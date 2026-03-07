@@ -1,0 +1,102 @@
+# =====================================
+# GLOBAL
+# =====================================
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.pid
+*.seed
+
+# =====================================
+# ENV FILES
+# =====================================
+.env
+.env.*
+*.env
+
+# =====================================
+# IDE / EDITOR
+# =====================================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =====================================
+# FRONTEND (Next.js)
+# =====================================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+
+# next image cache
+frontend/.next/cache/
+
+# logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# vercel
+frontend/.vercel
+
+# typescript
+frontend/*.tsbuildinfo
+
+# =====================================
+# BACKEND (Django / Python)
+# =====================================
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+
+# virtual environments
+backend/venv/
+backend/env/
+backend/.venv/
+backend/ENV/
+
+# python build
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/.eggs/
+
+# django database
+backend/db.sqlite3
+backend/*.sqlite3
+
+# static & media
+backend/staticfiles/
+backend/media/
+
+# python cache
+backend/.pytest_cache/
+backend/.mypy_cache/
+
+# coverage
+backend/.coverage
+backend/htmlcov/
+
+# =====================================
+# MYSQL / DATABASE DUMPS
+# =====================================
+*.sql
+*.dump
+*.bak
+
+# =====================================
+# TEMP / CACHE
+# =====================================
+.cache/
+tmp/
+temp/
+
+# =====================================
+# DOCKER (optional)
+# =====================================
+docker-compose.override.yml

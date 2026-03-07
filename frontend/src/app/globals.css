@@ -1,0 +1,168 @@
+/* ── Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 255, 255, 255;
+        --foreground: 17, 24, 39;
+        /* gray-900 */
+        --card: 255, 255, 255;
+        --card-foreground: 17, 24, 39;
+        --popover: 255, 255, 255;
+        --popover-foreground: 17, 24, 39;
+        --primary: 79, 70, 229;
+        /* #4f46e5 */
+        --primary-foreground: 255, 255, 255;
+        --secondary: 243, 244, 246;
+        /* gray-100 */
+        --secondary-foreground: 17, 24, 39;
+        --muted: 243, 244, 246;
+        --muted-foreground: 107, 114, 128;
+        /* gray-500 */
+        --accent: 243, 244, 246;
+        --accent-foreground: 17, 24, 39;
+        --border: 243, 244, 246;
+        --input: 243, 244, 246;
+        --ring: 79, 70, 229;
+    }
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Utilities ── */
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* Admin-style UI components - Theme aware */
+    .admin-card {
+        @apply bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden;
+    }
+
+    .admin-panel {
+        @apply bg-white border border-gray-100 rounded-lg p-5 shadow-sm;
+    }
+
+    .teal-button {
+        @apply bg-[#4f46e5] hover:bg-[#4338ca] text-white font-bold py-2 px-4 rounded-full transition-all active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
+    }
+
+    .teal-link {
+        @apply text-[#4f46e5] hover:text-[#4338ca] hover:underline font-medium transition-colors;
+    }
+}
+
+/* ── Animations ── */
+@keyframes marquee {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slow-zoom {
+    0% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes pulse-slow {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+}
+
+.animate-marquee {
+    display: flex;
+    animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+    animation-play-state: paused;
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-slow-zoom {
+    animation: slow-zoom 8s ease-out forwards;
+}
+
+.animate-float {
+    animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 5s ease-in-out infinite;
+}
