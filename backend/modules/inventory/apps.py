@@ -5,3 +5,6 @@ class InventoryConfig(AppConfig):
     name = 'modules.inventory'
     label = 'inventory'
     verbose_name = 'Inventory'
+
+    def ready(self):
+        import modules.inventory.signals

@@ -3,14 +3,14 @@ import api from './axios';
 import type {
     Product, ProductParams, Order, OrderItem,
     AppUser, AppRole, ActivityLog,
-    CompanyInfo, CompanyCategory, UserSettingsData,
+    CompanyInfo, CompanyCategory, UserSettingsData, ProductCategory, PaginatedResponse,
 } from '@/types';
 
 // Base URL for unauthenticated public requests
 const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
 // Re-export types consumed by other modules that import from '@/lib/api'
-export type { Product, ProductParams, Order, AppUser, AppRole, ActivityLog, CompanyInfo, CompanyCategory, UserSettingsData };
+export type { Product, ProductParams, Order, AppUser, AppRole, ActivityLog, CompanyInfo, CompanyCategory, UserSettingsData, ProductCategory, PaginatedResponse };
 
 export const productService = {
     getAll: async (params?: ProductParams): Promise<Product[]> => {
@@ -18,8 +18,10 @@ export const productService = {
         try {
             const { data } = await api.get('/v1/products/items/', { params });
             apiProducts = data.results || data || [];
-        } catch (error) {
-            console.error("API Fetch Error", error);
+        } catch (error: any) {
+            if (error.response?.status !== 401) {
+                console.error("API Fetch Error", error);
+            }
         }
 
         if (typeof window !== 'undefined') {
@@ -29,6 +31,54 @@ export const productService = {
             return [...filteredLocal, ...apiProducts];
         }
         return apiProducts;
+    },
+    getPaginated: async (params?: ProductParams): Promise<PaginatedResponse<Product>> => {
+        const page = Number(params?.page) || 1;
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        try {
+            // First, get all potential results to handle consistent slicing across merged data
+            // Since we must merge local storage, we need the full picture or at least a stable slice
+            const { data } = await api.get('/v1/products/items/', { params: { ...params, all_items: 'true', page: undefined, limit: undefined } });
+            let apiProducts: Product[] = data.results || (Array.isArray(data) ? data : []);
+            let totalApiCount = data.count || apiProducts.length;
+
+            if (typeof window !== 'undefined') {
+                const localProducts = JSON.parse(localStorage.getItem('qavi_products') || '[]');
+                const apiIds = new Set(apiProducts.map(p => String(p.id)));
+                const filteredLocal = localProducts.filter((p: any) => !apiIds.has(String(p.id)));
+                
+                const combined = [...filteredLocal, ...apiProducts];
+                const sliced = combined.slice(offset, offset + limit);
+                
+                return {
+                    results: sliced,
+                    count: combined.length,
+                    next: offset + limit < combined.length ? String(page + 1) : null,
+                    previous: page > 1 ? String(page - 1) : null
+                };
+            }
+
+            // Fallback if no window/localStorage
+            const sliced = apiProducts.slice(offset, offset + limit);
+            return {
+                results: sliced,
+                count: totalApiCount,
+                next: offset + limit < totalApiCount ? String(page + 1) : null,
+                previous: page > 1 ? String(page - 1) : null
+            };
+        } catch (error) {
+            console.error("Paginated API Fetch Error", error);
+            const all = await productService.getAll(params);
+            const sliced = all.slice(offset, offset + limit);
+            return {
+                results: sliced,
+                count: all.length,
+                next: offset + limit < all.length ? String(page + 1) : null,
+                previous: page > 1 ? String(page - 1) : null
+            };
+        }
     },
     getById: async (id: string) => {
         try {
@@ -43,15 +93,7 @@ export const productService = {
         }
     },
     getCategories: async () => {
-        try {
-            const response = await api.get('/v1/products/categories/');
-            return response.data;
-        } catch (error) {
-            return [
-                { id: 1, name: 'Skincare' }, { id: 2, name: 'Makeup' },
-                { id: 3, name: 'Fragrance' }, { id: 4, name: 'Haircare' }
-            ];
-        }
+        return await categoryService.getAll();
     },
     getFeatured: async () => {
         const all = await productService.getAll();
@@ -76,7 +118,7 @@ export const productService = {
                 id: savedProduct?.id || `lp-${Date.now()}`,
                 name: data.get('name'),
                 price: parseFloat(data.get('price')?.toString() || '0'),
-                stock: parseInt(data.get('quantity_in_stock')?.toString() || '0'),
+                stock: 0, // Force 0, stock must come from Inventory module
                 description: data.get('description'),
                 image: savedProduct?.image || null,
                 category_name: 'Cosmetics',
@@ -85,9 +127,9 @@ export const productService = {
 
             localProducts.unshift(newProduct);
             localStorage.setItem('qavi_products', JSON.stringify(localProducts));
-            return savedProduct || newProduct;
+            return (savedProduct || newProduct) as Product;
         }
-        return savedProduct;
+        return savedProduct as Product;
     },
     update: async (id: string, data: FormData | any) => {
         let updated = null;
@@ -113,12 +155,14 @@ export const productService = {
                     const price = data.get('price');
                     if (price) updatedFields.price = parseFloat(price.toString());
 
-                    const stock = data.get('quantity_in_stock') || data.get('stock');
-                    if (stock) updatedFields.stock = parseInt(stock.toString());
+                    // Removed manual stock update to protect Inventory integrity
+
 
                     // If image is updated in FormData, we can't save the File object to localStorage,
                     // but if the API succeeded (updated is not null), we use the returned URL.
-                    if (updated?.image) {
+                    if (updated?.image_url) {
+                        updatedFields.image_url = updated.image_url;
+                    } else if (updated?.image) {
                         updatedFields.image = updated.image;
                     } else if (data.get('image') instanceof File) {
                         // If API failed and we have a new file, we'd need a URL.
@@ -139,6 +183,23 @@ export const productService = {
             const localProducts = JSON.parse(localStorage.getItem('qavi_products') || '[]');
             localStorage.setItem('qavi_products', JSON.stringify(localProducts.filter((p: any) => String(p.id) !== String(id))));
         }
+    },
+    adjustStock: async (id: string | number, adjustment: number) => {
+        try {
+            const response = await api.post(`/v1/products/items/${id}/adjust-stock/`, { adjustment });
+            return response.data;
+        } catch (error) {
+            console.error("Stock adjustment failed", error);
+            if (typeof window !== 'undefined') {
+                const localProducts = JSON.parse(localStorage.getItem('qavi_products') || '[]');
+                const idx = localProducts.findIndex((p: any) => String(p.id) === String(id));
+                if (idx !== -1) {
+                    localProducts[idx].quantity_in_stock = (localProducts[idx].quantity_in_stock || 0) + adjustment;
+                    localStorage.setItem('qavi_products', JSON.stringify(localProducts));
+                    return localProducts[idx];
+                }
+            }
+        }
     }
 };
 
@@ -152,9 +213,56 @@ export const orderService = {
 
         if (typeof window !== 'undefined') {
             const localOrders = JSON.parse(localStorage.getItem('qavi_orders') || '[]');
+            // For simple getAll, we just merge all.
             return [...localOrders, ...apiOrders];
         }
         return apiOrders;
+    },
+    getPaginated: async (params?: any): Promise<PaginatedResponse<Order>> => {
+        const page = Number(params?.page) || 1;
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        try {
+            const response = await api.get('/v1/sales/orders/', { params: { ...params, page: undefined, limit: undefined } });
+            const data = response.data;
+            let apiOrders: Order[] = data.results || (Array.isArray(data) ? data : []);
+            let totalApiCount = data.count || apiOrders.length;
+
+            if (typeof window !== 'undefined') {
+                const localOrders = JSON.parse(localStorage.getItem('qavi_orders') || '[]');
+                const apiIds = new Set(apiOrders.map(o => String(o.id)));
+                const filteredLocal = localOrders.filter((o: any) => !apiIds.has(String(o.id)));
+
+                const combined = [...filteredLocal, ...apiOrders];
+                const sliced = combined.slice(offset, offset + limit);
+                
+                return {
+                    results: sliced,
+                    count: combined.length,
+                    next: offset + limit < combined.length ? String(page + 1) : null,
+                    previous: page > 1 ? String(page - 1) : null
+                };
+            }
+
+            const sliced = apiOrders.slice(offset, offset + limit);
+            return {
+                results: sliced,
+                count: totalApiCount,
+                next: offset + limit < totalApiCount ? String(page + 1) : null,
+                previous: page > 1 ? String(page - 1) : null
+            };
+        } catch (error) {
+            console.error("Order Paginated Fetch Error", error);
+            const all = await orderService.getAll(params);
+            const sliced = all.slice(offset, offset + limit);
+            return {
+                results: sliced,
+                count: all.length,
+                next: offset + limit < all.length ? String(page + 1) : null,
+                previous: page > 1 ? String(page - 1) : null
+            };
+        }
     },
     getById: async (id: string) => {
         try { return (await api.get(`/v1/sales/orders/${id}/`)).data; } catch (error) {
@@ -236,6 +344,18 @@ export const roleService = {
             return typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('qavi_roles') || '[{"id":1,"name":"Admin"}]') : [];
         }
     },
+    getById: async (id: number | string): Promise<any> => {
+        try {
+            const { data } = await api.get(`/v1/users/roles/${id}/`);
+            return data;
+        } catch (error) {
+            if (typeof window !== 'undefined') {
+                const roles = JSON.parse(localStorage.getItem('qavi_roles') || '[]');
+                return roles.find((r: any) => String(r.id) === String(id));
+            }
+            throw error;
+        }
+    },
     create: async (data: any) => {
         try { return (await api.post('/v1/users/roles/', data)).data; } catch (error) {
             if (typeof window !== 'undefined') {
@@ -245,6 +365,28 @@ export const roleService = {
                 localStorage.setItem('qavi_roles', JSON.stringify(roles));
                 return newRole;
             }
+            throw error;
+        }
+    },
+    update: async (id: number | string, data: any) => {
+        try { return (await api.patch(`/v1/users/roles/${id}/`, data)).data; } catch (error) {
+            if (typeof window !== 'undefined') {
+                const roles = JSON.parse(localStorage.getItem('qavi_roles') || '[]');
+                const idx = roles.findIndex((r: any) => String(r.id) === String(id));
+                if (idx !== -1) {
+                    roles[idx] = { ...roles[idx], ...data };
+                    localStorage.setItem('qavi_roles', JSON.stringify(roles));
+                    return roles[idx];
+                }
+            }
+            throw error;
+        }
+    },
+    delete: async (id: number | string) => {
+        try { await api.delete(`/v1/users/roles/${id}/`); } catch (error) { }
+        if (typeof window !== 'undefined') {
+            const roles = JSON.parse(localStorage.getItem('qavi_roles') || '[]');
+            localStorage.setItem('qavi_roles', JSON.stringify(roles.filter((r: any) => String(r.id) !== String(id))));
         }
     }
 };
@@ -346,6 +488,61 @@ export const userService = {
         const { data } = await api.get(`/v1/users/${id}/activity-logs/`, { params: { limit } });
         return data.results ?? data;
     },
+};
+
+export const permissionService = {
+    getAll: async (): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/users/permissions/');
+            const apiPerms = data.results || data || [];
+            if (typeof window !== 'undefined') localStorage.setItem('qavi_permissions', JSON.stringify(apiPerms));
+            return apiPerms;
+        } catch (error) {
+            console.error("Failed to fetch permissions", error);
+            return typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('qavi_permissions') || '[]') : [];
+        }
+    },
+    getById: async (id: number | string): Promise<any> => {
+        try {
+            const { data } = await api.get(`/v1/users/permissions/${id}/`);
+            return data;
+        } catch (error) {
+            if (typeof window !== 'undefined') {
+                return JSON.parse(localStorage.getItem('qavi_permissions') || '[]').find((p: any) => String(p.id) === String(id));
+            }
+        }
+    },
+    create: async (data: any) => {
+        try { return (await api.post('/v1/users/permissions/', data)).data; } catch (error) {
+            if (typeof window !== 'undefined') {
+                const perms = JSON.parse(localStorage.getItem('qavi_permissions') || '[]');
+                const newPerm = { ...data, id: Date.now() };
+                perms.unshift(newPerm);
+                localStorage.setItem('qavi_permissions', JSON.stringify(perms));
+                return newPerm;
+            }
+        }
+    },
+    update: async (id: number | string, data: any) => {
+        try { return (await api.patch(`/v1/users/permissions/${id}/`, data)).data; } catch (error) {
+            if (typeof window !== 'undefined') {
+                const perms = JSON.parse(localStorage.getItem('qavi_permissions') || '[]');
+                const idx = perms.findIndex((p: any) => String(p.id) === String(id));
+                if (idx !== -1) {
+                    perms[idx] = { ...perms[idx], ...data };
+                    localStorage.setItem('qavi_permissions', JSON.stringify(perms));
+                    return perms[idx];
+                }
+            }
+        }
+    },
+    delete: async (id: number | string) => {
+        try { await api.delete(`/v1/users/permissions/${id}/`); } catch (error) { }
+        if (typeof window !== 'undefined') {
+            const perms = JSON.parse(localStorage.getItem('qavi_permissions') || '[]');
+            localStorage.setItem('qavi_permissions', JSON.stringify(perms.filter((p: any) => String(p.id) !== String(id))));
+        }
+    }
 };
 
 // ─── Company Service ──────────────────────────────────────────────────────────
@@ -522,62 +719,95 @@ export const companyCategoryService = {
     }
 };
 
-// ─── Purchase Service ────────────────────────────────────────────────────────
+// ─── Company Contact Service ──────────────────────────────────────────────────
 
-export const purchaseService = {
-    getAll: async (params?: any): Promise<any[]> => {
+
+
+// ─── Product Category Service ─────────────────────────────────────────────────
+
+export const categoryService = {
+    getAll: async (): Promise<ProductCategory[]> => {
+        let apiCats: ProductCategory[] = [];
         try {
-            const { data } = await api.get('/v1/purchases/', { params });
-            const list = data.results || data || [];
-            if (typeof window !== 'undefined') localStorage.setItem('qavi_purchases', JSON.stringify(list));
-            return list;
-        } catch {
-            return typeof window !== 'undefined'
-                ? JSON.parse(localStorage.getItem('qavi_purchases') || '[]') : [];
+            // Use authenticated api instance to match backend permission requirements
+            const { data } = await api.get('/v1/products/categories/');
+            apiCats = Array.isArray(data) ? data : data.results || [];
+        } catch (error) {
+            console.error("Failed to fetch categories from API", error);
         }
-    },
-    getById: async (id: number | string): Promise<any> => {
-        try { return (await api.get(`/v1/purchases/${id}/`)).data; } catch {
-            return typeof window !== 'undefined'
-                ? JSON.parse(localStorage.getItem('qavi_purchases') || '[]').find((p: any) => String(p.id) === String(id)) : null;
-        }
-    },
-    create: async (data: any): Promise<any> => {
-        try { return (await api.post('/v1/purchases/', data)).data; } catch {
-            if (typeof window !== 'undefined') {
-                const list = JSON.parse(localStorage.getItem('qavi_purchases') || '[]');
-                const newItem = { ...data, id: `PO-${Date.now()}`, created_at: new Date().toISOString(), status: data.status || 'Pending' };
-                list.unshift(newItem);
-                localStorage.setItem('qavi_purchases', JSON.stringify(list));
-                return newItem;
-            }
-        }
-    },
-    update: async (id: number | string, data: any): Promise<any> => {
-        try { return (await api.patch(`/v1/purchases/${id}/`, data)).data; } catch {
-            if (typeof window !== 'undefined') {
-                const list = JSON.parse(localStorage.getItem('qavi_purchases') || '[]');
-                const idx = list.findIndex((p: any) => String(p.id) === String(id));
-                if (idx !== -1) { list[idx] = { ...list[idx], ...data }; localStorage.setItem('qavi_purchases', JSON.stringify(list)); return list[idx]; }
-            }
-        }
-    },
-    delete: async (id: number | string): Promise<void> => {
-        try { await api.delete(`/v1/purchases/${id}/`); } catch { }
+
         if (typeof window !== 'undefined') {
-            const list = JSON.parse(localStorage.getItem('qavi_purchases') || '[]');
-            localStorage.setItem('qavi_purchases', JSON.stringify(list.filter((p: any) => String(p.id) !== String(id))));
+            const localCats = JSON.parse(localStorage.getItem('qavi_product_categories') || '[]');
+            const apiIds = new Set(apiCats.map(c => String(c.id)));
+            // Keep local categories that haven't been synced to the API yet
+            const uniqueLocal = localCats.filter((c: any) => !apiIds.has(String(c.id)));
+            const merged = [...uniqueLocal, ...apiCats];
+            localStorage.setItem('qavi_product_categories', JSON.stringify(merged));
+            return merged;
         }
+        return apiCats;
     },
-    getSuppliers: async (): Promise<any[]> => {
+    create: async (payload: Partial<ProductCategory>): Promise<ProductCategory> => {
+        let saved = null;
         try {
-            const { data } = await api.get('/v1/suppliers/');
-            return data.results || data || [];
-        } catch {
-            return [];
+            const { data } = await api.post('/v1/products/categories/', payload);
+            saved = data;
+        } catch (error) {
+            console.error("Failed to create category on API", error);
         }
+
+        if (typeof window !== 'undefined') {
+            const list = JSON.parse(localStorage.getItem('qavi_product_categories') || '[]');
+            const newItem = {
+                ...payload,
+                id: saved?.id || `pcat-${Date.now()}`,
+                status: payload.status || 'active',
+                created_at: new Date().toISOString()
+            } as ProductCategory;
+            list.unshift(newItem);
+            localStorage.setItem('qavi_product_categories', JSON.stringify(list));
+            return saved || newItem;
+        }
+        if (!saved) throw new Error("Failed to create category");
+        return saved;
     },
+    update: async (id: string | number, payload: Partial<ProductCategory>): Promise<ProductCategory> => {
+        let updated = null;
+        try {
+            const { data } = await api.patch(`/v1/products/categories/${id}/`, payload);
+            updated = data;
+        } catch (error) {
+            console.error("Failed to update category on API", error);
+        }
+
+        if (typeof window !== 'undefined') {
+            const list = JSON.parse(localStorage.getItem('qavi_product_categories') || '[]');
+            const idx = list.findIndex((c: any) => String(c.id) === String(id));
+            if (idx !== -1) {
+                list[idx] = { ...list[idx], ...payload, ...(updated || {}) };
+                localStorage.setItem('qavi_product_categories', JSON.stringify(list));
+                return list[idx];
+            }
+        }
+        if (!updated) throw new Error("Failed to update category");
+        return updated;
+    },
+    delete: async (id: string | number): Promise<void> => {
+        try {
+            await api.delete(`/v1/products/categories/${id}/`);
+        } catch (error) {
+            console.error("Failed to delete category on API", error);
+        }
+        if (typeof window !== 'undefined') {
+            const list = JSON.parse(localStorage.getItem('qavi_product_categories') || '[]');
+            localStorage.setItem('qavi_product_categories', JSON.stringify(list.filter((c: any) => String(c.id) !== String(id))));
+        }
+    }
 };
+
+
+// ─── Supplier Service ──────────────────────────────────────────────────────────
+
 
 // ─── Settings Service ─────────────────────────────────────────────────────────
 
@@ -620,3 +850,178 @@ export const settingsService = {
         return data;
     },
 };
+
+// ─── Inventory Service ────────────────────────────────────────────────────────
+export const inventoryService = {
+    getInventory: async (params?: any): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/inventory/records/', { params });
+            let apiRecords = data.results || data || [];
+
+            if (typeof window !== 'undefined') {
+                const localRecords = JSON.parse(localStorage.getItem('qavi_inventory') || '[]');
+                // Simple merge for now
+                const apiIds = new Set(apiRecords.map((r: any) => String(r.id)));
+                const filteredLocal = localRecords.filter((r: any) => !apiIds.has(String(r.id)));
+                return [...filteredLocal, ...apiRecords];
+            }
+            return apiRecords;
+        } catch { 
+            if (typeof window !== 'undefined') {
+                return JSON.parse(localStorage.getItem('qavi_inventory') || '[]');
+            }
+            return []; 
+        }
+    },
+    getInventorySummary: async (): Promise<any> => {
+        try {
+            const { data } = await api.get('/v1/inventory/records/summary/');
+            return data;
+        } catch { 
+            return { total_items: 0, low_stock_count: 0, expired_batches: 0 }; 
+        }
+    },
+    getMovements: async (params?: any): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/inventory/movements/', { params });
+            return data.results || data || [];
+        } catch { return []; }
+    },
+    getBatches: async (params?: any): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/inventory/batches/', { params });
+            return data.results || data || [];
+        } catch { return []; }
+    },
+    getAdjustments: async (params?: any): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/inventory/adjustments/', { params });
+            return data.results || data || [];
+        } catch { return []; }
+    },
+    createAdjustment: async (payload: any): Promise<any> => {
+        const { data } = await api.post('/v1/inventory/adjustments/', payload);
+        return data;
+    },
+    getAlerts: async (params?: any): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/inventory/alerts/', { params });
+            return data.results || data || [];
+        } catch { return []; }
+    },
+    getWarehouses: async (params?: any): Promise<any[]> => {
+        try {
+            const { data } = await api.get('/v1/inventory/warehouses/', { params });
+            return data.results || data || [];
+        } catch { return []; }
+    },
+    createWarehouse: async (payload: any): Promise<any> => {
+        const { data } = await api.post('/v1/inventory/warehouses/', payload);
+        return data;
+    },
+    updateWarehouse: async (id: string | number, payload: any): Promise<any> => {
+        const { data } = await api.patch(`/v1/inventory/warehouses/${id}/`, payload);
+        return data;
+    },
+    deleteWarehouse: async (id: string | number): Promise<void> => {
+        await api.delete(`/v1/inventory/warehouses/${id}/`);
+    },
+    deleteInventory: async (id: string | number): Promise<void> => {
+        if (!id) return;
+        const idStr = String(id);
+
+        if (idStr.startsWith('li-') && typeof window !== 'undefined') {
+            const localRecords = JSON.parse(localStorage.getItem('qavi_inventory') || '[]');
+            const updated = localRecords.filter((r: any) => String(r.id) !== idStr);
+            localStorage.setItem('qavi_inventory', JSON.stringify(updated));
+            return;
+        }
+        
+        try {
+            await api.delete(`/v1/inventory/records/${idStr}/`);
+        } catch (error: any) {
+            // Ignore 404 as it means the record is already gone
+            if (error.response?.status === 404) return;
+            throw error;
+        }
+    },
+    createInventory: async (payload: any): Promise<any> => {
+        // If product ID is local (starts with lp-), we MUST save locally because server will reject non-UUID
+        const isLocalProduct = String(payload.product).startsWith('lp-');
+
+        if (isLocalProduct && typeof window !== 'undefined') {
+            const localRecords = JSON.parse(localStorage.getItem('qavi_inventory') || '[]');
+            const newRecord = {
+                ...payload,
+                id: `li-${Date.now()}`,
+                created_at: new Date().toISOString(),
+                // Use provided names if available, otherwise generic placeholders
+                product_name: payload.product_name || "Product Registry",
+                warehouse_name: payload.warehouse_name || "Storage Node"
+            };
+            localRecords.unshift(newRecord);
+            localStorage.setItem('qavi_inventory', JSON.stringify(localRecords));
+
+            // CRITICAL: Update the product's global "In Stock" count in local storage
+            const localProducts = JSON.parse(localStorage.getItem('qavi_products') || '[]');
+            const updatedProducts = localProducts.map((p: any) => {
+                if (String(p.id) === String(payload.product)) {
+                    const currentStock = Number(p.quantity_in_stock || 0);
+                    const addedStock = Number(payload.quantity_available || 0);
+                    return { ...p, quantity_in_stock: currentStock + addedStock };
+                }
+                return p;
+            });
+            localStorage.setItem('qavi_products', JSON.stringify(updatedProducts));
+
+            return newRecord;
+        }
+
+        const { data } = await api.post('/v1/inventory/records/', payload);
+        return data;
+    }
+};
+
+// ─── Return Service ───────────────────────────────────────────────────────────
+
+// Payments Module Services
+export const paymentCategoryService = {
+    getAll: async () => {
+        const { data } = await api.get('/v1/payments/categories/');
+        return data.results || data || [];
+    },
+    create: async (payload: any) => {
+        const { data } = await api.post('/v1/payments/categories/', payload);
+        return data;
+    },
+    update: async (id: string | number, payload: any) => {
+        const { data } = await api.patch(`/v1/payments/categories/${id}/`, payload);
+        return data;
+    },
+    delete: async (id: string | number) => {
+        await api.delete(`/v1/payments/categories/${id}/`);
+    },
+};
+
+export const paymentService = {
+    getAll: async (params = {}) => {
+        const { data } = await api.get('/v1/payments/transactions/', { params });
+        return data.results || data || [];
+    },
+    create: async (payload: any) => {
+        const { data } = await api.post('/v1/payments/transactions/', payload);
+        return data;
+    },
+    update: async (id: string | number, payload: any) => {
+        const { data } = await api.patch(`/v1/payments/transactions/${id}/`, payload);
+        return data;
+    },
+    delete: async (id: string | number) => {
+        await api.delete(`/v1/payments/transactions/${id}/`);
+    },
+    getStats: async () => {
+        const { data } = await api.get('/v1/payments/stats/summary/');
+        return data;
+    }
+};
+

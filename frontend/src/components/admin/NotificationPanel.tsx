@@ -38,7 +38,7 @@ export default function NotificationPanel({
     const unread = activities.filter(a => !a.read).length;
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-96 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-3 w-96 bg-white dark:bg-[#1e293b] rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between bg-[#232F3E] rounded-t-2xl">
                 <div className="flex items-center gap-2.5">
@@ -81,32 +81,32 @@ export default function NotificationPanel({
                     </div>
                 ) : activities.length === 0 ? (
                     <div className="py-12 text-center px-6">
-                        <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                            <Bell className="h-6 w-6 text-gray-300" strokeWidth={2} />
+                        <div className="w-12 h-12 bg-gray-100 dark:bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <Bell className="h-6 w-6 text-gray-300 dark:text-gray-600" strokeWidth={2} />
                         </div>
-                        <p className="font-bold text-gray-600 text-sm">No recent activity</p>
-                        <p className="text-xs text-gray-400 mt-1">Activity will appear here</p>
+                        <p className="font-bold text-gray-600 dark:text-gray-300 text-sm">No recent activity</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Activity will appear here</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-50 py-1">
+                    <div className="divide-y divide-gray-50 dark:divide-slate-800 py-1">
                         {activities.map(item => {
                             const Icon = item.icon;
                             return (
                                 <Link key={item.id} href={item.href}
                                     onClick={() => { onMarkRead(item.id); onClose(); }}
-                                    className={`flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50/80 transition-all group ${!item.read ? 'bg-[#FF9900]/5' : ''}`}>
-                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${item.bg}`}>
+                                    className={`flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-all group ${!item.read ? 'bg-[#FF9900]/5 dark:bg-[#FF9900]/10' : ''}`}>
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${item.bg} dark:bg-opacity-20`}>
                                         <Icon className={`h-4 w-4 ${item.color}`} strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between gap-2">
-                                            <p className={`text-sm font-bold leading-tight group-hover:text-[#FF9900] transition-colors ${!item.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                                            <p className={`text-sm font-bold leading-tight group-hover:text-[#FF9900] transition-colors ${!item.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300'}`}>
                                                 {item.title}
                                             </p>
                                             {!item.read && <span className="w-2 h-2 bg-[#FF9900] rounded-full flex-shrink-0 mt-1.5" />}
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
-                                        <p className="text-[10px] text-gray-400 mt-1.5 font-medium flex items-center gap-1">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{item.desc}</p>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-medium flex items-center gap-1">
                                             <Clock className="h-2.5 w-2.5" strokeWidth={2.5} />
                                             {item.time}
                                         </p>
@@ -119,12 +119,12 @@ export default function NotificationPanel({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 bg-gray-50/50 px-5 py-3 flex items-center justify-between rounded-b-2xl">
+            <div className="border-t border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/20 px-5 py-3 flex items-center justify-between rounded-b-2xl">
                 <Link href="/admin/sales" onClick={onClose} className="text-xs font-bold text-[#FF9900] hover:underline">
                     View all orders →
                 </Link>
                 <Link href="/admin/settings" onClick={onClose}
-                    className="text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white flex items-center gap-1">
                     <Settings className="h-3 w-3" strokeWidth={2.5} /> Settings
                 </Link>
             </div>

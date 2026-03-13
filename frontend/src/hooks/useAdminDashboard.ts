@@ -14,6 +14,8 @@ export interface DashboardData {
     recentOrders: any[];
     recentUsers: any[];
     topProducts: any[];
+    products: any[];
+    orders: any[];
     revenueData: RevenueDataPoint[];
     revenueData30: RevenueDataPoint[];
     loading: boolean;
@@ -38,6 +40,8 @@ export const useAdminDashboard = () => {
         recentOrders: [],
         recentUsers: [],
         topProducts: [],
+        products: [],
+        orders: [],
         revenueData: [],
         revenueData30: [],
         loading: true,
@@ -162,6 +166,8 @@ export const useAdminDashboard = () => {
                 recentOrders,
                 recentUsers,
                 topProducts,
+                products: enhancedProducts,
+                orders,
                 revenueData,
                 revenueData30,
                 loading: false,

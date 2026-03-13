@@ -69,3 +69,30 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Supplier(models.Model):
+    """
+    Supplier model to store external vendor/brand information.
+    """
+    name = models.CharField(max_length=255, verbose_name='Supplier Name')
+    contact_person = models.CharField(max_length=255, blank=True, verbose_name='Contact Person')
+    email = models.EmailField(blank=True, verbose_name='Email Address')
+    phone = models.CharField(max_length=50, blank=True, verbose_name='Phone Number')
+    whatsapp = models.CharField(max_length=50, blank=True, verbose_name='WhatsApp Number')
+    address = models.TextField(blank=True, verbose_name='Address')
+    city = models.CharField(max_length=100, blank=True, verbose_name='City')
+    country = models.CharField(max_length=100, default='Pakistan', verbose_name='Country')
+    tax_number = models.CharField(max_length=100, blank=True, verbose_name='Tax / NTN Number')
+    is_active = models.BooleanField(default=True, verbose_name='Active Status')
+    notes = models.TextField(blank=True, verbose_name='Internal Notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Supplier'
+        verbose_name_plural = 'Suppliers'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name

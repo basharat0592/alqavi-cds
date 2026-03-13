@@ -5,9 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Package, ShoppingCart, Users,
-    Settings, LogOut, Warehouse, Shield,
-    ExternalLink, Building2, TrendingUp, PackageSearch, RotateCcw, ArrowLeftRight, Tag
-} from 'lucide-react';
+    Settings, LogOut, Warehouse,
+    Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
+    BarChart3, Boxes, FolderTree, Bell, Sparkles,
+    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight
+} from 'lucide-react'; // Re-trigger HMR
 import { authService } from '@/lib/auth';
 import { productService, orderService } from '@/lib/api';
 
@@ -38,7 +40,12 @@ interface NavGroup {
 /* ═══════════════════════════════════════════════
    SIDEBAR COMPONENT
 ═══════════════════════════════════════════════ */
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+    isCollapsed?: boolean;
+    onToggle?: () => void;
+}
+
+export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const [adminUser, setAdminUser] = useState<any>(null);
@@ -75,37 +82,52 @@ export default function AdminSidebar() {
         });
     }, []);
 
-    const handleLogout = () => {
-        authService.logout();
-        router.push('/login');
-    };
-
     const menuGroups: NavGroup[] = [
         {
-            label: 'Organization',
+            label: 'Operations',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Companies (Vendors)', href: '/admin/company', icon: Building2 },
-                { name: 'Company Categories', href: '/admin/company-categories', icon: Tag },
+                { name: 'Alerts & Tasks', href: '/admin/alerts', icon: Bell, badge: (counts.lowStock || 0) + (counts.pendingOrders || 0), alert: (counts.lowStock + counts.pendingOrders) > 0 },
             ],
         },
         {
-            label: 'Store Management',
+            label: 'Inventory',
             items: [
-                { name: 'Products', href: '/admin/products', icon: Package, badge: counts.products },
-                { name: 'Inventory', href: '/admin/inventory', icon: Warehouse, badge: counts.lowStock, alert: counts.lowStock > 0 },
-                { name: 'Sales Orders', href: '/admin/sales', icon: TrendingUp, badge: counts.orders, alert: counts.pendingOrders > 0 },
-                { name: 'Sale Returns', href: '/admin/sale-returns', icon: ArrowLeftRight },
-                { name: 'Purchases', href: '/admin/purchases', icon: PackageSearch },
-                { name: 'Return Purchase', href: '/admin/returns', icon: RotateCcw },
+                { name: 'Stock Ledger', href: '/admin/inventory/list', icon: Boxes, badge: counts.lowStock, alert: counts.lowStock > 0 },
+                { name: 'Storage Nodes', href: '/admin/inventory/warehouses', icon: Warehouse },
+                { name: 'Movements', href: '/admin/inventory/movements', icon: ArrowLeftRight },
+                { name: 'Batch Center', href: '/admin/inventory/batches', icon: Layers },
             ],
         },
         {
-            label: 'Users & Control',
+            label: 'Catalog',
             items: [
-                { name: 'Customers', href: '/admin/customers', icon: Users, badge: counts.customers },
-                { name: 'Staff & Users', href: '/admin/users', icon: Users },
-                { name: 'Roles & Access', href: '/admin/roles', icon: Shield },
+                { name: 'All Products', href: '/admin/products', icon: Package, badge: counts.products },
+                { name: 'Categories', href: '/admin/products/categories', icon: FolderTree },
+            ],
+        },
+        {
+            label: 'Sales & Returns',
+            items: [
+                { name: 'Sale Console', href: '/admin/sale', icon: ShoppingCart },
+                { name: 'Orders List', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Returns Depot', href: '/admin/sale-returns', icon: RotateCcw },
+                { name: 'Client Registry', href: '/admin/customers', icon: Users, badge: counts.customers },
+            ],
+        },
+        {
+            label: 'Financials',
+            items: [
+                { name: 'Transaction Logs', href: '/admin/payments', icon: Banknote },
+                { name: 'Client Balances', href: '/admin/payments/customer', icon: Users },
+            ],
+        },
+        {
+            label: 'Admin Panel',
+            items: [
+                { name: 'Users', href: '/admin/users', icon: Users },
+                { name: 'Roles', href: '/admin/roles', icon: Shield },
+                { name: 'Organization', href: '/admin/company', icon: Building2 },
             ],
         },
     ];
@@ -113,49 +135,82 @@ export default function AdminSidebar() {
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
     return (
-        <div className="w-64 bg-[#131921] border-r border-[#232F3E] min-h-screen hidden md:flex flex-col flex-shrink-0 z-20">
+        <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-[#F8FAFC] dark:bg-[#0F172A] h-screen flex flex-col flex-shrink-0 z-20 font-sans border-r border-[#e2e8f0] dark:border-[#1e293b] shadow-[10px_0_30px_-15px_rgba(0,0,0,0.1)] dark:shadow-[10px_0_30px_-15px_rgba(0,0,0,0.5)] relative transition-all duration-300 ease-in-out`}>
 
-            {/* ── Logo Header ── */}
-            <div className="px-6 py-7 border-b border-[#232F3E]">
-                <Link href="/admin/dashboard" className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 bg-[#FF9900] rounded-xl flex items-center justify-center group-hover:bg-[#e68a00] transition-colors">
-                        <span className="font-black text-lg italic tracking-tighter text-[#131921]">AQ</span>
-                    </div>
-                    <div>
-                        <h1 className="font-black text-white text-sm tracking-tight leading-none uppercase">Al-Qavi</h1>
-                        <p className="text-[9px] font-bold text-[#FF9900] tracking-[0.3em] uppercase mt-1">Cosmetics Admin</p>
-                    </div>
-                </Link>
+            {/* ── Branded Header ── */}
+            <div className={`px-4 pt-8 pb-5 border-b border-slate-200 dark:border-[#1e293b] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} min-h-[73px] transition-all duration-300`}>
+                {!isCollapsed && (
+                    <Link href="/admin/dashboard" className="flex items-center gap-3 group shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
+                        <div className="w-9 h-9 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center transition-all group-hover:scale-105 group-hover:bg-[#FF9900] group-hover:text-white border border-slate-200 dark:border-slate-700 shrink-0 shadow-sm group-hover:shadow-orange-200 dark:group-hover:shadow-none">
+                            <Sparkles className="h-5 w-5 text-[#FF9900] group-hover:text-white transition-colors" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col">
+                            <h1 className="font-black text-slate-900 dark:text-white text-sm tracking-tight leading-none uppercase flex items-center gap-1 group-hover:text-[#ff9900] transition-colors">
+                                Al-Qavi
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff9900] animate-pulse"></span>
+                            </h1>
+                            <p className="text-[10px] font-black text-[#FF9900] dark:text-[#FFA41C] tracking-[0.2em] uppercase mt-1">Cosmetic Hub</p>
+                        </div>
+                    </Link>
+                )}
+
+                <button
+                    onClick={onToggle}
+                    className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800/50 hover:bg-[#FF9900] dark:hover:bg-[#FF9900] text-slate-500 dark:text-slate-400 hover:text-white transition-all duration-300 transform active:scale-90 shadow-sm border border-slate-200 dark:border-slate-700/50 hover:border-orange-400 flex items-center justify-center`}
+                    title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                >
+                    {isCollapsed ? (
+                        <ChevronsRight className="w-5 h-5 animate-in zoom-in duration-500" />
+                    ) : (
+                        <ChevronsLeft className="w-5 h-5 animate-in fade-in slide-in-from-right-4 duration-500" />
+                    )}
+                </button>
             </div>
 
-            {/* ── Navigation ── */}
-            <nav className="flex-1 overflow-y-auto px-3 custom-scrollbar py-4">
+            {/* ── Main Navigation ── */}
+            <nav className="flex-1 overflow-y-auto pt-4 pb-12 custom-scrollbar space-y-6">
                 {menuGroups.map((group, gIdx) => (
-                    <div key={group.label} className={gIdx === 0 ? '' : 'mt-1'}>
-                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-500 px-3 mb-1 mt-4 first:mt-0">
-                            {group.label}
-                        </p>
-                        <div className="space-y-0.5">
+                    <div key={group.label} className="px-3">
+                        {!isCollapsed && (
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 px-3 mb-2 opacity-80 animate-in fade-in">
+                                {group.label}
+                            </p>
+                        )}
+                        <div className="space-y-[2px]">
                             {group.items.map(item => {
                                 const active = isActive(item.href);
                                 return (
                                     <Link key={item.name} href={item.href}
-                                        className={`group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-150 text-sm font-bold
+                                        className={`group relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2.5 rounded-lg transition-all duration-200
                                             ${active
-                                                ? 'bg-[#FF9900] text-[#131921]'
-                                                : 'text-gray-300 hover:text-white hover:bg-[#232F3E]'}`}>
+                                                ? 'bg-white dark:bg-[#1e293b] text-[#ff9900] dark:text-white shadow-sm border border-slate-200 dark:border-transparent'
+                                                : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-[#1e293b]/50 hover:text-slate-900 dark:hover:text-white hover:shadow-sm'}`}>
+
+                                        {/* Amazon Active Indicator */}
+                                        {active && (
+                                            <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#ff9900] rounded-r shadow-[0_0_8px_rgba(255,153,0,0.6)]"></div>
+                                        )}
+
                                         <div className="flex items-center gap-3">
-                                            <item.icon className={`h-4 w-4 transition-none ${active ? 'text-[#131921]' : 'text-gray-500 group-hover:text-gray-300'}`}
-                                                strokeWidth={2.2} />
-                                            <span>{item.name}</span>
+                                            <item.icon className={`h-5 w-5 shrink-0 transition-colors ${active ? 'text-[#ff9900]' : 'text-slate-400 dark:text-slate-500 group-hover:text-[#ff9900]'}`}
+                                                strokeWidth={active ? 2.5 : 2} />
+                                            {!isCollapsed && <span className="text-[13px] tracking-tight font-black animate-in fade-in slide-in-from-left-2">{item.name}</span>}
                                         </div>
-                                        {item.badge !== undefined && item.badge > 0 && (
-                                            <span className={`text-[10px] px-2 py-0.5 font-black rounded-md
+
+                                        {!isCollapsed && item.badge !== undefined && item.badge > 0 && (
+                                            <span className={`text-[10px] px-1.5 py-0.5 font-black rounded min-w-[20px] text-center
                                                 ${active
-                                                    ? 'bg-[#131921]/20 text-[#131921]'
-                                                    : item.alert ? 'bg-red-900/40 text-red-400' : 'bg-[#232F3E] text-gray-400'}`}>
+                                                    ? 'bg-[#ff9900] text-[#131921] shadow-lg shadow-orange-500/20'
+                                                    : item.alert ? 'bg-red-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                                                 {item.badge}
                                             </span>
+                                        )}
+
+                                        {isCollapsed && (
+                                            <div className="absolute left-full ml-4 px-2 py-1 bg-slate-900 text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+                                                {item.name}
+                                                {item.badge !== undefined && item.badge > 0 && ` (${item.badge})`}
+                                            </div>
                                         )}
                                     </Link>
                                 );
@@ -165,47 +220,24 @@ export default function AdminSidebar() {
                 ))}
             </nav>
 
-            {/* ── Footer ── */}
-            <div className="border-t border-[#232F3E]">
-                {/* Settings */}
+            {/* ── System Footer ── */}
+            <div className={`mt-auto bg-white/30 dark:bg-[#000000]/10 border-t border-[#e2e8f0] dark:border-[#1e293b] p-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
                 <Link href="/admin/settings"
-                    className={`flex items-center gap-3 px-5 py-3 transition-all text-sm font-bold border-b border-[#232F3E] rounded-none
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-tight
                         ${isActive('/admin/settings')
-                            ? 'bg-[#FF9900] text-[#131921]'
-                            : 'text-gray-300 hover:text-white hover:bg-[#232F3E]'}`}>
-                    <Settings className="h-4 w-4" strokeWidth={2.2} />
-                    <span>Settings</span>
+                            ? 'bg-white dark:bg-[#1e293b] text-[#ff9900]'
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-[#1e293b] hover:text-slate-900 dark:hover:text-white'}`}>
+                    <Settings className={`h-5 w-5 ${isActive('/admin/settings') ? 'text-[#ff9900]' : 'text-slate-400'}`} />
+                    {!isCollapsed && <span>Control Panel</span>}
                 </Link>
-
-                {/* User Card */}
-                <div className="bg-[#0F1923] p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 bg-[#FF9900] rounded-lg flex items-center justify-center text-[#131921] font-black text-sm flex-shrink-0">
-                            {(adminUser?.name?.[0] || 'A').toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black text-gray-100 truncate tracking-tight">{adminUser?.name || 'Admin'}</p>
-                            <p className="text-[10px] font-bold text-[#FF9900] truncate uppercase tracking-widest">Administrator</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <Link href="/"
-                            className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-black text-gray-300 bg-[#232F3E] rounded-lg hover:bg-[#3d4f5c] transition-colors">
-                            <ExternalLink className="h-3 w-3" /> Portal
-                        </Link>
-                        <button onClick={handleLogout}
-                            className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-black text-red-400 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors">
-                            <LogOut className="h-3 w-3" /> Exit
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar { width: 3px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.03); }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.1); }
             `}</style>
         </div>
     );

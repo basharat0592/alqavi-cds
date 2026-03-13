@@ -56,11 +56,14 @@ class Product(BaseModel, StatusMixin, TimestampMixin):
         related_name='products'
     )
     sku = models.CharField(max_length=100, unique=True)
+    barcode = models.CharField(max_length=100, blank=True, null=True, unique=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     retail_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     quantity_in_stock = models.IntegerField(default=0)
     image = models.ImageField(upload_to='products/', blank=True)
+    packaging = models.CharField(max_length=100, default='Piece', help_text="e.g. Unit, Pack, Box, Carton")
+    pack_size = models.IntegerField(default=1, help_text="Number of items per pack")
     company_category = models.ForeignKey(
         'company.CompanyCategory',
         on_delete=models.SET_NULL,
@@ -85,3 +88,22 @@ class Product(BaseModel, StatusMixin, TimestampMixin):
     def is_in_stock(self):
         """Check if product is in stock."""
         return self.quantity_in_stock > 0
+
+
+class ProductImage(BaseModel, TimestampMixin):
+    """
+    Model for storing multiple images for a single product.
+    """
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='additional_images'
+    )
+    image = models.ImageField(upload_to='products/additional/')
+    is_feature = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Image for {self.product.name}"

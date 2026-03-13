@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, parser_classes, permission_class
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Company, CompanyCategory
-from .serializers import CompanySerializer, CompanyCategorySerializer
+from .models import Company, CompanyCategory, Supplier
+from .serializers import CompanySerializer, CompanyCategorySerializer, SupplierSerializer
 from core.utils import get_or_404_response
 
 
@@ -93,3 +93,46 @@ def company_detail(request, company_id):
 
     company.delete()
     return Response({'message': 'Company deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Supplier Views ────────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_suppliers(request):
+    """List all suppliers."""
+    suppliers = Supplier.objects.all().order_by('name')
+    return Response(SupplierSerializer(suppliers, many=True).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_supplier(request):
+    """Create a new supplier."""
+    serializer = SupplierSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([AllowAny])
+def supplier_detail(request, supplier_id):
+    """Retrieve, update, or delete a specific supplier."""
+    supplier, err = get_or_404_response(Supplier, id=supplier_id)
+    if err:
+        return err
+
+    if request.method == 'GET':
+        return Response(SupplierSerializer(supplier).data)
+
+    if request.method in ('PUT', 'PATCH'):
+        serializer = SupplierSerializer(supplier, data=request.data, partial=(request.method == 'PATCH'))
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    supplier.delete()
+    return Response({'message': 'Supplier deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

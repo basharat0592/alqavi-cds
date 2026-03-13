@@ -10,14 +10,17 @@ export const metadata = {
     description: 'The #1 Platform for Wholesale Cosmetics and Beauty Products by Al-Qavi',
 };
 
+import { Toaster } from 'react-hot-toast';
+
 export default function RootLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
     return (
-        <html lang="en">
-            <body className={`${inter.variable} ${playfair.variable} font-sans`}>
+        <html lang="en" suppressHydrationWarning={true}>
+            <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning={true}>
+                <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
                 <CartProvider>
                     {children}
                 </CartProvider>

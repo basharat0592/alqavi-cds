@@ -1,4 +1,4 @@
-﻿"""
+"""
 Sales module models - Order management for dashboard.
 """
 from django.db import models
@@ -6,6 +6,9 @@ from django.conf import settings
 from core.models import BaseModel
 from core.mixins import StatusMixin, TimestampMixin
 from modules.products.models import Product
+
+
+
 
 
 class Order(BaseModel, TimestampMixin):
@@ -67,6 +70,18 @@ class Order(BaseModel, TimestampMixin):
     )
     notes = models.TextField(blank=True)
     guest_name = models.CharField(max_length=255, null=True, blank=True)
+    
+    # New fields for advanced order creation
+    market = models.CharField(max_length=100, default='Pakistan')
+    currency = models.CharField(max_length=10, default='PKR')
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    shipping_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tags = models.JSONField(default=list, blank=True)
+    
+    # Real-world business fields
+    payment_method = models.CharField(max_length=50, default='Cash on Delivery')
+    shipping_method = models.CharField(max_length=50, default='Standard Delivery')
     
     class Meta:
         ordering = ['-created_at']

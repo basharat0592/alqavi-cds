@@ -3,26 +3,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card } from '@/components/ui/Card';
-import { productService, companyService, companyCategoryService } from '@/lib/api';
-import type { CompanyInfo, CompanyCategory } from '@/lib/api';
+import { productService, companyService } from '@/lib/api';
 import {
-    Upload, X, Save, ArrowLeft, Image as ImageIcon,
-    Type, AlignLeft, Tag, Box, Building2, Calendar,
-    DollarSign, Percent, Info, Settings, ShieldCheck,
-    CreditCard, CheckCircle, XCircle, Globe
+    ArrowLeft, Camera, Trash2, CheckCircle, AlertCircle, RefreshCw, Barcode, Hash, Plus, Save, Box, Package, Tag, Loader2
 } from 'lucide-react';
 
-const PRODUCT_CATEGORIES = [
-    { id: 'New Arrivals', name: 'New Arrivals' },
-    { id: 'Best Sellers', name: 'Best Sellers' },
-    { id: 'Wholesale / B2B', name: 'Wholesale / B2B' },
-    { id: 'Skincare', name: 'Skincare' },
-    { id: 'Makeup', name: 'Makeup' },
-    { id: 'Fragrance', name: 'Fragrance' },
-    { id: 'Haircare', name: 'Haircare' },
-    { id: 'Gift Sets', name: 'Gift Sets' }
-];
+// ─── Shared Utilities ─────────────────────────────────────────────────────────
+const INPUT = (err?: boolean) =>
+    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
+    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
+    ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
+
+const LABEL = 'block text-xs font-bold text-gray-900 dark:text-gray-200 mb-1';
+
+const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
+        {children}
+    </div>
+);
+
+const SectionHeader = ({ title, icon: Icon, action }: { title: string; icon?: any; action?: React.ReactNode }) => (
+    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+            {Icon && <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
+            <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
+        </div>
+        {action}
+    </div>
+);
 
 export default function AddEditProductPage() {
     const router = useRouter();
@@ -31,76 +39,38 @@ export default function AddEditProductPage() {
     const isEditMode = productId && productId !== 'add';
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const additionalFilesRef = useRef<HTMLInputElement>(null);
     const [images, setImages] = useState<string[]>([]);
     const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [additionalPreviews, setAdditionalPreviews] = useState<string[]>([]);
+    const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
-    const [companies, setCompanies] = useState<CompanyInfo[]>([]);
+    const [companies, setCompanies] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(isEditMode);
 
-    const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-
-    const showToast = (message: string, type: 'success' | 'error') => {
-        setToast({ show: true, message, type });
-        setTimeout(() => setToast(t => ({ ...t, show: false })), 4000);
-    };
+    const [toast, setToast] = useState<string | null>(null);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        category: '',
-        price: '',
-        costPrice: '',
-        retailPrice: '',
-        stock: '',
-        sku: '',
-        brand: '',
-        companyName: '',
-        company_category: '',
-        purchaseDate: '',
-        expiryDate: '',
-        status: 'active'
+        name: '', description: '', category: '', price: '', costPrice: '',
+        retailPrice: '', sku: '', barcode: '', batchNumber: '', company: '', status: 'active'
     });
 
-    // Fetch Categories
     useEffect(() => {
-        const fetchCategories = async () => {
+        const fetchMeta = async () => {
             try {
-                const cats = await productService.getCategories();
-                const fetchedCats = Array.isArray(cats) ? cats : cats.results || [];
-
-                const combined = PRODUCT_CATEGORIES.map(staticCat => {
-                    const found = fetchedCats.find((c: any) => c.name.toLowerCase() === staticCat.name.toLowerCase());
-                    return found ? { id: found.id, name: staticCat.name } : staticCat;
-                });
-
-                fetchedCats.forEach((fc: any) => {
-                    if (!combined.some(c => c.name.toLowerCase() === fc.name.toLowerCase())) {
-                        combined.push(fc);
-                    }
-                });
-                setCategories(combined);
-            } catch (error) {
-                setCategories(PRODUCT_CATEGORIES);
-            }
+                const [cats, comps] = await Promise.all([
+                    productService.getCategories(),
+                    companyService.getAll()
+                ]);
+                setCategories(cats);
+                setCompanies(comps);
+            } catch (err) { console.error("Meta fetch error", err); }
         };
-        fetchCategories();
+        fetchMeta();
     }, []);
 
-    // Fetch Companies & Company Categories
-    const [companyCategories, setCompanyCategories] = useState<CompanyCategory[]>([]);
-    useEffect(() => {
-        companyService.getAll()
-            .then(data => setCompanies(data))
-            .catch(() => setCompanies([]));
-
-        companyCategoryService.getAll()
-            .then(data => setCompanyCategories(data))
-            .catch(() => setCompanyCategories([]));
-    }, []);
-
-    // Load Data for Edit Mode
     useEffect(() => {
         if (isEditMode) {
             const fetchProduct = async () => {
@@ -111,22 +81,20 @@ export default function AddEditProductPage() {
                         description: product.description || '',
                         category: product.category?.id || product.category || '',
                         price: product.price ? product.price.toString() : '',
-                        costPrice: product.cost_price ? product.cost_price.toString() : (product.costPrice || ''),
-                        retailPrice: product.retail_price ? product.retail_price.toString() : (product.retailPrice || ''),
-                        stock: product.stock !== undefined ? product.stock.toString() : (product.stock_quantity !== undefined ? product.stock_quantity.toString() : '0'),
+                        costPrice: product.cost ? product.cost.toString() : '',
+                        retailPrice: product.retail_price ? product.retail_price.toString() : '',
                         sku: product.sku || '',
-                        brand: product.brand || '',
-                        companyName: product.company_name || product.companyName || '',
-                        purchaseDate: product.purchase_date || product.purchaseDate || '',
-                        expiryDate: product.expiry_date || product.expiryDate || '',
-                        company_category: product.company_category?.id || product.company_category || '',
-                        status: (product.is_active === false || product.is_visible_on_landing === false) ? 'draft' : 'active'
+                        barcode: product.barcode || '',
+                        batchNumber: product.batch_number || '',
+                        company: product.company?.id || product.company || '',
+                        status: product.status || 'active'
                     });
-                    if (product.image) {
-                        setImages([product.image]);
+                    if (product.image_url || product.image) setImages([product.image_url || product.image]);
+                    if (product.additional_images) {
+                        setAdditionalPreviews(product.additional_images.map((img: any) => img.image_url || img.image));
                     }
                 } catch (error) {
-                    console.error("Error fetching product", error);
+                    showToast('Failed to load product data');
                 } finally {
                     setIsLoading(false);
                 }
@@ -137,506 +105,223 @@ export default function AddEditProductPage() {
         }
     }, [isEditMode, productId]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const h = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        setErrors(p => ({ ...p, [e.target.name]: '' }));
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            const newImages: string[] = [];
-            const newFiles: File[] = [];
-            Array.from(files).forEach(file => {
-                const imageUrl = URL.createObjectURL(file);
-                newImages.push(imageUrl);
-                newFiles.push(file);
-            });
-            setImages(prev => [...prev, ...newImages]);
-            setImageFiles(prev => [...prev, ...newFiles]);
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setImageFiles([files[0]]);
+            const reader = new FileReader();
+            reader.onloadend = () => setImages([reader.result as string]);
+            reader.readAsDataURL(files[0]);
         }
     };
 
-    const removeImage = (index: number) => {
-        setImages(prev => prev.filter((_, i) => i !== index));
-        setImageFiles(prev => prev.filter((_, i) => i !== index));
+    const handleAdditionalUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setAdditionalFiles(prev => [...prev, ...files]);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onloadend = () => setAdditionalPreviews(prev => [...prev, reader.result as string]);
+                reader.readAsDataURL(file);
+            });
+        }
+    };
+
+    const removeAdditional = (index: number) => {
+        setAdditionalPreviews(prev => prev.filter((_, i) => i !== index));
+        setAdditionalFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // ── Validation ──────────────────────────────────
         const errs: Record<string, string> = {};
-        if (!formData.name.trim()) errs.name = 'Product name is required';
-        if (!formData.price || parseFloat(formData.price) <= 0)
-            errs.price = 'Selling price must be greater than 0';
-        if (!formData.stock && formData.stock !== '0')
-            errs.stock = 'Stock quantity is required';
-        if (!formData.category) errs.category = 'Please select a category';
+        if (!formData.name.trim()) errs.name = 'Required';
+        if (!formData.price) errs.price = 'Required';
+        if (!formData.category) errs.category = 'Required';
 
         if (Object.keys(errs).length > 0) {
-            setValidationErrors(errs);
-            showToast('Please fill in all required fields.', 'error');
+            setErrors(errs);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
-        setValidationErrors({});
-        setIsSubmitting(true);
 
+        setIsSubmitting(true);
         try {
             const data = new FormData();
             data.append('name', formData.name);
             data.append('description', formData.description);
-
-            // Handle Category
-            const isNumber = /^\d+$/.test(formData.category.toString());
-            if (isNumber) {
-                data.append('category', formData.category.toString());
-            } else {
-                const cat = categories.find(c => c.name === formData.category || c.id.toString() === formData.category);
-                if (cat) data.append('category', cat.id.toString());
-                else if (categories.length > 0) data.append('category', categories[0].id.toString()); // Fallback
-            }
-
-            data.append('price', formData.price || '0');
+            data.append('category', formData.category);
+            data.append('price', formData.price);
             if (formData.costPrice) data.append('cost', formData.costPrice);
             if (formData.retailPrice) data.append('retail_price', formData.retailPrice);
-            data.append('quantity_in_stock', formData.stock || '0');
-
-            if (formData.sku) {
-                data.append('sku', formData.sku);
-            } else {
-                data.append('sku', `SKU-${Date.now()}`);
-            }
-
+            if (formData.sku) data.append('sku', formData.sku);
+            if (formData.barcode) data.append('barcode', formData.barcode);
+            if (formData.batchNumber) data.append('batch_number', formData.batchNumber);
+            if (formData.company) data.append('company', formData.company);
             data.append('status', formData.status);
-            if (formData.company_category) data.append('company_category', formData.company_category);
 
-            if (imageFiles.length > 0) {
-                data.append('image', imageFiles[0]); // Take first file
-            }
+            if (imageFiles.length > 0) data.append('image', imageFiles[0]);
+            additionalFiles.forEach(file => data.append('upload_images', file));
 
-            if (isEditMode) {
-                try {
-                    await productService.update(productId, data);
-                    showToast(`Product "${formData.name}" updated successfully!`, 'success');
-                    setTimeout(() => router.push('/admin/products'), 1500);
-                } catch (e: any) {
-                    console.warn("API update failed", e);
-                    const errMsg = e?.response?.data ? JSON.stringify(e.response.data) : (e.message || "");
-                    showToast(`Failed to update product "${formData.name}". ${errMsg}`, 'error');
-                }
-            } else {
-                try {
-                    await productService.create(data);
-                    showToast(`Product "${formData.name}" added successfully!`, 'success');
-                    setTimeout(() => router.push('/admin/products'), 1500);
-                } catch (e: any) {
-                    console.warn("API create failed", e);
-                    const errMsg = e?.response?.data ? JSON.stringify(e.response.data) : (e.message || "");
-                    showToast(`Failed to add product "${formData.name}". ${errMsg}`, 'error');
-                }
-            }
+            if (isEditMode) await productService.update(productId, data);
+            else await productService.create(data);
+
+            showToast('Changes saved successfully!');
+            setTimeout(() => router.push('/admin/products'), 1000);
+        } catch (err) {
+            showToast('Failed to save changes');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (isLoading) {
-        return <div className="p-8 text-center text-gray-500">Loading details...</div>;
-    }
+    if (isLoading) return <div className="p-20 text-center text-gray-500">Loading catalog data...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin/products" className="p-2 bg-white border border-gray-200 rounded-full text-gray-500 hover:text-[#FF9900] hover:bg-[#FF9900]/10 hover:border-[#FF9900]/30 transition-all shadow-sm">
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Product' : 'Add New Product'}</h1>
-                        <p className="text-gray-500 text-sm mt-1">{isEditMode ? `Update details for ${formData.name}` : 'Create a new product in the catalog.'}</p>
-                    </div>
-                </div>
+        <div className="max-w-4xl mx-auto py-8 px-4">
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-normal text-gray-900 dark:text-white">
+                    {isEditMode ? 'Edit Product' : 'Add New Product'}
+                </h1>
+                <button onClick={() => router.push('/admin/products')} className="text-sm text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-1">
+                    <ArrowLeft className="w-4 h-4" /> Back to list
+                </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: General, Pricing, Inventory */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* General Information */}
-                    <Card title="General Information">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Product Name</label>
-                                <div className="relative">
-                                    <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={e => { handleInputChange(e); setValidationErrors(prev => ({ ...prev, name: '' })); }}
-                                        className={`w-full pl-10 pr-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 text-sm text-gray-900 transition-all font-medium ${validationErrors.name
-                                            ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
-                                            : 'border-gray-200 focus:ring-[#FF9900]/20 focus:border-[#FF9900]'
-                                            }`}
-                                        placeholder="e.g. Vitamin C Face Serum 30ml"
-                                    />
-                                </div>
-                                {validationErrors.name && <p className="text-red-500 text-[10px] font-bold mt-1">{validationErrors.name}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Description</label>
-                                <div className="relative">
-                                    <AlignLeft className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                                    <textarea
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleInputChange}
-                                        rows={4}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all resize-none"
-                                        placeholder="Write an engaging product description..."
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Pricing */}
-                    <Card title="Pricing">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Cost Price (Rs.)</label>
-                                <div className="relative">
-                                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <input
-                                        type="number"
-                                        name="costPrice"
-                                        value={formData.costPrice}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all font-medium"
-                                        placeholder="0.00"
-                                        min="0"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Retail Price (Rs.)</label>
-                                <div className="relative">
-                                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-400" />
-                                    <input
-                                        type="number"
-                                        name="retailPrice"
-                                        value={formData.retailPrice}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-blue-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm text-blue-700 transition-all font-medium"
-                                        placeholder="0.00"
-                                        min="0"
-                                    />
-                                </div>
-                            </div>
-                            <div className="col-span-2">
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Selling Price (Rs.) <span className="text-red-500">*</span></label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#FF9900]" />
-                                    <input
-                                        type="number"
-                                        name="price"
-                                        value={formData.price}
-                                        onChange={e => { handleInputChange(e); setValidationErrors(prev => ({ ...prev, price: '' })); }}
-                                        className={`w-full pl-10 pr-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 text-sm font-bold transition-all ${validationErrors.price
-                                            ? 'border-red-400 text-red-500 focus:ring-red-100 focus:border-red-400'
-                                            : 'border-gray-200 text-[#FF9900] focus:ring-[#FF9900]/20 focus:border-[#FF9900]'
-                                            }`}
-                                        placeholder="0.00"
-                                        min="0"
-                                    />
-                                </div>
-                                {validationErrors.price && <p className="text-red-500 text-[10px] font-bold mt-1">{validationErrors.price}</p>}
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Inventory & Tracking */}
-                    <Card title="Inventory & Tracking">
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">SKU</label>
-                                    <div className="relative">
-                                        <Settings className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            name="sku"
-                                            value={formData.sku}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all font-medium"
-                                            placeholder="e.g. SKU-123456"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Stock Quantity</label>
-                                    <div className="relative">
-                                        <Box className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="number"
-                                            name="stock"
-                                            value={formData.stock}
-                                            onChange={e => { handleInputChange(e); setValidationErrors(prev => ({ ...prev, stock: '' })); }}
-                                            className={`w-full pl-10 pr-4 py-3 bg-gray-50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 text-sm text-gray-900 transition-all font-medium ${validationErrors.stock
-                                                ? 'border-red-400 focus:ring-red-100 focus:border-red-400'
-                                                : 'border-gray-200 focus:ring-[#FF9900]/20 focus:border-[#FF9900]'
-                                                }`}
-                                            placeholder="0"
-                                            min="0"
-                                        />
-                                    </div>
-                                    {validationErrors.stock && <p className="text-red-500 text-[10px] font-bold mt-1">{validationErrors.stock}</p>}
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Purchase Date</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            name="purchaseDate"
-                                            value={formData.purchaseDate}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] transition-all text-gray-700 uppercase tracking-wider text-xs font-bold"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">Expiry Date</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            name="expiryDate"
-                                            value={formData.expiryDate}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] transition-all text-gray-700 uppercase tracking-wider text-xs font-bold"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Right Column: Organization & Media */}
+            <form onSubmit={handleSubmit}>
                 <div className="space-y-6">
-                    {/* Status / Publish Card */}
-                    <Card title="Product Status">
-                        <div className="flex items-center justify-between">
-
-                            {/* Left: Label + Status */}
-                            <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-900">
-                                    Product Visibility
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                    {formData.status === 'active'
-                                        ? 'Visible on storefront'
-                                        : 'Hidden from storefront'}
-                                </span>
+                    {/* Basic Info */}
+                    <SectionCard>
+                        <SectionHeader title="Basic Information" icon={Tag} />
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="md:col-span-2">
+                                    <label className={LABEL}>Product Name <span className="text-red-700">*</span></label>
+                                    <input name="name" value={formData.name} onChange={h} className={INPUT(!!errors.name)} placeholder="e.g. Lavender Face Wash" />
+                                </div>
+                                <div>
+                                    <label className={LABEL}>Category <span className="text-red-700">*</span></label>
+                                    <select name="category" value={formData.category} onChange={h} className={INPUT(!!errors.category)}>
+                                        <option value="">Select Category</option>
+                                        {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={LABEL}>Producer / Company</label>
+                                    <select name="company" value={formData.company} onChange={h} className={INPUT()}>
+                                        <option value="">Select Company</option>
+                                        {companies.map((comp: any) => <option key={comp.id} value={comp.id}>{comp.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className={LABEL}>Description</label>
+                                    <textarea name="description" value={formData.description} onChange={h} rows={3} className={INPUT() + ' resize-none'} placeholder="Technical specs and benefits..." />
+                                </div>
                             </div>
-
-                            {/* Right: Modern Toggle */}
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        status: prev.status === 'active' ? 'inactive' : 'active'
-                                    }))
-                                }
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${formData.status === 'active'
-                                    ? 'bg-[#FF9900]'
-                                    : 'bg-gray-300'
-                                    }`}
-                            >
-                                <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-300 ${formData.status === 'active'
-                                        ? 'translate-x-6'
-                                        : 'translate-x-1'
-                                        }`}
-                                />
-                            </button>
-
                         </div>
-                    </Card>
+                    </SectionCard>
 
-                    {/* Product Images */}
-                    <Card title="Product Images">
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {images.map((img, index) => (
-                                    <div key={index} className="relative aspect-square rounded-xl border border-gray-200 overflow-hidden group">
-                                        <img src={img} alt={`Product ${index}`} className="w-full h-full object-cover" />
+                    {/* Pricing & Inventory */}
+                    <SectionCard>
+                        <SectionHeader title="Pricing & Inventory" icon={Box} />
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className={LABEL}>List Price (PKR) <span className="text-red-700">*</span></label>
+                                    <input type="number" name="price" value={formData.price} onChange={h} className={INPUT(!!errors.price)} placeholder="0.00" />
+                                </div>
+                                <div>
+                                    <label className={LABEL}>Retail Price (MRP)</label>
+                                    <input type="number" name="retailPrice" value={formData.retailPrice} onChange={h} className={INPUT()} placeholder="0.00" />
+                                </div>
+                                <div>
+                                    <label className={LABEL}>SKU Identifier</label>
+                                    <input name="sku" value={formData.sku} onChange={h} className={INPUT()} placeholder="Manual code or auto-gen" />
+                                </div>
+                                <div>
+                                    <label className={LABEL}>Barcode (UPC/EAN)</label>
+                                    <input name="barcode" value={formData.barcode} onChange={h} className={INPUT()} placeholder="Standard code" />
+                                </div>
+                            </div>
+                        </div>
+                    </SectionCard>
+
+                    {/* Images */}
+                    <SectionCard>
+                        <SectionHeader title="Product Media" icon={Camera} />
+                        <div className="p-6">
+                            <div className="flex flex-wrap gap-4">
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-32 h-32 border border-[#ddd] rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 bg-white"
+                                >
+                                    {images[0] ? (
+                                        <img src={images[0]} className="w-full h-full object-contain p-2" />
+                                    ) : (
+                                        <div className="text-center p-2">
+                                            <Camera className="w-6 h-6 mx-auto text-gray-400" />
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase mt-1">Main Image</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {additionalPreviews.map((src, idx) => (
+                                    <div key={idx} className="w-32 h-32 border border-[#ddd] rounded relative group bg-white">
+                                        <img src={src} className="w-full h-full object-contain p-2" />
                                         <button
                                             type="button"
-                                            onClick={() => removeImage(index)}
-                                            className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-600 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-sm"
+                                            onClick={() => removeAdditional(idx)}
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
-                                            <X size={14} />
+                                            <Trash2 className="w-3 h-3" />
                                         </button>
                                     </div>
                                 ))}
-
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-[#FF9900] hover:text-[#FF9900] hover:bg-[#FF9900]/5 transition-colors bg-gray-50"
+                                <div
+                                    onClick={() => additionalFilesRef.current?.click()}
+                                    className="w-32 h-32 border border-dashed border-[#a6a6a6] rounded flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
                                 >
-                                    <Upload size={20} className="mb-1" />
-                                    <span className="text-[10px] font-bold">Add</span>
-                                </button>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    multiple
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                />
-                            </div>
-                            <p className="text-[11px] text-gray-500 font-medium text-center">
-                                Supports JPG, PNG up to 4 images.
-                            </p>
-                        </div>
-                    </Card>
-
-                    {/* Organization */}
-                    <Card title="Organization">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
-                                <div className="relative">
-                                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <select
-                                        name="category"
-                                        value={formData.category}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all appearance-none cursor-pointer font-medium"
-                                        required
-                                    >
-                                        <option value="" disabled>Select Category</option>
-                                        {categories.map((cat: any) => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </select>
+                                    <Plus className="w-6 h-6 text-gray-400" />
                                 </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Brand</label>
-                                <div className="relative">
-                                    <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        name="brand"
-                                        value={formData.brand}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all font-medium"
-                                        placeholder="e.g. L'Oreal"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Company Name</label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
-                                    {companies.length > 0 ? (
-                                        <select
-                                            name="companyName"
-                                            value={formData.companyName}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all appearance-none cursor-pointer font-medium"
-                                        >
-                                            <option value="">Select Company</option>
-                                            {companies.map(c => (
-                                                <option key={c.id} value={c.name}>{c.name}</option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <input
-                                            type="text"
-                                            name="companyName"
-                                            value={formData.companyName}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all font-medium"
-                                            placeholder="No companies yet — add one first"
-                                        />
-                                    )}
-                                </div>
-                                {companies.length === 0 && (
-                                    <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                                        <Building2 className="h-3 w-3" /> Go to Company section to add companies first
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Product Origin / Region</label>
-                                <div className="relative">
-                                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
-                                    <select
-                                        name="company_category"
-                                        value={formData.company_category}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm text-gray-900 transition-all appearance-none cursor-pointer font-medium"
-                                    >
-                                        <option value="">Select Origin (Local/Imported)</option>
-                                        {companyCategories.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <input type="file" ref={fileInputRef} className="hidden" onChange={handleImageUpload} />
+                                <input type="file" ref={additionalFilesRef} className="hidden" onChange={handleAdditionalUpload} multiple />
                             </div>
                         </div>
-                    </Card>
+                    </SectionCard>
 
-                    {/* ── Action Buttons ── */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+                    <div className="flex justify-end gap-3 pt-4">
                         <button
                             type="button"
-                            disabled={isSubmitting}
-                            onClick={handleSubmit as any}
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#FF9900] to-[#e68a00] text-white font-black text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_8px_20px_rgba(255,153,0,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:transform-none shadow-md"
+                            onClick={() => router.push('/admin/products')}
+                            className="px-6 py-1.5 bg-white dark:bg-slate-700 border border-[#a6a6a6] dark:border-slate-600 rounded text-sm hover:bg-gray-100 transition-colors"
                         >
-                            {isSubmitting
-                                ? <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-                                : <Save size={16} />
-                            }
-                            {isSubmitting ? 'Saving...' : 'Save Product'}
+                            Cancel
                         </button>
-                        <Link href="/admin/products">
-                            <button type="button"
-                                className="w-full py-3 bg-white border border-gray-200 text-gray-700 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all">
-                                Cancel
-                            </button>
-                        </Link>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="px-8 py-1.5 bg-[#f0c14b] border border-[#a88734] rounded text-sm font-medium hover:bg-[#ebae1e] shadow-sm flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-gray-800" />}
+                            {isEditMode ? 'Save Changes' : 'Create Product'}
+                        </button>
                     </div>
                 </div>
             </form>
 
-            {/* Toast Notification */}
-            {toast.show && (
-                <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-                    <div className="bg-white border border-gray-100 px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px]">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                            {toast.type === 'success' ? <CheckCircle className="h-5 w-5 text-white" /> : <XCircle className="h-5 w-5 text-white" />}
-                        </div>
-                        <div className="flex-1">
-                            <p className={`font-black text-[10px] uppercase tracking-widest mb-0.5 ${toast.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
-                                {toast.type === 'success' ? 'Success' : 'Error'}
-                            </p>
-                            <p className="text-gray-900 text-sm font-bold leading-tight">{toast.message}</p>
-                        </div>
-                        <button type="button" onClick={() => setToast(t => ({ ...t, show: false }))} className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
+            {toast && (
+                <div className="fixed bottom-6 right-6 bg-[#232f3e] text-white px-6 py-3 rounded shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                    <span className="text-sm font-medium">{toast}</span>
                 </div>
             )}
         </div>

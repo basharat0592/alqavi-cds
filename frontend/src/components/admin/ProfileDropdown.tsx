@@ -15,10 +15,10 @@ import { settingsService } from '@/lib/api';
 export default function ProfileDropdown({
     user, onClose, onLogout, onUpdated
 }: {
-    user: { name: string; email: string; role: string; id?: string };
+    user: { name: string; email: string; role: string; id?: string; avatar?: string };
     onClose: () => void;
     onLogout: () => void;
-    onUpdated: (name: string, email: string) => void;
+    onUpdated: (name: string, email: string, avatar?: string) => void;
 }) {
     const [tab, setTab] = useState<'menu' | 'edit' | 'password'>('menu');
     const [saving, setSaving] = useState(false);
@@ -58,17 +58,21 @@ export default function ProfileDropdown({
         setSaving(true);
         try {
             if (!user.id) throw new Error('no id');
-            await settingsService.updateProfile(Number(user.id), {
+            const response = await settingsService.updateProfile(Number(user.id), {
                 first_name: firstName, last_name: lastName, email, phone,
             });
             const fullName = `${firstName} ${lastName}`.trim();
             const u = authService.getUser();
-            if (u) authService.setSession(
-                { ...u, name: fullName, email },
-                localStorage.getItem('accessToken') || '',
-                localStorage.getItem('refreshToken') || undefined
-            );
-            onUpdated(fullName, email);
+            if (u) {
+                const updatedUser = { ...u, name: fullName, email, avatar: response?.avatar || u.avatar };
+                authService.setSession(
+                    updatedUser,
+                    localStorage.getItem('accessToken') || '',
+                    localStorage.getItem('refreshToken') || undefined
+                );
+                onUpdated(fullName, email, updatedUser.avatar);
+                window.dispatchEvent(new Event('profileUpdated'));
+            }
             showMsg('Profile updated!', true);
         } catch (err: any) {
             const status = err?.response?.status;
@@ -80,7 +84,7 @@ export default function ProfileDropdown({
                     localStorage.getItem('accessToken') || '',
                     localStorage.getItem('refreshToken') || undefined
                 );
-                onUpdated(fullName, email);
+                onUpdated(fullName, email, u?.avatar);
                 showMsg('Saved locally!', true);
             } else {
                 showMsg(err?.response?.data?.detail || 'Failed to update.', false);
@@ -103,7 +107,7 @@ export default function ProfileDropdown({
     };
 
     const initials = (user.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const inputCls = "w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF9900]/30 focus:border-[#FF9900] text-sm font-medium text-gray-900 transition-all placeholder:text-gray-300";
+    const inputCls = "w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF9900]/30 focus:border-[#FF9900] text-sm font-medium text-gray-900 dark:text-white transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600";
 
     const TABS = [
         { id: 'menu' as const, label: 'Menu' },
@@ -123,12 +127,12 @@ export default function ProfileDropdown({
     ];
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-[340px] bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-3 w-[340px] bg-white dark:bg-[#1e293b] rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
 
             {/* Toast */}
             {toast && (
                 <div className={`absolute top-3 left-3 right-3 flex items-center gap-2 px-3 py-2.5 text-xs font-bold z-10 rounded-xl shadow-lg
-                    ${toast.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    ${toast.ok ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20'}`}>
                     {toast.ok ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : <X className="h-3.5 w-3.5" strokeWidth={2.5} />}
                     {toast.msg}
                 </div>
@@ -137,8 +141,12 @@ export default function ProfileDropdown({
             {/* Profile Header */}
             <div className="bg-[#232F3E] px-5 pt-5 pb-4 rounded-t-2xl">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#FF9900] rounded-xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-base font-black text-white">{initials}</span>
+                    <div className="w-12 h-12 bg-[#FF9900] rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg border border-orange-400/20">
+                        {user.avatar ? (
+                            <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-base font-black text-white">{initials}</span>
+                        )}
                     </div>
                     <div className="min-w-0 flex-1">
                         <p className="font-black text-white text-sm truncate">{user.name}</p>
@@ -169,21 +177,21 @@ export default function ProfileDropdown({
                 <div className="py-2">
                     {MENU_ITEMS.map(item => (
                         <Link key={item.label} href={item.href} onClick={onClose}
-                            className="flex items-center gap-3 px-5 py-3 hover:bg-[#FF9900]/5 transition-colors group">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.bg}`}>
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-[#FF9900]/5 dark:hover:bg-[#FF9900]/10 transition-colors group">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.bg} dark:bg-opacity-20`}>
                                 <item.icon className={`h-4 w-4 ${item.color}`} strokeWidth={2.5} />
                             </div>
-                            <span className="text-sm font-bold text-gray-700 group-hover:text-[#FF9900] flex-1">{item.label}</span>
-                            <ChevronRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" strokeWidth={2.5} />
+                            <span className="text-sm font-bold text-gray-700 dark:text-slate-300 group-hover:text-[#FF9900] dark:group-hover:text-[#FF9900] flex-1 text-left">{item.label}</span>
+                            <ChevronRight className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" strokeWidth={2.5} />
                         </Link>
                     ))}
-                    <div className="mx-4 my-1 border-t border-gray-100" />
+                    <div className="mx-4 my-1 border-t border-gray-100 dark:border-slate-800" />
                     <button onClick={onLogout}
-                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-red-50 transition-colors group">
-                        <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
+                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-red-50 dark:hover:bg-red-500/5 transition-colors group">
+                        <div className="w-8 h-8 bg-red-50 dark:bg-red-500/10 rounded-lg flex items-center justify-center">
                             <LogOut className="h-4 w-4 text-red-500" strokeWidth={2.5} />
                         </div>
-                        <span className="text-sm font-bold text-red-600 flex-1 text-left">Sign Out</span>
+                        <span className="text-sm font-bold text-red-600 dark:text-red-400 flex-1 text-left">Sign Out</span>
                     </button>
                 </div>
             )}
@@ -245,9 +253,9 @@ export default function ProfileDropdown({
                             {[1, 2, 3, 4].map(i => (
                                 <div key={i} className={`h-1 flex-1 rounded-full ${newPw.length >= i * 3
                                     ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-orange-400' : i <= 3 ? 'bg-yellow-400' : 'bg-emerald-400'
-                                    : 'bg-gray-200'}`} />
+                                    : 'bg-gray-200 dark:bg-slate-800'}`} />
                             ))}
-                            <span className="text-[9px] font-bold text-gray-400 ml-1">
+                            <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 ml-1">
                                 {newPw.length < 4 ? 'Weak' : newPw.length < 7 ? 'Fair' : newPw.length < 10 ? 'Good' : 'Strong'}
                             </span>
                         </div>

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Sales module API views — Order management endpoints.
 """
 from rest_framework import status
@@ -12,9 +12,12 @@ from .models import Order, OrderItem
 from .serializers import (
     OrderSerializer,
     OrderCreateUpdateSerializer,
-    OrderListSerializer
+    OrderListSerializer,
 )
 from core.utils import get_or_404_response
+
+
+
 
 
 @api_view(['GET'])

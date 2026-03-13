@@ -1,261 +1,170 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { productService } from '@/lib/api';
+import React, { useEffect, useState } from 'react';
 import {
-    Package, Search, AlertTriangle, CheckCircle,
-    XCircle, RefreshCw, ChevronUp, ChevronDown,
+    Box, Package, ArrowRightLeft, History, AlertCircle,
+    ArrowUpRight, ArrowDownRight, Warehouse, Layers, Settings,
+    Search, Filter, Plus, FileText, ChevronRight, BarChart3, TrendingUp
 } from 'lucide-react';
+import Link from 'next/link';
+import { inventoryService } from '@/lib/api';
 
-function StockBadge({ stock }: { stock: number }) {
-    const n = parseInt(String(stock));
-    if (n === 0) return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-red-50 text-red-600 border-red-100 shadow-sm"><XCircle className="h-3.5 w-3.5" strokeWidth={2.5} /> Out of Stock</span>;
-    if (n < 10) return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-orange-50 text-orange-600 border-orange-100 shadow-sm"><AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.5} /> Low ({n})</span>;
-    return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm"><CheckCircle className="h-3.5 w-3.5" strokeWidth={2.5} /> In Stock ({n})</span>;
-}
-
-type SortDir = 'asc' | 'desc';
-
-export default function InventoryPage() {
-    const [products, setProducts] = useState<any[]>([]);
+export default function StockManagementOverview() {
+    const [stats, setStats] = useState({
+        total_items: 0,
+        low_stock_count: 0,
+        expired_batches: 0,
+        total_movements: 0
+    });
     const [loading, setLoading] = useState(true);
-    const [productSearch, setProductSearch] = useState('');
-    const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
-    const [productSort, setProductSort] = useState<{ key: string; dir: SortDir }>({ key: 'name', dir: 'asc' });
 
-    const load = async () => {
-        setLoading(true);
-        try {
-            let apiProducts: any[] = [];
+    useEffect(() => {
+        const fetchStats = async () => {
             try {
-                const p = await productService.getAll();
-                apiProducts = Array.isArray(p) ? p : (p as any)?.results || [];
-            } catch (err) {
-                console.error('API Error', err);
+                const summary = await inventoryService.getInventorySummary();
+                const movements = await inventoryService.getMovements();
+                setStats({
+                    ...summary,
+                    total_movements: movements.length
+                });
+            } catch (error) {
+                console.error("Failed to fetch inventory stats", error);
+            } finally {
+                setLoading(false);
             }
-            const merged = apiProducts.map((p: any) => ({
-                ...p,
-                stock: p.stock !== undefined ? p.stock : (p.stock_quantity ?? 0),
-                category_name: p.category_name || p.category || 'Uncategorized',
-            }));
-            setProducts(merged);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+        fetchStats();
+    }, []);
 
-    useEffect(() => { load(); }, []);
+    const cards = [
+        { title: 'Total Stocked Items', value: stats.total_items, icon: Box, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', link: '/admin/inventory/list' },
+        { title: 'Expired Batches', value: stats.expired_batches, icon: Layers, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20', link: '/admin/inventory/batches' },
+        { title: 'Recent Movements', value: stats.total_movements, icon: History, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', link: '/admin/inventory/movements' },
+        { title: 'Low Stock Alerts', value: stats.low_stock_count, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', link: '/admin/alerts' },
+    ];
 
-    const filteredProducts = products
-        .filter(p => {
-            const matchSearch =
-                p.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
-                p.category_name?.toLowerCase().includes(productSearch.toLowerCase());
-            const stock = parseInt(p.stock ?? 0);
-            const matchStock =
-                stockFilter === 'all' ? true :
-                    stockFilter === 'out' ? stock === 0 :
-                        stock < 10 && stock > 0;
-            return matchSearch && matchStock;
-        })
-        .sort((a, b) => {
-            const va = a[productSort.key] ?? '';
-            const vb = b[productSort.key] ?? '';
-            if (typeof va === 'number') return productSort.dir === 'asc' ? va - vb : vb - va;
-            return productSort.dir === 'asc'
-                ? String(va).localeCompare(String(vb))
-                : String(vb).localeCompare(String(va));
-        });
-
-    const toggleSort = (key: string) => {
-        setProductSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
-    };
-
-    const outOfStock = products.filter(p => parseInt(p.stock ?? 0) === 0).length;
-    const lowStock = products.filter(p => parseInt(p.stock ?? 0) > 0 && parseInt(p.stock ?? 0) < 10).length;
-
-    const SortIcon = ({ k }: { k: string }) =>
-        productSort.key === k
-            ? productSort.dir === 'asc' ? <ChevronUp className="h-3 w-3 inline" /> : <ChevronDown className="h-3 w-3 inline" />
-            : null;
+    const tools = [
+        { name: 'Inventory Ledger', desc: 'Central tracking of all stock levels', icon: Package, link: '/admin/inventory/list' },
+        { name: 'Stock Movements', desc: 'Detailed log of every stock change', icon: ArrowRightLeft, link: '/admin/inventory/movements' },
+        { name: 'Batch Tracking', desc: 'Monitor production sets and expiry', icon: Layers, link: '/admin/inventory/batches' },
+        { name: 'Stock Adjustments', desc: 'Manual corrections and audits', icon: Settings, link: '/admin/inventory/adjustments' },
+        { name: 'Warehouse Hub', desc: 'Manage fulfillment centers and nodes', icon: Warehouse, link: '/admin/inventory/warehouses' },
+    ];
 
     return (
-        <div className="max-w-[1600px] mx-auto space-y-6 pb-12 font-sans px-3 sm:px-6 mt-6 relative z-0">
+        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
 
-            {/* Ambient Glow */}
-            <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
-                <div className="absolute top-[10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#FF9900]/15/30 blur-[120px]" />
-                <div className="absolute top-[20%] right-[0%] w-[30%] h-[50%] rounded-full bg-[#FF9900]/10/40 blur-[100px]" />
+            {/* Header - Matching Users/Company Style */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-[#E68A00]" />
+                        Inventory Dashboard
+                    </h1>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">
+                        Comprehensive overview of inventory health and operations across all warehouses
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Link href="/admin/inventory/adjustments" style={{ backgroundColor: '#E68A00' }} className="hover:opacity-90 text-white px-6 py-2 rounded text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-2">
+                        <Plus className="h-4 w-4" strokeWidth={3} />
+                        Create Adjustment
+                    </Link>
+                </div>
             </div>
 
-            {/* ── Merged Header + Stats Card ── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF9900]/6 rounded-full blur-[80px] -z-10 pointer-events-none" />
-
-                {/* Title + Refresh Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-7 sm:px-10 pt-7 pb-5 border-b border-gray-100/60">
-                    <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 bg-gradient-to-br from-[#FF9900] to-[#e68a00] rounded-2xl flex items-center justify-center shadow-[0_8px_20px_rgba(0,113,133,0.25)] flex-shrink-0">
-                            <Package className="h-5 w-5 text-white" strokeWidth={2.5} />
+            {/* Quick Stats Grid - Registry Style */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {cards.map((card, idx) => (
+                    <Link href={card.link} key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded shadow-sm hover:border-[#E68A00] transition-colors group">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest group-hover:text-[#E68A00] transition-colors">{card.title}</p>
+                            <div className={`${card.bg} p-2 rounded-lg transition-colors`}>
+                                <card.icon className={`h-4 w-4 ${card.color}`} strokeWidth={2.5} />
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-xl font-black text-gray-900 tracking-tight">Inventory</h1>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                                Manage product stock levels and alerts
+                        <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white uppercase">
+                            {loading ? '...' : card.value}
+                        </p>
+                    </Link>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Inventory Tools */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm overflow-hidden">
+                        <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-3 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Inventory Control Center</span>
+                            </div>
+                        </div>
+                        <div className="divide-y divide-gray-100 dark:divide-slate-800">
+                            {tools.map((tool, idx) => (
+                                <Link key={idx} href={tool.link} className="flex items-center p-6 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                    <div className="w-12 h-12 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mr-4 group-hover:bg-[#E68A00] group-hover:text-white transition-colors border border-gray-200 dark:border-slate-700">
+                                        <tool.icon className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-[#E68A00] transition-colors">{tool.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-slate-400">{tool.desc}</p>
+                                    </div>
+                                    <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-all opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0" />
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Operational Health Summary */}
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm p-6 overflow-hidden">
+                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-slate-800 pb-3">
+                            <Warehouse className="w-5 h-5 text-[#E68A00]" />
+                            <h2 className="font-bold text-gray-900 dark:text-white uppercase text-sm tracking-tight">Operational Health</h2>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="p-4 bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 rounded">
+                                <p className="text-[10px] font-bold text-red-800 dark:text-red-400 uppercase tracking-tight mb-1">Attention Required</p>
+                                <p className="text-sm text-red-700 dark:text-red-300">You have <strong>{stats.low_stock_count}</strong> items currently matching or below reorder levels.</p>
+                            </div>
+
+                            <div className="p-4 bg-orange-50 dark:bg-orange-900/10 border-l-4 border-orange-500 rounded">
+                                <p className="text-[10px] font-bold text-orange-800 dark:text-orange-400 uppercase tracking-tight mb-1">Quality Control</p>
+                                <p className="text-sm text-orange-700 dark:text-orange-300"><strong>{stats.expired_batches}</strong> stock batches have reached their expiration dates.</p>
+                                <Link href="/admin/inventory/batches" className="text-[10px] font-bold text-orange-800 dark:text-orange-400 hover:underline mt-2 inline-block uppercase bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded">Review Batches →</Link>
+                            </div>
+
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500 rounded">
+                                <p className="text-[10px] font-bold text-blue-800 dark:text-blue-400 uppercase tracking-tight mb-1">System Audit</p>
+                                <p className="text-sm text-blue-700 dark:text-blue-300">Stock movements tracking active. Total operations recorded: <strong>{stats.total_movements}</strong>.</p>
+                                <Link href="/admin/inventory/movements" className="text-[10px] font-bold text-blue-800 dark:text-blue-400 hover:underline mt-2 inline-block uppercase bg-blue-100 dark:bg-blue-900/20 px-2 py-1 rounded">View History →</Link>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Search Hub */}
+                    <div className="bg-[#131921] text-white p-6 rounded shadow-lg overflow-hidden relative group border border-slate-800">
+                        <div className="relative z-10">
+                            <h2 className="font-bold text-lg mb-2 text-[#E68A00] tracking-tight">Global Search</h2>
+                            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-4 opacity-60 flex items-center gap-2">
+                                <Box className="w-3 h-3" /> SKU / Barcode Lookup
                             </p>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search by SKU, Name or Barcode..."
+                                    className="w-full bg-white text-gray-900 px-4 py-2.5 pr-10 rounded text-sm outline-none focus:ring-2 focus:ring-[#E68A00] font-medium"
+                                />
+                                <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                            </div>
                         </div>
-                    </div>
-
-                    <button
-                        onClick={load}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-50 hover:shadow-sm hover:text-gray-900 transition-all duration-300 disabled:opacity-50 self-start sm:self-auto"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} strokeWidth={2.5} />
-                        Refresh Data
-                    </button>
-                </div>
-
-                {/* 3 Stat Pills Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100/60 px-0">
-                    {/* Total Products */}
-                    <div className="flex items-center justify-between px-7 sm:px-10 py-5">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Total Products</p>
-                            <p className="text-3xl font-black text-gray-900 tracking-tight">{loading ? '—' : products.length}</p>
-                        </div>
-                        <div className="w-10 h-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm">
-                            <Package className="w-5 h-5 text-gray-400" />
-                        </div>
-                    </div>
-
-                    {/* Low Stock */}
-                    <div className="flex items-center justify-between px-7 sm:px-10 py-5">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1">Low Stock Alerts</p>
-                            <p className="text-3xl font-black text-orange-600 tracking-tight">{loading ? '—' : lowStock}</p>
-                        </div>
-                        <div className="w-10 h-10 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center shadow-sm">
-                            <AlertTriangle className="w-5 h-5 text-orange-400" />
-                        </div>
-                    </div>
-
-                    {/* Out of Stock */}
-                    <div className="flex items-center justify-between px-7 sm:px-10 py-5">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-1">Out of Stock</p>
-                            <p className="text-3xl font-black text-red-600 tracking-tight">{loading ? '—' : outOfStock}</p>
-                        </div>
-                        <div className="w-10 h-10 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-center shadow-sm">
-                            <XCircle className="w-5 h-5 text-red-400" />
-                        </div>
+                        <Search className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5 opacity-10 blur-sm pointer-events-none transition-transform group-hover:scale-110" />
                     </div>
                 </div>
-            </div>
-
-            {/* ── Inventory Table Card ── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-[#FF9900]/4 blur-[100px] pointer-events-none -z-10" />
-
-                {/* Search + Filter Bar */}
-                <div className="px-6 sm:px-8 py-5 border-b border-gray-100/50 bg-gradient-to-b from-white to-transparent flex flex-col sm:flex-row items-center gap-4 relative z-10">
-                    <div className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl px-4 py-2.5 flex-1 min-w-[180px] focus-within:ring-2 focus-within:ring-[#FF9900]/20 focus-within:border-[#FF9900] shadow-sm transition-all">
-                        <Search className="h-4 w-4 text-gray-400" strokeWidth={2.5} />
-                        <input
-                            value={productSearch}
-                            onChange={e => setProductSearch(e.target.value)}
-                            placeholder="Search inventory..."
-                            className="text-sm text-gray-900 outline-none w-full bg-transparent font-bold placeholder:font-medium placeholder:text-gray-400"
-                        />
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                        {[
-                            { key: 'all', label: 'All Items' },
-                            { key: 'low', label: '⚠ Low Stock' },
-                            { key: 'out', label: '✕ Out of Stock' },
-                        ].map(f => (
-                            <button
-                                key={f.key}
-                                onClick={() => setStockFilter(f.key as any)}
-                                className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 shadow-sm border ${stockFilter === f.key
-                                        ? 'bg-gradient-to-r from-[#FF9900] to-[#e68a00] text-white border-transparent shadow-[0_4px_15px_rgba(0,113,133,0.25)] -translate-y-0.5'
-                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:-translate-y-0.5'
-                                    }`}
-                            >
-                                {f.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {loading ? (
-                    <div className="py-20 flex flex-col justify-center items-center">
-                        <div className="w-10 h-10 border-4 border-[#FF9900]/20 border-t-[#FF9900] rounded-full animate-spin mb-4" />
-                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Inventory...</p>
-                    </div>
-                ) : filteredProducts.length === 0 ? (
-                    <div className="py-20 text-center relative z-10 px-6">
-                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
-                            <Package className="h-8 w-8 text-gray-300" />
-                        </div>
-                        <p className="text-gray-900 font-bold mb-1">No products found in inventory.</p>
-                        <p className="text-gray-400 text-sm font-medium">Try adjusting your filters or search terms.</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto relative z-10 pb-2">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-gray-50/80 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    <th className="text-left px-8 py-4 cursor-pointer hover:text-gray-800 transition-colors" onClick={() => toggleSort('name')}>
-                                        <div className="flex items-center gap-1.5">Product <SortIcon k="name" /></div>
-                                    </th>
-                                    <th className="text-left px-5 py-4 cursor-pointer hover:text-gray-800 transition-colors" onClick={() => toggleSort('category_name')}>
-                                        <div className="flex items-center gap-1.5">Category <SortIcon k="category_name" /></div>
-                                    </th>
-                                    <th className="text-left px-5 py-4 cursor-pointer hover:text-gray-800 transition-colors" onClick={() => toggleSort('price')}>
-                                        <div className="flex items-center gap-1.5">Price <SortIcon k="price" /></div>
-                                    </th>
-                                    <th className="text-left px-5 py-4 cursor-pointer hover:text-gray-800 transition-colors" onClick={() => toggleSort('stock')}>
-                                        <div className="flex items-center gap-1.5">Stock <SortIcon k="stock" /></div>
-                                    </th>
-                                    <th className="text-left px-5 py-4">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredProducts.map((p, i) => (
-                                    <tr key={p.id || i} className="hover:bg-white/60 transition-all duration-300 group border-b border-gray-50/50 last:border-0">
-                                        <td className="px-8 py-4 font-black text-gray-900">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-200 border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-500 overflow-hidden">
-                                                    {p.image ? (
-                                                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <Package className="h-4 w-4 text-gray-400" />
-                                                    )}
-                                                </div>
-                                                <span className="truncate max-w-[200px] group-hover:text-[#FF9900] transition-colors text-sm">{p.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-4 text-gray-500 font-bold text-[10px] uppercase tracking-widest">
-                                            <span className="bg-gray-100 px-3 py-1.5 rounded-xl">{p.category_name || p.category || '—'}</span>
-                                        </td>
-                                        <td className="px-5 py-4 font-black text-gray-900 text-sm">
-                                            <span className="text-[10px] font-bold text-emerald-500 mr-1">Rs.</span>
-                                            {(parseFloat(p.price || 0) * 280).toLocaleString()}
-                                        </td>
-                                        <td className="px-5 py-4 font-black text-gray-900 text-sm">
-                                            {p.stock ?? '—'} <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">units</span>
-                                        </td>
-                                        <td className="px-5 py-4 group-hover:scale-105 transition-transform origin-left">
-                                            <StockBadge stock={parseInt(p.stock ?? 0)} />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
             </div>
         </div>
     );
 }
+

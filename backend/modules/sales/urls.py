@@ -1,4 +1,4 @@
-﻿"""
+"""
 Sales module URL routing.
 """
 from django.urls import path

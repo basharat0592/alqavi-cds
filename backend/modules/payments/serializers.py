@@ -1,1 +1,31 @@
-﻿
+from rest_framework import serializers
+from .models import PaymentCategory, Payment
+
+
+class PaymentCategorySerializer(serializers.ModelSerializer):
+    """Serializer for payment categories."""
+    
+    class Meta:
+        model = PaymentCategory
+        fields = ['id', 'name', 'description', 'slug', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    """Serializer for general payments."""
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Payment
+        fields = [
+            'id', 'amount', 'payment_type', 'method', 'category', 'category_name',
+            'reference_number', 'payer_payee', 'description', 'date', 'user', 'user_name',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'date']
+
+    def get_user_name(self, obj):
+        if obj.user:
+            return obj.user.get_full_name() or obj.user.username
+        return "System"

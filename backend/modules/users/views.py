@@ -262,14 +262,29 @@ def list_roles(request):
     return Response({'results': serializer.data, 'count': roles.count()})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def role_detail(request, role_id):
-    """Get role details."""
+    """Get, update, or delete role details."""
     role, err = get_or_404_response(Role, id=role_id)
     if err:
         return err
-    return Response(RoleSerializer(role).data)
+        
+    if request.method == 'GET':
+        return Response(RoleSerializer(role).data)
+        
+    elif request.method == 'PATCH':
+        serializer = RoleSerializer(role, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    elif request.method == 'DELETE':
+        if role.is_default:
+            return Response({'error': 'Cannot delete system default role'}, status=status.HTTP_400_BAD_REQUEST)
+        role.delete()
+        return Response({'message': 'Role deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])

@@ -45,7 +45,10 @@ export interface Product {
     category_name?: string;
     sku?: string;
     image?: string;
+    image_url?: string;
+    additional_images?: any[];
     status?: string;
+    batches?: any[];
     is_active?: boolean;
     is_in_stock?: boolean;
     company_category?: number | string | { id: number; name: string };
@@ -53,6 +56,18 @@ export interface Product {
     created_at: string;
     updated_at?: string;
 }
+
+export interface ProductCategory {
+    id: number | string;
+    name: string;
+    description?: string;
+    slug: string;
+    image?: string;
+    status: 'active' | 'inactive';
+    created_at?: string;
+    updated_at?: string;
+}
+
 
 // ─── Order ────────────────────────────────────────────────────────────────────
 
@@ -83,6 +98,14 @@ export interface Order {
     total?: string | number;
     status: OrderStatus | string;
     payment_status?: PaymentStatus | string;
+    payment_method?: string;
+    shipping_method?: string;
+    market?: string;
+    currency?: string;
+    discount_amount?: string | number;
+    shipping_cost?: string | number;
+    tax_amount?: string | number;
+    tags?: string[];
     items: OrderItem[];
     notes?: string;
     created_at: string;
@@ -180,9 +203,9 @@ export interface CompanyInfo {
     twitter?: string;
     currency?: string;
     tax_number?: string;
-    created_at?: string;
     updated_at?: string;
 }
+
 
 // ─── User Settings ────────────────────────────────────────────────────────────
 
@@ -233,13 +256,85 @@ export interface DashboardStats {
     customersChange?: number;
 }
 
-// ─── Cart ─────────────────────────────────────────────────────────────────────
-
-export interface CartItem {
+// ─── Inventory ────────────────────────────────────────────────────────────────
+export interface Warehouse {
     id: number | string;
     name: string;
-    price: number | string;
+    location?: string;
+    is_default: boolean;
+    status?: string | 'active' | 'inactive';
+}
+
+export interface ProductBatch {
+    id: number | string;
+    product: number | string;
+    product_name: string;
+    batch_number: string;
+    manufacturing_date?: string;
+    expiry_date?: string;
+    cost_price?: string | number;
+    status?: string;
+}
+
+export interface Inventory {
+    id: number | string;
+    product: number | string;
+    product_name: string;
+    sku: string;
+    warehouse: number | string;
+    warehouse_name: string;
+    batch?: number | string | null;
+    batch_number?: string | null;
+    current_stock: number;
+    reserved_stock: number;
+    available_stock: number;
+}
+
+export interface InventoryMovement {
+    id: number | string;
+    inventory: number | string;
+    product_name: string;
+    warehouse_name: string;
+    movement_type: 'purchase' | 'sale' | 'return' | 'adjustment' | 'transfer';
     quantity: number;
-    image: string;
-    category: string;
+    reference_id?: string;
+    user?: number | string;
+    user_name?: string;
+    notes?: string;
+    created_at: string;
+}
+
+export interface StockAdjustment {
+    id: number | string;
+    inventory: number | string;
+    product_name: string;
+    adjustment_type: 'add' | 'subtract';
+    quantity: number;
+    reason: string;
+    user?: number | string;
+    user_name?: string;
+    created_at: string;
+}
+
+export interface StockTransfer {
+    id: number | string;
+    product: number | string;
+    product_name: string;
+    batch?: number | string | null;
+    from_warehouse: number | string;
+    from_warehouse_name: string;
+    to_warehouse: number | string;
+    to_warehouse_name: string;
+    quantity: number;
+    status: 'pending' | 'completed' | 'cancelled';
+    user?: number | string;
+    user_name?: string;
+    created_at: string;
+}
+// ─── Common ───────────────────────────────────────────────────────────────────
+export interface PaginatedResponse<T> {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: T[];
 }

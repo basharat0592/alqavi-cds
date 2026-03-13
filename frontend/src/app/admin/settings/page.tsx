@@ -5,7 +5,7 @@ import {
     Settings, User, Store, Bell, Shield, Palette,
     Save, Camera, Eye, EyeOff, Check, X, Sun, Moon,
     Mail, Phone, Globe, Lock, Key, AlertTriangle, Trash2,
-    Upload, Loader2, RefreshCw
+    Upload, Loader2, RefreshCw, CheckCircle
 } from 'lucide-react';
 import { settingsService, companyService, CompanyInfo } from '@/lib/api';
 import { authService } from '@/lib/auth';
@@ -28,58 +28,65 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 /* ─── Toggle ─── */
 function Toggle({ enabled, onChange, label, description }: { enabled: boolean; onChange: (v: boolean) => void; label: string; description?: string; }) {
     return (
-        <div className="flex items-center justify-between py-4 border-b border-gray-100/80 last:border-0">
+        <div className="flex items-center justify-between py-4 border-b border-gray-100/80 dark:border-slate-800/80 last:border-0">
             <div>
-                <p className="text-sm font-bold text-gray-800">{label}</p>
-                {description && <p className="text-xs font-medium text-gray-400 mt-0.5">{description}</p>}
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{label}</p>
+                {description && <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-0.5">{description}</p>}
             </div>
-            <button onClick={() => onChange(!enabled)} className={`relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${enabled ? 'bg-[#FF9900]' : 'bg-gray-200'}`}>
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-300 ${enabled ? 'left-7' : 'left-1'}`} />
+            <button
+                type="button"
+                onClick={() => onChange(!enabled)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none ${enabled ? 'bg-[#FF9900]' : 'bg-gray-200 dark:bg-slate-600'}`}
+            >
+                <span className="sr-only">Use setting</span>
+                <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
+                />
             </button>
         </div>
     );
 }
 
 /* ─── Section Card ─── */
-function SectionCard({ children, title, subtitle, icon: Icon, accent = '#FF9900' }: { children: React.ReactNode; title: string; subtitle?: string; icon: React.ElementType; accent?: string; }) {
+function SectionCard({ children, title, subtitle, icon: Icon }: { children: React.ReactNode; title: string; subtitle?: string; icon: React.ElementType }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-56 h-56 rounded-full blur-[80px] -z-10 pointer-events-none" style={{ background: `${accent}10` }} />
-            <div className="px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}bb)` }}>
-                    <Icon className="h-5 w-5 text-white" strokeWidth={2.5} />
-                </div>
-                <div>
-                    <h2 className="text-base font-black text-gray-900 tracking-tight">{title}</h2>
-                    {subtitle && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{subtitle}</p>}
+        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800/50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-[#FF9900]" />
+                    <div>
+                        <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{title}</h2>
+                        {subtitle && <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.1em] mt-0.5">{subtitle}</p>}
+                    </div>
                 </div>
             </div>
-            <div className="px-8 py-6">{children}</div>
+            <div className="px-6 py-6">{children}</div>
         </div>
     );
 }
 
 /* ─── Field ─── */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, description }: { label: string; children: React.ReactNode; description?: string }) {
     return (
-        <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">{label}</label>
+        <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</label>
             {children}
+            {description && <p className="text-[10px] text-slate-400 font-medium">{description}</p>}
         </div>
     );
 }
 
-const inputCls = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF9900]/20 focus:border-[#FF9900] text-sm font-medium text-gray-900 shadow-sm transition-all placeholder:text-gray-300";
+const inputCls = "w-full px-3 py-2 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#FF9900] focus:border-[#FF9900] transition-all placeholder:text-gray-400";
 
-/* ─── Save Button ─── */
-function SaveBtn({ saving, onClick, label = 'Save Changes', gradient = 'from-[#FF9900] to-[#cc7a00]', shadow = 'rgba(0,113,133,0.3)' }: { saving: boolean; onClick: () => void; label?: string; gradient?: string; shadow?: string; }) {
+function SaveBtn({ saving, onClick, label = 'Save Changes' }: { saving: boolean; onClick: () => void; label?: string }) {
     return (
         <button
             onClick={onClick}
             disabled={saving}
-            className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r ${gradient} text-white font-black text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_8px_20px_${shadow}] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0`}
+            className="flex items-center gap-2 px-6 py-2 bg-[#FF9900] hover:bg-[#E68A00] text-[#131921] font-black text-xs uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} /> : <Save className="h-4 w-4" strokeWidth={2.5} />}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin text-[#131921]" /> : <Check className="h-4 w-4" />}
             {saving ? 'Saving...' : label}
         </button>
     );
@@ -98,7 +105,9 @@ export default function SettingsPage() {
 
     /* ── Profile state ── */
     const [profileSaving, setProfileSaving] = useState(false);
-    const [profile, setProfile] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+    const [profile, setProfile] = useState({ firstName: '', lastName: '', email: '', phone: '', avatar: '' });
+    const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
     /* ── Store / Company state ── */
@@ -150,6 +159,7 @@ export default function SettingsPage() {
                     lastName: nameParts.slice(1).join(' ') || '',
                     email: user?.email || '',
                     phone: '',
+                    avatar: user?.avatar || '',
                 });
 
                 // 2) Full profile from backend (overrides localStorage data)
@@ -160,6 +170,7 @@ export default function SettingsPage() {
                         lastName: profileData.last_name || nameParts.slice(1).join(' ') || '',
                         email: profileData.email || user?.email || '',
                         phone: profileData.phone || '',
+                        avatar: profileData.avatar || user?.avatar || '',
                     });
                     // Override dbId with real DB id from backend
                     setCurrentUser((u: any) => ({ ...u, dbId: profileData.id }));
@@ -234,45 +245,74 @@ export default function SettingsPage() {
         loadAll();
     }, []);
 
+    /* ─── Handle Avatar Choice ─── */
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedAvatar(file);
+            setAvatarPreview(URL.createObjectURL(file));
+        }
+    };
+
     /* ─── Profile Save ─── */
     const handleSaveProfile = async () => {
         setProfileSaving(true);
+        const accessToken = localStorage.getItem('accessToken') || '';
+        const isDemo = accessToken.startsWith('demo-token-');
+
         try {
             const userId = currentUser?.dbId || currentUser?.id;
-            if (!userId) throw new Error('User ID not found');
-            await settingsService.updateProfile(Number(userId), {
-                first_name: profile.firstName,
-                last_name: profile.lastName,
-                email: profile.email,
-                phone: profile.phone,
-            });
-            // Always update localStorage regardless
+            
+            // 1) Prepare Data
+            const fd = new FormData();
+            fd.append('first_name', profile.firstName);
+            fd.append('last_name', profile.lastName);
+            fd.append('email', profile.email);
+            fd.append('phone', profile.phone);
+            if (selectedAvatar) {
+                fd.append('avatar', selectedAvatar);
+            }
+
+            let updatedUserData = null;
+
+            // 2) Update Remote Database
+            if (userId && !isDemo) {
+                const response = await settingsService.updateProfile(Number(userId), fd as any);
+                updatedUserData = response;
+                showToast('Administrative profile synchronized with database.', 'success');
+            } else if (isDemo) {
+                showToast('Profile updated locally (Demo Mode).', 'success');
+            }
+
+            // 3) Update Local Session
             const user = authService.getUser();
             if (user) {
-                authService.setSession(
-                    { ...user, name: `${profile.firstName} ${profile.lastName}`.trim(), email: profile.email },
-                    localStorage.getItem('accessToken') || '',
-                    localStorage.getItem('refreshToken') || undefined
-                );
-            }
-            showToast('Profile updated successfully!', 'success');
-        } catch (err: any) {
-            // Even if backend fails (e.g. demo token), save name/email to localStorage
-            const status = err?.response?.status;
-            if (status === 401 || status === 403) {
-                const user = authService.getUser();
-                if (user) {
-                    authService.setSession(
-                        { ...user, name: `${profile.firstName} ${profile.lastName}`.trim(), email: profile.email },
-                        localStorage.getItem('accessToken') || '',
-                        localStorage.getItem('refreshToken') || undefined
-                    );
+                const updatedUser = { 
+                    ...user, 
+                    first_name: profile.firstName, 
+                    last_name: profile.lastName,
+                    name: `${profile.firstName} ${profile.lastName}`.trim(), 
+                    email: profile.email,
+                    avatar: updatedUserData?.avatar || user.avatar
+                };
+                authService.setSession(updatedUser, accessToken, localStorage.getItem('refreshToken') || undefined);
+                setCurrentUser(updatedUser);
+                if (updatedUserData?.avatar) {
+                    setProfile(prev => ({ ...prev, avatar: updatedUserData.avatar }));
                 }
-                showToast('Profile saved locally (login with real account to sync to server).', 'success');
-            } else {
-                const msg = err?.response?.data?.detail || err?.response?.data?.email?.[0] || 'Failed to update profile.';
-                showToast(msg, 'error');
+                // Notify other components like Layout/Navbar to refresh
+                window.dispatchEvent(new Event('profileUpdated'));
             }
+            setSelectedAvatar(null);
+            setAvatarPreview(null);
+        } catch (err: any) {
+            let msg = 'Database synchronization failed.';
+            if (err?.response?.status === 401) {
+                msg = 'Authentication credentials were not provided.';
+            } else {
+                msg = err?.response?.data?.detail || err?.response?.data?.email?.[0] || msg;
+            }
+            showToast(msg, 'error');
         } finally {
             setProfileSaving(false);
         }
@@ -333,16 +373,18 @@ export default function SettingsPage() {
 
     /* ─── Password Save ─── */
     const handleSavePassword = async () => {
+        if (!passwords.old) { showToast('Current password is required.', 'error'); return; }
         if (passwords.new !== passwords.confirm) { showToast('New passwords do not match!', 'error'); return; }
         if (passwords.new.length < 8) { showToast('New password must be at least 8 characters.', 'error'); return; }
         setPwSaving(true);
         try {
             const userId = currentUser?.dbId || currentUser?.id;
+            if (!userId) throw new Error('User session not found. Please log in again.');
             await settingsService.changePassword(Number(userId), passwords.old, passwords.new, passwords.confirm);
             setPasswords({ old: '', new: '', confirm: '' });
-            showToast('Password changed successfully!', 'success');
+            showToast('Password updated successfully!', 'success');
         } catch (err: any) {
-            const msg = err?.response?.data?.error || err?.response?.data?.detail || 'Failed to change password.';
+            const msg = err?.response?.data?.error || err?.response?.data?.detail || 'Update failed (Current password may be incorrect).';
             showToast(msg, 'error');
         } finally {
             setPwSaving(false);
@@ -398,38 +440,56 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="max-w-[1200px] mx-auto space-y-6 pb-12 font-sans px-3 sm:px-6 mt-6 relative z-0">
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-            {/* Ambient Glow */}
-            <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#FF9900]/15/30 blur-[120px]" />
-                <div className="absolute top-[20%] right-[-10%] w-[30%] h-[50%] rounded-full bg-purple-50/30 blur-[100px]" />
-            </div>
-
-            {/* ── Page Header ── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF9900]/8 rounded-full blur-[80px] -z-10 pointer-events-none" />
-                <div className="px-7 sm:px-10 py-7 flex items-center gap-4">
-                    <div className="w-11 h-11 bg-gradient-to-br from-[#FF9900] to-[#e68a00] rounded-2xl flex items-center justify-center shadow-[0_8px_20px_rgba(0,113,133,0.25)] flex-shrink-0">
-                        <Settings className="h-5 w-5 text-white" strokeWidth={2.5} />
+        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6 animate-in fade-in duration-700">
+            {toast && (
+                <div className="fixed bottom-6 right-6 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+                    <div className={`bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 ${toast.type === 'error' ? 'border-red-500' : 'border-[#FF9900]'}`}>
+                        {toast.type === 'error' ? (
+                            <AlertTriangle className="h-4 w-4 text-red-500" strokeWidth={2.5} />
+                        ) : (
+                            <CheckCircle className="h-4 w-4 text-[#FF9900]" strokeWidth={2.5} />
+                        )}
+                        <p className="text-xs font-bold uppercase tracking-widest leading-none">{toast.message}</p>
                     </div>
+                </div>
+            )}
+
+            {/* Header Card */}
+            <div className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-100 dark:border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-black text-gray-900 tracking-tight">Settings</h1>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Manage your account and store preferences</p>
+                        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2 italic uppercase">
+                            <Settings className="h-5 w-5 text-[#FF9900]" />
+                            Control Panel
+                        </h1>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-[0.2em] mt-1">Manage infrastructure, security and platform appearance</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => window.location.reload()} className="p-2 border border-gray-200 dark:border-slate-800 rounded hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 transition-colors">
+                            <RefreshCw className={`h-4 w-4 ${pageLoading ? 'animate-spin' : ''}`} />
+                        </button>
                     </div>
                 </div>
 
-                {/* Tab Nav */}
-                <div className="px-7 sm:px-10 border-t border-gray-100/60">
-                    <div className="flex gap-1 overflow-x-auto py-3">
+                {/* Horizontal Tabs */}
+                <div className="px-6 py-1 bg-gray-50/50 dark:bg-slate-800/20 overflow-x-auto scroller-hidden">
+                    <div className="flex gap-4">
                         {TABS.map(tab => {
                             const active = activeTab === tab.id;
                             return (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-200 ${active ? 'bg-[#FF9900] text-white shadow-[0_4px_12px_rgba(0,113,133,0.25)]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}>
-                                    <tab.icon className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                    {tab.label}
+                                <button 
+                                    key={tab.id} 
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`relative px-4 py-4 text-xs font-black uppercase tracking-widest transition-all duration-200 whitespace-nowrap
+                                        ${active ? 'text-[#FF9900]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <tab.icon className={`h-3.5 w-3.5 ${active ? 'text-[#FF9900]' : ''}`} strokeWidth={active ? 2.5 : 2} />
+                                        {tab.label}
+                                    </span>
+                                    {active && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF9900] rounded-full animate-in slide-in-from-left duration-300"></div>
+                                    )}
                                 </button>
                             );
                         })}
@@ -437,28 +497,39 @@ export default function SettingsPage() {
                 </div>
             </div>
 
+            <div className="space-y-6">
+                {/* Content Area */}
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+
             {/* ══════════════════════════════ PROFILE ══════════════════════════════ */}
             {activeTab === 'profile' && (
                 <SectionCard title="Profile Information" subtitle="Your personal account details" icon={User}>
                     {/* Avatar */}
-                    <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-100">
-                        <div className="relative flex-shrink-0">
-                            <div className="w-20 h-20 bg-gradient-to-br from-[#FF9900] to-[#e68a00] rounded-2xl flex items-center justify-center shadow-[0_8px_24px_rgba(0,113,133,0.25)]">
-                                <span className="text-2xl font-black text-white">
-                                    {(profile.firstName[0] || '?').toUpperCase()}{(profile.lastName[0] || '').toUpperCase()}
-                                </span>
+                    <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
+                        <div className="relative">
+                            <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 dark:border-slate-700">
+                                {avatarPreview || profile.avatar ? (
+                                    <img src={avatarPreview || profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-2xl font-black text-[#FF9900]">
+                                        {(profile.firstName[0] || '?').toUpperCase()}{(profile.lastName[0] || '').toUpperCase()}
+                                    </span>
+                                )}
                             </div>
-                            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white border-2 border-gray-100 rounded-xl flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors" title="Upload Photo">
-                                <Camera className="h-3.5 w-3.5 text-gray-500" strokeWidth={2.5} />
+                            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors text-slate-500" title="Upload Photo">
+                                <Camera className="h-3.5 w-3.5" />
                             </button>
-                            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" />
+                            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                         </div>
                         <div>
-                            <p className="font-black text-gray-900 text-base">{profile.firstName} {profile.lastName}</p>
-                            <p className="text-xs font-medium text-gray-400 mt-0.5">{profile.email}</p>
-                            <p className="text-[10px] font-bold text-[#FF9900] uppercase tracking-widest mt-1">
-                                {currentUser?.role || 'Admin'}
-                            </p>
+                            <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Account Identity:</span>
+                                <h1 className="text-base font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{profile.firstName} {profile.lastName}</h1>
+                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{profile.email}</p>
+                            </div>
+                            <span className="mt-3 inline-block px-3 py-1 bg-slate-900 dark:bg-slate-800 text-[#FF9900] text-[9px] font-black uppercase tracking-[0.2em] rounded">
+                                {currentUser?.role_name || currentUser?.role || 'Administrative Authority'}
+                            </span>
                         </div>
                     </div>
 
@@ -476,9 +547,9 @@ export default function SettingsPage() {
                             </div>
                         </Field>
                         <Field label="Phone Number">
-                            <div className="relative">
-                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
-                                <input className={`${inputCls} pl-10`} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+92 300 0000000" />
+                            <div className="relative group">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                <input className={`${inputCls} pl-9`} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+92 300 0000000" />
                             </div>
                         </Field>
                     </div>
@@ -503,21 +574,21 @@ export default function SettingsPage() {
                             <input className={inputCls} value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} placeholder="Online Cosmetics Shop" />
                         </Field>
                         <Field label="Website">
-                            <div className="relative">
-                                <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
-                                <input className={`${inputCls} pl-10`} value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} placeholder="www.example.com" />
+                            <div className="relative group">
+                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                <input className={`${inputCls} pl-9`} value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} placeholder="www.example.com" />
                             </div>
                         </Field>
                         <Field label="Store Email">
-                            <div className="relative">
-                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
-                                <input className={`${inputCls} pl-10`} value={store.email} onChange={e => setStore(s => ({ ...s, email: e.target.value }))} placeholder="store@example.com" />
+                            <div className="relative group">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                <input className={`${inputCls} pl-9`} value={store.email} onChange={e => setStore(s => ({ ...s, email: e.target.value }))} placeholder="store@example.com" />
                             </div>
                         </Field>
                         <Field label="Store Phone">
-                            <div className="relative">
-                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
-                                <input className={`${inputCls} pl-10`} value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="+92 21 1234567" />
+                            <div className="relative group">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                <input className={`${inputCls} pl-9`} value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="+92 21 1234567" />
                             </div>
                         </Field>
                         <Field label="Currency">
@@ -536,7 +607,7 @@ export default function SettingsPage() {
                         </Field>
                     </div>
                     <div className="mt-6 flex justify-end">
-                        <SaveBtn saving={storeSaving} onClick={handleSaveStore} gradient="from-violet-500 to-purple-600" shadow="rgba(139,92,246,0.3)" />
+                        <SaveBtn saving={storeSaving} onClick={handleSaveStore} />
                     </div>
                 </SectionCard>
             )}
@@ -557,7 +628,7 @@ export default function SettingsPage() {
                         <Toggle enabled={notif.notif_sms} onChange={v => setNotif(n => ({ ...n, notif_sms: v }))} label="SMS Alerts" description="Receive critical alerts via SMS on your phone" />
                     </div>
                     <div className="mt-6 flex justify-end">
-                        <SaveBtn saving={notifSaving} onClick={handleSaveNotifications} label="Save Preferences" gradient="from-amber-400 to-orange-500" shadow="rgba(245,158,11,0.3)" />
+                        <SaveBtn saving={notifSaving} onClick={handleSaveNotifications} label="Save Preferences" />
                     </div>
                 </SectionCard>
             )}
@@ -574,17 +645,17 @@ export default function SettingsPage() {
                                 { label: 'Confirm New Password', field: 'confirm', show: showConfirm, toggle: setShowConfirm },
                             ].map(({ label, field, show, toggle }) => (
                                 <Field key={field} label={label}>
-                                    <div className="relative">
-                                        <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
+                                    <div className="relative group">
+                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
                                         <input
                                             type={show ? 'text' : 'password'}
-                                            className={`${inputCls} pl-10 pr-10`}
+                                            className={`${inputCls} pl-9 pr-9`}
                                             placeholder={field === 'old' ? 'Enter current password' : field === 'new' ? 'Min. 8 characters' : 'Repeat new password'}
                                             value={passwords[field as keyof typeof passwords]}
                                             onChange={e => setPasswords(p => ({ ...p, [field]: e.target.value }))}
                                         />
-                                        <button type="button" onClick={() => toggle(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        <button type="button" onClick={() => toggle(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                            {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                         </button>
                                     </div>
                                 </Field>
@@ -608,9 +679,9 @@ export default function SettingsPage() {
                             <button
                                 onClick={handleSavePassword}
                                 disabled={pwSaving || !passwords.old || !passwords.new || passwords.new !== passwords.confirm}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:shadow-[0_8px_20px_rgba(239,68,68,0.3)] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                                className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} /> : <Key className="h-4 w-4" strokeWidth={2.5} />}
+                                {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
                                 {pwSaving ? 'Updating...' : 'Update Password'}
                             </button>
                         </div>
@@ -650,10 +721,10 @@ export default function SettingsPage() {
                         <div className="mt-6 flex justify-end">
                             <SaveBtn saving={secSaving} onClick={async () => {
                                 setSecSaving(true);
-                                await new Promise(r => setTimeout(r, 500));
+                                await new Promise(r => setTimeout(r, 600));
                                 setSecSaving(false);
-                                showToast('Session settings saved!', 'success');
-                            }} label="Save Settings" gradient="from-emerald-500 to-indigo-" shadow="rgba(16,185,129,0.3)" />
+                                showToast('Session settings synchronized.', 'success');
+                            }} label="Save Settings" />
                         </div>
                     </SectionCard>
                 </div>
@@ -661,56 +732,53 @@ export default function SettingsPage() {
 
             {/* ══════════════════════════════ APPEARANCE ══════════════════════════════ */}
             {activeTab === 'appearance' && (
-                <SectionCard title="Appearance" subtitle="Customize the look and feel" icon={Palette} accent="#EC4899">
-                    {/* Theme */}
-                    <div className="mb-6 pb-6 border-b border-gray-100">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Theme Mode</p>
+                <SectionCard title="Appearance" subtitle="Customize the interface style" icon={Palette}>
+                    {/* Theme Mode */}
+                    <div className="mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">System Theme</p>
                         <div className="grid grid-cols-2 gap-3 max-w-sm">
                             {(['light', 'dark'] as const).map(t => (
                                 <button key={t} onClick={() => setTheme(t)}
-                                    className={`relative p-4 rounded-2xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${theme === t ? 'border-[#FF9900] bg-[#FF9900]/5 shadow-[0_4px_16px_rgba(0,113,133,0.15)]' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t === 'light' ? 'bg-amber-50' : 'bg-gray-800'}`}>
+                                    className={`relative p-3 rounded border transition-all duration-200 flex flex-col items-center gap-2 ${theme === t ? 'border-[#FF9900] bg-[#FF9900]/5' : 'border-gray-200 bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-gray-300'}`}>
+                                    <div className={`w-10 h-10 rounded flex items-center justify-center ${t === 'light' ? 'bg-amber-50' : 'bg-gray-700'}`}>
                                         {t === 'light' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-gray-300" />}
                                     </div>
-                                    <span className="text-xs font-black text-gray-700 capitalize">{t} Mode</span>
-                                    {theme === t && <span className="absolute top-2 right-2 w-5 h-5 bg-[#FF9900] rounded-full flex items-center justify-center"><Check className="h-3 w-3 text-white" strokeWidth={3} /></span>}
+                                    <span className="text-[10px] font-black uppercase text-gray-700 dark:text-gray-300">{t} Mode</span>
+                                    {theme === t && <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#FF9900] rounded-full flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" strokeWidth={4} /></span>}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Accent Color */}
-                    <div className="mb-6 pb-6 border-b border-gray-100">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Accent Color</p>
+                    {/* Accent Selection */}
+                    <div className="mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Accent Priority</p>
                         <div className="flex items-center gap-2.5 flex-wrap">
                             {ACCENT_PRESETS.map(color => (
                                 <button key={color} onClick={() => setAccentColor(color)}
-                                    className={`w-9 h-9 rounded-xl transition-all duration-200 flex items-center justify-center ${accentColor === color ? 'scale-110 shadow-lg ring-2 ring-offset-2' : 'hover:scale-105'}`}
-                                    style={{ backgroundColor: color }} title={color}>
-                                    {accentColor === color && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                                    className={`w-8 h-8 rounded transition-all duration-200 flex items-center justify-center ${accentColor === color ? 'ring-2 ring-offset-2 ring-[#FF9900]' : 'hover:scale-105'}`}
+                                    style={{ backgroundColor: color }}>
+                                    {accentColor === color && <Check className="h-3.5 w-3.5 text-white shadow-sm" strokeWidth={4} />}
                                 </button>
                             ))}
-                            <div className="flex items-center gap-2 ml-2">
-                                <span className="text-xs font-bold text-gray-400">Custom:</span>
-                                <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="w-9 h-9 rounded-xl border border-gray-200 cursor-pointer p-0.5 bg-white" />
-                            </div>
                         </div>
                     </div>
 
-                    <Toggle enabled={compactMode} onChange={setCompactMode} label="Compact Mode" description="Reduce spacing for a denser information layout" />
-                    <Toggle enabled={animations} onChange={setAnimations} label="Animations & Transitions" description="Enable smooth animations throughout the dashboard" />
-                    <Toggle enabled={sidebarCollapsed} onChange={setSidebarCollapsed} label="Collapsed Sidebar by Default" description="Start with the sidebar minimized on load" />
+                    <div className="space-y-1">
+                        <Toggle enabled={compactMode} onChange={setCompactMode} label="High Density Mode" description="Optimized spacing for data-heavy administrative workflows" />
+                        <Toggle enabled={animations} onChange={setAnimations} label="Interface Motion" description="Smooth transitions and interactive micro-animations" />
+                        <Toggle enabled={sidebarCollapsed} onChange={setSidebarCollapsed} label="Minimal Workspace" description="Start with a collapsed sidebar for maximum focus" />
+                    </div>
 
                     <div className="mt-6 flex justify-end">
-                        <button onClick={handleSaveAppearance} disabled={appearanceSaving}
-                            className="flex items-center gap-2 px-5 py-2.5 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:-translate-y-0.5 transition-all duration-300 shadow-lg disabled:opacity-60"
-                            style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}aa)` }}>
-                            {appearanceSaving ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} /> : <Save className="h-4 w-4" strokeWidth={2.5} />}
-                            {appearanceSaving ? 'Saving...' : 'Save Appearance'}
-                        </button>
+                        <SaveBtn saving={appearanceSaving} onClick={handleSaveAppearance} label="Save Style" />
                     </div>
                 </SectionCard>
             )}
+                </div>
+            </div>
         </div>
     );
 }
+
+const ACCENT_PRESETS = ['#FF9900', '#2563EB', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];

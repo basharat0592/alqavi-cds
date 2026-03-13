@@ -2,7 +2,7 @@
 Company module serializers.
 """
 from rest_framework import serializers
-from .models import Company, CompanyCategory
+from .models import Company, CompanyCategory, Supplier
 
 
 class CompanyCategorySerializer(serializers.ModelSerializer):
@@ -24,5 +24,17 @@ class CompanySerializer(serializers.ModelSerializer):
             'address', 'city', 'country', 'website', 'logo',
             'description', 'facebook', 'instagram', 'twitter',
             'currency', 'tax_number', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class SupplierSerializer(serializers.ModelSerializer):
+    """Serializer for Supplier model."""
+    class Meta:
+        model = Supplier
+        fields = [
+            'id', 'name', 'contact_person', 'email', 'phone', 'whatsapp',
+            'address', 'city', 'country', 'tax_number', 'is_active',
+            'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

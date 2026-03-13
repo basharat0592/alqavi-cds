@@ -52,7 +52,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'phone', 
-            'address', 'city', 'country', 'postal_code', 'role', 'role_name',
+            'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
             'status', 'status_display', 'is_active', 'permissions', 
             'date_joined', 'last_login', 'last_login_ip', 'last_login_at'
         ]
@@ -73,7 +73,7 @@ class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'full_name', 'phone', 'role', 'role_name',
+            'id', 'username', 'email', 'full_name', 'phone', 'avatar', 'role', 'role_name',
             'status', 'status_display', 'is_active', 'date_joined', 'last_login'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login']
@@ -88,7 +88,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username', 'email', 'password', 'password_confirm', 'first_name', 
-            'last_name', 'phone', 'address', 'city', 'country', 'postal_code', 'role'
+            'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role'
         ]
     
     def validate(self, data):
@@ -110,7 +110,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'first_name', 'last_name', 'email', 'phone', 'address', 
+            'first_name', 'last_name', 'email', 'phone', 'avatar', 'address', 
             'city', 'country', 'postal_code', 'role'
         ]
 
