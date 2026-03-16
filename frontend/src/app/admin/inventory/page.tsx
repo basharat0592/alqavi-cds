@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { inventoryService } from '@/lib/api';
+import { PageWrapper, PageHeader, PrimaryButton, SectionCard } from '@/components/ui/AmazonStyles';
 
 export default function StockManagementOverview() {
     const [stats, setStats] = useState({
@@ -52,26 +53,20 @@ export default function StockManagementOverview() {
     ];
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
+        <PageWrapper>
 
             {/* Header - Matching Users/Company Style */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
-                <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-[#E68A00]" />
-                        Inventory Dashboard
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">
-                        Comprehensive overview of inventory health and operations across all warehouses
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Link href="/admin/inventory/adjustments" style={{ backgroundColor: '#E68A00' }} className="hover:opacity-90 text-white px-6 py-2 rounded text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-2">
+            <PageHeader
+                title="Inventory Dashboard"
+                subtitle="Comprehensive overview of inventory health and operations across all warehouses"
+                icon={TrendingUp}
+                action={
+                    <PrimaryButton href="/admin/inventory/adjustments" className="!bg-[#E68A00] hover:!bg-[#cc7a00] text-white">
                         <Plus className="h-4 w-4" strokeWidth={3} />
                         Create Adjustment
-                    </Link>
-                </div>
-            </div>
+                    </PrimaryButton>
+                }
+            />
 
             {/* Quick Stats Grid - Registry Style */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -93,7 +88,7 @@ export default function StockManagementOverview() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Inventory Tools */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm overflow-hidden">
+                    <SectionCard>
                         <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-3 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <BarChart3 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -114,7 +109,7 @@ export default function StockManagementOverview() {
                                 </Link>
                             ))}
                         </div>
-                    </div>
+                    </SectionCard>
                 </div>
 
                 {/* Operational Health Summary */}
@@ -164,7 +159,7 @@ export default function StockManagementOverview() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageWrapper>
     );
 }
 

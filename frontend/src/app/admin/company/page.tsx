@@ -34,7 +34,7 @@ const SectionHeader = ({ title, icon: Icon, action }: { title: string; icon?: an
 );
 
 const EMPTY: Partial<CompanyInfo> = {
-    name: '', email: '', phone: '', address: '', city: '', tax_number: '', website: '', category: ''
+    name: '', email: '', phone: '', address: '', city: '', tax_number: '', website: '', category: '', is_active: true
 };
 
 // ─── Company Form ─────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ function CompanyForm({
     const [categories, setCategories] = useState<CompanyCategory[]>([]);
 
     useEffect(() => {
-        companyCategoryService.getAll().then(setCategories);
+        companyCategoryService.getAll().then(cats => setCategories((cats || []).filter(c => c.is_active !== false)));
         if (editCompany) {
             setForm({
                 name: editCompany.name || '',
@@ -63,6 +63,7 @@ function CompanyForm({
                 tax_number: editCompany.tax_number || '',
                 website: editCompany.website || '',
                 category: editCompany.category || '',
+                is_active: editCompany.is_active !== false,
             });
         }
     }, [editCompany]);
@@ -154,6 +155,17 @@ function CompanyForm({
                                 <label className={LABEL}>Business Address</label>
                                 <textarea name="address" value={form.address} onChange={h} rows={3} className={INPUT() + ' resize-none'} placeholder="Street, Area, Building..." />
                             </div>
+                            <div className="flex items-center gap-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    name="is_active"
+                                    id="is_active"
+                                    checked={form.is_active}
+                                    onChange={(e) => setForm((p: any) => ({ ...p, is_active: e.target.checked }))}
+                                    className="w-4 h-4 text-[#FF9900] border-gray-300 rounded focus:ring-[#FF9900]"
+                                />
+                                <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Company</label>
+                            </div>
                         </div>
                     </div>
                     <div className="bg-gray-50/50 dark:bg-slate-800/50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 dark:border-slate-800">
@@ -185,6 +197,8 @@ export default function CompanyPage() {
     const [companies, setCompanies] = useState<CompanyInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [categories, setCategories] = useState<CompanyCategory[]>([]);
     const [editCompany, setEditCompany] = useState<CompanyInfo | null>(null);
     const [deleteCompany, setDeleteCompany] = useState<CompanyInfo | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -193,8 +207,12 @@ export default function CompanyPage() {
     const load = async () => {
         setLoading(true);
         try {
-            const data = await companyService.getAll();
-            setCompanies(data || []);
+            const [compData, catData] = await Promise.all([
+                companyService.getAll(),
+                companyCategoryService.getAll()
+            ]);
+            setCompanies(compData || []);
+            setCategories((catData || []).filter(c => c.is_active !== false));
         } catch (e) {
             console.error(e);
         } finally {
@@ -232,11 +250,13 @@ export default function CompanyPage() {
         }
     };
 
-    const filtered = (companies || []).filter(c =>
-        c.name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.email?.toLowerCase().includes(search.toLowerCase()) ||
-        c.city?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = (companies || []).filter(c => {
+        const matchesSearch = c.name?.toLowerCase().includes(search.toLowerCase()) ||
+            c.email?.toLowerCase().includes(search.toLowerCase()) ||
+            c.city?.toLowerCase().includes(search.toLowerCase());
+        const matchesCat = selectedCategory ? (typeof c.category === 'object' ? c.category.id?.toString() === selectedCategory : c.category?.toString() === selectedCategory) : true;
+        return matchesSearch && matchesCat;
+    });
 
     if (view === 'form') {
         return (
@@ -254,13 +274,13 @@ export default function CompanyPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
                 <div>
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <Building2 className="h-6 w-6 text-[#FF9900]" /> Companies
+                        <Building2 className="h-6 w-6 text-[#E68A00]" /> Companies
                     </h1>
                     <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage global business profiles and supply chain nodes</p>
                 </div>
                 <button
                     onClick={() => { setEditCompany(null); setView('form'); }}
-                    className="bg-[#FF9900] hover:bg-[#e68a00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
+                    className="bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
                 >
                     <Plus className="h-4 w-4" /> Add Company
                 </button>
@@ -268,19 +288,32 @@ export default function CompanyPage() {
 
             {/* Quick Filter */}
             <SectionCard className="mb-6">
-                <div className="p-4 flex gap-4">
-                    <div className="relative flex-1 max-w-md">
+                <div className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Search companies..."
+                            placeholder="Search companies by name, email or city..."
                             className={INPUT()}
                         />
                     </div>
-                    <button onClick={load} className="p-2 border border-[#a6a6a6] rounded hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                        <RefreshCw className={`h-4 w-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4 h-8">
+                            <Tag className="h-3 w-3 text-gray-400" />
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="text-[10px] font-black bg-transparent outline-none text-gray-600 dark:text-gray-300 uppercase tracking-widest cursor-pointer"
+                            >
+                                <option value="">All Categories</option>
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <button onClick={load} className="p-2 border border-[#a6a6a6] rounded hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors ml-auto">
+                            <RefreshCw className={`h-4 w-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
                 </div>
             </SectionCard>
 
@@ -293,6 +326,7 @@ export default function CompanyPage() {
                                 <th className="px-6 py-3">Organization</th>
                                 <th className="px-6 py-3">Contact info</th>
                                 <th className="px-6 py-3">Location</th>
+                                <th className="px-6 py-3">Status</th>
                                 <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -322,9 +356,16 @@ export default function CompanyPage() {
                                             <div className="text-sm text-gray-900 dark:text-white flex items-center gap-1.5"><MapPin className="w-3 h-3" /> {c.city}</div>
                                             <div className="text-[10px] text-gray-400 truncate max-w-[200px] mt-0.5">{c.address}</div>
                                         </td>
+                                        <td className="px-6 py-4">
+                                            {c.is_active !== false ? (
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-green-100 text-green-700">Active</span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-gray-100 text-gray-600">Inactive</span>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <button onClick={() => { setEditCompany(c); setView('form'); }} className="p-1.5 text-gray-600 hover:text-[#FF9900] transition-colors font-medium">
+                                                <button onClick={() => { setEditCompany(c); setView('form'); }} className="p-1.5 text-gray-600 hover:text-[#E68A00] transition-colors font-medium">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
                                                 <button onClick={() => setDeleteCompany(c)} className="p-1.5 text-gray-400 hover:text-red-600 transition-colors">
@@ -381,7 +422,7 @@ export default function CompanyPage() {
 
             {/* Simple Toast */}
             {toast && (
-                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#FF9900] z-[100] animate-in slide-in-from-bottom-5">
+                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#E68A00] z-[100] animate-in slide-in-from-bottom-5">
                     <CheckCircle className="h-5 w-5 text-green-400" />
                     <span className="text-sm font-medium uppercase tracking-tight">{toast}</span>
                 </div>

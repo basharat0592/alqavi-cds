@@ -262,7 +262,7 @@ export default function SettingsPage() {
 
         try {
             const userId = currentUser?.dbId || currentUser?.id;
-            
+
             // 1) Prepare Data
             const fd = new FormData();
             fd.append('first_name', profile.firstName);
@@ -287,11 +287,11 @@ export default function SettingsPage() {
             // 3) Update Local Session
             const user = authService.getUser();
             if (user) {
-                const updatedUser = { 
-                    ...user, 
-                    first_name: profile.firstName, 
+                const updatedUser = {
+                    ...user,
+                    first_name: profile.firstName,
                     last_name: profile.lastName,
-                    name: `${profile.firstName} ${profile.lastName}`.trim(), 
+                    name: `${profile.firstName} ${profile.lastName}`.trim(),
                     email: profile.email,
                     avatar: updatedUserData?.avatar || user.avatar
                 };
@@ -477,8 +477,8 @@ export default function SettingsPage() {
                         {TABS.map(tab => {
                             const active = activeTab === tab.id;
                             return (
-                                <button 
-                                    key={tab.id} 
+                                <button
+                                    key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`relative px-4 py-4 text-xs font-black uppercase tracking-widest transition-all duration-200 whitespace-nowrap
                                         ${active ? 'text-[#FF9900]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
@@ -501,280 +501,280 @@ export default function SettingsPage() {
                 {/* Content Area */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
 
-            {/* ══════════════════════════════ PROFILE ══════════════════════════════ */}
-            {activeTab === 'profile' && (
-                <SectionCard title="Profile Information" subtitle="Your personal account details" icon={User}>
-                    {/* Avatar */}
-                    <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
-                        <div className="relative">
-                            <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 dark:border-slate-700">
-                                {avatarPreview || profile.avatar ? (
-                                    <img src={avatarPreview || profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-2xl font-black text-[#FF9900]">
-                                        {(profile.firstName[0] || '?').toUpperCase()}{(profile.lastName[0] || '').toUpperCase()}
+                    {/* ══════════════════════════════ PROFILE ══════════════════════════════ */}
+                    {activeTab === 'profile' && (
+                        <SectionCard title="Profile Information" subtitle="Your personal account details" icon={User}>
+                            {/* Avatar */}
+                            <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
+                                <div className="relative">
+                                    <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 dark:border-slate-700">
+                                        {avatarPreview || profile.avatar ? (
+                                            <img src={avatarPreview || profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-2xl font-black text-[#FF9900]">
+                                                {(profile.firstName[0] || '?').toUpperCase()}{(profile.lastName[0] || '').toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors text-slate-500" title="Upload Photo">
+                                        <Camera className="h-3.5 w-3.5" />
+                                    </button>
+                                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                                </div>
+                                <div>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Account Identity:</span>
+                                        <h1 className="text-base font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{profile.firstName} {profile.lastName}</h1>
+                                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{profile.email}</p>
+                                    </div>
+                                    <span className="mt-3 inline-block px-3 py-1 bg-slate-900 dark:bg-slate-800 text-[#FF9900] text-[9px] font-black uppercase tracking-[0.2em] rounded">
+                                        {currentUser?.role_name || currentUser?.role || 'Administrative Authority'}
                                     </span>
-                                )}
+                                </div>
                             </div>
-                            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors text-slate-500" title="Upload Photo">
-                                <Camera className="h-3.5 w-3.5" />
-                            </button>
-                            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                        </div>
-                        <div>
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Account Identity:</span>
-                                <h1 className="text-base font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{profile.firstName} {profile.lastName}</h1>
-                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{profile.email}</p>
-                            </div>
-                            <span className="mt-3 inline-block px-3 py-1 bg-slate-900 dark:bg-slate-800 text-[#FF9900] text-[9px] font-black uppercase tracking-[0.2em] rounded">
-                                {currentUser?.role_name || currentUser?.role || 'Administrative Authority'}
-                            </span>
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <Field label="First Name">
-                            <input className={inputCls} value={profile.firstName} onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" />
-                        </Field>
-                        <Field label="Last Name">
-                            <input className={inputCls} value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" />
-                        </Field>
-                        <Field label="Email Address">
-                            <div className="relative">
-                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
-                                <input className={`${inputCls} pl-10`} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
-                            </div>
-                        </Field>
-                        <Field label="Phone Number">
-                            <div className="relative group">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
-                                <input className={`${inputCls} pl-9`} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+92 300 0000000" />
-                            </div>
-                        </Field>
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <SaveBtn saving={profileSaving} onClick={handleSaveProfile} />
-                    </div>
-                </SectionCard>
-            )}
-
-            {/* ══════════════════════════════ STORE ══════════════════════════════ */}
-            {activeTab === 'store' && (
-                <SectionCard title="Store Settings" subtitle="Configure your shop details" icon={Store} accent="#8B5CF6">
-                    {companyId ? (
-                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-                            <Check className="h-3 w-3" strokeWidth={3} /> Connected to company ID #{companyId}
-                        </p>
-                    ) : (
-                        <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">⚠ No company record found — saving will create one</p>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <Field label="Store Name">
-                            <input className={inputCls} value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} placeholder="Online Cosmetics Shop" />
-                        </Field>
-                        <Field label="Website">
-                            <div className="relative group">
-                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
-                                <input className={`${inputCls} pl-9`} value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} placeholder="www.example.com" />
-                            </div>
-                        </Field>
-                        <Field label="Store Email">
-                            <div className="relative group">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
-                                <input className={`${inputCls} pl-9`} value={store.email} onChange={e => setStore(s => ({ ...s, email: e.target.value }))} placeholder="store@example.com" />
-                            </div>
-                        </Field>
-                        <Field label="Store Phone">
-                            <div className="relative group">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
-                                <input className={`${inputCls} pl-9`} value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="+92 21 1234567" />
-                            </div>
-                        </Field>
-                        <Field label="Currency">
-                            <select className={inputCls} value={store.currency} onChange={e => setStore(s => ({ ...s, currency: e.target.value }))}>
-                                <option value="PKR">PKR — Pakistani Rupee</option>
-                                <option value="USD">USD — US Dollar</option>
-                                <option value="EUR">EUR — Euro</option>
-                                <option value="GBP">GBP — British Pound</option>
-                            </select>
-                        </Field>
-                        <Field label="Tax Number / NTN">
-                            <input className={inputCls} value={store.tax_number} onChange={e => setStore(s => ({ ...s, tax_number: e.target.value }))} placeholder="NTN / GST number" />
-                        </Field>
-                        <Field label="Store Address">
-                            <textarea rows={2} className={`${inputCls} resize-none`} value={store.address} onChange={e => setStore(s => ({ ...s, address: e.target.value }))} placeholder="City, Country" />
-                        </Field>
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <SaveBtn saving={storeSaving} onClick={handleSaveStore} />
-                    </div>
-                </SectionCard>
-            )}
-
-            {/* ══════════════════════════════ NOTIFICATIONS ══════════════════════════════ */}
-            {activeTab === 'notifications' && (
-                <SectionCard title="Notification Preferences" subtitle="Control what alerts you receive" icon={Bell} accent="#F59E0B">
-                    <div className="mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Email Notifications</p>
-                        <Toggle enabled={notif.notif_new_order} onChange={v => setNotif(n => ({ ...n, notif_new_order: v }))} label="New Order Received" description="Get notified when a customer places an order" />
-                        <Toggle enabled={notif.notif_low_stock} onChange={v => setNotif(n => ({ ...n, notif_low_stock: v }))} label="Low Stock Alert" description="Receive alerts when product stock falls below 10 units" />
-                        <Toggle enabled={notif.notif_new_user} onChange={v => setNotif(n => ({ ...n, notif_new_user: v }))} label="New User Registration" description="Notify when a new customer registers an account" />
-                        <Toggle enabled={notif.notif_weekly_report} onChange={v => setNotif(n => ({ ...n, notif_weekly_report: v }))} label="Weekly Sales Report" description="Receive a weekly summary of your store's performance" />
-                        <Toggle enabled={notif.notif_marketing} onChange={v => setNotif(n => ({ ...n, notif_marketing: v }))} label="Marketing & Promotions" description="Updates about platform features and tips" />
-                    </div>
-                    <div className="pt-4 border-t border-gray-100">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">SMS Notifications</p>
-                        <Toggle enabled={notif.notif_sms} onChange={v => setNotif(n => ({ ...n, notif_sms: v }))} label="SMS Alerts" description="Receive critical alerts via SMS on your phone" />
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <SaveBtn saving={notifSaving} onClick={handleSaveNotifications} label="Save Preferences" />
-                    </div>
-                </SectionCard>
-            )}
-
-            {/* ══════════════════════════════ SECURITY ══════════════════════════════ */}
-            {activeTab === 'security' && (
-                <div className="space-y-6">
-                    {/* Change Password */}
-                    <SectionCard title="Change Password" subtitle="Update your account password" icon={Lock} accent="#EF4444">
-                        <div className="space-y-4">
-                            {[
-                                { label: 'Current Password', field: 'old', show: showOld, toggle: setShowOld },
-                                { label: 'New Password', field: 'new', show: showNew, toggle: setShowNew },
-                                { label: 'Confirm New Password', field: 'confirm', show: showConfirm, toggle: setShowConfirm },
-                            ].map(({ label, field, show, toggle }) => (
-                                <Field key={field} label={label}>
-                                    <div className="relative group">
-                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
-                                        <input
-                                            type={show ? 'text' : 'password'}
-                                            className={`${inputCls} pl-9 pr-9`}
-                                            placeholder={field === 'old' ? 'Enter current password' : field === 'new' ? 'Min. 8 characters' : 'Repeat new password'}
-                                            value={passwords[field as keyof typeof passwords]}
-                                            onChange={e => setPasswords(p => ({ ...p, [field]: e.target.value }))}
-                                        />
-                                        <button type="button" onClick={() => toggle(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                            {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                        </button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <Field label="First Name">
+                                    <input className={inputCls} value={profile.firstName} onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" />
+                                </Field>
+                                <Field label="Last Name">
+                                    <input className={inputCls} value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" />
+                                </Field>
+                                <Field label="Email Address">
+                                    <div className="relative">
+                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2} />
+                                        <input className={`${inputCls} pl-10`} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
                                     </div>
                                 </Field>
-                            ))}
+                                <Field label="Phone Number">
+                                    <div className="relative group">
+                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                        <input className={`${inputCls} pl-9`} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+92 300 0000000" />
+                                    </div>
+                                </Field>
+                            </div>
+                            <div className="mt-6 flex justify-end">
+                                <SaveBtn saving={profileSaving} onClick={handleSaveProfile} />
+                            </div>
+                        </SectionCard>
+                    )}
 
-                            {passwords.new && (
-                                <div className="flex gap-1.5 mt-1 items-center">
-                                    {[1, 2, 3, 4].map(i => (
-                                        <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${passwords.new.length >= i * 3 ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-orange-400' : i <= 3 ? 'bg-yellow-400' : 'bg-emerald-400' : 'bg-gray-200'}`} />
-                                    ))}
-                                    <span className="text-[10px] font-bold text-gray-400 ml-1">{pwStrength(passwords.new)}</span>
-                                </div>
-                            )}
-                            {passwords.new && passwords.confirm && passwords.new !== passwords.confirm && (
-                                <p className="text-xs text-red-500 font-bold flex items-center gap-1">
-                                    <X className="h-3 w-3" /> Passwords do not match
+                    {/* ══════════════════════════════ STORE ══════════════════════════════ */}
+                    {activeTab === 'store' && (
+                        <SectionCard title="Store Settings" subtitle="Configure your shop details" icon={Store} accent="#8B5CF6">
+                            {companyId ? (
+                                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                                    <Check className="h-3 w-3" strokeWidth={3} /> Connected to company ID #{companyId}
                                 </p>
+                            ) : (
+                                <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">⚠ No company record found — saving will create one</p>
                             )}
-                        </div>
-                        <div className="mt-6 flex justify-end">
-                            <button
-                                onClick={handleSavePassword}
-                                disabled={pwSaving || !passwords.old || !passwords.new || passwords.new !== passwords.confirm}
-                                className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
-                                {pwSaving ? 'Updating...' : 'Update Password'}
-                            </button>
-                        </div>
-                    </SectionCard>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <Field label="Store Name">
+                                    <input className={inputCls} value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} placeholder="Online Cosmetics Shop" />
+                                </Field>
+                                <Field label="Website">
+                                    <div className="relative group">
+                                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                        <input className={`${inputCls} pl-9`} value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} placeholder="www.example.com" />
+                                    </div>
+                                </Field>
+                                <Field label="Store Email">
+                                    <div className="relative group">
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                        <input className={`${inputCls} pl-9`} value={store.email} onChange={e => setStore(s => ({ ...s, email: e.target.value }))} placeholder="store@example.com" />
+                                    </div>
+                                </Field>
+                                <Field label="Store Phone">
+                                    <div className="relative group">
+                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                        <input className={`${inputCls} pl-9`} value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} placeholder="+92 21 1234567" />
+                                    </div>
+                                </Field>
+                                <Field label="Currency">
+                                    <select className={inputCls} value={store.currency} onChange={e => setStore(s => ({ ...s, currency: e.target.value }))}>
+                                        <option value="PKR">PKR — Pakistani Rupee</option>
+                                        <option value="USD">USD — US Dollar</option>
+                                        <option value="EUR">EUR — Euro</option>
+                                        <option value="GBP">GBP — British Pound</option>
+                                    </select>
+                                </Field>
+                                <Field label="Tax Number / NTN">
+                                    <input className={inputCls} value={store.tax_number} onChange={e => setStore(s => ({ ...s, tax_number: e.target.value }))} placeholder="NTN / GST number" />
+                                </Field>
+                                <Field label="Store Address">
+                                    <textarea rows={2} className={`${inputCls} resize-none`} value={store.address} onChange={e => setStore(s => ({ ...s, address: e.target.value }))} placeholder="City, Country" />
+                                </Field>
+                            </div>
+                            <div className="mt-6 flex justify-end">
+                                <SaveBtn saving={storeSaving} onClick={handleSaveStore} />
+                            </div>
+                        </SectionCard>
+                    )}
 
-                    {/* Session */}
-                    <SectionCard title="Access & Sessions" subtitle="Control session and account security" icon={Shield} accent="#10B981">
-                        <div className="py-4 border-b border-gray-100/80">
-                            <Field label="Session Timeout (minutes)">
-                                <select className={`${inputCls} mt-1.5 w-48`} value={sessionTimeout} onChange={e => setSessionTimeout(e.target.value)}>
-                                    <option value="15">15 minutes</option>
-                                    <option value="30">30 minutes</option>
-                                    <option value="60">1 hour</option>
-                                    <option value="120">2 hours</option>
-                                    <option value="0">Never</option>
-                                </select>
-                            </Field>
-                        </div>
+                    {/* ══════════════════════════════ NOTIFICATIONS ══════════════════════════════ */}
+                    {activeTab === 'notifications' && (
+                        <SectionCard title="Notification Preferences" subtitle="Control what alerts you receive" icon={Bell} accent="#F59E0B">
+                            <div className="mb-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Email Notifications</p>
+                                <Toggle enabled={notif.notif_new_order} onChange={v => setNotif(n => ({ ...n, notif_new_order: v }))} label="New Order Received" description="Get notified when a customer places an order" />
+                                <Toggle enabled={notif.notif_low_stock} onChange={v => setNotif(n => ({ ...n, notif_low_stock: v }))} label="Low Stock Alert" description="Receive alerts when product stock falls below 10 units" />
+                                <Toggle enabled={notif.notif_new_user} onChange={v => setNotif(n => ({ ...n, notif_new_user: v }))} label="New User Registration" description="Notify when a new customer registers an account" />
+                                <Toggle enabled={notif.notif_weekly_report} onChange={v => setNotif(n => ({ ...n, notif_weekly_report: v }))} label="Weekly Sales Report" description="Receive a weekly summary of your store's performance" />
+                                <Toggle enabled={notif.notif_marketing} onChange={v => setNotif(n => ({ ...n, notif_marketing: v }))} label="Marketing & Promotions" description="Updates about platform features and tips" />
+                            </div>
+                            <div className="pt-4 border-t border-gray-100">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">SMS Notifications</p>
+                                <Toggle enabled={notif.notif_sms} onChange={v => setNotif(n => ({ ...n, notif_sms: v }))} label="SMS Alerts" description="Receive critical alerts via SMS on your phone" />
+                            </div>
+                            <div className="mt-6 flex justify-end">
+                                <SaveBtn saving={notifSaving} onClick={handleSaveNotifications} label="Save Preferences" />
+                            </div>
+                        </SectionCard>
+                    )}
 
-                        {/* Danger Zone */}
-                        <div className="mt-4 p-4 bg-red-50/60 border border-red-100 rounded-2xl">
-                            <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <AlertTriangle className="h-4 w-4 text-red-500" strokeWidth={2.5} />
+                    {/* ══════════════════════════════ SECURITY ══════════════════════════════ */}
+                    {activeTab === 'security' && (
+                        <div className="space-y-6">
+                            {/* Change Password */}
+                            <SectionCard title="Change Password" subtitle="Update your account password" icon={Lock} accent="#EF4444">
+                                <div className="space-y-4">
+                                    {[
+                                        { label: 'Current Password', field: 'old', show: showOld, toggle: setShowOld },
+                                        { label: 'New Password', field: 'new', show: showNew, toggle: setShowNew },
+                                        { label: 'Confirm New Password', field: 'confirm', show: showConfirm, toggle: setShowConfirm },
+                                    ].map(({ label, field, show, toggle }) => (
+                                        <Field key={field} label={label}>
+                                            <div className="relative group">
+                                                <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                                <input
+                                                    type={show ? 'text' : 'password'}
+                                                    className={`${inputCls} pl-9 pr-9`}
+                                                    placeholder={field === 'old' ? 'Enter current password' : field === 'new' ? 'Min. 8 characters' : 'Repeat new password'}
+                                                    value={passwords[field as keyof typeof passwords]}
+                                                    onChange={e => setPasswords(p => ({ ...p, [field]: e.target.value }))}
+                                                />
+                                                <button type="button" onClick={() => toggle(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                    {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                                </button>
+                                            </div>
+                                        </Field>
+                                    ))}
+
+                                    {passwords.new && (
+                                        <div className="flex gap-1.5 mt-1 items-center">
+                                            {[1, 2, 3, 4].map(i => (
+                                                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${passwords.new.length >= i * 3 ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-orange-400' : i <= 3 ? 'bg-yellow-400' : 'bg-emerald-400' : 'bg-gray-200'}`} />
+                                            ))}
+                                            <span className="text-[10px] font-bold text-gray-400 ml-1">{pwStrength(passwords.new)}</span>
+                                        </div>
+                                    )}
+                                    {passwords.new && passwords.confirm && passwords.new !== passwords.confirm && (
+                                        <p className="text-xs text-red-500 font-bold flex items-center gap-1">
+                                            <X className="h-3 w-3" /> Passwords do not match
+                                        </p>
+                                    )}
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-black text-red-800">Danger Zone</p>
-                                    <p className="text-xs font-medium text-red-500 mt-0.5">These actions are irreversible. Proceed with caution.</p>
-                                    <button className="mt-3 flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 font-black text-xs rounded-xl hover:bg-red-50 transition-all">
-                                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                        Delete Account
+                                <div className="mt-6 flex justify-end">
+                                    <button
+                                        onClick={handleSavePassword}
+                                        disabled={pwSaving || !passwords.old || !passwords.new || passwords.new !== passwords.confirm}
+                                        className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
+                                        {pwSaving ? 'Updating...' : 'Update Password'}
                                     </button>
                                 </div>
-                            </div>
-                        </div>
+                            </SectionCard>
 
-                        <div className="mt-6 flex justify-end">
-                            <SaveBtn saving={secSaving} onClick={async () => {
-                                setSecSaving(true);
-                                await new Promise(r => setTimeout(r, 600));
-                                setSecSaving(false);
-                                showToast('Session settings synchronized.', 'success');
-                            }} label="Save Settings" />
-                        </div>
-                    </SectionCard>
-                </div>
-            )}
+                            {/* Session */}
+                            <SectionCard title="Access & Sessions" subtitle="Control session and account security" icon={Shield} accent="#10B981">
+                                <div className="py-4 border-b border-gray-100/80">
+                                    <Field label="Session Timeout (minutes)">
+                                        <select className={`${inputCls} mt-1.5 w-48`} value={sessionTimeout} onChange={e => setSessionTimeout(e.target.value)}>
+                                            <option value="15">15 minutes</option>
+                                            <option value="30">30 minutes</option>
+                                            <option value="60">1 hour</option>
+                                            <option value="120">2 hours</option>
+                                            <option value="0">Never</option>
+                                        </select>
+                                    </Field>
+                                </div>
 
-            {/* ══════════════════════════════ APPEARANCE ══════════════════════════════ */}
-            {activeTab === 'appearance' && (
-                <SectionCard title="Appearance" subtitle="Customize the interface style" icon={Palette}>
-                    {/* Theme Mode */}
-                    <div className="mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">System Theme</p>
-                        <div className="grid grid-cols-2 gap-3 max-w-sm">
-                            {(['light', 'dark'] as const).map(t => (
-                                <button key={t} onClick={() => setTheme(t)}
-                                    className={`relative p-3 rounded border transition-all duration-200 flex flex-col items-center gap-2 ${theme === t ? 'border-[#FF9900] bg-[#FF9900]/5' : 'border-gray-200 bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-gray-300'}`}>
-                                    <div className={`w-10 h-10 rounded flex items-center justify-center ${t === 'light' ? 'bg-amber-50' : 'bg-gray-700'}`}>
-                                        {t === 'light' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-gray-300" />}
+                                {/* Danger Zone */}
+                                <div className="mt-4 p-4 bg-red-50/60 border border-red-100 rounded-2xl">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <AlertTriangle className="h-4 w-4 text-red-500" strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-black text-red-800">Danger Zone</p>
+                                            <p className="text-xs font-medium text-red-500 mt-0.5">These actions are irreversible. Proceed with caution.</p>
+                                            <button className="mt-3 flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 font-black text-xs rounded-xl hover:bg-red-50 transition-all">
+                                                <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                                Delete Account
+                                            </button>
+                                        </div>
                                     </div>
-                                    <span className="text-[10px] font-black uppercase text-gray-700 dark:text-gray-300">{t} Mode</span>
-                                    {theme === t && <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#FF9900] rounded-full flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" strokeWidth={4} /></span>}
-                                </button>
-                            ))}
+                                </div>
+
+                                <div className="mt-6 flex justify-end">
+                                    <SaveBtn saving={secSaving} onClick={async () => {
+                                        setSecSaving(true);
+                                        await new Promise(r => setTimeout(r, 600));
+                                        setSecSaving(false);
+                                        showToast('Session settings synchronized.', 'success');
+                                    }} label="Save Settings" />
+                                </div>
+                            </SectionCard>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Accent Selection */}
-                    <div className="mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Accent Priority</p>
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                            {ACCENT_PRESETS.map(color => (
-                                <button key={color} onClick={() => setAccentColor(color)}
-                                    className={`w-8 h-8 rounded transition-all duration-200 flex items-center justify-center ${accentColor === color ? 'ring-2 ring-offset-2 ring-[#FF9900]' : 'hover:scale-105'}`}
-                                    style={{ backgroundColor: color }}>
-                                    {accentColor === color && <Check className="h-3.5 w-3.5 text-white shadow-sm" strokeWidth={4} />}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    {/* ══════════════════════════════ APPEARANCE ══════════════════════════════ */}
+                    {activeTab === 'appearance' && (
+                        <SectionCard title="Appearance" subtitle="Customize the interface style" icon={Palette}>
+                            {/* Theme Mode */}
+                            <div className="mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">System Theme</p>
+                                <div className="grid grid-cols-2 gap-3 max-w-sm">
+                                    {(['light', 'dark'] as const).map(t => (
+                                        <button key={t} onClick={() => setTheme(t)}
+                                            className={`relative p-3 rounded border transition-all duration-200 flex flex-col items-center gap-2 ${theme === t ? 'border-[#FF9900] bg-[#FF9900]/5' : 'border-gray-200 bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-gray-300'}`}>
+                                            <div className={`w-10 h-10 rounded flex items-center justify-center ${t === 'light' ? 'bg-amber-50' : 'bg-gray-700'}`}>
+                                                {t === 'light' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-gray-300" />}
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase text-gray-700 dark:text-gray-300">{t} Mode</span>
+                                            {theme === t && <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#FF9900] rounded-full flex items-center justify-center"><Check className="h-2.5 w-2.5 text-white" strokeWidth={4} /></span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
-                    <div className="space-y-1">
-                        <Toggle enabled={compactMode} onChange={setCompactMode} label="High Density Mode" description="Optimized spacing for data-heavy administrative workflows" />
-                        <Toggle enabled={animations} onChange={setAnimations} label="Interface Motion" description="Smooth transitions and interactive micro-animations" />
-                        <Toggle enabled={sidebarCollapsed} onChange={setSidebarCollapsed} label="Minimal Workspace" description="Start with a collapsed sidebar for maximum focus" />
-                    </div>
+                            {/* Accent Selection */}
+                            <div className="mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Accent Priority</p>
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                    {ACCENT_PRESETS.map(color => (
+                                        <button key={color} onClick={() => setAccentColor(color)}
+                                            className={`w-8 h-8 rounded transition-all duration-200 flex items-center justify-center ${accentColor === color ? 'ring-2 ring-offset-2 ring-[#FF9900]' : 'hover:scale-105'}`}
+                                            style={{ backgroundColor: color }}>
+                                            {accentColor === color && <Check className="h-3.5 w-3.5 text-white shadow-sm" strokeWidth={4} />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
-                    <div className="mt-6 flex justify-end">
-                        <SaveBtn saving={appearanceSaving} onClick={handleSaveAppearance} label="Save Style" />
-                    </div>
-                </SectionCard>
-            )}
+                            <div className="space-y-1">
+                                <Toggle enabled={compactMode} onChange={setCompactMode} label="High Density Mode" description="Optimized spacing for data-heavy administrative workflows" />
+                                <Toggle enabled={animations} onChange={setAnimations} label="Interface Motion" description="Smooth transitions and interactive micro-animations" />
+                                <Toggle enabled={sidebarCollapsed} onChange={setSidebarCollapsed} label="Minimal Workspace" description="Start with a collapsed sidebar for maximum focus" />
+                            </div>
+
+                            <div className="mt-6 flex justify-end">
+                                <SaveBtn saving={appearanceSaving} onClick={handleSaveAppearance} label="Save Style" />
+                            </div>
+                        </SectionCard>
+                    )}
                 </div>
             </div>
         </div>

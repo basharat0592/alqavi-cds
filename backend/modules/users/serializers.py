@@ -156,11 +156,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         # Add user data to the response
         user = self.user
+
+        # Determine role string: superusers and staff are always 'admin'
+        if user.is_superuser or user.is_staff:
+            role = 'admin'
+        elif user.role:
+            role = user.role.name.lower()
+        else:
+            role = 'customer'
+
         data['user'] = {
             'id': str(user.id),
             'name': user.get_full_name() or user.username,
             'email': user.email,
-            'role': user.role.name.lower() if user.role else 'customer',
+            'role': role,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser,
         }
         
         return data

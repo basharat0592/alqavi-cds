@@ -11,6 +11,10 @@ import {
     User, Calendar, CreditCard as CardIcon
 } from 'lucide-react';
 import Link from 'next/link';
+import { 
+    PageHeader, SectionCard, SectionHeader, Toast, 
+    AMZ_INPUT, AMZ_LABEL, PrimaryButton, SecondaryButton, ActionButton 
+} from '@/components/ui/AmazonStyles';
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -27,33 +31,7 @@ interface CardDetails {
     cvv: string;
 }
 
-/* ══════════════════════════════════════════════
-   COMPONENTS
-   ══════════════════════════════════════════════ */
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
-
-const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
-    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-        <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
-    </div>
-);
-
-// Form Styles
-const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
-    ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
-
-const LABEL = "block text-[11px] font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5";
-
-const PRIMARY_BTN = "bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] text-gray-900 font-bold rounded-[3px] shadow-sm text-sm py-2 px-4 transition-all flex items-center justify-center gap-2 active:bg-[#e2b13c]";
-const SECONDARY_BTN = "bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 border border-[#adb1b8] dark:border-slate-600 text-gray-700 dark:text-slate-200 rounded-[3px] shadow-sm text-sm font-medium py-2 px-4 transition-all flex items-center justify-center gap-2 active:bg-gray-100 dark:active:bg-slate-600";
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 export default function PointOfSalePage() {
     const { isAuthenticated } = useAdminAuth();
@@ -312,12 +290,12 @@ export default function PointOfSalePage() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3 noprint">
-                        <button onClick={() => window.print()} className={SECONDARY_BTN + " flex-1"}>
+                        <SecondaryButton onClick={() => window.print()} className="flex-1">
                             <Printer className="w-4 h-4" /> Print Receipt
-                        </button>
-                        <button onClick={resetPOS} className={PRIMARY_BTN + " flex-1"}>
+                        </SecondaryButton>
+                        <PrimaryButton onClick={resetPOS} className="flex-1">
                             <Plus className="w-4 h-4" /> Next Transaction
-                        </button>
+                        </PrimaryButton>
                     </div>
                 </SectionCard>
 
@@ -429,31 +407,20 @@ export default function PointOfSalePage() {
 
     return (
         <div className="max-w-[1600px] mx-auto px-4 py-6 font-sans">
-
             {/* Amazon Style Toast Feedback */}
-            {toast && (
-                <div className={`fixed bottom-6 right-6 ${toast.type === 'success' ? 'bg-[#131921]' : 'bg-red-900'} text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 ${toast.type === 'success' ? 'border-[#FF9900]' : 'border-red-500'} z-[300] animate-in slide-in-from-bottom-5`}>
-                    {toast.type === 'success' ? <Check className="h-5 w-5 text-green-400" /> : <AlertCircle className="h-5 w-5 text-red-400" />}
-                    <span className="text-sm font-bold uppercase tracking-tight">{toast.msg}</span>
-                </div>
-            )}
+            <Toast message={toast?.msg || ''} />
 
             {/* Header Module */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
-                <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <ShoppingCart className="h-6 w-6 text-[#FF9900]" /> Point of Sale
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1 flex items-center gap-2">
-                        Station Active: <span className="text-emerald-500 font-bold">● ONLINE</span> • {currentTime.toLocaleTimeString()}
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={() => window.location.reload()} className={SECONDARY_BTN}>
+            <PageHeader
+                title="Point of Sale"
+                subtitle={`Station Active: ● ONLINE • ${currentTime.toLocaleTimeString()}`}
+                icon={ShoppingCart}
+                action={
+                    <SecondaryButton onClick={() => window.location.reload()}>
                         <RefreshCw className="w-4 h-4" /> Refresh Station
-                    </button>
-                </div>
-            </div>
+                    </SecondaryButton>
+                }
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
@@ -470,13 +437,13 @@ export default function PointOfSalePage() {
                                     onChange={e => setSearchQuery(e.target.value)}
                                     onKeyDown={handleSearchKeyDown}
                                     placeholder="Scan barcode or search items..."
-                                    className={INPUT()}
+                                    className={AMZ_INPUT}
                                 />
                             </div>
                             <select
                                 value={selectedCategory}
                                 onChange={e => setSelectedCategory(e.target.value)}
-                                className={INPUT() + " md:w-48"}
+                                className={AMZ_INPUT + " md:w-48"}
                             >
                                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
@@ -543,11 +510,11 @@ export default function PointOfSalePage() {
                         {/* Tray Setup */}
                         <div className="p-4 border-b border-[#eee] dark:border-slate-800 bg-[#fcfcfc] dark:bg-slate-900/50 space-y-4">
                             <div>
-                                <label className={LABEL}>Customer Profile</label>
+                                <label className={AMZ_LABEL}>Customer Profile</label>
                                 <select
                                     value={customerId || ''}
                                     onChange={e => setCustomerId(e.target.value || null)}
-                                    className={INPUT()}
+                                    className={AMZ_INPUT}
                                 >
                                     <option value="">Guest / Walk-in Customer</option>
                                     {users.map((u: any) => (
@@ -560,13 +527,13 @@ export default function PointOfSalePage() {
 
                             {!customerId && (
                                 <div className="animate-in slide-in-from-top-2">
-                                    <label className={LABEL}>Guest Name</label>
+                                    <label className={AMZ_LABEL}>Guest Name</label>
                                     <input
                                         type="text"
                                         value={guestName}
                                         onChange={e => setGuestName(e.target.value)}
                                         placeholder="Identification Reference"
-                                        className={INPUT()}
+                                        className={AMZ_INPUT}
                                     />
                                 </div>
                             )}
@@ -642,10 +609,10 @@ export default function PointOfSalePage() {
                                 </button>
                             </div>
 
-                            <button
+                            <PrimaryButton
                                 disabled={cart.length === 0 || isProcessing}
                                 onClick={() => handleCompleteSale()}
-                                className={PRIMARY_BTN + " w-full !py-3 !text-[13px] uppercase tracking-wide shadow-md disabled:opacity-40"}
+                                className="w-full !py-3 !text-[13px] uppercase tracking-wide shadow-md disabled:opacity-40"
                             >
                                 {isProcessing ? (
                                     <>
@@ -655,7 +622,7 @@ export default function PointOfSalePage() {
                                 ) : (
                                     <>Authorize Payment</>
                                 )}
-                            </button>
+                            </PrimaryButton>
 
                             {cart.length > 0 && (
                                 <button onClick={clearCart} className="w-full text-[10px] font-bold text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 uppercase tracking-widest mt-4">
@@ -682,19 +649,19 @@ export default function PointOfSalePage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className={LABEL}>Cardholder Name</label>
+                                <label className={AMZ_LABEL}>Cardholder Name</label>
                                 <input 
                                     type="text" 
-                                    className={INPUT()} 
+                                    className={AMZ_INPUT} 
                                     placeholder="Full name as on card"
                                     onChange={e => setCardDetails(prev => ({ ...(prev || { name: '', number: '', expiry: '', cvv: '' }), name: e.target.value }))}
                                 />
                             </div>
                             <div>
-                                <label className={LABEL}>Card Number</label>
+                                <label className={AMZ_LABEL}>Card Number</label>
                                 <input 
                                     type="text" 
-                                    className={INPUT()} 
+                                    className={AMZ_INPUT} 
                                     placeholder="XXXX XXXX XXXX XXXX" 
                                     maxLength={16}
                                     onChange={e => setCardDetails(prev => ({ ...(prev || { name: '', number: '', expiry: '', cvv: '' }), number: e.target.value }))}
@@ -702,20 +669,20 @@ export default function PointOfSalePage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className={LABEL}>Expiry</label>
+                                    <label className={AMZ_LABEL}>Expiry</label>
                                     <input 
                                         type="text" 
-                                        className={INPUT()} 
+                                        className={AMZ_INPUT} 
                                         placeholder="MM/YY" 
                                         maxLength={5} 
                                         onChange={e => setCardDetails(prev => ({ ...(prev || { name: '', number: '', expiry: '', cvv: '' }), expiry: e.target.value }))}
                                     />
                                 </div>
                                 <div>
-                                    <label className={LABEL}>CVV</label>
+                                    <label className={AMZ_LABEL}>CVV</label>
                                     <input 
                                         type="password" 
-                                        className={INPUT()} 
+                                        className={AMZ_INPUT} 
                                         placeholder="***" 
                                         maxLength={3} 
                                         onChange={e => setCardDetails(prev => ({ ...(prev || { name: '', number: '', expiry: '', cvv: '' }), cvv: e.target.value }))}
@@ -723,12 +690,12 @@ export default function PointOfSalePage() {
                                 </div>
                             </div>
                             <div className="pt-2">
-                                <button 
+                                <PrimaryButton 
                                     onClick={() => { if (cardDetails?.number) { setShowCardModal(false); setShowConfirmModal(true); } }} 
-                                    className={PRIMARY_BTN + " w-full !py-2 uppercase tracking-wide"}
+                                    className="w-full !py-2 uppercase tracking-wide"
                                 >
                                     Confirm Card Details
-                                </button>
+                                </PrimaryButton>
                             </div>
                         </div>
                     </div>
@@ -767,21 +734,21 @@ export default function PointOfSalePage() {
                                 </div>
                             </div>
                             <div className="flex flex-col gap-2">
-                                <button 
+                                <PrimaryButton 
                                     onClick={() => { setShowConfirmModal(false); handleCompleteSale(true); }} 
-                                    className={PRIMARY_BTN + " w-full !py-2.5 uppercase tracking-wide"}
+                                    className="w-full !py-2.5 uppercase tracking-wide"
                                 >
                                     Authorize Now
-                                </button>
-                                <button 
+                                </PrimaryButton>
+                                <SecondaryButton 
                                     onClick={() => {
                                         setShowConfirmModal(false);
                                         if (paymentMethod === 'card') setShowCardModal(true);
                                     }} 
-                                    className={SECONDARY_BTN + " w-full !py-2 text-[11px] uppercase tracking-wider font-bold"}
+                                    className="w-full !py-2 text-[11px] uppercase tracking-wider font-bold"
                                 >
                                     {paymentMethod === 'card' ? 'Edit Card Info' : 'Go Back'}
-                                </button>
+                                </SecondaryButton>
                             </div>
                         </div>
                     </div>

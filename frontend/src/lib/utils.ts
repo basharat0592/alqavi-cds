@@ -79,3 +79,32 @@ export function truncate(str: string, maxLength: number): string {
     if (str.length <= maxLength) return str;
     return `${str.slice(0, maxLength)}\u2026`;
 }
+
+/**
+ * Handle media URLs, prepending the API base URL if relative.
+ * Robust against varied path formats (leading slashes, full URLs, etc.)
+ */
+export function getImageUrl(url: string | null | undefined): string | null {
+    if (!url || typeof url !== 'string') return null;
+    
+    // If it's already a full URL or base64, return as is
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    
+    // Fallback to local API if no env provided
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
+    const domain = apiBase.replace('/api', '').replace(/\/$/, '');
+    
+    // Ensure the path starts with a single slash
+    const path = url.startsWith('/') ? url : `/${url}`;
+    
+    // Join domain and path
+    const fullUrl = `${domain}${path}`;
+    
+    // DEBUG LOG - to help identify why images might fail
+    // console.log(`[getImageUrl] input: ${url} -> output: ${fullUrl}`);
+    
+    return fullUrl;
+}
+
+
+

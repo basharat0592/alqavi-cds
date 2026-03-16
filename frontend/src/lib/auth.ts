@@ -17,14 +17,6 @@ const STORAGE_KEY_USER = 'cosmetic_distro_user';
 export const authService = {
     // Login API
     login: async (emailOrUsername: string, password: string): Promise<{ user: User; token: string }> => {
-        // Demo credentials fallback
-        const demoAccounts: Record<string, { password: string; user: User }> = {
-            'admin': {
-                password: '12345',
-                user: { id: '1', name: 'System Admin', email: 'admin@alqavi.com', role: 'admin' }
-            },
-        };
-
         try {
             const { data } = await api.post('/v1/users/token/', {
                 username: emailOrUsername,
@@ -38,13 +30,6 @@ export const authService = {
             return { user: safeUser, token };
         } catch (error: any) {
             const isNetworkError = !error.response;
-            const demo = demoAccounts[emailOrUsername.toLowerCase()];
-            if (demo && demo.password === password) {
-                const fakeToken = 'demo-token-' + Date.now();
-                authService.setSession(demo.user, fakeToken);
-                return { user: demo.user, token: fakeToken };
-            }
-
             console.error("Login Error:", error.response?.data || error.message);
             const errorMessage = error.response?.data?.detail ||
                 error.response?.data?.message ||

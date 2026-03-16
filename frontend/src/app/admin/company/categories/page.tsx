@@ -109,9 +109,10 @@ export default function CompanyCategoriesPage() {
             }
             load();
             setView('list');
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('Failed to save category.');
+            const detail = e.response?.data ? JSON.stringify(e.response.data) : (e.message || 'Unknown error');
+            alert(`Failed to save category: ${detail}`);
         } finally {
             setSaving(false);
         }
@@ -130,7 +131,7 @@ export default function CompanyCategoriesPage() {
                     <h1 className="text-2xl font-normal text-gray-900 dark:text-white">
                         {editCat ? 'Edit Category' : 'Add New Category'}
                     </h1>
-                    <button onClick={() => setView('list')} className="text-sm text-gray-400 hover:text-[#FF9900]:text-[#C45500] hover:underline flex items-center gap-1">
+                    <button onClick={() => setView('list')} className="text-sm text-gray-400 hover:text-[#C45500] hover:underline flex items-center gap-1">
                         <ArrowLeft className="w-4 h-4" /> Back to list
                     </button>
                 </div>
@@ -230,13 +231,13 @@ export default function CompanyCategoriesPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
                 <div>
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <Tag className="h-6 w-6 text-[#FF9900]" /> Company Categories
+                        <Tag className="h-6 w-6 text-[#E68A00]" /> Company Categories
                     </h1>
                     <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage business classification for supply chain partners</p>
                 </div>
                 <button
                     onClick={handleNew}
-                    className="bg-[#FF9900] hover:bg-[#e68a00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
+                    className="bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
                 >
                     <Plus className="h-4 w-4" /> Add Category
                 </button>
@@ -303,7 +304,7 @@ export default function CompanyCategoriesPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleEdit(cat)} className="p-1.5 text-gray-600 hover:text-gray-400 hover:text-[#FF9900] transition-colors">
+                                                <button onClick={() => handleEdit(cat)} className="p-1.5 text-gray-600 hover:text-[#E68A00] transition-colors">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
                                                 <button onClick={() => setDeleteCat(cat)} className="p-1.5 text-gray-400 hover:text-red-600 transition-colors">
@@ -360,7 +361,7 @@ export default function CompanyCategoriesPage() {
 
             {/* Simple Toast */}
             {toast && (
-                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#FF9900] z-[100] animate-in slide-in-from-bottom-5">
+                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#E68A00] z-[100] animate-in slide-in-from-bottom-5">
                     <CheckCircle className="h-5 w-5 text-green-400" />
                     <span className="text-sm font-medium uppercase tracking-tight">{toast}</span>
                 </div>

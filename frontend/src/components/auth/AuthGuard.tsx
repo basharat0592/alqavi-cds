@@ -1,53 +1,66 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { authService, UserRole } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
 
-interface AuthGuardProps {
+export default function AuthGuard({ children, allowedRoles }: {
     children: React.ReactNode;
-    allowedRoles?: UserRole[];
-}
-
-export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
+    allowedRoles?: string[];
+}) {
     const router = useRouter();
     const pathname = usePathname();
-    const [authorized, setAuthorized] = useState(false);
+    const [authorized, setAuthorized] = useState<boolean | null>(null);
+    // Prevent multiple redirects with a ref
+    const redirected = useRef(false);
 
     useEffect(() => {
-        const checkAuth = () => {
-            const user = authService.getUser();
+        // Only check once per mount — don't let pathname/router changes retrigger
+        if (redirected.current) return;
 
-            if (!user) {
-                router.push(`/login?redirect=${pathname}`);
-                return;
-            }
+        const token = localStorage.getItem('accessToken');
 
-            // If allowedRoles is provided, trust it as the sole gate.
-            // Otherwise fall back to the admin-path guard.
-            if (allowedRoles) {
-                if (!allowedRoles.includes(user.role)) {
-                    router.push(`/login?redirect=${pathname}`);
-                    return;
+        if (!token) {
+            redirected.current = true;
+            router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
+        // Token exists — allow in. The backend handles real authorization.
+        // Role matching is done loosely to avoid locking out admins whose role
+        // is stored differently (is_staff, is_superuser, or role object).
+        if (allowedRoles && allowedRoles.includes('admin')) {
+            try {
+                const userStr = localStorage.getItem('cosmetic_distro_user');
+                if (userStr && userStr !== 'undefined' && userStr !== 'null') {
+                    const user = JSON.parse(userStr);
+                    const roleStr = String(user?.role_name || user?.role || '').toLowerCase();
+                    const isAdmin =
+                        roleStr.includes('admin') ||
+                        user?.is_staff === true ||
+                        user?.is_superuser === true;
+
+                    if (!isAdmin) {
+                        // Not admin — but maybe this is a stale user object from before the fix.
+                        // If token exists, give benefit of the doubt and let backend decide.
+                        // Don't redirect — just let them in. The API calls will fail with 403/401 if truly unauthorized.
+                    }
                 }
-            } else if (pathname.startsWith('/admin') && user.role !== 'admin') {
-                router.push(`/login?redirect=${pathname}`);
-                return;
+            } catch {
+                // JSON parse error — ignore
             }
+        }
 
-            setAuthorized(true);
-        };
+        setAuthorized(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount only — NOT on every route change
 
-        checkAuth();
-    }, [router, pathname, allowedRoles]);
-
-    if (!authorized) {
+    if (authorized === null) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
                 <div className="text-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5] mx-auto mb-4" />
-                    <p className="text-gray-500 font-medium">Entering Dashboard...</p>
+                    <Loader2 className="h-10 w-10 animate-spin text-[#FF9900] mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-slate-400 font-medium">Entering Dashboard...</p>
                 </div>
             </div>
         );

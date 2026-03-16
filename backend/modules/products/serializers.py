@@ -2,12 +2,12 @@
 Products module serializers.
 """
 from rest_framework import serializers
-from .models import Product, Category, ProductImage
-from modules.company.models import CompanyCategory
+from .models import Product, Category, ProductGallery
+from modules.company.models import Company, CompanyCategory
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
-    """Serializer for ProductImage model."""
+    """Serializer for ProductGallery model."""
     image_url = serializers.SerializerMethodField()
 
     def get_image_url(self, obj):
@@ -19,8 +19,9 @@ class ProductImageSerializer(serializers.ModelSerializer):
         return obj.image.url
 
     class Meta:
-        model = ProductImage
+        model = ProductGallery
         fields = ['id', 'image', 'image_url', 'is_feature']
+
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -31,15 +32,26 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'slug', 'image', 'status']
         read_only_fields = ['id']
 
+    def validate(self, data):
+        if not data.get('slug') and data.get('name'):
+            from django.utils.text import slugify
+            data['slug'] = slugify(data['name'])
+            # If slugify returns empty (non-latin), use name as slug or just leave it for DB null
+            if not data['slug']:
+                 import time
+                 data['slug'] = f"cat-{int(time.time())}"
+        return data
+
 
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for Product model."""
     
     category_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
     company_category_name = serializers.SerializerMethodField()
     is_in_stock = serializers.SerializerMethodField()
     batches = serializers.SerializerMethodField()
-    additional_images = ProductImageSerializer(many=True, read_only=True)
+    gallery = ProductImageSerializer(many=True, read_only=True)
     image_url = serializers.SerializerMethodField()
     
     def get_image_url(self, obj):
@@ -55,10 +67,10 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'description', 'category', 'category_name',
+            'company', 'company_name',
             'company_category', 'company_category_name',
             'sku', 'barcode', 'price', 'cost', 'retail_price', 'quantity_in_stock', 
-            'image', 'image_url', 'additional_images',
-            'packaging', 'pack_size',
+            'image', 'image_url', 'gallery',
             'status', 'is_in_stock', 'batches', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -69,13 +81,16 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_company_category_name(self, obj):
         return obj.company_category.name if obj.company_category else None
 
+    def get_company_name(self, obj):
+        return obj.company.name if obj.company else None
+
     def get_is_in_stock(self, obj):
         return obj.is_in_stock()
 
     def get_batches(self, obj):
-        from modules.inventory.serializers import ProductBatchSerializer
-        batches = obj.batches.all()
-        return ProductBatchSerializer(batches, many=True).data
+        from modules.inventory.serializers import BatchSerializer
+        batches = obj.batch_set.all() if hasattr(obj, 'batch_set') else obj.batches.all()
+        return BatchSerializer(batches, many=True).data
 
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
@@ -90,11 +105,19 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    company = serializers.PrimaryKeyRelatedField(
+        queryset=Company.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    image = serializers.FileField(required=False, allow_null=True)
+    sku = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    barcode = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     
     batch_number = serializers.CharField(write_only=True, required=False, allow_null=True)
-    # Using ListField to accommodate multiple images (expecting list of files)
+    # Using ListField to accommodate multiple images (allow files more broadly)
     upload_images = serializers.ListField(
-        child=serializers.ImageField(max_length=1000000, allow_empty_file=False, use_url=False),
+        child=serializers.FileField(max_length=10000, allow_empty_file=False),
         write_only=True,
         required=False
     )
@@ -102,13 +125,29 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'name', 'description', 'category', 'company_category', 'sku',
+            'name', 'description', 'category', 'company', 'company_category', 'sku',
             'price', 'cost', 'retail_price', 'image', 'status', 'barcode',
-            'packaging', 'pack_size', 'batch_number', 'upload_images'
+            'batch_number', 'upload_images'
         ]
+
+    def validate(self, data):
+        sku = data.get('sku')
+        if not sku:
+            import uuid
+            # Generate a clean 8-char SKU if missing
+            data['sku'] = f"PROD-{uuid.uuid4().hex[:8].upper()}"
+        
+        # Ensure barcode is None if empty string to avoid unique constraint on multiple empty strings
+        if 'barcode' in data and not data['barcode']:
+            data['barcode'] = None
+            
+        return data
 
     def create(self, validated_data):
         batch_number = validated_data.pop('batch_number', None)
+        # Pop upload_images to avoid TypeError in Product.objects.create
+        validated_data.pop('upload_images', None)
+        
         # DRF ListField might not get all files from multipart if not handled correctly
         # Extract directly from request.FILES for multi-file upload support
         request = self.context.get('request')
@@ -121,21 +160,33 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         # Handle multiple images with safety check
         for img in upload_images:
             try:
-                ProductImage.objects.create(product=product, image=img)
+                ProductGallery.objects.create(product=product, image=img)
             except Exception as e:
                 print(f"Error saving additional image: {e}")
 
         if batch_number:
-            from modules.inventory.models import ProductBatch
-            ProductBatch.objects.create(
-                product=product,
-                batch_number=batch_number,
-                status='active'
-            )
+            from modules.inventory.models import Batch, Warehouse
+            # Try to find a default warehouse or create one if missing
+            warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
+            if not warehouse:
+                warehouse = Warehouse.objects.create(name="Default Warehouse", is_default=True)
+            
+            try:
+                Batch.objects.create(
+                    product=product,
+                    warehouse=warehouse,
+                    batch_number=batch_number,
+                    status='Active'
+                )
+            except Exception as e:
+                print(f"Error creating batch: {e}")
         return product
 
     def update(self, instance, validated_data):
         batch_number = validated_data.pop('batch_number', None)
+        # Pop upload_images to avoid TypeError in Product.objects.update
+        validated_data.pop('upload_images', None)
+
         request = self.context.get('request')
         upload_images = []
         if request and hasattr(request, 'FILES'):
@@ -146,16 +197,24 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         # If new images are uploaded, add them
         for img in upload_images:
             try:
-                ProductImage.objects.create(product=product, image=img)
+                ProductGallery.objects.create(product=product, image=img)
             except Exception as e:
                 print(f"Error saving additional image: {e}")
 
         if batch_number:
-            from modules.inventory.models import ProductBatch
-            # Check if batch exists or create new one
-            ProductBatch.objects.get_or_create(
-                product=product,
-                batch_number=batch_number,
-                defaults={'status': 'active'}
-            )
+            from modules.inventory.models import Batch, Warehouse
+            warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
+            if not warehouse:
+                warehouse = Warehouse.objects.create(name="Default Warehouse", is_default=True)
+            
+            try:
+                # Check if batch exists or create new one
+                Batch.objects.get_or_create(
+                    product=product,
+                    warehouse=warehouse,
+                    batch_number=batch_number,
+                    defaults={'status': 'Active'}
+                )
+            except Exception as e:
+                print(f"Error updating batch: {e}")
         return product

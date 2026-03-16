@@ -8,7 +8,7 @@ import {
     Settings, LogOut, Warehouse,
     Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
     BarChart3, Boxes, FolderTree, Bell, Sparkles,
-    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight
+    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock
 } from 'lucide-react'; // Re-trigger HMR
 import { authService } from '@/lib/auth';
 import { productService, orderService } from '@/lib/api';
@@ -91,12 +91,10 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             ],
         },
         {
-            label: 'Inventory',
+            label: 'Company Hub',
             items: [
-                { name: 'Stock Ledger', href: '/admin/inventory/list', icon: Boxes, badge: counts.lowStock, alert: counts.lowStock > 0 },
-                { name: 'Storage Nodes', href: '/admin/inventory/warehouses', icon: Warehouse },
-                { name: 'Movements', href: '/admin/inventory/movements', icon: ArrowLeftRight },
-                { name: 'Batch Center', href: '/admin/inventory/batches', icon: Layers },
+                { name: 'Company', href: '/admin/company', icon: Building2 },
+                { name: 'Company Category', href: '/admin/company/categories', icon: Tag },
             ],
         },
         {
@@ -104,6 +102,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             items: [
                 { name: 'All Products', href: '/admin/products', icon: Package, badge: counts.products },
                 { name: 'Categories', href: '/admin/products/categories', icon: FolderTree },
+            ],
+        },
+        {
+            label: 'Inventory',
+            items: [
+                { name: 'Stock Ledger', href: '/admin/inventory/list', icon: Boxes, badge: counts.lowStock, alert: counts.lowStock > 0 },
+                { name: 'Storage Nodes', href: '/admin/inventory/warehouses', icon: Warehouse },
+                { name: 'Movements', href: '/admin/inventory/movements', icon: ArrowLeftRight },
+                { name: 'Batch Center', href: '/admin/inventory/batches', icon: Layers },
             ],
         },
         {
@@ -126,8 +133,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             label: 'Admin Panel',
             items: [
                 { name: 'Users', href: '/admin/users', icon: Users },
-                { name: 'Roles', href: '/admin/roles', icon: Shield },
-                { name: 'Organization', href: '/admin/company', icon: Building2 },
+                { name: 'Roles', href: '/admin/users/roles', icon: Shield },
+                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },
             ],
         },
     ];

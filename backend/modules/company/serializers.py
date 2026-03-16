@@ -21,7 +21,7 @@ class CompanySerializer(serializers.ModelSerializer):
         model = Company
         fields = [
             'id', 'name', 'category', 'category_name', 'tagline', 'email', 'phone', 'whatsapp',
-            'address', 'city', 'country', 'website', 'logo',
+            'address', 'city', 'country', 'website', 'logo', 'is_active',
             'description', 'facebook', 'instagram', 'twitter',
             'currency', 'tax_number', 'created_at', 'updated_at'
         ]

@@ -14,7 +14,7 @@ class CompanyCategory(models.Model):
     ]
 
     name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=10, unique=True, blank=True)
+    code = models.CharField(max_length=10, unique=True, blank=True, null=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='local')
     country = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
@@ -60,6 +60,7 @@ class Company(models.Model):
     twitter = models.URLField(blank=True, verbose_name='Twitter / X URL')
     currency = models.CharField(max_length=10, default='PKR', verbose_name='Currency')
     tax_number = models.CharField(max_length=100, blank=True, verbose_name='Tax / NTN Number')
+    is_active = models.BooleanField(default=True, verbose_name='Active Status')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

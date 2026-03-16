@@ -6,7 +6,7 @@ from core.models import BaseModel
 from core.mixins import StatusMixin, TimestampMixin
 
 
-class Category(BaseModel, StatusMixin, TimestampMixin):
+class Category(BaseModel, StatusMixin):
     """
     Product category model.
     
@@ -18,8 +18,8 @@ class Category(BaseModel, StatusMixin, TimestampMixin):
     """
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True)
-    slug = models.SlugField(unique=True)
-    image = models.ImageField(upload_to='categories/', blank=True)
+    slug = models.SlugField(unique=True, blank=True, null=True)
+    image = models.FileField(upload_to='categories/', blank=True)
     
     class Meta:
         ordering = ['name']
@@ -33,7 +33,7 @@ class Category(BaseModel, StatusMixin, TimestampMixin):
         return self.name
 
 
-class Product(BaseModel, StatusMixin, TimestampMixin):
+class Product(BaseModel, StatusMixin):
     """
     Product model.
     
@@ -55,15 +55,13 @@ class Product(BaseModel, StatusMixin, TimestampMixin):
         null=True,
         related_name='products'
     )
-    sku = models.CharField(max_length=100, unique=True)
+    sku = models.CharField(max_length=100, unique=True, blank=True, null=True)
     barcode = models.CharField(max_length=100, blank=True, null=True, unique=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     retail_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     quantity_in_stock = models.IntegerField(default=0)
-    image = models.ImageField(upload_to='products/', blank=True)
-    packaging = models.CharField(max_length=100, default='Piece', help_text="e.g. Unit, Pack, Box, Carton")
-    pack_size = models.IntegerField(default=1, help_text="Number of items per pack")
+    image = models.FileField(upload_to='products/', blank=True)
     company_category = models.ForeignKey(
         'company.CompanyCategory',
         on_delete=models.SET_NULL,
@@ -71,6 +69,14 @@ class Product(BaseModel, StatusMixin, TimestampMixin):
         blank=True,
         related_name='products',
         verbose_name='Origin Category'
+    )
+    company = models.ForeignKey(
+        'company.Company',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name='Manufacturing Company'
     )
     
     class Meta:
@@ -90,20 +96,21 @@ class Product(BaseModel, StatusMixin, TimestampMixin):
         return self.quantity_in_stock > 0
 
 
-class ProductImage(BaseModel, TimestampMixin):
+class ProductGallery(BaseModel, TimestampMixin):
     """
-    Model for storing multiple images for a single product.
+    Model for storing additional images for a single product.
+    Using a fresh name to avoid database tablespace conflicts.
     """
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='additional_images'
+        related_name='gallery'
     )
-    image = models.ImageField(upload_to='products/additional/')
+    image = models.FileField(upload_to='products/gallery/')
     is_feature = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Image for {self.product.name}"
+        return f"Gallery {self.id} for {self.product.name}"

@@ -6,9 +6,11 @@ import {
     Search, ShoppingCart, Menu, X, MapPin, ChevronDown,
     LogOut, LayoutDashboard, User, Heart, Package,
     Tag, Star, Gift, Truck, Settings, TrendingUp, Phone,
+    Sun, Moon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCart } from '@/context/CartContext';
+import { useCart } from "@/context/CartContext";
+import { getImageUrl } from "@/lib/utils";
 import { authService, User as AuthUser } from '@/lib/auth';
 import { productService } from '@/lib/api';
 
@@ -50,6 +52,7 @@ export default function Navbar() {
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [theme, setTheme] = useState<'light' | 'dark'>('light');
     const searchRef = useRef<HTMLDivElement>(null);
 
     const router = useRouter();
@@ -61,14 +64,22 @@ export default function Navbar() {
     useEffect(() => {
         setUser(authService.getUser());
 
+        // Initialize theme
+        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
+        setTheme(savedTheme);
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
         const onStorage = () => setUser(authService.getUser());
         window.addEventListener('storage', onStorage);
 
-        // Load all products once for live search
         const loadProducts = async () => {
             try {
                 const apiData = await productService.getAll();
-                const apiArr = Array.isArray(apiData) ? apiData : [];
+                const apiArr = (Array.isArray(apiData) ? apiData : (apiData as any).results || []).filter((p: any) => p.status === 'active');
                 setAllProducts(apiArr);
             } catch {
                 setAllProducts([]);
@@ -78,6 +89,17 @@ export default function Navbar() {
 
         return () => window.removeEventListener('storage', onStorage);
     }, []);
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        if (newTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
 
     // Close dropdowns on outside click
     useEffect(() => {
@@ -215,8 +237,8 @@ export default function Navbar() {
                                         href={`/product/${p.id || p.slug || '#'}`}
                                         onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
                                         className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition group border-b border-gray-50 last:border-0">
-                                        {p.image ? (
-                                            <img src={p.image} alt={p.name}
+                                        {p.image_url || p.image ? (
+                                            <img src={getImageUrl(p.image_url || p.image) || ""} alt={p.name}
                                                 className="w-12 h-12 object-cover rounded-lg border border-gray-100 flex-shrink-0 shadow-sm" />
                                         ) : (
                                             <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
@@ -331,6 +353,12 @@ export default function Navbar() {
                         </div>
 
                         {/* Returns & Orders */}
+                        {/* Theme Toggle */}
+                        <button onClick={toggleTheme}
+                            className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors text-gray-500 dark:text-gray-400">
+                            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5 text-[#FF9900]" />}
+                        </button>
+
                         <Link href="/shop"
                             className="hidden lg:flex items-center justify-center w-10 h-10 hover:bg-gray-50 rounded-full text-[#FF9900] transition">
                             <Heart className="h-6 w-6" />
@@ -441,3 +469,4 @@ export default function Navbar() {
         </>
     );
 }
+

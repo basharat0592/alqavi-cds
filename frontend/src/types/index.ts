@@ -44,6 +44,7 @@ export interface Product {
     category: number | string | { id: number; name: string };
     category_name?: string;
     sku?: string;
+    barcode?: string;
     image?: string;
     image_url?: string;
     additional_images?: any[];
@@ -51,6 +52,8 @@ export interface Product {
     batches?: any[];
     is_active?: boolean;
     is_in_stock?: boolean;
+    company?: number | string | { id: number; name: string };
+    company_name?: string;
     company_category?: number | string | { id: number; name: string };
     company_category_name?: string;
     created_at: string;
@@ -197,6 +200,7 @@ export interface CompanyInfo {
     country?: string;
     website?: string;
     logo?: string | null;
+    is_active?: boolean;
     description?: string;
     facebook?: string;
     instagram?: string;

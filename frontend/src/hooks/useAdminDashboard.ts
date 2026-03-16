@@ -56,7 +56,7 @@ export const useAdminDashboard = () => {
             const [ordersRes, usersRes, productsRes] = await Promise.all([
                 orderService.getAll?.() ?? Promise.resolve([]),
                 userService.getAll?.() ?? Promise.resolve([]),
-                productService.getAll?.() ?? Promise.resolve([]),
+                productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
             ]);
 
             const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.results || [];
