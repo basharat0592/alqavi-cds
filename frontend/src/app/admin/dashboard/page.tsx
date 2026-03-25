@@ -272,7 +272,7 @@ function ProductRow({ product, rank }: { product: any; rank: number }) {
    MAIN DASHBOARD PAGE
 ═══════════════════════════════════════════════════════ */
 export default function AdminDashboard() {
-    const { stats, recentOrders, recentUsers, topProducts, products, orders, revenueData, revenueData30, loading, refetch } = useAdminDashboard();
+    const { stats, recentOrders, recentPurchases, recentUsers, topProducts, products, orders, revenueData, revenueData30, activityLogs, loading, refetch } = useAdminDashboard();
     const { isAuthenticated } = useAdminAuth();
     const [chartRange, setChartRange] = useState<'7' | '30'>('7');
 
@@ -330,11 +330,13 @@ export default function AdminDashboard() {
             </div>
 
             {/* ── CORE METRICS BOARD (Horizontal Strip) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <MetricBox label="TOTAL SALES" value={`PKR ${stats?.totalRevenue?.toLocaleString()}`} change={stats?.revenueChange} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <MetricBox label="NET BALANCE" value={`PKR ${stats?.totalRevenue?.toLocaleString()}`} change={stats?.revenueChange} />
                 <MetricBox label="UNITS SOLD" value={stats?.totalOrders?.toLocaleString() || '0'} change={stats?.ordersChange} />
                 <MetricBox label="TODAY'S ORDERS" value={stats?.ordersToday?.toLocaleString() || '0'} />
                 <MetricBox label="PENDING" value={stats?.pendingOrders?.toLocaleString() || '0'} />
+                <MetricBox label="PRODUCTS" value={stats?.totalProducts || '0'} />
+                <MetricBox label="CUSTOMERS" value={stats?.totalCustomers || '0'} />
             </div>
 
             {/* ── MAIN DASHBOARD GRID ── */}
@@ -455,15 +457,16 @@ export default function AdminDashboard() {
 
                     {/* RECENT ACTIVITY (Ticker Style) */}
                     <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded h-fit">
-                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20">
+                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20 flex items-center justify-between">
                             <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Order Lifecycle</h2>
+                            <Link href="/admin/sales" className="text-[9px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest">View All</Link>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
                             {recentOrders.map(o => (
                                 <div key={o.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
                                     <div className="flex justify-between mb-1">
-                                        <span className="text-xs font-bold text-[#007185] dark:text-[#00A8C1] group-hover:underline">ORDER {o.orderNumber || o.id}</span>
-                                        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(o.created_at).toLocaleDateString()}</span>
+                                        <span className="text-xs font-bold text-[#007185] dark:text-[#00A8C1] group-hover:underline uppercase tracking-tighter transition-all">ORDER {o.orderNumber || o.id}</span>
+                                        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(o.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium truncate max-w-[150px]">{o.customerName || 'Customer'}</p>
@@ -474,23 +477,57 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* BUSINESS NEWS / ALERTS */}
+                    {/* RECENT PURCHASE ORDERS */}
+                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4_20px_rgba(0,0,0,0.2)] rounded h-fit">
+                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20 flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Procurement Feed</h2>
+                            <Link href="/admin/purchases" className="text-[9px] font-black text-slate-400 hover:text-orange-600 transition-colors uppercase tracking-widest">View All</Link>
+                        </div>
+                        <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
+                            {recentPurchases.length > 0 ? (
+                                recentPurchases.map(p => (
+                                    <div key={p.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group border-l-4 border-transparent hover:border-orange-400">
+                                        <div className="flex justify-between mb-1">
+                                            <span className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-orange-500 transition-colors uppercase tracking-tighter underline decoration-dotted decoration-gray-300 group-hover:decoration-orange-300">PO: {p.purchase_number}</span>
+                                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(p.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium truncate max-w-[150px]">{p.supplier_name || 'Generic Supplier'}</p>
+                                            <span className="text-xs font-black text-orange-600">- PKR {Number(p.total_amount || 0).toFixed(0)}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-[10px] text-slate-400 italic text-center py-6 uppercase tracking-widest font-bold">No purchase records</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* REAL-TIME ACTIVITY LOGS */}
                     <div className="bg-white/40 dark:bg-slate-900/40 glass-effect p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
-                        <div className="flex items-center gap-3 mb-4 text-[#FF9900]">
+                        <div className="flex items-center gap-3 mb-6 text-[#FF9900]">
                             <div className="p-2 bg-orange-50 dark:bg-[#FF9900]/10 rounded-lg">
                                 <Activity className="w-5 h-5" />
                             </div>
-                            <h3 className="text-sm font-bold uppercase tracking-widest">News & Alerts</h3>
+                            <h3 className="text-sm font-bold uppercase tracking-widest">System Activity</h3>
                         </div>
                         <div className="space-y-4">
-                            <div className="border-l-4 border-indigo-500 pl-4 py-2 bg-white/40 dark:bg-slate-800/40 rounded-r-xl">
-                                <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">System Update v1.4 Live</p>
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1.5">Inventory synchronization logic improved for bulk orders.</p>
-                            </div>
-                            <div className="border-l-4 border-slate-200 dark:border-slate-700 pl-4 py-2 opacity-60">
-                                <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">Monthly Report Available</p>
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1.5">February sales summary is ready for download.</p>
-                            </div>
+                            {activityLogs.length > 0 ? (
+                                activityLogs.map((log: any) => (
+                                    <div key={log.id} className="border-l-4 border-[#FF9900] pl-4 py-2 bg-white/40 dark:bg-slate-800/40 rounded-r-xl transition-all hover:bg-white/60 dark:hover:bg-slate-800/60">
+                                        <p className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight uppercase tracking-tight">{log.action_display || log.action}</p>
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">{log.description}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-[10px] text-slate-500 italic text-center py-4">No recent activity found.</p>
+                            )}
                         </div>
                     </div>
 

@@ -2,7 +2,7 @@
 Products module serializers.
 """
 from rest_framework import serializers
-from .models import Product, Category, ProductGallery
+from .models import Product, Category, ProductGallery, MainCategory
 from modules.company.models import Company, CompanyCategory
 
 
@@ -29,7 +29,7 @@ class CategorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'slug', 'image', 'status']
+        fields = ['id', 'name', 'description', 'slug', 'image', 'status', 'main_category']
         read_only_fields = ['id']
 
     def validate(self, data):
@@ -53,6 +53,8 @@ class ProductSerializer(serializers.ModelSerializer):
     batches = serializers.SerializerMethodField()
     gallery = ProductImageSerializer(many=True, read_only=True)
     image_url = serializers.SerializerMethodField()
+    main_category_names = serializers.SerializerMethodField()
+    main_category_slugs = serializers.SerializerMethodField()
     
     def get_image_url(self, obj):
         if not obj.image:
@@ -71,10 +73,17 @@ class ProductSerializer(serializers.ModelSerializer):
             'company_category', 'company_category_name',
             'sku', 'barcode', 'price', 'cost', 'retail_price', 'quantity_in_stock', 
             'image', 'image_url', 'gallery',
-            'status', 'is_in_stock', 'batches', 'created_at', 'updated_at'
+            'status', 'is_in_stock', 'batches', 'main_category_names', 'main_category_slugs', 'main_categories',
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    def get_main_category_names(self, obj):
+        return [c.name for c in obj.main_categories.all()]
+
+    def get_main_category_slugs(self, obj):
+        return [c.slug or c.name for c in obj.main_categories.all()]
+
     def get_category_name(self, obj):
         return obj.category.name if obj.category else "Uncategorized"
 
@@ -122,12 +131,18 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         required=False
     )
     
+    main_categories = serializers.PrimaryKeyRelatedField(
+        queryset=MainCategory.objects.all(),
+        many=True,
+        required=False
+    )
+    
     class Meta:
         model = Product
         fields = [
             'name', 'description', 'category', 'company', 'company_category', 'sku',
             'price', 'cost', 'retail_price', 'image', 'status', 'barcode',
-            'batch_number', 'upload_images'
+            'batch_number', 'upload_images', 'main_categories'
         ]
 
     def validate(self, data):
@@ -218,3 +233,29 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             except Exception as e:
                 print(f"Error updating batch: {e}")
         return product
+
+
+class MainCategorySerializer(serializers.ModelSerializer):
+    """Serializer for MainCategory model."""
+    product_details = ProductSerializer(source='products', many=True, read_only=True)
+    product_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        source='products',
+        many=True,
+        write_only=True,
+        required=False
+    )
+    
+    class Meta:
+        model = MainCategory
+        fields = ['id', 'name', 'description', 'slug', 'image', 'status', 'product_details', 'product_ids']
+        read_only_fields = ['id']
+
+    def validate(self, data):
+        if not data.get('slug') and data.get('name'):
+            from django.utils.text import slugify
+            data['slug'] = slugify(data['name'])
+            if not data['slug']:
+                 import time
+                 data['slug'] = f"mcat-{int(time.time())}"
+        return data

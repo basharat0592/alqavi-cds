@@ -11,7 +11,7 @@ export const roleService = {
         return data;
     },
     create: async (data: any) => {
-        const response = await api.post('/v1/users/roles/', data);
+        const response = await api.post('/v1/users/roles/create/', data);
         return response.data;
     },
     update: async (id: number | string, data: any) => {
@@ -80,6 +80,10 @@ export const userService = {
     },
     getActivityLogs: async (id: number, limit = 50): Promise<ActivityLog[]> => {
         const { data } = await api.get(`/v1/users/${id}/activity-logs/`, { params: { limit } });
+        return data.results ?? data;
+    },
+    getAllActivityLogs: async (limit = 50): Promise<ActivityLog[]> => {
+        const { data } = await api.get('/v1/users/Admin/all-activity-logs/', { params: { limit } });
         return data.results ?? data;
     },
 };

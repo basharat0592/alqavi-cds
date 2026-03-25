@@ -124,7 +124,7 @@ export default function AddAdjustmentPage() {
                             <select value={form.warehouse} onChange={e => handle('warehouse', e.target.value)}
                                 className={inputCls('warehouse')}>
                                 <option value="">Confirm Warehouse</option>
-                                {warehouses.map(wh => (
+                                {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => (
                                     <option key={wh.id} value={wh.id}>{wh.name}</option>
                                 ))}
                             </select>

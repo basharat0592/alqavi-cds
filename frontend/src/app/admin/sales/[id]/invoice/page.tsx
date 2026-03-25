@@ -85,145 +85,136 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     const total = parseFloat(order.total_amount || '0');
 
     return (
-        <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-8 font-sans">
+        <div className="min-h-screen bg-white py-10 px-6 font-sans text-[#111]">
             {/* Action Bar - Hidden in print */}
-            <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden">
+            <div className="max-w-3xl mx-auto mb-8 flex items-center justify-between print:hidden border-b pb-6">
                 <button
                     onClick={() => router.push('/admin/sales')}
-                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-bold text-sm bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 transition-all hover:shadow-md"
+                    className="flex items-center gap-2 text-gray-500 hover:text-black font-bold text-xs uppercase tracking-widest"
                 >
-                    <ArrowLeft className="w-4 h-4" /> Back
+                    <ArrowLeft className="w-3.5 h-3.5" /> Back to list
                 </button>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <button
                         onClick={handleShare}
-                        className="flex items-center gap-2 bg-white text-gray-700 border border-gray-200 font-bold text-sm px-4 py-2 rounded-xl shadow-sm hover:shadow-md hover:bg-gray-50 transition-all"
+                        className="flex items-center gap-2 text-gray-500 hover:text-black font-bold text-xs uppercase tracking-widest"
                     >
-                        {shared ? <Check className="w-4 h-4 text-green-500" /> : <Share2 className="w-4 h-4" />}
-                        {shared ? 'Copied Link' : 'Share'}
+                        {shared ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Share2 className="w-3.5 h-3.5" />}
+                        {shared ? 'Link Copied' : 'Share'}
                     </button>
                     <button
                         onClick={handlePrint}
-                        className="flex items-center gap-2 bg-[#FF9900] text-gray-900 font-black text-sm px-5 py-2 rounded-xl shadow-sm hover:shadow-md hover:bg-[#e68a00] transition-all"
+                        className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-gray-800 transition-all shadow-sm"
                     >
-                        <Download className="w-4 h-4" /> Print / Download
+                        <Printer className="w-3.5 h-3.5" /> Print Invoice
                     </button>
                 </div>
             </div>
 
-            {/* Invoice A4 Container */}
-            <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-none sm:rounded-2xl overflow-hidden tracking-tight print:shadow-none print:w-full print:max-w-none">
-
-                {/* Header Section */}
-                <div className="px-8 sm:px-12 py-10 bg-gradient-to-r from-[#131921] to-[#1a222c] text-white flex flex-col sm:flex-row items-center justify-between gap-6 print:bg-white print:text-gray-900">
-                    <div className="flex items-center gap-5">
-                        <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center p-1.5 shadow-[0_0_20px_rgba(255,153,0,0.2)] border-2 border-[#FF9900]/30 overflow-hidden shrink-0 print:border-gray-300 print:shadow-none">
-                            <img src="/aqt-logo.jpg" alt="AQT Logo" className="w-full h-full object-contain rounded-full" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-gray-100') }} />
-                            <span className="hidden w-full h-full items-center justify-center text-[#FF9900] font-black text-xs text-center leading-tight [img:not([style*='display: none'])_~_&]:hidden">AQT<br />LOGO</span>
-                        </div>
-                        <div className="text-center sm:text-left">
-                            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-[#FF9900] mb-1">AQT AL-QAVI TRADES</h1>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest print:text-gray-500">Customs Made Easy</p>
-                        </div>
-                    </div>
-                    <div className="text-center sm:text-right">
-                        <h2 className="text-4xl font-black tracking-tighter uppercase mb-2">INVOICE</h2>
-                        <p className="text-sm font-medium text-gray-300 print:text-gray-600">
-                            No. #<span className="font-bold">{order.order_number || String(order.id).toUpperCase()}</span>
-                        </p>
-                        <p className="text-sm font-medium text-gray-300 print:text-gray-600">
-                            Date: <span className="font-bold">{formatDate(order.created_at)}</span>
-                        </p>
-                    </div>
-                </div>
-
-                {/* Details Section */}
-                <div className="px-8 sm:px-12 py-10 grid grid-cols-1 sm:grid-cols-2 gap-10 border-b border-gray-100">
+            {/* Invoice Container */}
+            <div className="max-w-3xl mx-auto bg-white print:w-full">
+                
+                {/* Header Information */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mb-12">
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[#FF9900] mb-3">Bill To</p>
-                        <h3 className="text-lg font-black text-gray-900 mb-1">{customerName}</h3>
-                        {c?.email && <p className="text-sm text-gray-500 font-medium mb-1">{c.email}</p>}
-                        {c?.phone && <p className="text-sm text-gray-500 font-medium">{c.phone}</p>}
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 border-2 border-black flex items-center justify-center p-1 font-black text-[10px] leading-tight text-center">
+                                AQT<br/>TRADE
+                            </div>
+                            <h1 className="text-xl font-black tracking-tighter uppercase">AL-QAVI TRADES</h1>
+                        </div>
+                        <div className="text-[11px] text-gray-500 font-bold uppercase tracking-widest space-y-1">
+                            <p>Customs Made Easy</p>
+                            <p>International Logistics & Supply</p>
+                            <p>Email: support@aqt-trades.com</p>
+                        </div>
                     </div>
                     <div className="sm:text-right">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[#FF9900] mb-3">Payment Info</p>
-                        {order.status !== 'cancelled' && (
-                            <p className="text-sm text-gray-500 font-medium mb-1">
-                                Status: <span className="font-bold text-gray-900 uppercase">{order.payment_status || 'Pending'}</span>
+                        <h2 className="text-3xl font-black tracking-tighter uppercase mb-4">INVOICE</h2>
+                        <div className="text-[11px] font-bold uppercase tracking-widest space-y-1">
+                            <p className="text-gray-400">Invoice Number</p>
+                            <p className="text-black mb-2">#{order.order_number || String(order.id).toUpperCase()}</p>
+                            <p className="text-gray-400">Date Issued</p>
+                            <p className="text-black">{formatDate(order.created_at)}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Billing Details */}
+                <div className="grid grid-cols-2 gap-8 mb-12 pt-8 border-t border-gray-100">
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Billed To</h4>
+                        <div className="space-y-1">
+                            <p className="text-sm font-black text-black uppercase">{customerName}</p>
+                            {c?.email && <p className="text-xs text-gray-500 font-medium">{c.email}</p>}
+                            {c?.phone && <p className="text-xs text-gray-500 font-medium">{c.phone}</p>}
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Order Status</h4>
+                        <div className="space-y-1">
+                            <p className={`text-xs font-black uppercase ${order.status === 'delivered' ? 'text-green-600' : 'text-black'}`}>
+                                {order.status}
                             </p>
-                        )}
-                        <p className="text-sm text-gray-500 font-medium mb-1">
-                            Order Status: <span className={`font-bold uppercase ${order.status === 'delivered' ? 'text-green-600' : 'text-gray-900'}`}>{order.status}</span>
-                        </p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                Payment: {order.payment_status || 'Unpaid'}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Items Table Section */}
-                <div className="px-8 sm:px-12 py-10">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b-2 border-gray-900">
-                                    <th className="py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest w-1/2">Description</th>
-                                    <th className="py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Qty</th>
-                                    <th className="py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-right">Price</th>
-                                    <th className="py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-right">Total</th>
+                {/* Table */}
+                <div className="mb-12">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b-2 border-black">
+                                <th className="py-3 text-[10px] font-black uppercase tracking-widest text-black">Description</th>
+                                <th className="py-3 text-[10px] font-black uppercase tracking-widest text-center text-black">Qty</th>
+                                <th className="py-3 text-[10px] font-black uppercase tracking-widest text-right text-black">Unit</th>
+                                <th className="py-3 text-[10px] font-black uppercase tracking-widest text-right text-black">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 italic font-medium">
+                            {items.map((item: any, i: number) => (
+                                <tr key={i} className="text-xs">
+                                    <td className="py-4 font-black not-italic text-black">{item.product_name || item.name || `Product ${i + 1}`}</td>
+                                    <td className="py-4 text-center text-gray-500">{item.quantity || 1}</td>
+                                    <td className="py-4 text-right text-gray-500">{formatCurrency(parseFloat(item.price || item.unit_price || 0))}</td>
+                                    <td className="py-4 text-right font-black not-italic text-black">{formatCurrency((parseFloat(item.price || item.unit_price || 0) * (item.quantity || 1)))}</td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {items.map((item: any, i: number) => (
-                                    <tr key={i} className="text-sm font-medium hover:bg-gray-50/50 transition-colors">
-                                        <td className="py-4 font-black text-gray-900 pr-4">
-                                            {item.product_name || item.name || `Product ${i + 1}`}
-                                        </td>
-                                        <td className="py-4 text-center text-gray-600">
-                                            {item.quantity || 1}
-                                        </td>
-                                        <td className="py-4 text-right text-gray-600">
-                                            {formatCurrency(parseFloat(item.price || item.unit_price || 0))}
-                                        </td>
-                                        <td className="py-4 text-right font-black text-gray-900">
-                                            {formatCurrency((parseFloat(item.price || item.unit_price || 0) * (item.quantity || 1)))}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {items.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="py-8 text-center text-gray-400 italic font-medium">No items found for this order.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
 
-                {/* Totals Section */}
-                <div className="px-8 sm:px-12 py-10 bg-gray-50 flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 print:bg-transparent">
-                    <div className="w-full sm:w-1/2 text-sm text-gray-500 font-medium">
-                        <p className="mb-1 font-bold text-gray-900">Terms & Conditions</p>
-                        <p className="text-xs">Payment is due within 30 days. Please make checks payable to AQT AL-QAVI TRADES. Thank you for your business.</p>
-                    </div>
-                    <div className="w-full sm:w-[320px] space-y-3">
-                        <div className="flex justify-between items-center text-sm font-bold text-gray-600">
+                {/* Calculations */}
+                <div className="flex justify-end pt-6 border-t border-black">
+                    <div className="w-64 space-y-3 font-bold text-xs uppercase tracking-widest">
+                        <div className="flex justify-between text-gray-400">
                             <span>Subtotal</span>
                             <span>{formatCurrency(subtotal)}</span>
                         </div>
-                        <div className="flex justify-between items-center text-sm font-bold text-gray-600 pb-3 border-b border-gray-200">
+                        <div className="flex justify-between text-gray-400 pb-3 border-b border-gray-100">
                             <span>Tax (0%)</span>
                             <span>{formatCurrency(tax)}</span>
                         </div>
-                        <div className="flex justify-between items-center text-xl font-black text-[#FF9900]">
-                            <span>Total</span>
+                        <div className="flex justify-between text-lg font-black text-black pt-2">
+                            <span>Total Amount</span>
                             <span>{formatCurrency(total)}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Footer Section */}
-                <div className="px-8 sm:px-12 py-6 bg-[#131921] text-center print:bg-white print:border-t print:border-gray-200">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest print:text-gray-500">
-                        AQT AL-QAVI TRADES • Customs Made Easy • Contact: support@aqt-trades.com
-                    </p>
+                {/* Footer Notes */}
+                <div className="mt-24 pt-12 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-start gap-8 opacity-60 grayscale hover:grayscale-0 transition-all">
+                    <div className="max-w-xs">
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-2">Terms & Conditions</p>
+                        <p className="text-[9px] font-medium leading-relaxed">Please make payment within 30 days of issuance. Goods once sold are typically non-refundable unless specified.</p>
+                    </div>
+                    <div className="text-left sm:text-right">
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 italic">Authorized Signature</p>
+                        <div className="w-32 h-0.5 bg-black/20 mt-8 ml-auto"></div>
+                    </div>
                 </div>
             </div>
         </div>

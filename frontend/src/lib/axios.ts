@@ -12,8 +12,8 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token && !token.startsWith('demo-token-')) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
         return config;
@@ -28,23 +28,22 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // If we get an explicit "token_not_valid" error, it's likely a demo token being sent to a real backend
-        const isInvalidToken = error.response?.data?.code === 'token_not_valid';
+        // Custom handling for Network Error (likely backend down)
+        if (error.code === 'ERR_NETWORK') {
+            const backendUrl = error.config?.baseURL || 'the backend';
+            error.message = `Network Error: Could not connect to ${backendUrl}. Please ensure the server is running and the database is connected.`;
+        }
 
-        // Check if this is a demo token — don't redirect, just reject silently
-        const token = localStorage.getItem('accessToken') || '';
-        const isDemoToken = token.startsWith('demo-token-');
+        const isInvalidToken = error.response?.data?.code === 'token_not_valid';
 
         if ((error.response?.status === 401 || isInvalidToken) && !originalRequest._retry) {
             originalRequest._retry = true;
 
-            // Demo tokens can't be refreshed — just reject silently without redirect
-            if (isDemoToken || isInvalidToken) {
-                if (!isDemoToken) {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    window.location.href = '/login';
-                }
+            if (isInvalidToken) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('cosmetic_distro_user');
+                window.location.href = '/login';
                 return Promise.reject(error);
             }
 
@@ -57,11 +56,18 @@ api.interceptors.response.use(
                     localStorage.setItem('accessToken', response.data.access);
                     api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
                     return api(originalRequest);
+                } else {
+                    // No refresh token available — force logout
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('cosmetic_distro_user');
+                    window.location.href = '/login';
                 }
             } catch (refreshError) {
                 // Handle refresh token failure (e.g., logout)
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
+                localStorage.removeItem('cosmetic_distro_user');
                 window.location.href = '/login';
             }
         }

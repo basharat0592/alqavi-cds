@@ -23,8 +23,8 @@ export default function LoginPage() {
         if (isRegisteredFlow) setSuccess(true);
         if (user && !isRegisteredFlow) {
             if (redirect) router.push(redirect);
-            else if (user.role === 'admin') router.push('/admin/dashboard');
-            else router.push('/');
+            else if (user.role === 'admin' || user.is_staff || user.is_superuser) router.push('/admin/dashboard');
+            else router.push('/dashboard');
         }
         const saved = localStorage.getItem('rememberedUsername');
         if (saved) setFormData(p => ({ ...p, username: saved, rememberMe: true }));
@@ -44,9 +44,13 @@ export default function LoginPage() {
             if (formData.rememberMe) localStorage.setItem('rememberedUsername', formData.username);
             else localStorage.removeItem('rememberedUsername');
             const redirect = new URLSearchParams(window.location.search).get('redirect');
-            if (redirect) router.push(redirect);
-            else if (user.role === 'admin') router.push('/admin/dashboard');
-            else router.push('/');
+            if (redirect) {
+                router.push(redirect);
+            } else if (user.role === 'admin' || user.is_staff || user.is_superuser) {
+                router.push('/admin/dashboard');
+            } else {
+                router.push('/dashboard');
+            }
         } catch (err: any) {
             setError(err.message || 'Invalid credentials. Please try again.');
         } finally { setLoading(false); }

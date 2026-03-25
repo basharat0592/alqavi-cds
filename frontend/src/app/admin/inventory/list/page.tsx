@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { 
-    Search, Filter, Plus, FileText, ChevronDown, 
+import {
+    Search, Filter, Plus, FileText, ChevronDown,
     MoreHorizontal, Download, Trash2, Edit, Warehouse,
     Package, AlertTriangle, CheckCircle2, History, Layers, X, Info, ChevronLeft,
-    RefreshCw, Boxes, AlertCircle, TrendingUp
+    RefreshCw, Boxes, AlertCircle, TrendingUp, PackagePlus
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 export default function InventoryListPage() {
     const searchParams = useSearchParams();
     const warehouseId = searchParams.get('warehouse') || '';
-    
+
     const [view, setView] = useState<'list' | 'add'>('list');
     const [inventory, setInventory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -27,6 +27,16 @@ export default function InventoryListPage() {
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingId, setEditingId] = useState<string|number|null>(null);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // ── Add Stock Modal ────────────────────────────────────────────────────────
+    const [addStockItem, setAddStockItem] = useState<any>(null);   // the inventory row
+    const [addStockQty, setAddStockQty] = useState<number>(0);
 
     const SECONDARY_COLOR = "#E68A00";
 
@@ -60,29 +70,70 @@ export default function InventoryListPage() {
                 inventoryService.getWarehouses(),
                 productService.getAll({ all_items: 'true' } as any)
             ]);
-            // Enrich records if names are missing
-            const enrichedInventory = invData.map((item: any) => {
-                if (!item.product_name || item.product_name === "Product Record") {
-                    const prod = prodData.find((p: any) => String(p.id) === String(item.product));
-                    item.product_name = prod?.name || item.product_name || "Product Record";
-                }
-                if (!item.warehouse_name || item.warehouse_name === "Main Node") {
-                    const wh = whData.find((w: any) => String(w.id) === String(item.warehouse));
-                    item.warehouse_name = wh?.name || item.warehouse_name || "Main Node";
-                    item.warehouse_type = wh?.warehouse_type || item.warehouse_type;
-                }
-                return item;
-            });
+            
+            // Find default warehouse for virtual records
+            const defaultWarehouse = whData.find((w: any) => w.is_default) || whData[0];
+            
+            // Re-map everything to be product-centric or at least ensure every product is represented
+            let finalInventory: any[] = [];
 
-            // Clean and Filter invalid/stale records
-            const cleanedInventory = enrichedInventory.filter((item: any) => {
-                const isPlaceholder = item.product_name === "Local Product (Pending Sync)" || item.product_name === "Product Record";
-                const isBroken = isNaN(Number(item.quantity_available));
-                // Only keep records that are not broken
-                return !isBroken;
-            });
+            if (selectedWarehouse) {
+                // If a warehouse is selected, show every product's status in that warehouse
+                finalInventory = prodData.map((prod: any) => {
+                    const record = invData.find((inv: any) => 
+                        String(inv.product) === String(prod.id) && 
+                        String(inv.warehouse) === String(selectedWarehouse)
+                    );
+                    
+                    if (record) return { ...record, product_name: prod.name, sku: prod.sku, barcode: prod.barcode };
 
-            setInventory(cleanedInventory);
+                    // Virtual record for product not yet in this warehouse
+                    return {
+                        id: `virtual-${prod.id}-${selectedWarehouse}`,
+                        product: prod.id,
+                        product_name: prod.name,
+                        sku: prod.sku,
+                        barcode: prod.barcode,
+                        warehouse: selectedWarehouse,
+                        warehouse_name: whData.find((w: any) => String(w.id) === String(selectedWarehouse))?.name,
+                        quantity_available: 0,
+                        is_virtual: true
+                    };
+                });
+            } else {
+                // If "All Storage Hubs" is selected, show all real records PLUS any products that don't have ANY record yet
+                const recordsWithInfo = invData.map((inv: any) => {
+                    const prod = prodData.find((p: any) => String(p.id) === String(inv.product));
+                    const wh = whData.find((w: any) => String(w.id) === String(inv.warehouse));
+                    return {
+                        ...inv,
+                        product_name: prod?.name || inv.product_name,
+                        sku: prod?.sku || inv.sku,
+                        barcode: prod?.barcode || inv.barcode,
+                        warehouse_name: wh?.name || inv.warehouse_name,
+                        warehouse_type: wh?.warehouse_type || inv.warehouse_type
+                    };
+                });
+                
+                // Find products missing entirely from inventory
+                const missingProducts = prodData.filter((p: any) => !invData.some((inv: any) => String(inv.product) === String(p.id)));
+                const virtualRecords = missingProducts.map((p: any) => ({
+                    id: `virtual-${p.id}`,
+                    product: p.id,
+                    product_name: p.name,
+                    sku: p.sku,
+                    barcode: p.barcode,
+                    warehouse: defaultWarehouse?.id,
+                    warehouse_name: defaultWarehouse?.name || "Main Hub",
+                    quantity_available: 0,
+                    is_virtual: true
+                }));
+                
+                finalInventory = [...recordsWithInfo, ...virtualRecords];
+            }
+
+            // Final filter for valid data
+            setInventory(finalInventory.filter(item => item.product_name && !isNaN(Number(item.quantity_available))));
             setWarehouses(whData);
             setAllProducts(prodData);
         } catch (error) {
@@ -109,106 +160,101 @@ export default function InventoryListPage() {
         }
     };
 
-    const handleCreateInventory = async (e: React.FormEvent) => {
+    const handleSaveEdit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // Basic Validation
-        if (!addFormData.product || !addFormData.warehouse) {
-            toast.error("Please select both product and warehouse");
-            return;
-        }
-
         setIsSubmitting(true);
         try {
-            // Sanitize payload: DRF unique constraints often treat "" as a value, 
-            // so we convert empty strings to null for optional fields.
-            // Find names for local display (especially for internal storage)
-            const prodObj = allProducts.find(p => String(p.id) === String(addFormData.product));
-            const whObj = warehouses.find(w => String(w.id) === String(addFormData.warehouse));
-
             const payload = {
-                ...addFormData,
-                product_name: prodObj?.name,
-                warehouse_name: whObj?.name,
-                sku: addFormData.sku.trim() || null,
-                barcode: addFormData.barcode.trim() || null,
-                batch_number: addFormData.batch_number.trim() || null,
-                // Ensure numbers are indeed numbers (DecimalField in backend)
+                product: addFormData.product,
+                warehouse: addFormData.warehouse,
+                sku: addFormData.sku,
+                barcode: addFormData.barcode,
                 quantity_available: Number(addFormData.quantity_available),
                 reorder_level: Number(addFormData.reorder_level),
+                batch_number: addFormData.batch_number || null,
             };
 
-            await inventoryService.createInventory(payload);
-            toast.success("New inventory record created");
+            if (isEditing && editingId) {
+                // PATCH update for existing record
+                await inventoryService.updateInventory(editingId, payload);
+                toast.success(`Updated metadata for ${allProducts.find(p => String(p.id) === payload.product)?.name}`);
+            } else {
+                // Create or Virtual-to-Real transformation
+                await inventoryService.createInventory(payload);
+                toast.success(`Registered and saved stock record`);
+            }
             setView('list');
-            setAddFormData({
-                product: '',
-                warehouse: '',
-                sku: '',
-                barcode: '',
-                quantity_available: 0,
-                reorder_level: 0,
-                batch_number: '',
-            });
             loadData();
         } catch (error: any) {
-            const errorData = error.response?.data;
-            console.error("Inventory Creation Detailed Error:", errorData || error);
-            
-            if (errorData) {
-                // Check for unique constraint specifically
-                const isUniqueError = JSON.stringify(errorData).toLowerCase().includes("unique");
-                if (isUniqueError) {
-                    toast.error("Record already exists for this product/batch at this warehouse.");
-                    return;
-                }
-
-                // Try to find any specific field error (e.g. "product: This field is required")
-                const firstField = Object.keys(errorData)[0];
-                if (firstField && firstField !== 'detail') {
-                    const firstErr = Array.isArray(errorData[firstField]) ? errorData[firstField][0] : errorData[firstField];
-                    toast.error(`${firstField}: ${firstErr}`);
-                    return;
-                }
-
-                if (errorData.detail) {
-                    toast.error(errorData.detail);
-                    return;
-                }
-            }
-            
-            toast.error("Failed to create inventory record context");
+            console.error("Save failed", error);
+            const errMsg = error?.response?.data?.error
+                || error?.response?.data?.detail
+                || Object.values(error?.response?.data || {})?.[0]
+                || "Failed to update record.";
+            toast.error(String(errMsg));
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const handleEditClick = (item: any) => {
+        setAddFormData({
+            product: String(item.product),
+            warehouse: String(item.warehouse),
+            sku: item.sku || '',
+            barcode: item.barcode || '',
+            quantity_available: item.quantity_available,
+            reorder_level: item.reorder_level || 0,
+            batch_number: item.batch_number || '',
+        });
+        setIsEditing(true);
+        setEditingId(item.is_virtual ? null : item.id);
+        setView('add');
+    };
+
     const handleAddClick = () => {
-        setAddFormData(p => ({
-            ...p,
-            warehouse: selectedWarehouse || ''
-        }));
+        setAddFormData({
+            product: '',
+            warehouse: selectedWarehouse || '',
+            sku: '',
+            barcode: '',
+            quantity_available: 0,
+            reorder_level: 0,
+            batch_number: '',
+        });
+        setIsEditing(false);
+        setEditingId(null);
         setView('add');
     };
 
     const filtered = inventory.filter(item => {
-        const matchesSearch = 
+        const matchesSearch =
             (item.product_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (item.sku?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (item.barcode?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (item.batch_number?.toLowerCase().includes(searchTerm.toLowerCase()));
-        
+
         const matchesWarehouse = !selectedWarehouse || String(item.warehouse) === String(selectedWarehouse);
-        
+
         return matchesSearch && matchesWarehouse;
     });
+
+    // Pagination Calculation
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedWarehouse]);
 
     if (view === 'add') {
         return (
             <div className="max-w-[900px] mx-auto pb-12 font-sans px-4 mt-6 animate-in fade-in duration-300">
                 {/* Amazon-style Breadcrumb/Back link */}
                 <div className="mb-6">
-                    <button 
+                    <button
                         onClick={() => setView('list')}
                         className="flex items-center text-sm text-[#007185] dark:text-[#4caec2] hover:text-[#c45500] hover:underline gap-1 transition-colors font-bold uppercase tracking-tight"
                     >
@@ -220,10 +266,12 @@ export default function InventoryListPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                            <Plus className="h-5 w-5 text-[#E68A00]" />
-                            Add Inventory Entry
+                            {isEditing ? <Edit className="h-5 w-5 text-[#E68A00]" /> : <Plus className="h-5 w-5 text-[#E68A00]" />}
+                            {isEditing ? 'Modify Stock Registry' : 'Add Inventory Entry'}
                         </h1>
-                        <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Initialize a new stock record for a product in your network</p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">
+                            {isEditing ? 'Update master records and stock configurations' : 'Initialize a new stock record for a product in your network'}
+                        </p>
                     </div>
                 </div>
 
@@ -231,19 +279,24 @@ export default function InventoryListPage() {
                     <div className="p-6 border-b border-gray-100 dark:border-slate-800">
                         <div className="bg-[#f7fafa] dark:bg-slate-800/50 border border-[#d5dbdb] dark:border-slate-700 p-4 rounded flex gap-3 text-[#111] dark:text-gray-300 text-sm italic">
                             <Info className="w-5 h-5 text-[#007185] dark:text-blue-400 shrink-0" />
-                            <p>This form creates a master record for a product at a specific location. If the product already exists in this warehouse, please use the <b>Adjustments</b> module instead.</p>
+                            <p>
+                                {isEditing 
+                                    ? "You are modifying a master record. Changes to quantities will update physical availability directly without creating a movement log."
+                                    : "This form creates a master record for a product at a specific location. If the product already exists in this warehouse, please use the Adjustments module instead."
+                                }
+                            </p>
                         </div>
                     </div>
 
-                    <form onSubmit={handleCreateInventory} className="p-8 space-y-6">
+                    <form onSubmit={handleSaveEdit} className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold text-gray-900 dark:text-gray-200 uppercase tracking-wider mb-1">Select Product <span className="text-red-600">*</span></label>
-                                <select 
+                                <select
                                     required
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] transition-all shadow-sm text-gray-900 dark:text-white"
                                     value={addFormData.product}
-                                    onChange={(e) => setAddFormData({...addFormData, product: e.target.value})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, product: e.target.value })}
                                 >
                                     <option value="" className="bg-white dark:bg-slate-900">Select a product...</option>
                                     {allProducts.map(p => (
@@ -253,14 +306,14 @@ export default function InventoryListPage() {
                             </div>
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold text-gray-900 dark:text-gray-200 uppercase tracking-wider mb-1">Warehouse / Location <span className="text-red-600">*</span></label>
-                                <select 
+                                <select
                                     required
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] transition-all shadow-sm text-gray-900 dark:text-white"
                                     value={addFormData.warehouse}
-                                    onChange={(e) => setAddFormData({...addFormData, warehouse: e.target.value})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, warehouse: e.target.value })}
                                 >
                                     <option value="" className="bg-white dark:bg-slate-900">Select storage location...</option>
-                                    {warehouses.map(wh => (
+                                    {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => (
                                         <option key={wh.id} value={wh.id} className="bg-white dark:bg-slate-900">{wh.name}</option>
                                     ))}
                                 </select>
@@ -270,77 +323,77 @@ export default function InventoryListPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-gray-900 dark:text-white">
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold uppercase tracking-wider mb-1">SKU (optional)</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder="Leave blank for auto-assign"
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-sm"
                                     value={addFormData.sku}
-                                    onChange={(e) => setAddFormData({...addFormData, sku: e.target.value})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, sku: e.target.value })}
                                 />
                             </div>
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold uppercase tracking-wider mb-1">EAN / Barcode</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder="Scan barcode..."
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-sm"
                                     value={addFormData.barcode}
-                                    onChange={(e) => setAddFormData({...addFormData, barcode: e.target.value})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, barcode: e.target.value })}
                                 />
                             </div>
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold uppercase tracking-wider mb-1">Batch Number</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder="LOT-Default"
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-sm"
                                     value={addFormData.batch_number}
-                                    onChange={(e) => setAddFormData({...addFormData, batch_number: e.target.value})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, batch_number: e.target.value })}
                                 />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-900 dark:text-white">
                             <div className="flex flex-col text-gray-900 dark:text-white">
-                                <label className="text-xs font-bold mb-1 text-[#c45500] uppercase tracking-wider">Opening Stock <span className="text-red-500">*</span></label>
-                                <input 
-                                    type="number" 
+                                <label className="text-xs font-bold mb-1 text-[#c45500] uppercase tracking-wider">{isEditing ? 'Current Stock Count' : 'Opening Stock'} <span className="text-red-500">*</span></label>
+                                <input
+                                    type="number"
                                     required
                                     min="0"
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-sm font-medium"
                                     value={addFormData.quantity_available}
-                                    onChange={(e) => setAddFormData({...addFormData, quantity_available: Number(e.target.value)})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, quantity_available: Number(e.target.value) })}
                                 />
                             </div>
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold uppercase tracking-wider mb-1">Reorder Threshold</label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     min="0"
                                     className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-sm"
                                     value={addFormData.reorder_level}
-                                    onChange={(e) => setAddFormData({...addFormData, reorder_level: Number(e.target.value)})}
+                                    onChange={(e) => setAddFormData({ ...addFormData, reorder_level: Number(e.target.value) })}
                                 />
                             </div>
                         </div>
 
                         <div className="flex items-center justify-end gap-3 p-6 bg-[#f7fafa] dark:bg-slate-800/80 -mx-8 -mb-8 mt-10 border-t border-gray-200 dark:border-slate-800">
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 onClick={() => setView('list')}
                                 className="px-5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
                             >
                                 Cancel
                             </button>
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 disabled={isSubmitting}
                                 style={{ backgroundColor: '#E68A00', borderColor: '#d67d00' }}
                                 className="hover:opacity-90 disabled:bg-gray-200 disabled:text-gray-400 text-white px-8 py-1.5 rounded border shadow-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
                             >
                                 {isSubmitting ? (
                                     <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                                ) : "Save and continue"}
+                                ) : (isEditing ? "Commit Updates" : "Save and continue")}
                             </button>
                         </div>
                     </form>
@@ -357,15 +410,15 @@ export default function InventoryListPage() {
                 <div>
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
                         <Boxes className="h-5 w-5 text-[#E68A00]" />
-                        Inventory Ledger
+                        Stock Management
                     </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Central registry of stock keeping units across all physical nodes</p>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Central registry of stock keeping units across all warehouses</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={loadData} className="p-2 border border-gray-200 dark:border-slate-800 rounded hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 transition-colors">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button 
+                    <button
                         onClick={purgeLocalInventory}
                         title="Clear local test data"
                         className="p-2 border border-gray-200 dark:border-slate-800 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
@@ -375,7 +428,7 @@ export default function InventoryListPage() {
                     <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded shadow-sm text-xs font-bold uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
                         <Download className="w-4 h-4" /> Export
                     </button>
-                    <button 
+                    <button
                         onClick={handleAddClick}
                         style={{ backgroundColor: SECONDARY_COLOR }}
                         className="text-white px-6 py-2 rounded shadow-sm text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all hover:opacity-90"
@@ -397,8 +450,8 @@ export default function InventoryListPage() {
             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-t p-4 flex flex-col md:flex-row gap-4 items-center">
                 <div className="relative flex-1 w-full max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2.5} />
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         placeholder="Search by SKU, Product Name, Barcode..."
                         className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-sm outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-[#E68A00] dark:text-white transition-all shadow-sm"
                         value={searchTerm}
@@ -407,13 +460,13 @@ export default function InventoryListPage() {
                 </div>
                 <div className="relative w-full md:w-72">
                     <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={2.5} />
-                    <select 
+                    <select
                         className="w-full pl-10 pr-10 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-sm font-bold text-gray-700 dark:text-slate-200 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-[#E68A00] transition-all shadow-sm cursor-pointer appearance-none"
                         value={selectedWarehouse}
                         onChange={(e) => setSelectedWarehouse(e.target.value)}
                     >
                         <option value="" className="bg-white dark:bg-slate-900">All Storage Hubs</option>
-                        {warehouses.map(wh => (
+                        {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => (
                             <option key={wh.id} value={wh.id} className="bg-white dark:bg-slate-900">{wh.name}</option>
                         ))}
                     </select>
@@ -451,7 +504,7 @@ export default function InventoryListPage() {
                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Adjust your warehouse filter or register new stock to begin</p>
                                     </td>
                                 </tr>
-                            ) : filtered.map((item) => (
+                            ) : paginatedItems.map((item) => (
                                 <tr key={item.id} className="group hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-start">
@@ -478,18 +531,28 @@ export default function InventoryListPage() {
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase">Available:</span>
-                                                <span className={`text-sm font-black ${Number(item.quantity_available) <= Number(item.reorder_level || 0) ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'}`}>{Number(item.quantity_available).toLocaleString()}</span>
+                                                <span className={`text-sm font-black ${Number(item.quantity_available) <= Number(item.reorder_level || 0) && !item.is_virtual ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'}`}>{Number(item.quantity_available).toLocaleString()}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-[10px]">
-                                                <span className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Res: {item.quantity_reserved || 0}</span>
-                                                <span className="text-slate-200 dark:text-slate-800">|</span>
-                                                <span className="font-bold text-red-400 uppercase tracking-tighter">Dmg: {item.quantity_damaged || 0}</span>
+                                                {item.is_virtual ? (
+                                                    <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-tight italic">No physical logs yet</span>
+                                                ) : (
+                                                    <>
+                                                        <span className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Res: {item.quantity_reserved || 0}</span>
+                                                        <span className="text-slate-200 dark:text-slate-800">|</span>
+                                                        <span className="font-bold text-red-400 uppercase tracking-tighter">Dmg: {item.quantity_damaged || 0}</span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col gap-2">
-                                            {Number(item.quantity_available) <= Number(item.reorder_level || 0) ? (
+                                            {item.is_virtual ? (
+                                                <div className="inline-flex items-center gap-1.5 text-[9px] font-black text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-800 uppercase w-fit">
+                                                    Initial Registry
+                                                </div>
+                                            ) : Number(item.quantity_available) <= Number(item.reorder_level || 0) ? (
                                                 <div className="inline-flex items-center gap-1.5 text-[9px] font-black text-red-600 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-100 dark:border-red-900/50 uppercase w-fit">
                                                     <AlertTriangle className="w-3 h-3" /> Reorder Level
                                                 </div>
@@ -500,12 +563,19 @@ export default function InventoryListPage() {
                                             )}
                                             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
                                                 <Layers className="w-3 h-3 text-slate-300 dark:text-slate-600" />
-                                                LOT: <span className="text-slate-900 dark:text-slate-300">{item.batch_number || 'Default'}</span>
+                                                LOT: <span className="text-slate-900 dark:text-slate-300">{item.batch_number || (item.is_virtual ? 'N/A' : 'Default')}</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => handleEditClick(item)}
+                                                title="Edit Master Record"
+                                                className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg text-slate-300 hover:text-indigo-600 transition-all border border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/50"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </button>
                                             <button onClick={() => { setSelectedItem(item); setIsDeleteModalOpen(true); }} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-slate-300 hover:text-red-500 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/50">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -522,13 +592,37 @@ export default function InventoryListPage() {
                         </tbody>
                     </table>
                 </div>
-                {/* Footer Count Strip */}
-                <div className="bg-gray-50/50 dark:bg-slate-800/50 p-4 border-t border-gray-50 dark:border-slate-800 text-center">
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest italic leading-none">
-                        System Registry Check Complete • Total Records Mapping: {inventory.length}
-                    </p>
-                </div>
+
+                {/* Pagination Controls (Matching Products page style) */}
+                {filtered.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 gap-4">
+                        <div className="text-[11px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filtered.length)} of {filtered.length} entries
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-4 py-1.5 border border-gray-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-[#E68A00] hover:bg-orange-50 dark:hover:bg-orange-900/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Previous
+                            </button>
+                            <div className="text-[11px] font-black text-gray-600 dark:text-slate-300 tracking-wider">
+                                PAGE {currentPage} / {totalPages}
+                            </div>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-1.5 border border-gray-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-[#E68A00] hover:bg-orange-50 dark:hover:bg-orange-900/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
+
+
 
             {/* Amazon-Style Delete Popup */}
             {isDeleteModalOpen && (
@@ -551,7 +645,7 @@ export default function InventoryListPage() {
                             </p>
                         </div>
                         <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex flex-col gap-2">
-                            <button 
+                            <button
                                 onClick={handleDelete}
                                 disabled={isSubmitting}
                                 className="w-full bg-[#f0c14b] border border-[#a88734] hover:bg-[#e7bb46] disabled:bg-gray-200 disabled:text-gray-400 text-[#111] py-2 rounded font-bold text-xs uppercase tracking-widest shadow-sm transition-all flex items-center justify-center gap-2"
@@ -560,7 +654,7 @@ export default function InventoryListPage() {
                                     <div className="w-4 h-4 border-2 border-[#111]/20 border-t-[#111] rounded-full animate-spin"></div>
                                 ) : "Delete Permanent"}
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setIsDeleteModalOpen(false)}
                                 className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 py-2 rounded font-bold text-xs uppercase tracking-widest transition-all shadow-sm"
                             >

@@ -2,19 +2,48 @@
 
 import api from './axios';
 
-export type UserRole = 'admin';
+export type UserRole = 'admin' | 'Customer' | 'staff' | 'manager';
 
 export interface User {
     id: string;
     name: string;
     email: string;
-    role: UserRole;
+    role: UserRole | string;
     avatar?: string;
+    phone?: string;
+    is_staff?: boolean;
+    is_superuser?: boolean;
 }
 
 const STORAGE_KEY_USER = 'cosmetic_distro_user';
 
 export const authService = {
+    // Registration API
+    register: async (userData: any): Promise<User> => {
+        try {
+            const { data } = await api.post('/v1/users/register/', userData);
+            return data as User;
+        } catch (error: any) {
+            const detail = error.response?.data;
+            let errorMessage = "Registration failed.";
+            console.error("Registration Error Detail:", detail);
+            
+            if (detail) {
+                if (typeof detail === 'string') errorMessage = detail;
+                else if (typeof detail === 'object') {
+                    // Get the first error message from the object
+                    const field = Object.keys(detail)[0];
+                    if (field && Array.isArray(detail[field])) {
+                        errorMessage = `${field}: ${detail[field][0]}`;
+                    } else if (detail.detail) {
+                        errorMessage = detail.detail;
+                    }
+                }
+            }
+            throw new Error(errorMessage);
+        }
+    },
+
     // Login API
     login: async (emailOrUsername: string, password: string): Promise<{ user: User; token: string }> => {
         try {
@@ -46,6 +75,9 @@ export const authService = {
 
     getUser: (): User | null => {
         if (typeof window === 'undefined') return null;
+        const token = localStorage.getItem('accessToken');
+        if (!token) return null;
+        
         const userStr = localStorage.getItem(STORAGE_KEY_USER);
         if (!userStr || userStr === 'undefined') return null;
         try {

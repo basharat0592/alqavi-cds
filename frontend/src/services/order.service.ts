@@ -35,5 +35,9 @@ export const orderService = {
     },
     delete: async (id: string) => {
         await api.delete(`/v1/sales/orders/${id}/delete/`);
+    },
+    getStats: async () => {
+        const response = await api.get('/v1/sales/dashboard/stats/');
+        return response.data;
     }
 };

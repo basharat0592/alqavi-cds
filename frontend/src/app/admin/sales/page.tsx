@@ -9,17 +9,17 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import {
     ShoppingBag, Search, X, RefreshCw, Eye,
     CheckCircle, Clock, DollarSign, Printer, Plus, Trash2, Edit,
-    AlertTriangle, Loader2, Package, Save
+    AlertTriangle, Loader2, Package, Save, XCircle
 } from 'lucide-react';
-import { 
-    PageWrapper, SectionCard, PageHeader, Toast, DeleteConfirmModal, 
-    AMZ_INPUT, ActionButton, SecondaryButton, PrimaryButton, 
-    FilterHub, AdminTable 
+import {
+    PageWrapper, SectionCard, PageHeader, Toast, DeleteConfirmModal,
+    AMZ_INPUT, ActionButton, SecondaryButton, PrimaryButton,
+    FilterHub, AdminTable
 } from '@/components/ui/AmazonStyles';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_FILTERS = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+const STATUS_FILTERS = ['All', 'Ordered', 'Confirmed', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Rejected'];
 
 // ── Modals ───────────────────────────────────────────────────────────────────
 function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => void }) {
@@ -39,7 +39,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                     <div className="flex items-center gap-3">
                         <ShoppingBag className="w-5 h-5 text-[#FF9900]" />
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">
-                            Order #{order.order_number || order.id}
+                            Sale Order #{order.order_number || order.id}
                         </h2>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
@@ -51,7 +51,16 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 rounded">
                             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Customer Identity</p>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">{customerName}</p>
+                            {order.customer ? (
+                                <Link
+                                    href={`/admin/customers/edit/${typeof order.customer === 'object' ? order.customer.id : order.customer}`}
+                                    className="text-sm font-bold text-[#007185] hover:text-[#C45500] hover:underline"
+                                >
+                                    {customerName}
+                                </Link>
+                            ) : (
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">{customerName}</p>
+                            )}
                             <p className="text-xs text-gray-500 mt-1">{c?.email || 'Guest Client'}</p>
                         </div>
                         <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 rounded">
@@ -79,7 +88,18 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                             <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                                 {items.map((item: any, i: number) => (
                                     <tr key={i} className="text-xs text-gray-700 dark:text-gray-300">
-                                        <td className="px-4 py-3 font-bold">{item.product_name || item.name || `Registry Item ${i + 1}`}</td>
+                                        <td className="px-4 py-3 font-bold">
+                                            {item.product?.id ? (
+                                                <Link
+                                                    href={`/admin/products/edit/${item.product.id}`}
+                                                    className="text-[#007185] hover:text-[#C45500] hover:underline"
+                                                >
+                                                    {item.product_name || item.name || `Registry Item ${i + 1}`}
+                                                </Link>
+                                            ) : (
+                                                item.product_name || item.name || `Registry Item ${i + 1}`
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-center">{item.quantity}</td>
                                         <td className="px-4 py-3 text-right">{formatCurrency(parseFloat(item.price || 0), currency)}</td>
                                         <td className="px-4 py-3 text-right font-bold">{formatCurrency((parseFloat(item.price || 0) * item.quantity), currency)}</td>
@@ -111,9 +131,12 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                     <button onClick={onClose} className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] dark:border-slate-600 rounded text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 shadow-sm transition-colors">
                         Close
                     </button>
-                    <button onClick={() => window.print()} className="px-4 py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded text-xs font-bold text-[#111] shadow-sm flex items-center gap-2">
-                        <Printer className="h-3 w-3" /> Print Invoice
-                    </button>
+                    <Link
+                        href={`/admin/sales/${order.id}/invoice`}
+                        className="px-4 py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded text-xs font-bold text-[#111] shadow-sm flex items-center gap-2"
+                    >
+                        <Printer className="h-3 w-3" /> View/Print Invoice
+                    </Link>
                 </div>
             </div>
         </div>
@@ -137,7 +160,7 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order, onClos
             });
             onSuccess();
         } catch (error) {
-            onSuccess();
+            console.error("Update error", error);
         } finally {
             setLoading(false);
         }
@@ -156,11 +179,14 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order, onClos
                     <div>
                         <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status Classification</label>
                         <select value={status} onChange={e => setStatus(e.target.value)} className={AMZ_INPUT}>
+                            <option value="ordered">Ordered</option>
+                            <option value="confirmed">Confirmed</option>
                             <option value="pending">Pending</option>
                             <option value="processing">Processing</option>
                             <option value="shipped">Shipped</option>
                             <option value="delivered">Delivered</option>
                             <option value="cancelled">Cancelled</option>
+                            <option value="rejected">Rejected</option>
                         </select>
                     </div>
                     <div>
@@ -201,21 +227,34 @@ export default function SalesPage() {
     const [totalCount, setTotalCount] = useState(0);
     const [pageSize] = useState(10);
 
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [stats, setStats] = useState<any>(null);
+
     const load = async (page = currentPage) => {
         setLoading(true);
         try {
             const params: any = {
                 page,
                 ordering: '-created_at',
-                search: search || undefined
+                search: search || undefined,
+                start_date: startDate || undefined,
+                end_date: endDate || undefined
             };
             if (statusFilter !== 'All') {
                 params.status = statusFilter.toLowerCase();
+            } else {
+                params.exclude_status = 'ordered';
             }
 
-            const data = await orderService.getPaginated(params);
-            setOrders(data.results);
-            setTotalCount(data.count);
+            const [ordersData, statsData] = await Promise.all([
+                orderService.getPaginated(params),
+                orderService.getStats()
+            ]);
+
+            setOrders(ordersData.results);
+            setTotalCount(ordersData.count);
+            setStats(statsData);
         } catch { }
         finally { setLoading(false); }
     };
@@ -224,15 +263,28 @@ export default function SalesPage() {
         const delayDebounceFn = setTimeout(() => {
             setCurrentPage(1);
             load(1);
-        }, 300);
+        }, 500);
         return () => clearTimeout(delayDebounceFn);
-    }, [search, statusFilter]);
+    }, [search, statusFilter, startDate, endDate]);
 
     useEffect(() => {
         load(currentPage);
     }, [currentPage]);
 
     const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+    const handleStatusMove = async (orderId: string, newStatus: string) => {
+        setLoading(true);
+        try {
+            await orderService.update(orderId, { status: newStatus });
+            showToast(`Order status set to ${newStatus}.`);
+            load(currentPage);
+        } catch {
+            showToast("Update failed.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const confirmDelete = async () => {
         if (!orderToDelete) return;
@@ -248,7 +300,19 @@ export default function SalesPage() {
         }
     };
 
-    const totalRevenue = orders.reduce((s, o) => (o.payment_status || '').toLowerCase() === 'completed' ? s + parseFloat(String(o.total_amount || '0')) : s, 0);
+    const handleViewOrder = async (order: Order) => {
+        setLoading(true);
+        try {
+            const fullOrder = await orderService.getById(order.id as string);
+            setSelectedOrder(fullOrder);
+        } catch (error) {
+            console.error("Error fetching order details", error);
+            showToast("Failed to load order details.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const totalPages = Math.ceil(totalCount / pageSize);
 
     return (
@@ -259,12 +323,12 @@ export default function SalesPage() {
 
             {/* Simple Amazon Header */}
             <PageHeader
-                title="Transaction Ledger"
+                title="Sale Order List"
                 subtitle="Global sales record and order fulfillment tracking"
                 icon={ShoppingBag}
                 action={
                     <PrimaryButton href="/admin/sales/create">
-                        <Plus className="h-4 w-4" /> Add Order
+                        <Plus className="h-4 w-4" /> Add Sale Order
                     </PrimaryButton>
                 }
             />
@@ -272,10 +336,10 @@ export default function SalesPage() {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[
-                    { label: 'Total Orders', val: loading ? '...' : totalCount, icon: Package, color: 'text-blue-600' },
-                    { label: 'Completed Sales', val: orders.filter(o => o.status === 'delivered').length, icon: CheckCircle, color: 'text-green-600' },
-                    { label: 'Total Revenue', val: loading ? '...' : formatCurrency(totalRevenue), icon: DollarSign, color: 'text-[#FF9900]' },
-                    { label: 'Pending Queue', val: orders.filter(o => o.status === 'pending').length, icon: Clock, color: 'text-yellow-600' }
+                    { label: 'Total Sale Orders', val: loading ? '...' : (stats?.total_orders || totalCount), icon: Package, color: 'text-blue-600' },
+                    { label: 'Completed Sales', val: stats?.delivered_orders || 0, icon: CheckCircle, color: 'text-green-600' },
+                    { label: 'Total Revenue', val: loading ? '...' : formatCurrency(stats?.total_revenue || 0), icon: DollarSign, color: 'text-[#FF9900]' },
+                    { label: 'Pending Queue', val: stats?.pending_orders || 0, icon: Clock, color: 'text-yellow-600' }
                 ].map((s, i) => (
                     <div key={i} className="bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 p-4 rounded shadow-sm flex items-center justify-between">
                         <div>
@@ -294,6 +358,28 @@ export default function SalesPage() {
                 searchPlaceholder="Find by order # or customer..."
                 loading={loading}
                 onRefresh={() => load()}
+                extraFilters={
+                    <div className="flex flex-col md:flex-row gap-2 items-center">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">From</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className={AMZ_INPUT + " !py-1 !px-2 !w-32 text-xs"}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">To</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
+                                className={AMZ_INPUT + " !py-1 !px-2 !w-32 text-xs"}
+                            />
+                        </div>
+                    </div>
+                }
             >
                 <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded border border-gray-200 dark:border-slate-700 overflow-x-auto no-scrollbar max-w-full">
                     {STATUS_FILTERS.map(f => (
@@ -313,12 +399,10 @@ export default function SalesPage() {
                 data={orders}
                 loading={loading}
                 emptyMessage="No transactions recorded in this axis."
-                pagination={{
-                    currentPage,
-                    totalPages,
-                    totalCount,
-                    onPageChange: setCurrentPage
-                }}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                onPageChange={setCurrentPage}
                 renderRow={(o) => {
                     const c = o.customer as any;
                     const cName = (o as any).customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || c?.email || 'Guest');
@@ -343,13 +427,23 @@ export default function SalesPage() {
                             </td>
                             <td className="px-6 py-4 text-right">
                                 <div className="flex justify-end gap-1">
-                                    <button onClick={() => setSelectedOrder(o)} className="p-1.5 text-gray-400 hover:text-[#FF9900]">
+                                    {o.status === 'ordered' && (
+                                        <>
+                                            <button onClick={() => handleStatusMove(o.id as string, 'confirmed')} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded bg-white border border-emerald-100 shadow-sm transition-all" title="Confirm Order">
+                                                <CheckCircle className="h-4 w-4" />
+                                            </button>
+                                            <button onClick={() => handleStatusMove(o.id as string, 'rejected')} className="p-1.5 text-red-500 hover:bg-red-50 rounded bg-white border border-red-100 shadow-sm transition-all" title="Reject Order">
+                                                <XCircle className="h-4 w-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                    <button onClick={() => handleViewOrder(o)} className="p-1.5 text-gray-400 hover:text-[#FF9900]" title="View Details">
                                         <Eye className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => setOrderToUpdate(o)} className="p-1.5 text-gray-400 hover:text-blue-500">
+                                    <button onClick={() => setOrderToUpdate(o)} className="p-1.5 text-gray-400 hover:text-blue-500" title="Edit Status">
                                         <Edit className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => setOrderToDelete(o)} className="p-1.5 text-gray-400 hover:text-red-600">
+                                    <button onClick={() => setOrderToDelete(o)} className="p-1.5 text-gray-400 hover:text-red-600" title="Remove Record">
                                         <Trash2 className="h-4 w-4" />
                                     </button>
                                 </div>

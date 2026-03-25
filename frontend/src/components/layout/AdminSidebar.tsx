@@ -101,14 +101,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             label: 'Catalog',
             items: [
                 { name: 'All Products', href: '/admin/products', icon: Package, badge: counts.products },
-                { name: 'Categories', href: '/admin/products/categories', icon: FolderTree },
+                { name: 'Main Category', href: '/admin/products/main-categories', icon: Layers },
+                { name: 'Sub Category', href: '/admin/products/categories', icon: FolderTree },
             ],
         },
         {
             label: 'Inventory',
             items: [
-                { name: 'Stock Ledger', href: '/admin/inventory/list', icon: Boxes, badge: counts.lowStock, alert: counts.lowStock > 0 },
-                { name: 'Storage Nodes', href: '/admin/inventory/warehouses', icon: Warehouse },
+                { name: 'Stock Management', href: '/admin/inventory/list', icon: Boxes, badge: counts.lowStock, alert: counts.lowStock > 0 },
+                { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Warehouse },
                 { name: 'Movements', href: '/admin/inventory/movements', icon: ArrowLeftRight },
                 { name: 'Batch Center', href: '/admin/inventory/batches', icon: Layers },
             ],
@@ -116,9 +117,9 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
         {
             label: 'Sales & Returns',
             items: [
-                { name: 'Sale Console', href: '/admin/sale', icon: ShoppingCart },
-                { name: 'Orders List', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Returns Depot', href: '/admin/sale-returns', icon: RotateCcw },
+                { name: 'POS  (Point of Sale)', href: '/admin/sale', icon: ShoppingCart },
+                { name: 'Sale Order List', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
                 { name: 'Client Registry', href: '/admin/customers', icon: Users, badge: counts.customers },
             ],
         },
@@ -127,6 +128,13 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             items: [
                 { name: 'Transaction Logs', href: '/admin/payments', icon: Banknote },
                 { name: 'Client Balances', href: '/admin/payments/customer', icon: Users },
+            ],
+        },
+        {
+            label: 'Purchasing',
+            items: [
+                { name: 'Purchase Orders', href: '/admin/purchases', icon: ShoppingCart },
+                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RotateCcw },
             ],
         },
         {

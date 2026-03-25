@@ -75,9 +75,9 @@ export default function WarehousesPage() {
                 <div>
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
                         <Building2 className="h-5 w-5 text-[#E68A00]" />
-                        Fulfillment Network
+                        Warehouses
                     </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage global distribution nodes, storage capacity and hub status</p>
+                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage warehouses, storage capacity and hub status</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded shadow-sm text-xs font-bold uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
@@ -88,7 +88,7 @@ export default function WarehousesPage() {
                         style={{ backgroundColor: '#E68A00' }}
                         className="text-white px-6 py-2 rounded shadow-sm text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all hover:opacity-90"
                     >
-                        <Plus className="w-4 h-4" strokeWidth={3} /> Register New Node
+                        <Plus className="w-4 h-4" strokeWidth={3} /> Add Warehouse
                     </Link>
                 </div>
             </div>

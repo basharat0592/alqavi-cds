@@ -37,15 +37,24 @@ export default function ProductsPage() {
     const [deleteProd, setDeleteProd] = useState<Product | null>(null);
     const [deleting, setDeleting] = useState(false);
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, category, selectedCompany]);
+
     const loadData = async () => {
         setLoading(true);
         try {
             const [prodData, catData, compData] = await Promise.all([
-                productService.getAll(),
+                productService.getAll({ all_items: 'true' } as any),
                 productService.getCategories(),
                 companyService.getAll()
             ]);
-            
+
             const items = Array.isArray(prodData) ? prodData : (prodData as any).results || [];
             setProducts(items);
             setCategories((catData || []).filter((c: any) => c.status === 'active'));
@@ -83,12 +92,16 @@ export default function ProductsPage() {
     };
 
     const filtered = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                            (p.sku || '').toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+            (p.sku || '').toLowerCase().includes(search.toLowerCase());
         const matchesCat = category ? p.category?.toString() === category : true;
         const matchesComp = selectedCompany ? (typeof p.company === 'object' ? p.company.id?.toString() === selectedCompany : p.company?.toString() === selectedCompany) : true;
         return matchesSearch && matchesCat && matchesComp;
     });
+
+    // Pagination slices
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const paginatedProducts = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
@@ -123,8 +136,8 @@ export default function ProductsPage() {
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="flex items-center gap-2 border-l border-gray-200 pl-4 h-8">
                             <Filter className="h-3 w-3 text-gray-400" />
-                            <select 
-                                value={category} 
+                            <select
+                                value={category}
                                 onChange={(e) => setCategory(e.target.value)}
                                 className="text-[10px] font-black bg-transparent outline-none text-gray-600 dark:text-gray-300 uppercase tracking-widest cursor-pointer"
                             >
@@ -134,8 +147,8 @@ export default function ProductsPage() {
                         </div>
                         <div className="flex items-center gap-2 border-l border-gray-200 pl-4 h-8">
                             <Building2 className="h-3 w-3 text-gray-400" />
-                            <select 
-                                value={selectedCompany} 
+                            <select
+                                value={selectedCompany}
                                 onChange={(e) => setSelectedCompany(e.target.value)}
                                 className="text-[10px] font-black bg-transparent outline-none text-gray-600 dark:text-gray-300 uppercase tracking-widest cursor-pointer"
                             >
@@ -158,8 +171,7 @@ export default function ProductsPage() {
                             <tr className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
                                 <th className="px-6 py-3">Product Context</th>
                                 <th className="px-6 py-3">Pricing</th>
-                                <th className="px-6 py-3">SKU / Barcode</th>
-                                <th className="px-6 py-3">Stock Status</th>
+                                <th className="px-6 py-3 text-center">SKU / Barcode</th>
                                 <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -171,11 +183,11 @@ export default function ProductsPage() {
                             ) : filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                        Your inventory is currently empty.
+                                        Your inventory is currently empty or no products match your filters.
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map(prod => (
+                                paginatedProducts.map(prod => (
                                     <tr key={prod.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -190,12 +202,27 @@ export default function ProductsPage() {
                                                     <div className="font-bold text-gray-900 dark:text-white uppercase tracking-tight text-sm">{prod.name}</div>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{prod.category_name || 'Standard Catalog'}</div>
+                                                        {prod.company_category_name && (
+                                                            <>
+                                                                <span className="text-gray-300">•</span>
+                                                                <div className="text-[10px] text-blue-600 font-black uppercase tracking-wider">{prod.company_category_name}</div>
+                                                            </>
+                                                        )}
                                                         {prod.company_name && (
                                                             <>
                                                                 <span className="text-gray-300">•</span>
                                                                 <div className="text-[10px] text-[#E68A00] font-black uppercase tracking-wider">{prod.company_name}</div>
                                                             </>
                                                         )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-1.5 pt-1.5 border-t border-gray-50 dark:border-slate-800">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className={`h-1.5 w-1.5 rounded-full ${(prod.quantity_in_stock || 0) > 10 ? 'bg-green-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-orange-500' : 'bg-red-500'}`} />
+                                                            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">{prod.quantity_in_stock || 0} Units Available</span>
+                                                        </div>
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${prod.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                                                            {prod.status}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -204,31 +231,21 @@ export default function ProductsPage() {
                                             <div className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Rs. {Number(prod.price).toLocaleString()}</div>
                                             <div className="text-[9px] text-gray-400 font-black uppercase mt-0.5">Cost: {Number(prod.cost).toLocaleString()}</div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex flex-col gap-1 items-center">
                                                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded w-fit">
                                                     <Hash className="h-3 w-3 text-gray-400" />
                                                     <span className="text-[10px] font-mono font-bold text-gray-600 dark:text-gray-300">{prod.sku || 'NO-SKU'}</span>
                                                 </div>
                                                 {prod.barcode && (
-                                                    <div className="flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase">
+                                                    <div className="flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase translate-x-[1px]">
                                                         <Barcode className="h-3 w-3" />
                                                         <span>{prod.barcode}</span>
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`h-2 w-2 rounded-full ${(prod.quantity_in_stock || 0) > 10 ? 'bg-green-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-orange-500' : 'bg-red-500'}`} />
-                                                    <span className="text-[11px] font-black text-gray-700 dark:text-gray-200">{prod.quantity_in_stock || 0} Units</span>
-                                                </div>
-                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${prod.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                    {prod.status}
-                                                </span>
-                                            </div>
-                                        </td>
+
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => router.push(`/admin/products/${prod.id}`)} className="p-1.5 text-gray-600 hover:text-[#E68A00] transition-colors">
@@ -245,6 +262,34 @@ export default function ProductsPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {filtered.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 gap-4">
+                        <div className="text-[11px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} products
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-4 py-1.5 border border-gray-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-[#E68A00] hover:bg-orange-50 dark:hover:bg-orange-900/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Previous
+                            </button>
+                            <div className="text-[11px] font-black text-gray-600 dark:text-slate-300 tracking-wider">
+                                PAGE {currentPage} / {totalPages}
+                            </div>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-1.5 border border-gray-200 dark:border-slate-700 rounded text-[10px] font-black uppercase tracking-widest text-[#E68A00] hover:bg-orange-50 dark:hover:bg-orange-900/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </SectionCard>
 
             {/* Amazon-Style Delete Modal */}
@@ -266,15 +311,15 @@ export default function ProductsPage() {
                             </p>
                         </div>
                         <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
-                            <button 
-                                onClick={() => setDeleteProd(null)} 
+                            <button
+                                onClick={() => setDeleteProd(null)}
                                 disabled={deleting}
                                 className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] dark:border-slate-600 rounded shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                             >
                                 Cancel
                             </button>
-                            <button 
-                                onClick={handleDelete} 
+                            <button
+                                onClick={handleDelete}
                                 disabled={deleting}
                                 className="px-4 py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-xs font-medium text-[#111] transition-colors flex items-center gap-2 disabled:opacity-50"
                             >

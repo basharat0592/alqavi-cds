@@ -1,6 +1,7 @@
 import './globals.css';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
+import { WishlistProvider } from '@/context/WishlistContext';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -11,6 +12,7 @@ export const metadata = {
 };
 
 import { Toaster } from 'react-hot-toast';
+import WhatsAppButton from '@/components/ui/WhatsAppButton';
 
 export default function RootLayout({
     children,
@@ -21,8 +23,11 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning={true}>
             <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning={true}>
                 <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+                <WhatsAppButton />
                 <CartProvider>
-                    {children}
+                    <WishlistProvider>
+                        {children}
+                    </WishlistProvider>
                 </CartProvider>
             </body>
         </html>

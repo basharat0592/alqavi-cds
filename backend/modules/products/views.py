@@ -7,12 +7,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.pagination import PageNumberPagination
-from .models import Product, Category
+from .models import Product, Category, MainCategory
 from .serializers import (
     ProductSerializer,
     ProductCreateUpdateSerializer,
-    CategorySerializer
+    CategorySerializer,
+    MainCategorySerializer
 )
+from modules.users.models import UserActivityLog
 from core.utils import get_or_404_response
 
 
@@ -52,6 +54,32 @@ def list_products(request):
             serializer = ProductCreateUpdateSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
                 product = serializer.save()
+                
+                # Auto-initialize inventory record to ensure visibility in Stock Management
+                try:
+                    from modules.inventory.models import Warehouse, Inventory
+                    # Find default warehouse or use the first available one
+                    warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
+                    if warehouse:
+                        Inventory.objects.get_or_create(
+                            product=product,
+                            warehouse=warehouse,
+                            defaults={
+                                'quantity_available': 0,
+                                'reorder_level': 5, # Reasonable default threshold
+                                'batch_number': 'INITIAL-LOG'
+                            }
+                        )
+                except Exception as inv_err:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to auto-link product {product.name} to warehouse: {inv_err}")
+
+                UserActivityLog.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    action='create',
+                    description=f'Created product: {product.name} and initialized stock tracking.'
+                )
                 return Response(
                     ProductSerializer(product, context={'request': request}).data, 
                     status=status.HTTP_201_CREATED
@@ -87,6 +115,11 @@ def product_detail(request, product_id):
         serializer = ProductCreateUpdateSerializer(product, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
+            UserActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='update',
+                description=f'Updated product: {product.name}'
+            )
             return Response(ProductSerializer(product, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -154,3 +187,46 @@ def adjust_stock(request, product_id):
         return Response(ProductSerializer(product).data)
     except (ValueError, TypeError):
         return Response({'error': 'Invalid adjustment value'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def list_main_categories(request):
+    """List all main categories or create a new one."""
+    if request.method == 'GET':
+        main_categories = MainCategory.objects.all().order_by('name')
+        serializer = MainCategorySerializer(main_categories, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = MainCategorySerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            main_category = serializer.save()
+            return Response(
+                MainCategorySerializer(main_category, context={'request': request}).data, 
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PATCH', 'DELETE'])
+@permission_classes([AllowAny])
+def main_category_detail(request, m_category_id):
+    """Retrieve, update, or delete a specific main category."""
+    main_category, err = get_or_404_response(MainCategory, id=m_category_id)
+    if err:
+        return err
+
+    if request.method == 'GET':
+        return Response(MainCategorySerializer(main_category, context={'request': request}).data)
+
+    if request.method == 'PATCH':
+        serializer = MainCategorySerializer(main_category, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(MainCategorySerializer(main_category, context={'request': request}).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # DELETE
+    main_category.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)

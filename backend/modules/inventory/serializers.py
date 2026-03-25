@@ -11,6 +11,12 @@ class InventorySerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     
+    sku = serializers.ReadOnlyField(source='product.sku')
+    barcode = serializers.ReadOnlyField(source='product.barcode')
+    purchase_price = serializers.ReadOnlyField(source='product.cost')
+    cost_price = serializers.ReadOnlyField(source='product.cost')
+    selling_price = serializers.ReadOnlyField(source='product.price')
+    
     class Meta:
         model = Inventory
         fields = '__all__'

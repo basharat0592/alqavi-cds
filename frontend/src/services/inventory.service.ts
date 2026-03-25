@@ -9,8 +9,8 @@ export const inventoryService = {
         try {
             const { data } = await api.get('/v1/inventory/records/summary/');
             return data;
-        } catch { 
-            return { total_items: 0, low_stock_count: 0, expired_batches: 0 }; 
+        } catch {
+            return { total_items: 0, low_stock_count: 0, expired_batches: 0 };
         }
     },
     getMovements: async (params?: any): Promise<any[]> => {
@@ -55,5 +55,13 @@ export const inventoryService = {
     createInventory: async (payload: any): Promise<any> => {
         const { data } = await api.post('/v1/inventory/records/', payload);
         return data;
-    }
+    },
+    addStock: async (inventoryId: string | number, quantity: number, notes?: string): Promise<any> => {
+        const { data } = await api.post(`/v1/inventory/records/${inventoryId}/add_stock/`, { quantity, notes });
+        return data;
+    },
+    updateInventory: async (id: string | number, payload: any): Promise<any> => {
+        const { data } = await api.patch(`/v1/inventory/records/${id}/`, payload);
+        return data;
+    },
 };

@@ -13,6 +13,7 @@ urlpatterns = [
     # Auth
     path('token/', views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('register/', views.signup, name='user-register'),
 
     # User Management
     path('', views.list_users, name='user-list'),

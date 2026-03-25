@@ -30,6 +30,7 @@ export interface ProductParams {
     min_price?: number;
     max_price?: number;
     ordering?: string;
+    limit?: number;
 }
 
 export interface Product {
@@ -253,6 +254,7 @@ export interface DashboardStats {
     activeUsers: number;
     ordersToday: number;
     pendingOrders: number;
+    deliveredOrders?: number;
     totalCustomers?: number;
     revenueChange?: number;
     ordersChange?: number;

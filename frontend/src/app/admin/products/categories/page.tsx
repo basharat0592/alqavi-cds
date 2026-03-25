@@ -6,7 +6,7 @@ import {
     RefreshCw, CheckCircle, Package,
     Save, Loader2, X, ArrowLeft, AlertTriangle
 } from 'lucide-react';
-import { categoryService, ProductCategory } from '@/lib/api';
+import { categoryService, ProductCategory, mainCategoryService } from '@/lib/api';
 
 // ─── Shared Utilities (Same to same as Company pages) ────────────────────────────────
 const INPUT = (err?: boolean) =>
@@ -42,20 +42,30 @@ export default function ProductCategoriesPage() {
     const [toast, setToast] = useState<string | null>(null);
     const [editCat, setEditCat] = useState<ProductCategory | null>(null);
     const [deleteCat, setDeleteCat] = useState<ProductCategory | null>(null);
+    const [mainCategories, setMainCategories] = useState<any[]>([]);
     const [deleting, setDeleting] = useState(false);
 
-    // Form State
     const [form, setForm] = useState({
         name: '',
         description: '',
         status: 'active' as 'active' | 'inactive',
+        main_category: '',
     });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+    };
 
     const load = async () => {
         setLoading(true);
         try {
-            const data = await categoryService.getAll();
+            const [data, mCats] = await Promise.all([
+                categoryService.getAll(),
+                mainCategoryService.getAll()
+            ]);
             setCategories(data || []);
+            setMainCategories(mCats || []);
         } catch (e) {
             console.error(e);
         } finally {
@@ -76,13 +86,14 @@ export default function ProductCategoriesPage() {
             name: cat.name,
             description: cat.description || '',
             status: (cat.status?.toLowerCase() as any) || 'active',
+            main_category: (cat as any).main_category || '',
         });
         setView('form');
     };
 
     const handleNew = () => {
         setEditCat(null);
-        setForm({ name: '', description: '', status: 'active' });
+        setForm({ name: '', description: '', status: 'active', main_category: '' });
         setView('form');
     };
 
@@ -102,29 +113,22 @@ export default function ProductCategoriesPage() {
         }
     };
 
-    const handleSave = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
         try {
-            const payload = {
-                name: form.name,
-                description: form.description,
-                status: form.status
-            };
-
             if (editCat) {
-                await (categoryService.update as any)(editCat.id, payload);
+                await categoryService.update(editCat.id, form);
                 showToast('Category updated.');
             } else {
-                await (categoryService.create as any)(payload);
+                await categoryService.create(form);
                 showToast('Category created.');
             }
             load();
             setView('list');
-        } catch (e: any) {
+        } catch (e) {
             console.error(e);
-            const detail = e.response?.data ? JSON.stringify(e.response.data) : (e.message || 'Unknown error');
-            alert(`Failed to save category: ${detail}`);
+            alert('Failed to save category.');
         } finally {
             setSaving(false);
         }
@@ -147,7 +151,7 @@ export default function ProductCategoriesPage() {
                     </button>
                 </div>
 
-                <form onSubmit={handleSave}>
+                <form onSubmit={handleSubmit}>
                     <SectionCard>
                         <SectionHeader title="Category Details" icon={Tag} />
                         <div className="p-6">
@@ -156,18 +160,34 @@ export default function ProductCategoriesPage() {
                                     <label className={LABEL}>Category Name <span className="text-red-700">*</span></label>
                                     <input
                                         required
+                                        name="name"
                                         value={form.name}
-                                        onChange={e => setForm({ ...form, name: e.target.value })}
+                                        onChange={handleChange}
                                         className={INPUT()}
                                         placeholder="e.g. Skin Care, Hair Care"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className={LABEL}>Listing Status</label>
+                                    <label className={LABEL}>Main Category <span className="text-gray-400 font-normal ml-1">(Optional)</span></label>
                                     <select
+                                        name="main_category"
+                                        value={form.main_category}
+                                        onChange={handleChange}
+                                        className={INPUT()}
+                                    >
+                                        <option value="">Unspecified</option>
+                                        {mainCategories.map(m => (
+                                            <option key={m.id} value={m.id}>{m.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={LABEL}>Status</label>
+                                    <select
+                                        name="status"
                                         value={form.status}
-                                        onChange={e => setForm({ ...form, status: e.target.value as any })}
+                                        onChange={handleChange}
                                         className={INPUT()}
                                     >
                                         <option value="active">Active</option>

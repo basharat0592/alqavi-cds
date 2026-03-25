@@ -7,7 +7,7 @@ import {
     Save, Loader2, ArrowLeft, DollarSign, Database,
     X, AlertTriangle, CheckCircle, Barcode, Hash
 } from 'lucide-react';
-import { productService, companyCategoryService, companyService, CompanyInfo } from '@/lib/api';
+import { productService, companyCategoryService, companyService, CompanyInfo, mainCategoryService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 
 // ─── Shared Utilities (Same to same as Company pages) ────────────────────────────────
@@ -48,6 +48,7 @@ export default function AddEditProductPage() {
     const [productCategories, setProductCategories] = useState<any[]>([]);
     const [companyCategories, setCompanyCategories] = useState<any[]>([]);
     const [companies, setCompanies] = useState<CompanyInfo[]>([]);
+    const [mainCategories, setMainCategories] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -62,6 +63,7 @@ export default function AddEditProductPage() {
         retail_price: '',
         status: 'active',
         batch_number: '',
+        main_category: '', // single selection for UI
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -80,39 +82,43 @@ export default function AddEditProductPage() {
     useEffect(() => {
         const fetchInitial = async () => {
             try {
-                const [pCats, cCats, comps] = await Promise.all([
+                const [pCats, cCats, comps, mCats] = await Promise.all([
                     productService.getCategories(),
                     companyCategoryService.getAll(),
-                    companyService.getAll()
+                    companyService.getAll(),
+                    mainCategoryService.getAll()
                 ]);
                 setProductCategories((pCats || []).filter((c: any) => c.status === 'active'));
                 setCompanyCategories((cCats || []).filter((c: any) => c.is_active !== false));
                 setCompanies((comps || []).filter((c: any) => c.is_active !== false));
+                setMainCategories(mCats || []);
 
                 if (isEdit) {
                     const product = await productService.getById(id as string);
                     setFormData({
                         name: product.name || '',
                         description: product.description || '',
-                        category: typeof product.category === 'object' ? product.category.id : product.category || '',
-                        company: typeof product.company === 'object' ? product.company.id : product.company || '',
-                        company_category: typeof product.company_category === 'object' ? product.company_category.id : product.company_category || '',
+                        category: (product.category && typeof product.category === 'object') ? product.category.id : product.category || '',
+                        company: (product.company && typeof product.company === 'object') ? product.company.id : product.company || '',
+                        company_category: (product.company_category && typeof product.company_category === 'object') ? product.company_category.id : product.company_category || '',
                         sku: product.sku || '',
                         barcode: product.barcode || '',
                         price: product.price || '',
                         cost: product.cost || '',
                         retail_price: product.retail_price || '',
                         status: (product.status?.toLowerCase()) || 'active',
-                        batch_number: '', 
+                        batch_number: '',
+                        main_category: (product.main_categories && product.main_categories.length > 0) ? product.main_categories[0] : '',
                     });
                     if (product.image_url || product.image) {
                         setMainImagePreview(getImageUrl(product.image_url || product.image));
                     }
                     setExistingGallery(product.gallery || []);
                 }
-            } catch (error) {
-                console.error(error);
-                alert('Failed to load initial data.');
+            } catch (error: any) {
+                console.error('Fetch Initial Error:', error);
+                const msg = error?.message || 'Failed to load initial data.';
+                alert(msg);
             } finally {
                 setLoading(false);
             }
@@ -158,6 +164,10 @@ export default function AddEditProductPage() {
 
             if (mainImage) data.append('image', mainImage);
             additionalImages.forEach(file => { data.append('upload_images', file); });
+
+            if (formData.main_category) {
+                data.append('main_categories', formData.main_category);
+            }
 
             if (isEdit) {
                 await productService.update(id as string, data);
@@ -206,29 +216,27 @@ export default function AddEditProductPage() {
                                     <label className={LABEL}>Product Name <span className="text-red-700">*</span></label>
                                     <input required name="name" value={formData.name} onChange={handleChange} className={INPUT()} placeholder="e.g. Premium Lavender Moisturizer" />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
-                                        <label className={LABEL}>Product Category</label>
+                                        <label className={LABEL}>Main Category</label>
+                                        <select name="main_category" value={formData.main_category} onChange={handleChange} className={INPUT()}>
+                                            <option value="">Standard/None</option>
+                                            {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={LABEL}>Sub Category</label>
                                         <select name="category" value={formData.category} onChange={handleChange} className={INPUT()}>
                                             <option value="">Standard / None</option>
                                             {productCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className={LABEL}>Origin / Vendor Category</label>
-                                            <select name="company_category" value={formData.company_category} onChange={handleChange} className={INPUT()}>
-                                                <option value="">Unspecified</option>
-                                                {companyCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={LABEL}>Manufacturing Company</label>
-                                            <select name="company" value={formData.company} onChange={handleChange} className={INPUT()}>
-                                                <option value="">Unspecified</option>
-                                                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
+                                    <div>
+                                        <label className={LABEL}>Manufacturing Company</label>
+                                        <select name="company" value={formData.company} onChange={handleChange} className={INPUT()}>
+                                            <option value="">Unspecified</option>
+                                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
                                     </div>
                                 </div>
                                 <div>
@@ -303,9 +311,9 @@ export default function AddEditProductPage() {
                         </SectionCard>
 
                         <SectionCard>
-                            <SectionHeader 
-                                title="Gallery" 
-                                icon={Database} 
+                            <SectionHeader
+                                title="Gallery"
+                                icon={Database}
                                 action={<button type="button" onClick={() => galleryInputRef.current?.click()} className="p-1 hover:text-[#E68A00] transition-colors"><Plus className="h-4 w-4" /></button>}
                             />
                             <div className="p-4 grid grid-cols-4 gap-2">
@@ -345,7 +353,7 @@ export default function AddEditProductPage() {
                             <button
                                 type="button"
                                 onClick={() => router.push('/admin/products')}
-                                className="w-full py-2 bg-white dark:bg-slate-800 border border-[#adb1b8] border-gray-300 rounded text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shadow-sm uppercase tracking-widest"
+                                className="w-full py-2 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shadow-sm uppercase tracking-widest"
                             >
                                 Discard Changes
                             </button>

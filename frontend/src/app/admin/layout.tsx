@@ -7,12 +7,12 @@ import NotificationPanel, { type ActivityItem } from '@/components/admin/Notific
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
-    User, ShoppingBag, Users, AlertTriangle, Sun, Moon
+    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/lib/auth';
-import { productService, orderService, userService, settingsService } from '@/lib/api';
+import { productService, orderService, userService, settingsService, inventoryService, paymentService } from '@/lib/api';
 
 /* ═══════════════════════════════════════════════
    HELPERS
@@ -162,7 +162,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         };
 
         refreshAdminState();
-        
+
         // Load full profile from DB initially as well
         settingsService.getProfile().then(p => {
             setAdminId(String(p.id));
@@ -183,80 +183,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         };
     }, []);
 
-    /* ── Fetch activity ── */
+    /* ── Fetch activity (Mock only as requested) ── */
     const fetchActivity = async () => {
         setActLoading(true);
         try {
-            const [ordersRes, usersRes, productsRes] = await Promise.allSettled([
-                orderService.getAll(), userService.getAll(), productService.getAll(),
-            ]);
+            // Simulated delay for premium feel
+            await new Promise(r => setTimeout(r, 600));
 
-            const items: ActivityItem[] = [];
+            const items: ActivityItem[] = [
+                {
+                    id: 'm1', type: 'order', title: 'New Order #12093', desc: 'Saeed Khan — PKR 12,500',
+                    time: '2 mins ago', timeRaw: Date.now() - 120000,
+                    href: '/admin/sales', read: false, icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50'
+                },
+                {
+                    id: 'm2', type: 'alert', title: 'Low Stock Alert', desc: 'Face Wash — 5 units left',
+                    time: '15 mins ago', timeRaw: Date.now() - 900000,
+                    href: '/admin/inventory', read: false, icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50'
+                },
+                {
+                    id: 'm3', type: 'product', title: 'New Product Added', desc: '"Gold Serum" is now live',
+                    time: '1 hour ago', timeRaw: Date.now() - 3600000,
+                    href: '/admin/products', read: false, icon: Package, color: 'text-green-600', bg: 'bg-green-50'
+                },
+                {
+                    id: 'm4', type: 'user', title: 'New User Registered', desc: 'Amna Ahmed joined',
+                    time: '2 hours ago', timeRaw: Date.now() - 7200000,
+                    href: '/admin/users', read: false, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50'
+                },
+                {
+                    id: 'm5', type: 'order', title: 'New Order #12094', desc: 'Zia Ahmed — PKR 8,700',
+                    time: '4 hours ago', timeRaw: Date.now() - 14400000,
+                    href: '/admin/sales', read: false, icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50'
+                }
+            ];
 
-            const orders = ordersRes.status === 'fulfilled'
-                ? (Array.isArray(ordersRes.value) ? ordersRes.value : [])
-                    .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-                : [];
-
-            orders.slice(0, 4).forEach((o: any) => {
-                const ts = o.created_at || o.date || Date.now();
-                const c = o.customer as any;
-                const customerName = o.customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || c?.email || (typeof o.customer === 'string' ? o.customer : 'Guest'));
-
-                items.push({
-                    id: `order-${o.id}`, type: 'order',
-                    title: `New Order #${o.order_number || o.orderNumber || o.id}`,
-                    desc: `${customerName} — PKR ${parseFloat(o.total_amount || o.total || 0).toFixed(0)}`,
-                    time: timeAgo(ts), timeRaw: new Date(ts).getTime(),
-                    href: '/admin/sales', read: false,
-                    icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50',
-                });
-            });
-
-            const users = usersRes.status === 'fulfilled'
-                ? (Array.isArray(usersRes.value) ? usersRes.value : [])
-                    .sort((a: any, b: any) => new Date(b.date_joined || 0).getTime() - new Date(a.date_joined || 0).getTime())
-                : [];
-
-            users.slice(0, 3).forEach((u: any) => {
-                const ts = u.date_joined || u.created_at || Date.now();
-                const userName = u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.name || u.email || u.username;
-                items.push({
-                    id: `user-${u.id}`, type: 'user',
-                    title: 'New User Registered',
-                    desc: `${userName} joined`,
-                    time: timeAgo(ts), timeRaw: new Date(ts).getTime(),
-                    href: '/admin/users', read: false,
-                    icon: Users, color: 'text-violet-600', bg: 'bg-violet-50',
-                });
-            });
-
-            const products = productsRes.status === 'fulfilled'
-                ? (Array.isArray(productsRes.value) ? productsRes.value : []) : [];
-
-            products.filter((p: any) => {
-                const s = p.quantity_in_stock ?? p.stock ?? p.stock_quantity ?? 0;
-                return s < 10 && s > 0;
-            }).slice(0, 2).forEach((p: any) => {
-                const stock = p.quantity_in_stock ?? p.stock ?? p.stock_quantity;
-                items.push({
-                    id: `low-${p.id}`, type: 'alert',
-                    title: 'Low Stock Alert',
-                    desc: `"${p.name}" — ${stock} units left`,
-                    time: 'Now', timeRaw: Date.now(),
-                    href: '/admin/products', read: false,
-                    icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50',
-                });
-            });
-
-            items.sort((a, b) => b.timeRaw - a.timeRaw);
             setActivities(items);
         } catch (err) {
-            console.error('Activity fetch failed', err);
-        } finally { setActLoading(false); }
+            console.error('Activity mock fail', err);
+        } finally {
+            setActLoading(false);
+        }
     };
 
-    useEffect(() => { fetchActivity(); }, []);
+    useEffect(() => {
+        fetchActivity();
+        const interval = setInterval(fetchActivity, 60000); // Auto-refresh every minute
+        return () => clearInterval(interval);
+    }, []);
 
     /* ── Search ── */
     useEffect(() => {
@@ -287,8 +261,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const handleLogout = () => { authService.logout(); router.push('/login'); };
     const handleProfileUpdated = (name: string, email: string, avatar?: string) => {
-        setAdminName(name); 
-        setAdminEmail(email); 
+        setAdminName(name);
+        setAdminEmail(email);
         if (avatar) setAdminAvatar(avatar);
         setProfileOpen(false);
     };
@@ -316,9 +290,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="flex flex-1 min-h-0 print:block print:overflow-visible">
                     {/* Desktop Sidebar */}
                     <div className="hidden md:flex flex-col flex-shrink-0 z-30 print:hidden relative">
-                        <AdminSidebar 
-                            isCollapsed={sidebarCollapsed} 
-                            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+                        <AdminSidebar
+                            isCollapsed={sidebarCollapsed}
+                            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
                         />
                     </div>
 
@@ -327,9 +301,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <div className="fixed inset-0 z-[100] md:hidden flex print:hidden">
                             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
                             <div className="relative w-64 bg-white dark:bg-[#1e293b] shadow-2xl h-full border-r border-gray-100 dark:border-slate-800 z-[110]">
-                                <AdminSidebar 
-                                    isCollapsed={false} 
-                                    onToggle={() => setMobileOpen(false)} 
+                                <AdminSidebar
+                                    isCollapsed={false}
+                                    onToggle={() => setMobileOpen(false)}
                                 />
                                 <button onClick={() => setMobileOpen(false)}
                                     className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition z-50">

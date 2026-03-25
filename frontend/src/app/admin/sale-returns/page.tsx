@@ -576,7 +576,7 @@ export default function SaleReturnsPage() {
                                 <RotateCcw className="h-6 w-6 text-[#f0c14b]" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold dark:text-white">Sale Returns Ledger</h1>
+                                <h1 className="text-xl font-bold dark:text-white">Sale Returns List</h1>
                                 <div className="flex items-center gap-2 mt-0.5">
                                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded-sm">
                                         Management Hub
@@ -776,7 +776,7 @@ export default function SaleReturnsPage() {
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right duration-300">
                     <div className={`flex items-center gap-3 px-6 py-3 rounded shadow-2xl border-l-[6px] ${toast.type === 'success' ? 'bg-[#232f3e] border-[#f0c14b] text-white' : 'bg-red-900 border-red-500 text-white'}`}>
-                        {toast.type === 'success' ? <Check className="h-5 w-5 text-[#f0c14b]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
+                        {toast.type === 'success' ? <CheckCircle className="h-5 w-5 text-[#f0c14b]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
                         <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
                         <button onClick={() => setToast(null)} className="ml-4 hover:opacity-70 transition-opacity">
                             <X className="h-4 w-4" />

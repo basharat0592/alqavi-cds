@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { RevenueData } from '@/data/mockDashboardData';
+import type { RevenueDataPoint } from '@/types';
 
 interface RevenueChartProps {
-    data: RevenueData[];
+    data: RevenueDataPoint[];
 }
 
 export function RevenueChart({ data }: RevenueChartProps) {
@@ -24,7 +24,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             const x = padding + i * stepX;
             // Invert Y axis because SVG coordinates start from top
             const y = height - padding - (d.revenue / maxRevenue) * (height - padding * 2);
-            return { x, y, value: d.revenue, label: d.month };
+            return { x, y, value: d.revenue, label: d.date };
         });
 
         // Create curve path
@@ -113,7 +113,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                         marginTop: '-10px'
                     }}
                 >
-                    <div className="font-bold">{data[hoveredPoint].month}</div>
+                    <div className="font-bold">{data[hoveredPoint].date}</div>
                     <div>Rs. {data[hoveredPoint].revenue.toLocaleString()}</div>
                 </div>
             )}

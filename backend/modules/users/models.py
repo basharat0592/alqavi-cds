@@ -163,7 +163,7 @@ class UserActivityLog(models.Model):
         ('other', 'Other'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs', null=True, blank=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     description = models.TextField()
     ip_address = models.GenericIPAddressField(null=True, blank=True)

@@ -1,61 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import {
-    Minus, Plus, Trash2, ArrowRight, ShieldCheck, Truck,
-    Tag, X, ShoppingCart, Lock, ArrowLeft, CheckCircle,
-    Info, ShoppingBag, Shield
+    Minus, Plus, Trash2, ShieldCheck,
+    Info, ShoppingBag, ChevronRight, CheckCircle, Package,
+    ArrowLeft, ShoppingCart, Zap, Sparkles
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/utils';
 
-const PROMO_CODES: Record<string, number> = {
-    BEAUTY10: 10,
-    FIRST15: 15,
-    DISTRO20: 20,
-};
-
 export default function CartPage() {
-    const { items, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
-    const [promoCode, setPromoCode] = useState('');
-    const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
-    const [promoError, setPromoError] = useState('');
+    const { items, updateQuantity, removeFromCart, cartTotal, cartCount } = useCart();
 
     const shippingThreshold = 5000;
-    const shipping = cartTotal >= shippingThreshold ? 0 : 350;
-    const discountAmount = appliedPromo ? Math.round((cartTotal * appliedPromo.discount) / 100) : 0;
-    const total = cartTotal - discountAmount + shipping;
-
-    const applyPromo = () => {
-        const upper = promoCode.toUpperCase().trim();
-        if (PROMO_CODES[upper]) {
-            setAppliedPromo({ code: upper, discount: PROMO_CODES[upper] });
-            setPromoError('');
-            setPromoCode('');
-        } else {
-            setPromoError('Invalid or expired promo code');
-        }
-    };
+    const isFreeShipping = cartTotal >= shippingThreshold;
+    const remainingForFree = shippingThreshold - cartTotal;
 
     if (items.length === 0) {
         return (
-            <div className="flex flex-col min-h-screen bg-white dark:bg-[#0f172a]">
+            <div className="flex flex-col min-h-screen bg-[#eaeded] dark:bg-background">
                 <Navbar />
-                <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-32">
-                    <div className="w-24 h-24 bg-gray-50 dark:bg-slate-900 rounded-[2.5rem] flex items-center justify-center text-gray-300 dark:text-slate-800 mb-8 border border-gray-100 dark:border-slate-800">
-                        <ShoppingBag className="h-12 w-12" />
+                <main className="flex-1 container mx-auto px-4 py-20 flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in duration-500">
+                    <div className="w-48 h-48 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm">
+                        <ShoppingCart className="h-20 w-20 text-gray-200" />
                     </div>
-                    <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Your Bag is Empty</h2>
-                    <p className="text-gray-500 dark:text-slate-500 font-medium mb-10 max-w-xs leading-relaxed">
-                        Discover the latest in premium skincare and makeup essentials.
-                    </p>
-                    <Link href="/shop"
-                        className="px-10 py-5 bg-[#FF9900] hover:bg-[#131921] text-white font-black uppercase tracking-widest rounded-2xl text-[10px] transition shadow-xl shadow-[#FF9900]/20 active:scale-95">
-                        Start Shopping
-                    </Link>
+                    <div className="space-y-4">
+                        <h1 className="text-3xl font-bold dark:text-white">Your Shopping Cart is empty.</h1>
+                        <p className="text-gray-500 text-sm max-w-sm mx-auto">Your Shopping Cart lives to serve. Give it purpose — fill it with cosmetics, skincare, and more.</p>
+                        <Link href="/shop" className="inline-block px-10 py-2.5 bg-[#ffd814] hover:bg-[#f7ca00] text-[#111] font-bold rounded-lg shadow-sm text-sm">
+                            Continue Shopping
+                        </Link>
+                    </div>
                 </main>
                 <Footer />
             </div>
@@ -63,162 +41,109 @@ export default function CartPage() {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#F8F9FA] dark:bg-[#0f172a] font-sans transition-colors duration-500">
+        <div className="flex flex-col min-h-screen bg-[#eaeded] dark:bg-background">
             <Navbar />
 
-            <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800">
-                <div className="container mx-auto px-4 lg:px-12 py-10">
-                    <h1 className="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white tracking-tighter flex items-center gap-4">
-                        Review Your Bag 
-                        <span className="text-sm font-bold text-gray-400 dark:text-slate-500">({items.reduce((s, i) => s + i.quantity, 0)} Items)</span>
-                    </h1>
-                </div>
-            </div>
+            <main className="flex-1 py-8">
+                <div className="container mx-auto px-4">
+                    <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-            <main className="flex-1 py-12">
-                <div className="container mx-auto px-4 lg:px-12">
-                    <div className="flex flex-col lg:flex-row gap-12 items-start">
+                        {/* LEFT: SHOPPING CART ITEMS */}
+                        <div className="flex-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded shadow-sm animate-in fade-in duration-500">
+                            <div className="border-b border-gray-100 dark:border-slate-800 pb-4 mb-8 flex items-baseline justify-between transition-all">
+                                <h1 className="text-3xl font-bold dark:text-white">Shopping Cart</h1>
+                                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest leading-none">Price Per Unit</span>
+                            </div>
 
-                        {/* ITEMS LIST */}
-                        <div className="flex-1 w-full space-y-6">
-                            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm">
-                                <div className="p-8 lg:p-10 divide-y divide-gray-100 dark:divide-slate-800">
-                                    {items.map(item => {
-                                        const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-                                        return (
-                                            <div key={item.id} className="flex flex-col sm:flex-row gap-8 py-8 first:pt-0 last:pb-0 group">
-                                                <Link href={`/product/${item.id}`} className="flex-shrink-0">
-                                                    <div className="w-40 h-40 bg-gray-50 dark:bg-slate-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-slate-800">
-                                                        <img src={getImageUrl(item.image) || 'https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=400'} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                                    </div>
-                                                </Link>
+                            <div className="space-y-10">
+                                {items.map(item => {
+                                    const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+                                    return (
+                                        <div key={item.id} className="flex flex-col md:flex-row gap-6 pb-10 border-b border-gray-100 dark:border-slate-800 last:border-0">
+                                            {/* Thumbnail */}
+                                            <Link href={`/product/${item.id}`} className="w-40 h-40 flex-shrink-0 bg-gray-50 dark:bg-slate-800 p-4 border border-gray-100 rounded group overflow-hidden">
+                                                <img src={getImageUrl(item.image) || ''} alt={item.name} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-transform group-hover:scale-105" />
+                                            </Link>
 
-                                                <div className="flex-1 min-w-0 pr-4">
-                                                    <div className="flex flex-col h-full">
-                                                        <div className="mb-4">
-                                                            <p className="text-[10px] text-[#FF9900] font-black uppercase tracking-widest mb-1">{item.category}</p>
-                                                            <Link href={`/product/${item.id}`}>
-                                                                <h3 className="text-xl font-black text-gray-900 dark:text-white group-hover:text-[#FF9900] transition-colors line-clamp-2 tracking-tight">{item.name}</h3>
-                                                            </Link>
-                                                        </div>
-
-                                                        <div className="mt-auto flex items-center justify-between gap-6 flex-wrap">
-                                                            <div className="flex items-center bg-gray-50 dark:bg-slate-800 p-1.5 rounded-2xl border border-gray-100 dark:border-slate-700">
-                                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                                    className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white dark:hover:bg-slate-700 transition text-gray-900 dark:text-white disabled:opacity-20"
-                                                                    disabled={item.quantity <= 1}>
-                                                                    <Minus className="h-4 w-4" />
-                                                                </button>
-                                                                <span className="w-10 text-center text-sm font-black text-gray-900 dark:text-white">{item.quantity}</span>
-                                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                                    className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white dark:hover:bg-slate-700 transition text-gray-900 dark:text-white">
-                                                                    <Plus className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-6">
-                                                                <div className="text-right">
-                                                                    <p className="text-xl font-black text-gray-900 dark:text-[#FF9900] tracking-tighter">Rs. {(price * item.quantity).toLocaleString()}</p>
-                                                                </div>
-                                                                <button onClick={() => removeFromCart(item.id)}
-                                                                    className="w-10 h-10 flex items-center justify-center bg-red-50 dark:bg-red-950/30 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all">
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                            {/* Info */}
+                                            <div className="flex-1 space-y-2">
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <Link href={`/product/${item.id}`}>
+                                                        <h3 className="text-lg font-bold text-[#007185] hover:text-[#C45500] hover:underline cursor-pointer line-clamp-2 max-w-xl items-baseline">
+                                                            {item.name}
+                                                        </h3>
+                                                    </Link>
+                                                    <div className="text-lg font-black dark:text-white text-right shrink-0">PKR {price.toLocaleString()}</div>
+                                                </div>
+                                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-tighter">In Stock</p>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">{item.category}</p>
+                                                <div className="flex items-center gap-6 mt-8">
+                                                    <QuantityController item={item} updateQuantity={updateQuantity} />
+                                                    
+                                                    <div className="h-4 w-[1px] bg-gray-200 dark:bg-slate-700" />
+                                                    
+                                                    <button 
+                                                        onClick={() => removeFromCart(item.id)} 
+                                                        className="text-xs text-[#007185] hover:text-[#C45500] hover:underline transition-all tracking-tight font-medium"
+                                                    >
+                                                        Delete Item
+                                                    </button>
+                                                    
+                                                    <div className="h-4 w-[1px] bg-gray-200 dark:bg-slate-700 hidden sm:block" />
+                                                    
+                                                    <button className="hidden sm:block text-xs text-[#007185] hover:text-[#C45500] hover:underline transition-all tracking-tight font-medium">
+                                                        Save for later
+                                                    </button>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-8 text-right">
+                                <p className="text-lg font-bold dark:text-white tracking-tight">Subtotal ({cartCount} items): <span className="text-xl font-black">PKR {cartTotal.toLocaleString()}</span></p>
+                            </div>
+                        </div>
+
+                        {/* RIGHT: BUY BOX */}
+                        <div className="w-full lg:w-[320px] sticky top-24 space-y-4">
+                            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm space-y-6">
+                                {isFreeShipping ? (
+                                    <div className="flex gap-3 text-xs">
+                                        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0"><CheckCircle className="h-3 w-3" /></div>
+                                        <p className="text-emerald-600 font-bold uppercase tracking-tighter leading-none pt-1">Your order qualifies for FREE Shipping.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="w-full h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${(cartTotal / shippingThreshold) * 100}%` }} />
+                                        </div>
+                                        <p className="text-xs text-gray-500 leading-tight">Add PKR <span className="font-bold text-[#C45500] underline">{remainingForFree.toLocaleString()}</span> for free shipping.</p>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <p className="text-lg font-medium dark:text-white leading-tight">Subtotal ({cartCount} items):</p>
+                                    <p className="text-2xl font-black dark:text-white tracking-widest mt-1">PKR {cartTotal.toLocaleString()}</p>
                                 </div>
-                                <div className="bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 p-10 flex justify-between items-center">
-                                    <button onClick={clearCart} className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors flex items-center gap-2">
-                                        <X className="h-4 w-4" /> Clear All Items
-                                    </button>
-                                    <div className="text-right">
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Subtotal</p>
-                                        <p className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">Rs. {cartTotal.toLocaleString()}</p>
+
+                                <Link href="/checkout" className="block w-full py-2 bg-[#ffd814] hover:bg-[#f7ca00] text-[#111] font-bold rounded-lg text-sm text-center shadow-sm active:shadow-inner active:scale-[0.98] transition-all">
+                                    Proceed to Checkout
+                                </Link>
+                                
+                                <div className="pt-2">
+                                    <div className="flex items-center gap-2 p-3 border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 rounded pointer-events-none">
+                                        <ShieldCheck className="h-4 w-4 text-gray-400" />
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">A-to-z Guarantee Protected</span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <Link href="/shop" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF9900] transition-colors ml-4">
-                                <ArrowLeft className="h-4 w-4" /> Continue Discovering
-                            </Link>
-                        </div>
-
-                        {/* ORDER SUMMARY */}
-                        <div className="w-full lg:w-[420px] sticky top-28 space-y-6">
-                            {/* PROMO BOX */}
-                            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-slate-800 shadow-sm">
-                                <h3 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                    <Tag className="h-4 w-4 text-[#FF9900]" /> Coupon Code
-                                </h3>
-                                {appliedPromo ? (
-                                    <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl px-5 py-4">
-                                        <div>
-                                            <p className="font-black text-emerald-600 dark:text-emerald-400 text-xs tracking-widest uppercase">{appliedPromo.code}</p>
-                                            <p className="text-[10px] font-bold text-emerald-600/70 mt-1 uppercase">Tier Discount Applied</p>
-                                        </div>
-                                        <button onClick={() => setAppliedPromo(null)} className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-gray-400 transition-colors">
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <input type="text" placeholder="ENTER CODE"
-                                            value={promoCode} onChange={e => { setPromoCode(e.target.value); setPromoError(''); }}
-                                            className="flex-1 px-5 py-4 bg-gray-50 dark:bg-slate-800 border-2 border-transparent rounded-2xl text-xs font-black outline-none focus:border-[#FF9900]/30 transition-all text-gray-900 dark:text-white uppercase tracking-widest" />
-                                        <button onClick={applyPromo}
-                                            className="px-6 bg-[#131921] hover:bg-[#FF9900] text-white font-black rounded-2xl text-[10px] uppercase tracking-widest transition-all">
-                                            Apply
-                                        </button>
-                                    </div>
-                                )}
-                                {promoError && <p className="text-red-500 text-[9px] font-black uppercase mt-3 ml-2">{promoError}</p>}
-                            </div>
-
-                            {/* PRICE BOX */}
-                            <div className="bg-[#131921] rounded-[3rem] p-10 text-white shadow-2xl shadow-black/20 overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF9900]/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
-                                
-                                <div className="relative space-y-6 text-[11px] font-bold uppercase tracking-widest text-white/50 mb-10">
-                                    <div className="flex justify-between">
-                                        <span>Order Value</span>
-                                        <span className="text-white">Rs. {cartTotal.toLocaleString()}</span>
-                                    </div>
-                                    {appliedPromo && (
-                                        <div className="flex justify-between text-emerald-400">
-                                            <span>Tier reward</span>
-                                            <span>- Rs. {discountAmount.toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between">
-                                        <span>Logistics Fee</span>
-                                        <span className={shipping === 0 ? 'text-[#FF9900]' : 'text-white'}>
-                                            {shipping === 0 ? 'COMPLIMENTARY' : `Rs. ${shipping}`}
-                                        </span>
-                                    </div>
-                                    <div className="border-t border-white/10 pt-8 mt-4 flex justify-between items-end text-white">
-                                        <span className="text-[10px] text-white/40">Total Amount</span>
-                                        <span className="text-4xl font-black tracking-tighter text-[#FF9900]">Rs. {total.toLocaleString()}</span>
-                                    </div>
-                                </div>
-
-                                <Link href="/checkout"
-                                    className="relative w-full flex items-center justify-center gap-3 py-6 bg-[#FF9900] hover:bg-white hover:text-[#FF9900] text-[#131921] font-black uppercase tracking-widest rounded-2xl text-xs transition-all shadow-xl shadow-[#FF9900]/10 active:scale-95 group">
-                                    Secure Checkout <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                                </Link>
-
-                                <div className="relative mt-8 space-y-4 pt-8 border-t border-white/10">
-                                    <div className="flex items-center gap-3 text-[9px] font-black uppercase text-white/30 tracking-widest">
-                                        <Shield className="h-4 w-4 text-[#FF9900]/60" /> SSL Encrypted Gateway
-                                    </div>
-                                    <div className="flex items-center gap-3 text-[9px] font-black uppercase text-white/30 tracking-widest">
-                                        <Truck className="h-4 w-4 text-[#FF9900]/60" /> Global Priority Fleet
-                                    </div>
-                                </div>
+                            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm">
+                                <h4 className="text-sm font-bold dark:text-white mb-2 uppercase tracking-tighter">Your Browsing History</h4>
+                                <div className="text-[10px] text-gray-500 italic">Explore recently viewed items in the collection.</div>
+                                <Link href="/shop" className="block text-xs text-[#007185] hover:text-[#C45500] hover:underline mt-4 font-bold tracking-widest uppercase">Visit Store Catalog</Link>
                             </div>
                         </div>
 
@@ -227,6 +152,70 @@ export default function CartPage() {
             </main>
 
             <Footer />
+        </div>
+    );
+}
+
+/* ═══════════════
+   SUBCOMPONENTS
+═══════════════ */
+
+function QuantityController({ item, updateQuantity }: { item: any, updateQuantity: Function }) {
+    const [localVal, setLocalVal] = useState<string>(item.quantity.toString());
+    const [isFocused, setIsFocused] = useState(false);
+
+    // Sync with props when quantity changes from parent, but ONLY if not currently focused/typing
+    useEffect(() => {
+        if (!isFocused) {
+            setLocalVal(item.quantity.toString());
+        }
+    }, [item.quantity, isFocused]);
+
+    return (
+        <div className="flex items-center gap-0 border border-gray-200 dark:border-slate-700 rounded shadow-sm overflow-hidden bg-gray-50 dark:bg-slate-800">
+            <button 
+                onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} 
+                className="px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-r dark:border-slate-700"
+            >
+                <Minus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+            </button>
+            <input 
+                type="text" 
+                value={localVal}
+                onFocus={() => setIsFocused(true)}
+                onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '' || /^\d+$/.test(v)) {
+                        setLocalVal(v);
+                        const n = parseInt(v);
+                        if (!isNaN(n) && n >= 1) {
+                            // Important: We update the store but don't force localVal back 
+                            // because the user might still be typing (e.g. typing 10)
+                            updateQuantity(item.id, n);
+                        }
+                    }
+                }}
+                onBlur={() => {
+                    setIsFocused(false);
+                    const n = parseInt(localVal);
+                    if (isNaN(n) || n < 1) {
+                        setLocalVal('1');
+                        updateQuantity(item.id, 1);
+                    } else {
+                        // Ensure display is cleaned up (e.g. leading zeros)
+                        setLocalVal(n.toString());
+                        updateQuantity(item.id, n);
+                    }
+                }}
+                className="w-12 text-center text-sm font-bold bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                placeholder=""
+            />
+            <button 
+                onClick={() => updateQuantity(item.id, item.quantity + 1)} 
+                className="px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-l dark:border-slate-700"
+            >
+                <Plus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+            </button>
         </div>
     );
 }

@@ -152,6 +152,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        username = attrs.get('username')
+        
+        # If the provided username is an email, resolve it to the actual username
+        if '@' in username:
+            user = User.objects.filter(email=username).first()
+            if user:
+                attrs['username'] = user.username
+                
         data = super().validate(attrs)
         
         # Add user data to the response

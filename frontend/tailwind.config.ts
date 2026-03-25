@@ -10,8 +10,14 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
+                border: "rgb(var(--border) / <alpha-value>)",
+                input: "rgb(var(--input) / <alpha-value>)",
+                ring: "rgb(var(--ring) / <alpha-value>)",
+                background: "rgb(var(--background) / <alpha-value>)",
+                foreground: "rgb(var(--foreground) / <alpha-value>)",
                 primary: {
-                    DEFAULT: '#007185', // Teal
+                    DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+                    foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
                     light: '#008296',
                     dark: '#005d6e',
                     50: '#f0f9fa',
@@ -25,18 +31,25 @@ const config: Config = {
                     800: '#294c56',
                     900: '#25414a',
                 },
-                retail: {
-                    DEFAULT: '#007185',
-                    light: '#008296',
-                    accent: '#007185', // Changed from Amazon orange
-                    link: '#007185',
-                    button: '#ffd814',
-                    buttonHover: '#f7ca00',
-                    yellow: '#ffd814',
-                    orange: '#f7ca00',
-                    dark: '#131921', // Keeping Amazon dark as a utility
+                accent: {
+                    DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+                    foreground: "rgb(var(--accent-foreground) / <alpha-value>)",
+                },
+                card: {
+                    DEFAULT: "rgb(var(--card) / <alpha-value>)",
+                    foreground: "rgb(var(--card-foreground) / <alpha-value>)",
+                },
+                popover: {
+                    DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+                    foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
+                },
+                muted: {
+                    DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+                    foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
                 },
                 secondary: {
+                    DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+                    foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
                     50: '#fdf2f8',
                     100: '#fce7f3',
                     200: '#fbcfe8',
@@ -48,6 +61,22 @@ const config: Config = {
                     800: '#9d174d',
                     900: '#831843',
                 },
+                retail: {
+                    DEFAULT: '#007185',
+                    light: '#008296',
+                    accent: '#007185', // Changed from Amazon orange
+                    link: '#007185',
+                    button: '#ffd814',
+                    buttonHover: '#f7ca00',
+                    yellow: '#ffd814',
+                    orange: '#f7ca00',
+                    dark: '#131921', // Keeping Amazon dark as a utility
+                },
+            },
+            borderRadius: {
+                lg: "var(--radius)",
+                md: "calc(var(--radius) - 2px)",
+                sm: "calc(var(--radius) - 4px)",
             },
             fontFamily: {
                 sans: ['var(--font-inter)', 'sans-serif'],

@@ -20,8 +20,7 @@ class Warehouse(BaseModel, StatusMixin, TimestampMixin):
 class Inventory(BaseModel, TimestampMixin):
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='inventory_records')
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='inventory_records')
-    sku = models.CharField(max_length=100, blank=True, null=True)
-    barcode = models.CharField(max_length=100, blank=True, null=True)
+    # Duplicate product fields removed to maintain single source of truth in Product model
     
     quantity_available = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     quantity_reserved = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -30,10 +29,6 @@ class Inventory(BaseModel, TimestampMixin):
     
     reorder_level = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     reorder_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
-    purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    selling_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     batch_number = models.CharField(max_length=100, blank=True, null=True)
     manufacturing_date = models.DateField(null=True, blank=True)
@@ -45,12 +40,31 @@ class Inventory(BaseModel, TimestampMixin):
         # If we track by batch, unique might need to include batch_number
         unique_together = ('product', 'warehouse', 'batch_number')
 
-    def __str__(self):
-        return f"{self.product.name} @ {self.warehouse.name} ({self.batch_number or 'No Batch'})"
-
-    @property
-    def total_stock(self):
-        return self.quantity_available + self.quantity_reserved + self.quantity_damaged + self.quantity_in_transit
+    def save(self, *args, **kwargs):
+        # Determine if we should create an alert
+        # We only create alerts if reorder_level is set (> 0)
+        should_alert = self.reorder_level > 0 and self.quantity_available <= self.reorder_level
+        
+        super().save(*args, **kwargs)
+        
+        if should_alert:
+            LowStockAlert.objects.update_or_create(
+                product=self.product,
+                warehouse=self.warehouse,
+                defaults={
+                    'current_quantity': self.quantity_available,
+                    'reorder_level': self.reorder_level,
+                    'alert_status': 'Pending'
+                }
+            )
+        else:
+            # If stock is now above reorder level, we can auto-resolve pending alerts 
+            # for this product/warehouse combination
+            LowStockAlert.objects.filter(
+                product=self.product, 
+                warehouse=self.warehouse, 
+                alert_status='Pending'
+            ).update(alert_status='Resolved')
 
 class InventoryMovement(BaseModel, TimestampMixin):
     MOVEMENT_TYPES = (

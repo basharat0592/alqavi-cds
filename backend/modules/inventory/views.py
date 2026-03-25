@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status, filters
+from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -21,7 +22,7 @@ class InventoryViewSet(viewsets.ModelViewSet):
     serializer_class = InventorySerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['warehouse', 'product']
-    search_fields = ['sku', 'barcode', 'batch_number', 'product__name']
+    search_fields = ['product__sku', 'product__barcode', 'batch_number', 'product__name']
 
     def create(self, request, *args, **kwargs):
         """
@@ -78,6 +79,51 @@ class InventoryViewSet(viewsets.ModelViewSet):
             'expired_batches': expired_batches,
         })
 
+    @action(detail=True, methods=['post'], url_path='add_stock')
+    def add_stock(self, request, pk=None):
+        """Directly add units to an existing inventory record by its PK."""
+        inventory = self.get_object()
+        qty = request.data.get('quantity', 0)
+        try:
+            qty = float(qty)
+        except (TypeError, ValueError):
+            return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
+        if qty <= 0:
+            return Response({'error': 'Quantity must be greater than 0'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import traceback
+        try:
+            with transaction.atomic():
+                prev_qty = float(inventory.quantity_available)
+                inventory.quantity_available = prev_qty + qty
+                inventory.save()
+
+                InventoryMovement.objects.create(
+                    product=inventory.product,
+                    warehouse=inventory.warehouse,
+                    movement_type='Adjustment',
+                    quantity=qty,
+                    previous_quantity=prev_qty,
+                    new_quantity=inventory.quantity_available,
+                    notes=request.data.get('notes', 'Stock added via Stock Management'),
+                    created_by=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
+                )
+
+                # Resolve any pending low-stock alerts if stock is now healthy
+                if inventory.reorder_level and inventory.quantity_available > inventory.reorder_level:
+                    LowStockAlert.objects.filter(
+                        product=inventory.product,
+                        warehouse=inventory.warehouse,
+                        alert_status='Pending'
+                    ).update(alert_status='Resolved')
+        except Exception as e:
+            tb = traceback.format_exc()
+            print("ERROR IN ADD_STOCK:", tb)
+            return Response({'error': str(e), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        serializer = self.get_serializer(inventory)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class InventoryMovementViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = InventoryMovement.objects.all().order_by('-created_at')
     serializer_class = InventoryMovementSerializer
@@ -102,17 +148,28 @@ class StockAdjustmentViewSet(viewsets.ModelViewSet):
             adjustment = serializer.save(adjusted_by=request.user)
             
             # Real-time stock update logic
-            inventory, created = Inventory.objects.get_or_create(
+            # Use filter().first() instead of get_or_create() to safely handle
+            # cases where multiple inventory records exist for the same
+            # product/warehouse (different batch_numbers → unique_together).
+            inventory = Inventory.objects.filter(
                 product=adjustment.product,
                 warehouse=adjustment.warehouse,
-                defaults={'sku': adjustment.product.sku}
-            )
+            ).order_by('id').first()
+
+            if inventory is None:
+                # No record exists yet — create a base one
+                inventory = Inventory.objects.create(
+                    product=adjustment.product,
+                    warehouse=adjustment.warehouse,
+                    sku=getattr(adjustment.product, 'sku', None) or '',
+                    quantity_available=0,
+                )
             
             prev_qty = inventory.quantity_available
             if adjustment.adjustment_type == 'Add':
                 inventory.quantity_available += adjustment.quantity
             else:
-                inventory.quantity_available -= adjustment.quantity
+                inventory.quantity_available = max(0, inventory.quantity_available - adjustment.quantity)
             inventory.save()
             
             # Create Movement Record
@@ -143,6 +200,7 @@ class StockAdjustmentViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class LowStockAlertViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
     queryset = LowStockAlert.objects.all().order_by('-created_at')
     serializer_class = LowStockAlertSerializer
     filter_backends = [DjangoFilterBackend]

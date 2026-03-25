@@ -20,6 +20,13 @@ class Category(BaseModel, StatusMixin):
     description = models.TextField(blank=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
     image = models.FileField(upload_to='categories/', blank=True)
+    main_category = models.ForeignKey(
+        'MainCategory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sub_categories'
+    )
     
     class Meta:
         ordering = ['name']
@@ -68,7 +75,7 @@ class Product(BaseModel, StatusMixin):
         null=True,
         blank=True,
         related_name='products',
-        verbose_name='Origin Category'
+        verbose_name='Origin / Vendor Category'
     )
     company = models.ForeignKey(
         'company.Company',
@@ -114,3 +121,32 @@ class ProductGallery(BaseModel, TimestampMixin):
 
     def __str__(self):
         return f"Gallery {self.id} for {self.product.name}"
+
+
+class MainCategory(BaseModel, StatusMixin):
+    """
+    Main Category model for grouping products into top-level sections.
+    
+    Attributes:
+        name: Main category name
+        description: Category description
+        slug: URL-safe identifier
+        image: Category image
+        products: Many-to-Many relationship with Product
+    """
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True)
+    slug = models.SlugField(unique=True, blank=True, null=True)
+    image = models.FileField(upload_to='main_categories/', blank=True)
+    products = models.ManyToManyField(Product, related_name='main_categories', blank=True)
+    
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['status']),
+        ]
+        verbose_name_plural = 'Main Categories'
+
+    def __str__(self):
+        return self.name
