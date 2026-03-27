@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Loader2, ArrowLeft, Mail, CheckCircle, ShieldCheck, AlertCircle, KeyRound } from 'lucide-react';
+import { Loader2, ArrowLeft, AlertTriangle } from 'lucide-react';
+
+const INPUT = (err?: boolean) =>
+    `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
+    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
+    ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
+
+const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -15,146 +22,93 @@ export default function ForgotPasswordPage() {
         setError(null);
         if (!email.trim()) { setError('Please enter your email address.'); return; }
         setLoading(true);
+        // Simulate API call
         await new Promise(r => setTimeout(r, 1500));
         setLoading(false);
         setSubmitted(true);
     };
 
     return (
-        <div className="min-h-screen bg-white flex flex-col font-sans relative overflow-hidden">
-
-            {/* Ambient glow */}
-            <div className="fixed inset-0 pointer-events-none -z-10">
-                <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#FF9900]/10 blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#FF9900]/8 blur-[100px]" />
-            </div>
-
-            {/* Top bar */}
-            <div className="bg-[#131921] py-4 px-6 flex items-center justify-center">
-                <Link href="/" className="flex flex-col items-center leading-none group">
-                    <span className="font-black text-xl text-white tracking-tight group-hover:text-[#FF9900] transition-colors">Al-Qavi Cosmetics</span>
-                    <span className="text-[9px] font-bold tracking-[0.3em] text-white/40 uppercase mt-0.5">Premium · Authentic · Pakistan</span>
+        <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
+            <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
+                <Link href="/" className="flex flex-col items-center">
+                    <span className="font-extrabold text-2xl text-[#111] tracking-tighter uppercase">AL-QAVI</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Password Recovery</span>
                 </Link>
-            </div>
+            </header>
 
-            <main className="flex-1 flex items-start justify-center py-10 px-4">
+            <main className="flex-1 flex flex-col items-center py-12 px-4">
                 <div className="w-full max-w-sm">
-
-                    {/* Back to login */}
-                    <Link href="/login" className="flex items-center gap-1.5 text-sm text-[#FF9900] hover:text-[#e68a00] font-bold mb-4 transition-colors">
-                        <ArrowLeft className="h-4 w-4" /> Back to Sign In
-                    </Link>
-
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-
+                    <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4">
                         {submitted ? (
-                            /* ── Success state ── */
-                            <div className="text-center">
-                                <div className="w-14 h-14 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <CheckCircle className="h-7 w-7 text-emerald-600" />
-                                </div>
-                                <h2 className="text-xl font-black text-gray-900 tracking-tight mb-2">Check your email</h2>
-                                <p className="text-sm text-gray-500 font-medium mb-1">
-                                    We've sent password reset instructions to:
+                            <div className="text-left">
+                                <h1 className="text-2xl font-bold text-[#111] mb-2 tracking-tight">Check your email</h1>
+                                <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                                    We've sent password reset instructions to <span className="font-bold">{email}</span>.
                                 </p>
-                                <p className="font-black text-gray-900 text-sm mb-5 break-all">{email}</p>
-
-                                <div className="bg-[#FF9900]/5 border border-[#FF9900]/20 rounded-xl p-3 mb-5 text-xs text-gray-600 text-left">
-                                    <p className="font-black text-gray-700 mb-1.5 uppercase tracking-widest text-[10px]">Next Steps</p>
-                                    <ol className="list-decimal list-inside space-y-1 font-medium">
-                                        <li>Check your inbox (and spam/junk folder)</li>
-                                        <li>Click the reset link in the email</li>
-                                        <li>Create your new password</li>
-                                    </ol>
-                                </div>
-
+                                <p className="text-xs text-gray-600 mb-6">
+                                    If you don't see the email, check your spam or junk folder.
+                                </p>
                                 <Link href="/login"
-                                    className="w-full block text-center py-3 bg-[#FF9900] hover:bg-[#e68a00] text-[#131921] font-black text-sm uppercase tracking-widest rounded-xl transition-all mb-3">
+                                    className="block w-full text-center py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-sm font-bold text-[#111] transition-colors">
                                     Return to Sign In
                                 </Link>
                                 <button onClick={() => { setSubmitted(false); setEmail(''); }}
-                                    className="text-xs text-[#FF9900] hover:text-[#e68a00] font-bold hover:underline transition-colors">
+                                    className="w-full text-center text-xs text-[#0066c0] hover:text-[#c45500] hover:underline mt-4">
                                     Try a different email address
                                 </button>
                             </div>
                         ) : (
-                            /* ── Form state ── */
                             <>
-                                {/* Header */}
-                                <div className="mb-6">
-                                    <div className="w-11 h-11 bg-[#FF9900] rounded-xl flex items-center justify-center mb-4">
-                                        <KeyRound className="h-5 w-5 text-[#131921]" strokeWidth={2.5} />
-                                    </div>
-                                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Reset Password</h1>
-                                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                        We'll send you a reset link
-                                    </p>
-                                </div>
+                                <h1 className="text-2xl font-bold text-[#111] mb-2 tracking-tight text-left">Password assistance</h1>
+                                <p className="text-xs text-gray-700 mb-5 leading-relaxed text-left">
+                                    Enter the email address associated with your Al-Qavi account.
+                                </p>
 
                                 {error && (
-                                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 mb-4 text-sm font-bold">
-                                        <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
+                                    <div className="flex items-start gap-2 border border-[#c40000] bg-white rounded p-3 mb-5 text-sm text-left">
+                                        <AlertTriangle className="h-4 w-4 text-[#c40000] flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-[#c40000] font-bold">There was a problem</p>
+                                            <p className="text-gray-800 text-xs mt-1 leading-relaxed">{error}</p>
+                                        </div>
                                     </div>
                                 )}
 
                                 <form onSubmit={handleSubmit} className="space-y-4">
                                     <div>
-                                        <label className="block text-xs font-black text-gray-700 uppercase tracking-widest mb-1.5">
-                                            Email Address
-                                        </label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                            <input
-                                                type="email" required
-                                                value={email} onChange={e => { setEmail(e.target.value); setError(null); }}
-                                                placeholder="you@example.com"
-                                                className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none bg-gray-50 focus:bg-white focus:border-[#FF9900] focus:ring-2 focus:ring-[#FF9900]/20 transition-all"
-                                            />
-                                        </div>
+                                        <label className={LABEL}>Email Address</label>
+                                        <input
+                                            type="email" required
+                                            value={email} onChange={e => { setEmail(e.target.value); setError(null); }}
+                                            className={INPUT(!!error)}
+                                        />
                                     </div>
 
                                     <button type="submit" disabled={loading}
-                                        className="w-full flex items-center justify-center gap-2 py-3 bg-[#FF9900] hover:bg-[#e68a00] text-[#131921] font-black text-sm uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 active:scale-[0.98] shadow-sm">
-                                        {loading
-                                            ? <><Loader2 className="animate-spin h-4 w-4" /> Sending...</>
-                                            : 'Send Reset Link'}
+                                        className="w-full py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-sm font-bold text-[#111] transition-colors mt-2">
+                                        {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" strokeWidth={3} /> : 'Continue'}
                                     </button>
                                 </form>
 
-                                <div className="mt-5 pt-4 border-t border-gray-100 space-y-2 text-center">
-                                    <p className="text-xs text-gray-500 font-medium">
-                                        Remember your password?{' '}
-                                        <Link href="/login" className="text-[#FF9900] hover:text-[#e68a00] font-black transition-colors">
-                                            Sign in
-                                        </Link>
+                                <div className="mt-8 pt-6 border-t border-[#eee] text-left">
+                                    <p className="text-xs text-gray-800 font-bold mb-2">Has your email changed?</p>
+                                    <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                                        If you no longer use the email address associated with your Al-Qavi account, you may contact <span className="text-[#0066c0] hover:underline cursor-pointer">Customer Service</span> for help restoring access to your account.
                                     </p>
-                                    <p className="text-xs text-gray-500 font-medium">
-                                        Don&apos;t have an account?{' '}
-                                        <Link href="/register" className="text-[#FF9900] hover:text-[#e68a00] font-black transition-colors">
-                                            Create one
-                                        </Link>
-                                    </p>
+                                    <Link href="/login" className="text-xs text-[#0066c0] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                                        <ArrowLeft className="h-3 w-3" /> Back to Sign In
+                                    </Link>
                                 </div>
                             </>
                         )}
                     </div>
+                </div>
 
-                    {/* Secure badge */}
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-5">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure & Encrypted
-                    </div>
+                <div className="mt-8 text-center">
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Al-Qavi Cosmetics Distributor Network © 2026</p>
                 </div>
             </main>
-
-            {/* Footer */}
-            <footer className="bg-[#131921] py-4 px-6 text-center">
-                <div className="flex justify-center gap-6 text-xs text-gray-400">
-                    <span className="hover:text-[#FF9900] hover:underline cursor-pointer transition-colors">Conditions of Use</span>
-                    <span className="hover:text-[#FF9900] hover:underline cursor-pointer transition-colors">Privacy Policy</span>
-                    <span className="hover:text-[#FF9900] hover:underline cursor-pointer transition-colors">Help</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">© 2026 Al-Qavi Cosmetics. All rights reserved.</p>
-            </footer>
         </div>
     );
 }

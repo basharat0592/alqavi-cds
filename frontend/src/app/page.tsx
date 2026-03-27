@@ -13,6 +13,7 @@ import Footer from "@/components/layout/Footer";
 import { useCart } from "@/context/CartContext";
 import { getImageUrl } from "@/lib/utils";
 import { productService, categoryService, mainCategoryService } from "@/lib/api";
+import ProductCard from "@/components/ui/ProductCard";
 
 const HERO_SLIDES = [
     {
@@ -45,7 +46,7 @@ const CATEGORY_FALLBACK_IMAGES = [
     "https://images.unsplash.com/photo-1527799820374-87412714d9ef?q=80&w=400"
 ];
 
-function ProductRow({ title, subtitle, products, loading, onAdd }: { title: string, subtitle: string, products: any[], loading: boolean, onAdd: (p: any, e: React.MouseEvent) => void }) {
+function ProductRow({ title, subtitle, products, loading, onAdd }: { title: string, subtitle: string, products: any[], loading: boolean, onAdd: (p: any, e?: React.MouseEvent, qty?: number) => void }) {
     if (!loading && products.length === 0) return null;
     return (
         <section className="mt-20">
@@ -59,66 +60,28 @@ function ProductRow({ title, subtitle, products, loading, onAdd }: { title: stri
                 </Link>
             </div>
 
-            <div className="flex gap-6 overflow-x-auto no-scrollbar px-6 lg:px-12 pb-10">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-6 lg:px-12 pb-4">
                 {loading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="w-[180px] lg:w-[210px] h-[320px] bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-2xl flex-shrink-0" />
+                    Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-[360px] bg-slate-50 dark:bg-[#1B1C1E] animate-pulse rounded-2xl" />
                     ))
                 ) : (
                     products.map(p => {
+                        const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price || 0);
                         const inStock = p.quantity_in_stock === undefined || p.quantity_in_stock > 0;
                         return (
-                            <Link key={p.id} href={`/product/${p.id}`} className="w-[180px] lg:w-[210px] h-[320px] group flex flex-col flex-shrink-0 transition-transform duration-500 active:scale-[0.98]">
-                                <div className="relative h-full bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-border/60 hover:border-[#FF9900]/40 transition-all duration-500 shadow-sm hover:shadow-xl group-hover:-translate-y-1 flex flex-col">
-                                    {/* IMAGE SECTION */}
-                                    <div className="h-[55%] overflow-hidden bg-[#fafafa] dark:bg-slate-850 relative p-4 group/img flex-shrink-0">
-                                        <img
-                                            src={getImageUrl(p.image_url || p.image || '') || ''}
-                                            className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-all duration-700 group-hover:scale-110"
-                                            alt={p.name}
-                                        />
-                                        {!inStock && (
-                                            <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center">
-                                                <span className="text-[8px] font-black uppercase tracking-widest bg-red-600 text-white px-2 py-1 rounded-sm shadow-lg">Sold Out</span>
-                                            </div>
-                                        )}
-                                        <div className="absolute top-2 right-2 flex flex-col gap-2 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 z-10">
-                                            <button className="w-8 h-8 rounded-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-lg flex items-center justify-center text-slate-900 dark:text-white hover:bg-[#FF9900] hover:text-white transition-all transform hover:rotate-12">
-                                                <Heart className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* CONTENT SECTION */}
-                                    <div className="p-4 flex flex-col flex-grow justify-between bg-white dark:bg-slate-900 border-t border-border/40">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-0.5 opacity-60">
-                                                {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-2 w-2 text-[#FFA41C] fill-[#FFA41C]" />)}
-                                            </div>
-                                            <h3 className="text-[11px] font-bold dark:text-white line-clamp-2 leading-tight group-hover:text-[#007185] transition-colors min-h-[2.4em]">{p.name}</h3>
-                                            <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest truncate">{p.category_name || 'Beauty'}</p>
-                                        </div>
-
-                                        <div className="flex items-end justify-between pt-2">
-                                            <div className="space-y-0.5">
-                                                <div className="flex items-center gap-1.5 leading-none">
-                                                    <span className="text-slate-900 dark:text-white text-[13px] font-black tracking-tighter">PKR {parseFloat(p.price).toLocaleString()}</span>
-                                                </div>
-                                                <span className={`text-[7px] uppercase font-bold tracking-[0.1em] block transition-colors ${inStock ? 'text-emerald-500' : 'text-red-500 opacity-60'}`}>
-                                                    {inStock ? 'Ready to Ship' : 'Backordering'}
-                                                </span>
-                                            </div>
-                                            <button
-                                                onClick={(e) => { e.preventDefault(); onAdd(p, e); }}
-                                                disabled={!inStock}
-                                                className={`w-8 h-8 rounded-lg transition-all shadow-md flex items-center justify-center group/cart ${inStock ? 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-[#FF9900] hover:shadow-[#FF9900]/30 active:scale-90' : 'bg-slate-50 dark:bg-slate-800 text-slate-300'}`}
-                                            >
-                                                <ShoppingCart className="h-3.5 w-3.5 transition-transform group-hover/cart:scale-110" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Link>
+                            <ProductCard
+                                key={p.id}
+                                id={String(p.id)}
+                                title={p.name}
+                                image={getImageUrl(p.image_url || p.image || '') || ''}
+                                price={price}
+                                category={p.category_name || 'Beauty'}
+                                stock={p.quantity_in_stock}
+                                rating={4.5}
+                                reviews={p.reviews_count || 12}
+                                onAddToCart={(qty) => onAdd(p, undefined, qty)}
+                            />
                         );
                     })
                 )}
@@ -156,9 +119,9 @@ export default function Home() {
         return () => clearInterval(timer);
     }, []);
 
-    const handleAdd = (p: any, e: React.MouseEvent) => {
-        e.preventDefault();
-        addToCart({ id: p.id, name: p.name, price: p.price, quantity: 1, image: p.image_url || p.image || '', category: p.category_name || 'Beauty' });
+    const handleAdd = (p: any, e?: React.MouseEvent, qty: number = 1) => {
+        e?.preventDefault();
+        addToCart({ id: p.id, name: p.name, price: p.price, quantity: qty, image: p.image_url || p.image || '', category: p.category_name || 'Beauty', stock: p.quantity_in_stock });
     };
 
     return (

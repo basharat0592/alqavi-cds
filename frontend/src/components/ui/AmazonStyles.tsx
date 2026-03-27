@@ -1,11 +1,12 @@
+'use client';
 import React from 'react';
 import Link from 'next/link';
 import { CheckCircle, AlertTriangle, Loader2, Trash2, Search, RefreshCw, ArrowLeft, Save } from 'lucide-react';
 
 // ── Shared Styling Variables ──────────────────────────────────────────────────
-export const AMZ_INPUT = `w-full px-3 py-2 bg-white dark:bg-slate-800 border border-[#a6a6a6] dark:border-slate-700 rounded text-sm outline-none transition-all focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400 disabled:bg-gray-100 disabled:opacity-50`;
+export const AMZ_INPUT = `w-full px-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none transition-all focus:border-[#FF9900]/60 focus:ring-2 focus:ring-[#FF9900]/10 placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:opacity-50 font-medium`;
 export const AMZ_SELECT = AMZ_INPUT;
-export const AMZ_LABEL = `block text-xs font-bold text-gray-900 dark:text-gray-200 mb-1`;
+export const AMZ_LABEL = `block text-[10px] font-black text-slate-500 dark:text-white/40 uppercase tracking-[0.15em] mb-1.5`;
 
 // ── Structural Components ─────────────────────────────────────────────────────
 
@@ -15,30 +16,30 @@ export const PageWrapper = ({ children, className = "" }: { children: React.Reac
     </div>
 );
 
-export const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
+export const SectionCard = ({ children, className = "", overflowVisible = false }: { children: React.ReactNode; className?: string; overflowVisible?: boolean }) => (
+    <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-100 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] ${overflowVisible ? '' : 'overflow-hidden'} ${className}`}>
         {children}
     </div>
 );
 
-export const SectionHeader = ({ title, icon: Icon, rightAction, iconColor = "text-gray-600 dark:text-gray-400" }: { title: string; icon?: any; rightAction?: React.ReactNode; iconColor?: string }) => (
-    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+export const SectionHeader = ({ title, icon: Icon, rightAction, iconColor = "text-slate-500 dark:text-white/40" }: { title: string; icon?: any; rightAction?: React.ReactNode; iconColor?: string }) => (
+    <div className="bg-slate-50/50 dark:bg-white/[0.02] px-6 py-3.5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
             {Icon && <Icon className={`w-4 h-4 ${iconColor.startsWith('#') ? '' : iconColor}`} style={iconColor.startsWith('#') ? { color: iconColor } : {}} />}
-            <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
+            <span className="text-[11px] font-black text-slate-600 dark:text-white/60 uppercase tracking-[0.2em]">{title}</span>
         </div>
         {rightAction && <div>{rightAction}</div>}
     </div>
 );
 
 export const PageHeader = ({ title, subtitle, icon: Icon, action, iconColor = "#FF9900" }: { title: string; subtitle?: string; icon?: any; action?: React.ReactNode; iconColor?: string }) => (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                {Icon && <Icon className="h-6 w-6" style={{ color: iconColor }} />}
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase flex items-center gap-3">
+                {Icon && <Icon className="h-5 w-5" style={{ color: iconColor }} />}
                 {title}
             </h1>
-            {subtitle && <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">{subtitle}</p>}
+            {subtitle && <p className="text-[11px] text-slate-400 dark:text-white/30 font-black uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>}
         </div>
         {action && <div>{action}</div>}
     </div>
@@ -54,14 +55,14 @@ export const FilterHub = ({ children, onSearch, searchValue, searchPlaceholder =
     extraFilters?: React.ReactNode;
 }) => (
     <SectionCard className="mb-6">
-        <div className="p-4 flex flex-col md:flex-row gap-4 items-center">
+        <div className="p-4 flex flex-col md:flex-row gap-3 items-center">
             {onSearch !== undefined && (
                 <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-white/20" />
                     <input
                         type="text"
                         placeholder={searchPlaceholder}
-                        className={AMZ_INPUT}
+                        className={`${AMZ_INPUT} pl-9`}
                         value={searchValue}
                         onChange={e => onSearch(e.target.value)}
                     />
@@ -70,8 +71,8 @@ export const FilterHub = ({ children, onSearch, searchValue, searchPlaceholder =
             {extraFilters}
             {children}
             {onRefresh && (
-                <button onClick={onRefresh} className="p-2 border border-[#a6a6a6] rounded hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shrink-0">
-                    <RefreshCw className={`h-4 w-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                <button onClick={onRefresh} className="p-2.5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 hover:border-[#FF9900]/40 transition-all shrink-0">
+                    <RefreshCw className={`h-3.5 w-3.5 text-slate-500 dark:text-white/40 ${loading ? 'animate-spin' : ''}`} />
                 </button>
             )}
         </div>
@@ -90,6 +91,7 @@ interface AdminTableProps<T> {
     totalPages?: number;
     totalCount?: number;
     onPageChange?: (page: number) => void;
+    overflowVisible?: boolean;
 }
 
 export function AdminTable<T>({
@@ -101,34 +103,35 @@ export function AdminTable<T>({
     currentPage,
     totalPages,
     totalCount,
-    onPageChange
+    onPageChange,
+    overflowVisible = false
 }: AdminTableProps<T>) {
     return (
-        <SectionCard>
-            <div className="overflow-x-auto">
+        <SectionCard overflowVisible={overflowVisible}>
+            <div className={overflowVisible ? 'overflow-visible' : 'overflow-x-auto'}>
                 <table className="w-full text-left">
                     <thead>
-                        <tr className="bg-[#f6f6f6] dark:bg-slate-800/50 border-b border-[#ddd] dark:border-slate-800 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
+                        <tr className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5 text-[9px] font-black text-slate-400 dark:text-white/25 uppercase tracking-[0.2em]">
                             {headers.map((h, i) => (
-                                <th key={i} className={`px-6 py-3 ${i === headers.length - 1 ? 'text-right' : ''}`}>
+                                <th key={i} className={`px-6 py-4 ${i === headers.length - 1 ? 'text-right' : ''}`}>
                                     {h}
                                 </th>
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-slate-50 dark:divide-white/[0.03]">
                         {loading ? (
                             Array(5).fill(0).map((_, i) => (
                                 <tr key={i}>
-                                    <td colSpan={headers.length} className="px-6 py-6 animate-pulse">
-                                        <div className="h-4 bg-gray-100 dark:bg-slate-800 rounded w-full" />
+                                    <td colSpan={headers.length} className="px-6 py-5 animate-pulse">
+                                        <div className="h-3.5 bg-slate-100 dark:bg-white/5 rounded-full w-full" />
                                     </td>
                                 </tr>
                             ))
                         ) : data.length === 0 ? (
                             <tr>
-                                <td colSpan={headers.length} className="px-6 py-12 text-center text-gray-500 italic">
-                                    {emptyMessage}
+                                <td colSpan={headers.length} className="px-6 py-16 text-center">
+                                    <p className="text-[11px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">{emptyMessage}</p>
                                 </td>
                             </tr>
                         ) : (
@@ -139,23 +142,25 @@ export function AdminTable<T>({
             </div>
 
             {onPageChange && totalCount !== undefined && currentPage !== undefined && totalPages !== undefined && (
-                <div className="bg-[#f6f6f6] dark:bg-slate-800 px-6 py-4 flex items-center justify-between border-t border-[#ddd] dark:border-slate-800">
-                    <p className="text-xs text-gray-500">Showing {data.length} of {totalCount} records</p>
+                <div className="bg-slate-50/50 dark:bg-white/[0.02] px-6 py-4 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-white/25 uppercase tracking-widest">
+                        Showing {data.length} of {totalCount} records
+                    </p>
                     <div className="flex items-center gap-2">
                         <button
                             disabled={currentPage === 1 || loading}
                             onClick={() => onPageChange(currentPage - 1)}
-                            className="px-3 py-1 bg-white dark:bg-slate-700 border border-[#a6a6a6] rounded text-xs hover:bg-gray-50 disabled:opacity-50 transition-colors dark:text-gray-200"
+                            className="px-4 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-[#FF9900]/40 disabled:opacity-30 transition-all"
                         >
-                            Previous
+                            Prev
                         </button>
-                        <span className="text-xs font-bold px-4 text-gray-700 dark:text-gray-300">
-                            Page {currentPage} / {totalPages || 1}
+                        <span className="text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-3">
+                            {currentPage} / {totalPages || 1}
                         </span>
                         <button
                             disabled={currentPage >= totalPages || totalCount === 0 || loading}
                             onClick={() => onPageChange(currentPage + 1)}
-                            className="px-3 py-1 bg-white dark:bg-slate-700 border border-[#a6a6a6] rounded text-xs hover:bg-gray-50 disabled:opacity-50 transition-colors dark:text-gray-200"
+                            className="px-4 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-[#FF9900]/40 disabled:opacity-30 transition-all"
                         >
                             Next
                         </button>
@@ -192,19 +197,19 @@ export const AdminForm = ({
     submitHoverColor?: string;
 }) => (
     <div className={`${maxWidth} mx-auto py-8 px-4`}>
-        <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-normal text-gray-900 dark:text-white tracking-tight uppercase">
+        <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">
                 {title}
             </h1>
             {(onCancel || cancelHref) && (
                 <div className="flex gap-2">
                     {cancelHref ? (
-                        <Link href={cancelHref} className="text-sm text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-1 uppercase font-bold tracking-tighter">
-                            <ArrowLeft className="w-4 h-4" /> Back to list
+                        <Link href={cancelHref} className="text-[11px] font-black text-[#FF9900] hover:opacity-80 flex items-center gap-2 uppercase tracking-widest border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl hover:border-[#FF9900]/40 transition-all">
+                            <ArrowLeft className="w-3.5 h-3.5" /> Back
                         </Link>
                     ) : (
-                        <button onClick={onCancel} className="text-sm text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-1 uppercase font-bold tracking-tighter">
-                            <ArrowLeft className="w-4 h-4" /> Back to list
+                        <button onClick={onCancel} className="text-[11px] font-black text-[#FF9900] hover:opacity-80 flex items-center gap-2 uppercase tracking-widest border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl hover:border-[#FF9900]/40 transition-all">
+                            <ArrowLeft className="w-3.5 h-3.5" /> Back
                         </button>
                     )}
                 </div>
@@ -229,7 +234,7 @@ export const AdminForm = ({
                         color={submitColor}
                         hoverColor={submitHoverColor}
                     >
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                         {submitLabel}
                     </ActionButton>
                 </div>
@@ -243,7 +248,7 @@ export const AdminForm = ({
 export const PrimaryButton = ({ children, onClick, disabled, className = "", type = "button", href, color = "#FF9900", hoverColor = "#e68a00" }: {
     children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; type?: "button" | "submit"; href?: string; color?: string; hoverColor?: string;
 }) => {
-    const baseClass = `text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${className}`;
+    const baseClass = `text-[#131921] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${className}`;
     const style = { backgroundColor: color, '--hover-bg': hoverColor } as any;
     
     if (href) {
@@ -267,17 +272,17 @@ export const PrimaryButton = ({ children, onClick, disabled, className = "", typ
 export const SecondaryButton = ({ children, onClick, disabled, className = "", type = "button", href }: {
     children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; type?: "button" | "submit"; href?: string;
 }) => {
-    const baseClass = `bg-white dark:bg-slate-800 border border-[#adb1b8] border-gray-300 rounded text-xs font-bold text-gray-700 dark:text-gray-200 px-4 py-1.5 hover:bg-gray-50 shadow-sm transition-colors disabled:opacity-50 ${className}`;
+    const baseClass = `bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black text-slate-600 dark:text-white/50 px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 transition-all disabled:opacity-50 uppercase tracking-widest ${className}`;
     if (href) {
         return <Link href={href} className={baseClass}>{children}</Link>;
     }
     return <button type={type} onClick={onClick} disabled={disabled} className={baseClass}>{children}</button>;
 };
 
-export const ActionButton = ({ children, onClick, disabled, className = "", type = "button", href, color = "#232f3e", hoverColor = "#131921" }: {
+export const ActionButton = ({ children, onClick, disabled, className = "", type = "button", href, color = "#131921", hoverColor = "#000000" }: {
     children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; type?: "button" | "submit"; href?: string; color?: string; hoverColor?: string;
 }) => {
-    const baseClass = `text-white px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 ${className}`;
+    const baseClass = `text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50 ${className}`;
     const style = { backgroundColor: color } as any;
     
     if (href) {
@@ -303,9 +308,9 @@ export const ActionButton = ({ children, onClick, disabled, className = "", type
 export const Toast = ({ message, color = "#FF9900" }: { message: string, color?: string }) => {
     if (!message) return null;
     return (
-        <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '4px', borderLeftColor: color }}>
-            <CheckCircle className="h-5 w-5 text-green-400" />
-            <span className="text-sm font-bold uppercase tracking-tight">{message}</span>
+        <div className="fixed bottom-6 right-6 bg-white dark:bg-[#1B1C1E] border border-slate-100 dark:border-white/10 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: color }}>
+            <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color }} />
+            <span className="text-[11px] font-black uppercase tracking-[0.15em]">{message}</span>
         </div>
     );
 };
@@ -313,9 +318,9 @@ export const Toast = ({ message, color = "#FF9900" }: { message: string, color?:
 export const ErrorToast = ({ message }: { message: string }) => {
     if (!message) return null;
     return (
-        <div className="fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] z-[300] animate-in slide-in-from-bottom-5">
-            <AlertTriangle className="h-5 w-5 text-white" />
-            <span className="text-sm font-bold uppercase tracking-tight">{message}</span>
+        <div className="fixed bottom-6 right-6 bg-white dark:bg-[#1B1C1E] border border-red-100 dark:border-red-500/20 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: '#ef4444' }}>
+            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+            <span className="text-[11px] font-black uppercase tracking-[0.15em]">{message}</span>
         </div>
     );
 };
@@ -327,27 +332,27 @@ export const DeleteConfirmModal = ({
 }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded border border-gray-300 dark:border-slate-700 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-[#e47911]" />
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">System Purge</h3>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#1B1C1E] rounded-2xl border border-slate-100 dark:border-white/10 max-w-sm w-full shadow-2xl dark:shadow-[0_24px_64px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between px-6 py-4 bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
+                    <div className="flex items-center gap-2.5">
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                        <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Confirm Delete</h3>
                     </div>
                 </div>
-                <div className="p-6 text-sm text-gray-700 dark:text-gray-300">
-                    Permanently delete record <span className="font-bold text-gray-900 dark:text-white">#{itemName}</span>?
+                <div className="p-6 text-sm text-slate-600 dark:text-white/50">
+                    Permanently delete record <span className="font-black text-slate-900 dark:text-white">#{itemName}</span>? This action cannot be undone.
                 </div>
-                <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
+                <div className="px-6 py-4 bg-slate-50/50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex justify-end gap-2">
                     <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
                     <ActionButton 
                         onClick={onConfirm} 
                         disabled={deleting}
-                        color={confirmColor}
-                        hoverColor={confirmHoverColor}
+                        color={confirmColor || '#dc2626'}
+                        hoverColor={confirmHoverColor || '#b91c1c'}
                     >
-                        {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                        Commit Erasure
+                        {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                        Delete
                     </ActionButton>
                 </div>
             </div>

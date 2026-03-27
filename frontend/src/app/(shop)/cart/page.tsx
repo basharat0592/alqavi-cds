@@ -171,51 +171,68 @@ function QuantityController({ item, updateQuantity }: { item: any, updateQuantit
         }
     }, [item.quantity, isFocused]);
 
+    const maxStock = item.stock || 999;
+    const isMax = item.quantity >= maxStock;
+
     return (
-        <div className="flex items-center gap-0 border border-gray-200 dark:border-slate-700 rounded shadow-sm overflow-hidden bg-gray-50 dark:bg-slate-800">
-            <button 
-                onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} 
-                className="px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-r dark:border-slate-700"
-            >
-                <Minus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-            </button>
-            <input 
-                type="text" 
-                value={localVal}
-                onFocus={() => setIsFocused(true)}
-                onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === '' || /^\d+$/.test(v)) {
-                        setLocalVal(v);
-                        const n = parseInt(v);
-                        if (!isNaN(n) && n >= 1) {
-                            // Important: We update the store but don't force localVal back 
-                            // because the user might still be typing (e.g. typing 10)
-                            updateQuantity(item.id, n);
+        <div className="flex flex-col gap-1.5 min-w-[100px]">
+            <div className="flex items-center gap-0 border border-gray-200 dark:border-slate-700 rounded shadow-sm overflow-hidden bg-gray-50 dark:bg-slate-800 h-10">
+                <button 
+                    onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} 
+                    className="px-3 h-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-r dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled={item.quantity <= 1}
+                >
+                    <Minus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                </button>
+                <input 
+                    type="text" 
+                    value={localVal}
+                    onFocus={() => setIsFocused(true)}
+                    onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '' || /^\d+$/.test(v)) {
+                            const n = parseInt(v);
+                            if (!isNaN(n)) {
+                                if (n > maxStock) {
+                                    setLocalVal(maxStock.toString());
+                                    updateQuantity(item.id, maxStock);
+                                } else {
+                                    setLocalVal(v);
+                                    if (n >= 1) updateQuantity(item.id, n);
+                                }
+                            } else {
+                                setLocalVal(v);
+                            }
                         }
-                    }
-                }}
-                onBlur={() => {
-                    setIsFocused(false);
-                    const n = parseInt(localVal);
-                    if (isNaN(n) || n < 1) {
-                        setLocalVal('1');
-                        updateQuantity(item.id, 1);
-                    } else {
-                        // Ensure display is cleaned up (e.g. leading zeros)
+                    }}
+                    onBlur={() => {
+                        setIsFocused(false);
+                        let n = parseInt(localVal);
+                        if (isNaN(n) || n < 1) {
+                            n = 1;
+                        } else if (n > maxStock) {
+                            n = maxStock;
+                        }
                         setLocalVal(n.toString());
                         updateQuantity(item.id, n);
-                    }
-                }}
-                className="w-12 text-center text-sm font-bold bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                placeholder=""
-            />
-            <button 
-                onClick={() => updateQuantity(item.id, item.quantity + 1)} 
-                className="px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-l dark:border-slate-700"
-            >
-                <Plus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-            </button>
+                    }}
+                    className="w-12 text-center text-sm font-bold bg-transparent dark:text-white focus:outline-none [appearance:textfield]"
+                    placeholder=""
+                />
+                <button 
+                    onClick={() => updateQuantity(item.id, Math.min(maxStock, item.quantity + 1))} 
+                    className="px-3 h-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-l dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled={isMax}
+                >
+                    <Plus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                </button>
+            </div>
+            {isMax && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-lg animate-in fade-in zoom-in-95 duration-500 w-fit">
+                    <Info className="h-2.5 w-2.5 text-amber-600 dark:text-amber-400" />
+                    <span className="text-[9px] font-black text-amber-700 dark:text-amber-300 uppercase tracking-widest whitespace-nowrap">Stock Limit Reached</span>
+                </div>
+            )}
         </div>
     );
 }

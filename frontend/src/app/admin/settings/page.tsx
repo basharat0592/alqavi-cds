@@ -416,13 +416,18 @@ export default function SettingsPage() {
         }
     };
 
-    const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+    const userRole = (currentUser?.role_name || currentUser?.role || '').toString().toLowerCase();
+    const isSupplier = userRole === 'supplier';
+
+    const ALL_TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'store', label: 'Store', icon: Store },
         { id: 'notifications', label: 'Notifications', icon: Bell },
         { id: 'security', label: 'Security', icon: Shield },
         { id: 'appearance', label: 'Appearance', icon: Palette },
     ];
+
+    const TABS = ALL_TABS.filter(t => isSupplier ? ['profile', 'security', 'appearance'].includes(t.id) : true);
 
     const ACCENT_PRESETS = ['#FF9900', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444', '#3B82F6', '#F97316'];
 

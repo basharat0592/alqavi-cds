@@ -24,6 +24,13 @@ class InventoryViewSet(viewsets.ModelViewSet):
     filterset_fields = ['warehouse', 'product']
     search_fields = ['product__sku', 'product__barcode', 'batch_number', 'product__name']
 
+    def get_queryset(self):
+        qs = Inventory.objects.all()
+        if self.request.user.is_authenticated and not self.request.user.is_superuser:
+            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
+                return qs.filter(product__supplier=self.request.user.supplier_profile)
+        return qs
+
     def create(self, request, *args, **kwargs):
         """
         Custom create to support 'Add to Existing' logic.
@@ -130,12 +137,26 @@ class InventoryMovementViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['warehouse', 'product', 'movement_type']
 
+    def get_queryset(self):
+        qs = InventoryMovement.objects.all().order_by('-created_at')
+        if self.request.user.is_authenticated and not self.request.user.is_superuser:
+            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
+                return qs.filter(product__supplier=self.request.user.supplier_profile)
+        return qs
+
 class BatchViewSet(viewsets.ModelViewSet):
     queryset = Batch.objects.all()
     serializer_class = BatchSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status', 'warehouse', 'product']
     search_fields = ['batch_number']
+
+    def get_queryset(self):
+        qs = Batch.objects.all()
+        if self.request.user.is_authenticated and not self.request.user.is_superuser:
+            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
+                return qs.filter(product__supplier=self.request.user.supplier_profile)
+        return qs
 
 class StockAdjustmentViewSet(viewsets.ModelViewSet):
     queryset = StockAdjustment.objects.all()
@@ -205,3 +226,10 @@ class LowStockAlertViewSet(viewsets.ModelViewSet):
     serializer_class = LowStockAlertSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['alert_status', 'warehouse', 'product']
+
+    def get_queryset(self):
+        qs = LowStockAlert.objects.all().order_by('-created_at')
+        if self.request.user.is_authenticated and not self.request.user.is_superuser:
+            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
+                return qs.filter(product__supplier=self.request.user.supplier_profile)
+        return qs

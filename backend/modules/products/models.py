@@ -85,6 +85,14 @@ class Product(BaseModel, StatusMixin):
         related_name='products',
         verbose_name='Manufacturing Company'
     )
+    supplier = models.ForeignKey(
+        'company.Supplier',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name='Supplier'
+    )
     
     class Meta:
         ordering = ['-created_at']

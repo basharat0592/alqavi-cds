@@ -6,115 +6,14 @@ import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { productService } from '@/lib/api';
-import {
-    ShoppingCart, Star, ChevronRight,
-    Search, CheckCircle, Filters, X,
-    LayoutGrid, List, Sliders, ArrowUpRight, Heart
-} from 'lucide-react';
+import { Search, X, LayoutGrid, List, Sliders, ChevronRight, CheckCircle } from 'lucide-react';
+
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { getImageUrl } from '@/lib/utils';
 import { Toast } from '@/components/ui/AmazonStyles';
+import ProductCard from '@/components/ui/ProductCard';
 
-// ── Shared Constants ─────────────────────────────────────────────────────────
-const AMZ_BLUE_DARK = '#232f3e';
-const AMZ_ORANGE = '#FF9900';
-const AMZ_ORANGE_HOVER = '#e68a00';
-const AMZ_LINK_TEAL = '#007185';
-
-// ── Components ───────────────────────────────────────────────────────────────
-
-function AmazonProductCard({ product, onAdd }: { product: any; onAdd: (p: any) => void }) {
-    const [added, setAdded] = useState(false);
-    const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
-    const price = typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0);
-    const inStock = product.stock === undefined || product.stock > 0;
-    const isWishlisted = isInWishlist(product.id);
-
-    const handleAdd = (e: React.MouseEvent) => {
-        e.preventDefault(); e.stopPropagation();
-        if (!inStock) return;
-        onAdd(product);
-        setAdded(true);
-        setTimeout(() => setAdded(false), 2000);
-    };
-
-    const handleWishlist = (e: React.MouseEvent) => {
-        e.preventDefault(); e.stopPropagation();
-        if (isWishlisted) {
-            removeFromWishlist(product.id);
-        } else {
-            addToWishlist({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                image: product.image_url || product.image || '',
-                category: product.category_name || 'Beauty',
-                addedAt: new Date().toISOString()
-            });
-        }
-    };
-
-    return (
-        <div className="group bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-4 rounded-sm flex flex-col h-full hover:shadow-lg transition-shadow relative">
-            
-            {/* Wishlist Toggle Button */}
-            <button 
-                onClick={handleWishlist}
-                className={`absolute top-6 right-6 z-10 p-2 rounded-full border bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm transition-all hover:scale-110 active:scale-95 ${isWishlisted ? 'border-rose-100 text-rose-500' : 'border-gray-100 text-gray-400 dark:border-slate-700'}`}
-            >
-                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
-            </button>
-
-            <Link href={`/product/${product.id}`} className="block relative aspect-square bg-gray-50 dark:bg-slate-800 mb-4 p-4">
-                <img 
-                    src={getImageUrl(product.image_url || product.image) || 'https://via.placeholder.com/400?text=Product'} 
-                    alt={product.name} 
-                    className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-transform group-hover:scale-105" 
-                />
-            </Link>
-            
-            <div className="flex-1 flex flex-col pt-2">
-                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-tight">{product.category_name || 'Beauty Selection'}</span>
-                
-                <Link href={`/product/${product.id}`} className="block mt-1">
-                    <h3 className="text-sm font-bold text-[#0F1111] dark:text-white hover:text-[#C45500] line-clamp-2 leading-snug min-h-[2.5rem]">
-                        {product.name}
-                    </h3>
-                </Link>
-
-                <div className="flex items-center gap-1 mt-2 mb-3">
-                    <div className="flex">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className="h-3 w-3 fill-[#ffa41c] text-[#ffa41c]" />
-                        ))}
-                    </div>
-                    <span className="text-xs text-[#007185] hover:text-[#C45500] cursor-pointer ml-1">4.9 (1.2k+)</span>
-                </div>
-
-                <div className="mt-auto mb-4">
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-xs font-medium dark:text-gray-400">PKR</span>
-                        <span className="text-2xl font-bold dark:text-white leading-none">
-                            {price.toLocaleString()}
-                        </span>
-                    </div>
-                    {!inStock && <p className="text-xs text-red-600 font-bold mt-1 uppercase tracking-tighter">Temporarily Out of Stock</p>}
-                    <p className="text-[10px] text-gray-400 mt-1">Standard Delivery Available</p>
-                </div>
-
-                <button 
-                    onClick={handleAdd}
-                    disabled={!inStock}
-                    className={`w-full py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 border border-[#a88734] ${added ? 'bg-[#ffda3a] border-[#8b722b]' : 'bg-[#ffd814] hover:bg-[#f7ca00] text-[#111111]'} active:shadow-inner active:scale-[0.98] disabled:opacity-40`}
-                >
-                    {added ? <CheckCircle className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
-                    {added ? 'Added to Bag' : 'Add to Cart'}
-                </button>
-            </div>
-        </div>
-    );
-}
 
 function ShopContent() {
     const { addToCart } = useCart();
@@ -156,9 +55,9 @@ function ShopContent() {
 
     const cats = Array.from(new Set(products.map(p => p.category_name).filter(Boolean))) as string[];
 
-    const handleAddToCart = (p: any) => {
-        addToCart({ id: p.id, name: p.name, price: p.price, quantity: 1, image: p.image_url || p.image || '', category: p.category_name || 'Beauty' });
-        setToastMsg(`Successfully Added: ${p.name}`);
+    const handleAddToCart = (p: any, qty: number = 1) => {
+        addToCart({ id: p.id, name: p.name, price: p.price, quantity: qty, image: p.image_url || p.image || '', category: p.category_name || 'Beauty', stock: p.quantity_in_stock });
+        setToastMsg(`${qty} x ${p.name} added to cart!`);
         setTimeout(() => setToastMsg(''), 3000);
     };
 
@@ -245,7 +144,18 @@ function ShopContent() {
                         ) : filtered.length > 0 ? (
                             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {filtered.map(p => (
-                                    <AmazonProductCard key={p.id} product={p} onAdd={handleAddToCart} />
+                                    <ProductCard
+                                        key={p.id}
+                                        id={String(p.id)}
+                                        title={p.name}
+                                        image={getImageUrl(p.image_url || p.image || '') || ''}
+                                        price={typeof p.price === 'string' ? parseFloat(p.price) : (p.price || 0)}
+                                        category={p.category_name || 'Beauty'}
+                                        stock={p.quantity_in_stock}
+                                        rating={4.5}
+                                        reviews={p.reviews_count || 12}
+                                        onAddToCart={(qty) => handleAddToCart(p, qty)}
+                                    />
                                 ))}
                             </div>
                         ) : (

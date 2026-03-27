@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { productService, companyCategoryService, companyService, CompanyInfo, mainCategoryService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
+import { authService } from '@/lib/auth';
 
 // ─── Shared Utilities (Same to same as Company pages) ────────────────────────────────
 const INPUT = (err?: boolean) =>
@@ -49,6 +50,8 @@ export default function AddEditProductPage() {
     const [companyCategories, setCompanyCategories] = useState<any[]>([]);
     const [companies, setCompanies] = useState<CompanyInfo[]>([]);
     const [mainCategories, setMainCategories] = useState<any[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [user, setUser] = useState<any>(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -56,6 +59,7 @@ export default function AddEditProductPage() {
         category: '',
         company: '',
         company_category: '',
+        supplier: '',
         sku: '',
         barcode: '',
         price: '',
@@ -82,16 +86,21 @@ export default function AddEditProductPage() {
     useEffect(() => {
         const fetchInitial = async () => {
             try {
-                const [pCats, cCats, comps, mCats] = await Promise.all([
+                const [pCats, cCats, comps, mCats, sups] = await Promise.all([
                     productService.getCategories(),
                     companyCategoryService.getAll(),
                     companyService.getAll(),
-                    mainCategoryService.getAll()
+                    mainCategoryService.getAll(),
+                    companyService.getSuppliers?.() || Promise.resolve([])
                 ]);
                 setProductCategories((pCats || []).filter((c: any) => c.status === 'active'));
                 setCompanyCategories((cCats || []).filter((c: any) => c.is_active !== false));
                 setCompanies((comps || []).filter((c: any) => c.is_active !== false));
                 setMainCategories(mCats || []);
+                setSuppliers(sups || []);
+
+                const currentUser = authService.getUser();
+                setUser(currentUser);
 
                 if (isEdit) {
                     const product = await productService.getById(id as string);
@@ -101,6 +110,7 @@ export default function AddEditProductPage() {
                         category: (product.category && typeof product.category === 'object') ? product.category.id : product.category || '',
                         company: (product.company && typeof product.company === 'object') ? product.company.id : product.company || '',
                         company_category: (product.company_category && typeof product.company_category === 'object') ? product.company_category.id : product.company_category || '',
+                        supplier: (product.supplier && typeof product.supplier === 'object') ? product.supplier.id : product.supplier || '',
                         sku: product.sku || '',
                         barcode: product.barcode || '',
                         price: product.price || '',
@@ -236,6 +246,13 @@ export default function AddEditProductPage() {
                                         <select name="company" value={formData.company} onChange={handleChange} className={INPUT()}>
                                             <option value="">Unspecified</option>
                                             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className={user?.role_name?.toLowerCase().includes('supplier') ? 'hidden' : 'block'}>
+                                        <label className={LABEL}>Partner / Supplier</label>
+                                        <select name="supplier" value={formData.supplier} onChange={handleChange} className={INPUT()}>
+                                            <option value="">None (Internal)</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
                                     </div>
                                 </div>

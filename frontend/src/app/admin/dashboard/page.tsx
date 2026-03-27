@@ -21,7 +21,7 @@ import {
 ═══════════════════════════════════════════════════════ */
 const THEME = {
     primary: '#FF9900',   // Amazon Orange
-    secondary: '#0f172a', // Slate 900
+    secondary: '#1B1C1E', // Dark Card
     dark: '#1e293b',      // Slate 800
     hover: '#E68A00',
     link: '#FF9900',
@@ -273,8 +273,10 @@ function ProductRow({ product, rank }: { product: any; rank: number }) {
 ═══════════════════════════════════════════════════════ */
 export default function AdminDashboard() {
     const { stats, recentOrders, recentPurchases, recentUsers, topProducts, products, orders, revenueData, revenueData30, activityLogs, loading, refetch } = useAdminDashboard();
-    const { isAuthenticated } = useAdminAuth();
+    const { user, isAuthenticated } = useAdminAuth();
     const [chartRange, setChartRange] = useState<'7' | '30'>('7');
+
+    const isSupplier = (user?.role || '').toLowerCase() === 'supplier';
 
     const chartData = chartRange === '7' ? revenueData : revenueData30;
 
@@ -330,13 +332,13 @@ export default function AdminDashboard() {
             </div>
 
             {/* ── CORE METRICS BOARD (Horizontal Strip) ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                <MetricBox label="NET BALANCE" value={`PKR ${stats?.totalRevenue?.toLocaleString()}`} change={stats?.revenueChange} />
+            <div className={`grid grid-cols-2 md:grid-cols-3 ${isSupplier ? 'lg:grid-cols-5' : 'lg:grid-cols-6'} gap-4 mb-6`}>
+                <MetricBox label={isSupplier ? "MY REVENUE" : "NET BALANCE"} value={`PKR ${stats?.totalRevenue?.toLocaleString()}`} change={stats?.revenueChange} />
                 <MetricBox label="UNITS SOLD" value={stats?.totalOrders?.toLocaleString() || '0'} change={stats?.ordersChange} />
                 <MetricBox label="TODAY'S ORDERS" value={stats?.ordersToday?.toLocaleString() || '0'} />
                 <MetricBox label="PENDING" value={stats?.pendingOrders?.toLocaleString() || '0'} />
-                <MetricBox label="PRODUCTS" value={stats?.totalProducts || '0'} />
-                <MetricBox label="CUSTOMERS" value={stats?.totalCustomers || '0'} />
+                <MetricBox label="MY PRODUCTS" value={stats?.totalProducts || '0'} />
+                {!isSupplier && <MetricBox label="CUSTOMERS" value={stats?.totalCustomers || '0'} />}
             </div>
 
             {/* ── MAIN DASHBOARD GRID ── */}
@@ -433,7 +435,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN (Alerts, Inventory & News) */}
                 <div className="lg:col-span-4 space-y-6">
 
                     {/* MANAGE INVENTORY BOX */}
@@ -477,31 +478,33 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* RECENT PURCHASE ORDERS */}
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4_20px_rgba(0,0,0,0.2)] rounded h-fit">
-                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Procurement Feed</h2>
-                            <Link href="/admin/purchases" className="text-[9px] font-black text-slate-400 hover:text-orange-600 transition-colors uppercase tracking-widest">View All</Link>
-                        </div>
-                        <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
-                            {recentPurchases.length > 0 ? (
-                                recentPurchases.map(p => (
-                                    <div key={p.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group border-l-4 border-transparent hover:border-orange-400">
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-orange-500 transition-colors uppercase tracking-tighter underline decoration-dotted decoration-gray-300 group-hover:decoration-orange-300">PO: {p.purchase_number}</span>
-                                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(p.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
+                    {/* RECENT PURCHASE ORDERS (Skip for Suppliers) */}
+                    {!isSupplier && (
+                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded h-fit">
+                            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20 flex items-center justify-between">
+                                <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Procurement Feed</h2>
+                                <Link href="/admin/purchases" className="text-[9px] font-black text-slate-400 hover:text-orange-600 transition-colors uppercase tracking-widest">View All</Link>
+                            </div>
+                            <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
+                                {recentPurchases.length > 0 ? (
+                                    recentPurchases.map(p => (
+                                        <div key={p.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group border-l-4 border-transparent hover:border-orange-400">
+                                            <div className="flex justify-between mb-1">
+                                                <span className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-orange-500 transition-colors uppercase tracking-tighter underline decoration-dotted decoration-gray-300 group-hover:decoration-orange-300">PO: {p.purchase_number}</span>
+                                                <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(p.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium truncate max-w-[150px]">{p.supplier_name || 'Generic Supplier'}</p>
+                                                <span className="text-xs font-black text-orange-600">- PKR {Number(p.total_amount || 0).toFixed(0)}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium truncate max-w-[150px]">{p.supplier_name || 'Generic Supplier'}</p>
-                                            <span className="text-xs font-black text-orange-600">- PKR {Number(p.total_amount || 0).toFixed(0)}</span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-[10px] text-slate-400 italic text-center py-6 uppercase tracking-widest font-bold">No purchase records</p>
-                            )}
+                                    ))
+                                ) : (
+                                    <p className="text-[10px] text-slate-400 italic text-center py-6 uppercase tracking-widest font-bold">No purchase records</p>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* REAL-TIME ACTIVITY LOGS */}
                     <div className="bg-white/40 dark:bg-slate-900/40 glass-effect p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">

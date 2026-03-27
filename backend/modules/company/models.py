@@ -76,6 +76,14 @@ class Supplier(models.Model):
     """
     Supplier model to store external vendor/brand information.
     """
+    user = models.OneToOneField(
+        'users.User',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='supplier_profile',
+        verbose_name='Supplier User'
+    )
     name = models.CharField(max_length=255, verbose_name='Supplier Name')
     contact_person = models.CharField(max_length=255, blank=True, verbose_name='Contact Person')
     email = models.EmailField(blank=True, verbose_name='Email Address')
@@ -97,3 +105,8 @@ class Supplier(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def product_count(self):
+        """Returns the number of products added by this supplier."""
+        return self.products.count()

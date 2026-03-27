@@ -28,6 +28,7 @@ class Order(BaseModel, TimestampMixin):
     STATUS_CHOICES = [
         ('ordered', 'Ordered'),
         ('confirmed', 'Confirmed'),
+        ('pending', 'Pending'),
         ('processing', 'Processing'),
         ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),

@@ -43,11 +43,11 @@ class CategorySerializer(serializers.ModelSerializer):
         return data
 
 
+
 class ProductSerializer(serializers.ModelSerializer):
-    """Serializer for Product model."""
-    
     category_name = serializers.SerializerMethodField()
     company_name = serializers.SerializerMethodField()
+    supplier_name = serializers.SerializerMethodField()
     company_category_name = serializers.SerializerMethodField()
     is_in_stock = serializers.SerializerMethodField()
     batches = serializers.SerializerMethodField()
@@ -70,13 +70,16 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'category', 'category_name',
             'company', 'company_name',
-            'company_category', 'company_category_name',
+            'company_category', 'company_category_name', 'supplier', 'supplier_name',
             'sku', 'barcode', 'price', 'cost', 'retail_price', 'quantity_in_stock', 
             'image', 'image_url', 'gallery',
             'status', 'is_in_stock', 'batches', 'main_category_names', 'main_category_slugs', 'main_categories',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_supplier_name(self, obj):
+        return obj.supplier.name if obj.supplier else None
     
     def get_main_category_names(self, obj):
         return [c.name for c in obj.main_categories.all()]
@@ -140,7 +143,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'name', 'description', 'category', 'company', 'company_category', 'sku',
+            'name', 'description', 'category', 'company', 'company_category', 'supplier', 'sku',
             'price', 'cost', 'retail_price', 'image', 'status', 'barcode',
             'batch_number', 'upload_images', 'main_categories'
         ]
@@ -169,6 +172,10 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         upload_images = []
         if request and hasattr(request, 'FILES'):
             upload_images = request.FILES.getlist('upload_images')
+        
+        if request and hasattr(request, 'user') and hasattr(request.user, 'supplier_profile'):
+            if request.user.supplier_profile:
+                validated_data['supplier'] = request.user.supplier_profile
         
         product = super().create(validated_data)
         
@@ -237,7 +244,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
 
 class MainCategorySerializer(serializers.ModelSerializer):
     """Serializer for MainCategory model."""
-    product_details = ProductSerializer(source='products', many=True, read_only=True)
+    product_details = serializers.SerializerMethodField()
     product_ids = serializers.PrimaryKeyRelatedField(
         queryset=Product.objects.all(),
         source='products',
@@ -250,6 +257,25 @@ class MainCategorySerializer(serializers.ModelSerializer):
         model = MainCategory
         fields = ['id', 'name', 'description', 'slug', 'image', 'status', 'product_details', 'product_ids']
         read_only_fields = ['id']
+
+    def get_product_details(self, obj):
+        products = obj.products.all()
+        request = self.context.get('request')
+        
+        # Consistent filtering with list_products view
+        if not request or not request.user.is_authenticated:
+            products = products.filter(status='active')
+        else:
+            is_privileged = request.user.is_staff or request.user.is_superuser or (
+                getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin']
+            )
+            if not is_privileged:
+                if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
+                    products = products.filter(supplier=request.user.supplier_profile)
+                else:
+                    products = products.filter(status='active')
+        
+        return ProductSerializer(products, many=True, context=self.context).data
 
     def validate(self, data):
         if not data.get('slug') and data.get('name'):

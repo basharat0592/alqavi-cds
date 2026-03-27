@@ -104,7 +104,8 @@ export default function UsersPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <MetricBox label="Total Registry" value={users.length} icon={Users} />
                 <MetricBox label="Active Profiles" value={users.filter(u => u.is_active).length} icon={UserCheck} color="text-green-600" />
-                <MetricBox label="Administrators" value={users.filter(u => u.role_name?.toLowerCase().includes('admin')).length} icon={Shield} color="text-amber-600" />
+                <MetricBox label="Suppliers" value={users.filter(u => u.role_name?.toLowerCase().includes('supplier')).length} icon={Building2} color="text-amber-600" />
+                <MetricBox label="Administrators" value={users.filter(u => u.role_name?.toLowerCase().includes('admin')).length} icon={Shield} color="text-blue-600" />
                 <MetricBox label="Growth Rate" value="+12%" icon={RefreshCw} color="text-blue-600" />
             </div>
 
@@ -122,7 +123,7 @@ export default function UsersPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-0.5 rounded overflow-hidden">
-                            {['all', 'admin', 'seller', 'customer'].map(r => (
+                            {['all', 'admin', 'supplier', 'customer'].map(r => (
                                 <button key={r} onClick={() => setActiveRole(r)}
                                     className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all rounded
                                                 ${activeRole === r ? 'bg-white dark:bg-slate-700 text-[#E68A00] shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white'}`}>
@@ -181,7 +182,7 @@ export default function UsersPage() {
                                             <div className="flex flex-col gap-1">
                                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[9px] font-black uppercase tracking-widest w-fit
                                                     ${user.role_name?.toLowerCase().includes('admin') ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                        user.role_name?.toLowerCase().includes('seller') ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                        user.role_name?.toLowerCase().includes('supplier') ? 'bg-amber-50 text-amber-700 border-amber-100' :
                                                             'bg-gray-50 text-gray-600 border-gray-200'}`}>
                                                     {user.role_name || 'Customer'}
                                                 </span>

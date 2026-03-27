@@ -388,3 +388,75 @@ def signup(request):
         
         return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup_supplier(request):
+    """Public supplier registration with 'Supplier' role auto-assignment and Supplier Profile creation."""
+    data = request.data.copy()
+    
+    # Ensure 'Supplier' role exists
+    supplier_role, _ = Role.objects.get_or_create(
+        name='Supplier',
+        defaults={'description': 'External distributor / brand partner'}
+    )
+    
+    data['role'] = supplier_role.id
+    data['status'] = 'active'
+    
+    from .serializers import UserCreateSerializer
+    serializer = UserCreateSerializer(data=data)
+    if serializer.is_valid():
+        user = serializer.save()
+        
+        # Create Supplier Profile
+        from modules.company.models import Supplier
+        Supplier.objects.create(
+            user=user,
+            name=request.data.get('company_name', f"{user.first_name} {user.last_name}"),
+            email=user.email,
+            phone=user.phone,
+            contact_person=f"{user.first_name} {user.last_name}"
+        )
+        
+        # Log Initial Activity
+        UserActivityLog.objects.create(
+            user=user,
+            action='create',
+            description=f'Supplier account registered: {user.email}'
+        )
+        
+        return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup_admin(request):
+    """Public admin registration with 'Admin' role auto-assignment."""
+    data = request.data.copy()
+    
+    # Ensure 'Admin' role exists
+    admin_role, _ = Role.objects.get_or_create(
+        name='Admin',
+        defaults={'description': 'System administrator with full access'}
+    )
+    
+    data['role'] = admin_role.id
+    data['status'] = 'active'
+    data['is_staff'] = True
+    
+    from .serializers import UserCreateSerializer
+    serializer = UserCreateSerializer(data=data)
+    if serializer.is_valid():
+        user = serializer.save()
+        
+        # Log Initial Activity
+        UserActivityLog.objects.create(
+            user=user,
+            action='create',
+            description=f'Admin account registered: {user.email}'
+        )
+        
+        return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

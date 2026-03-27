@@ -113,12 +113,6 @@ export default function ProductsPage() {
                     </h1>
                     <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage your primary product listings and digital distribution catalog</p>
                 </div>
-                <button
-                    onClick={() => router.push('/admin/products/add')}
-                    className="bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
-                >
-                    <Plus className="h-4 w-4" /> Add New Product
-                </button>
             </div>
 
             {/* Quick Filter Hub */}

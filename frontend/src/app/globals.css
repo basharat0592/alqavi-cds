@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light mode base */
   :root {
     --background: 255, 255, 255;
     --foreground: 15, 23, 42;
@@ -24,27 +25,41 @@
     --input: 226, 232, 240;
     --ring: 255, 153, 0;
     --radius: 0.75rem;
+    /* Card color token */
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
   }
 
+  /* Dark mode — all surfaces use #1B1C1E */
   .dark {
-    --background: 15, 23, 42;
+    --background: 16, 17, 18;
     --foreground: 248, 250, 252;
-    --card: 30, 41, 59;
+    --card: 27, 28, 30;
     --card-foreground: 248, 250, 252;
-    --popover: 15, 23, 42;
+    --popover: 27, 28, 30;
     --popover-foreground: 248, 250, 252;
     --primary: 248, 250, 252;
     --primary-foreground: 15, 23, 42;
-    --secondary: 30, 41, 59;
+    --secondary: 27, 28, 30;
     --secondary-foreground: 248, 250, 252;
-    --muted: 30, 41, 59;
+    --muted: 27, 28, 30;
     --muted-foreground: 148, 163, 184;
     --accent: 255, 153, 0;
-    --accent-foreground: 15, 23, 42;
-    --border: 51, 65, 85;
-    --input: 51, 65, 85;
+    --accent-foreground: 19, 25, 33;
+    --border: 255, 255, 255, 0.07;
+    --input: 255, 255, 255, 0.07;
     --ring: 255, 153, 0;
+    /* Card color token */
+    --card-bg: #1B1C1E;
+    --card-border: rgba(255,255,255,0.07);
   }
+  /* ─── Remap Tailwind slate greys to the design system card color ─── */
+  .dark .dark\:bg-slate-800 { background-color: #1B1C1E !important; }
+  .dark .dark\:bg-slate-900 { background-color: #1B1C1E !important; }
+  .dark .dark\:bg-slate-800\/50 { background-color: rgba(27,28,30,0.5) !important; }
+  .dark .dark\:bg-slate-800\/20 { background-color: rgba(27,28,30,0.2) !important; }
+  .dark .dark\:border-slate-800 { border-color: rgba(255,255,255,0.07) !important; }
+  .dark .dark\:border-slate-700 { border-color: rgba(255,255,255,0.07) !important; }
 }
 
 @layer base {
@@ -58,12 +73,18 @@
 }
 
 @layer components {
+  /* ─── Admin Card (Recent Orders Design System) ─── */
   .admin-card {
-    @apply bg-card text-card-foreground rounded-xl border border-border shadow-sm transition-all duration-300;
+    @apply bg-white dark:bg-[#1B1C1E] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all duration-200;
   }
   
+  /* ─── Glass Effect (Solid Navbar Style) ─── */
+  .glass-effect {
+    @apply bg-white dark:bg-[#1B1C1E];
+  }
+
   .glass {
-    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-white/5;
+    @apply bg-white/70 dark:bg-[#0f1012]/70 backdrop-blur-md border border-white/20 dark:border-white/5;
   }
 
   .nav-link {

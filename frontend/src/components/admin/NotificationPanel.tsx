@@ -38,7 +38,7 @@ export default function NotificationPanel({
     const unread = activities.filter(a => !a.read).length;
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-96 bg-white dark:bg-[#1e293b] rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-3 w-96 bg-white dark:bg-[#1B1C1E] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between bg-[#232F3E] rounded-t-2xl">
                 <div className="flex items-center gap-2.5">

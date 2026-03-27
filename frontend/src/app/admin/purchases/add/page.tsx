@@ -94,6 +94,38 @@ export default function AddPurchasePage() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    useEffect(() => {
+        if (!loading && searchParams) {
+            const sn = searchParams.get('supplier_name');
+            if (sn) {
+                const matched = companies.find(c => c.name === sn);
+
+                // Pre-populate items with supplier's products
+                const supplierProds = products.filter(p =>
+                    p.company_name === sn ||
+                    (typeof p.supplier === 'object' && p.supplier?.name === sn) ||
+                    (p.supplier_name === sn)
+                );
+
+                setForm(f => ({
+                    ...f,
+                    supplier_name: sn,
+                    supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone,
+                }));
+
+                if (supplierProds.length > 0) {
+                    setItems(supplierProds.map(p => ({
+                        product: p.id.toString(),
+                        product_name: p.name,
+                        quantity: 1,
+                        unit_price: parseFloat(p.price || 0)
+                    })));
+                }
+            }
+        }
+    }, [loading, companies, products, searchParams]);
+
     const validate = () => {
         const e: Record<string, string> = {};
         if (!form.purchase_number) e.purchase_number = 'Required';
@@ -121,17 +153,17 @@ export default function AddPurchasePage() {
 
     const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0 }]);
     const removeItem = (i: number) => setItems(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
-    
+
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
                 const p = products.find(p => p.id === val || p.id === Number(val));
-                return { 
-                    ...item, 
-                    product: val, 
-                    product_name: p?.name || '', 
-                    unit_price: p?.price ? parseFloat(p.price) : item.unit_price 
+                return {
+                    ...item,
+                    product: val,
+                    product_name: p?.name || '',
+                    unit_price: p?.price ? parseFloat(p.price) : item.unit_price
                 };
             }
             return { ...item, [field]: val };
@@ -170,10 +202,10 @@ export default function AddPurchasePage() {
                     <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1.5">PO Number *</label>
-                            <input 
-                                value={form.purchase_number} 
-                                onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} 
-                                className={INPUT(!!errors.purchase_number)} 
+                            <input
+                                value={form.purchase_number}
+                                onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))}
+                                className={INPUT(!!errors.purchase_number)}
                             />
                             {errors.purchase_number && <p className="text-red-500 text-[10px] mt-1">{errors.purchase_number}</p>}
                         </div>
@@ -184,6 +216,20 @@ export default function AddPurchasePage() {
                                 onChange={e => {
                                     const val = e.target.value;
                                     const matched = companies.find(c => c.name === val);
+
+                                    // Also pre-populate items when manually selecting from dropdown
+                                    const supplierProds = products.filter(p => p.supplier_name === val);
+                                    if (supplierProds.length > 0) {
+                                        setItems(supplierProds.map(p => ({
+                                            product: p.id.toString(),
+                                            product_name: p.name,
+                                            quantity: 1,
+                                            unit_price: parseFloat(p.price || 0)
+                                        })));
+                                    } else {
+                                        setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+                                    }
+
                                     setForm(f => ({
                                         ...f,
                                         supplier_name: val,
@@ -247,7 +293,7 @@ export default function AddPurchasePage() {
                                         <select value={item.product} onChange={e => updateItem(i, 'product', e.target.value)} className={SELECT()}>
                                             <option value="">Select Item</option>
                                             {products
-                                                .filter(p => !form.supplier_name || p.company_name === form.supplier_name)
+                                                .filter(p => !form.supplier_name || p.supplier_name === form.supplier_name)
                                                 .map(p => <option key={p.id} value={p.id}>{p.name}</option>)
                                             }
                                         </select>
@@ -275,12 +321,12 @@ export default function AddPurchasePage() {
                     <Card>
                         <SectionHeader title="Additional Notes" />
                         <div className="p-6">
-                            <textarea 
-                                value={form.notes} 
-                                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} 
-                                rows={4} 
-                                className={INPUT() + ' resize-none'} 
-                                placeholder="Any internal notes or supplier instructions..." 
+                            <textarea
+                                value={form.notes}
+                                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                                rows={4}
+                                className={INPUT() + ' resize-none'}
+                                placeholder="Any internal notes or supplier instructions..."
                             />
                         </div>
                     </Card>
@@ -310,13 +356,13 @@ export default function AddPurchasePage() {
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
-                    <button 
+                    <button
                         onClick={() => router.push('/admin/purchases')}
                         className="px-8 py-2 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-sm font-medium hover:bg-gray-50"
                     >
                         Cancel
                     </button>
-                    <button 
+                    <button
                         onClick={handleSave}
                         disabled={saving}
                         className="px-10 py-2 bg-[#f0c14b] border border-[#a88734] rounded text-sm font-bold flex items-center gap-2 hover:bg-[#ebae1e] shadow-sm shadow-orange-100 dark:shadow-none"

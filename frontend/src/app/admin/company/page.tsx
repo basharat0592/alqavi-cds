@@ -199,6 +199,8 @@ export default function CompanyPage() {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [categories, setCategories] = useState<CompanyCategory[]>([]);
+    const [activeTab, setActiveTab] = useState<'manufacturing' | 'suppliers'>('manufacturing');
+    const [suppliers, setSuppliers] = useState<any[]>([]);
     const [editCompany, setEditCompany] = useState<CompanyInfo | null>(null);
     const [deleteCompany, setDeleteCompany] = useState<CompanyInfo | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -207,12 +209,14 @@ export default function CompanyPage() {
     const load = async () => {
         setLoading(true);
         try {
-            const [compData, catData] = await Promise.all([
+            const [compData, catData, supData] = await Promise.all([
                 companyService.getAll(),
-                companyCategoryService.getAll()
+                companyCategoryService.getAll(),
+                companyService.getSuppliers?.() || Promise.resolve([])
             ]);
             setCompanies(compData || []);
             setCategories((catData || []).filter(c => c.is_active !== false));
+            setSuppliers(supData || []);
         } catch (e) {
             console.error(e);
         } finally {
@@ -250,12 +254,18 @@ export default function CompanyPage() {
         }
     };
 
-    const filtered = (companies || []).filter(c => {
+    const filteredCompanies = (companies || []).filter(c => {
         const matchesSearch = c.name?.toLowerCase().includes(search.toLowerCase()) ||
             c.email?.toLowerCase().includes(search.toLowerCase()) ||
             c.city?.toLowerCase().includes(search.toLowerCase());
         const matchesCat = selectedCategory ? (typeof c.category === 'object' ? c.category.id?.toString() === selectedCategory : c.category?.toString() === selectedCategory) : true;
         return matchesSearch && matchesCat;
+    });
+
+    const filteredSuppliers = (suppliers || []).filter(s => {
+        return s.name?.toLowerCase().includes(search.toLowerCase()) ||
+            s.email?.toLowerCase().includes(search.toLowerCase()) ||
+            s.city?.toLowerCase().includes(search.toLowerCase());
     });
 
     if (view === 'form') {
@@ -270,116 +280,156 @@ export default function CompanyPage() {
 
     return (
         <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
-                <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <Building2 className="h-6 w-6 text-[#E68A00]" /> Companies
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage global business profiles and supply chain nodes</p>
+            {/* Header Title & Switch */}
+            <div className={`mb-8 ${view === 'form' ? 'hidden' : 'block'}`}>
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                            <span className="w-1.5 h-10 bg-[#E68A00] rounded-full"></span>
+                            Company Hub
+                        </h1>
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-widest">
+                            Manage manufacturing entities and registered distribution partners
+                        </p>
+                    </div>
+
+                    <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <button
+                            onClick={() => setActiveTab('manufacturing')}
+                            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
+                                ${activeTab === 'manufacturing' ? 'bg-white dark:bg-slate-700 text-[#E68A00] shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-white'}`}
+                        >
+                            Manufacturing
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('suppliers')}
+                            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
+                                ${activeTab === 'suppliers' ? 'bg-white dark:bg-slate-700 text-[#E68A00] shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-white'}`}
+                        >
+                            Distribution Suppliers
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={() => { setEditCompany(null); setView('form'); }}
-                    className="bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
-                >
-                    <Plus className="h-4 w-4" /> Add Company
-                </button>
             </div>
 
-            {/* Quick Filter */}
-            <SectionCard className="mb-6">
-                <div className="p-4 flex flex-col md:flex-row gap-4 items-center">
-                    <div className="relative flex-1 w-full">
+            <div className="space-y-6">
+                {/* Filter & Action Row */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 border border-[#ddd] dark:border-slate-800 rounded shadow-sm">
+                    <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
+                            type="text"
+                            placeholder={`Search registered ${activeTab}...`}
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Search companies by name, email or city..."
-                            className={INPUT()}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className={INPUT() + " pl-10 h-10 border-gray-200 focus:border-[#E68A00]"}
                         />
                     </div>
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="flex items-center gap-2 border-l border-gray-200 pl-4 h-8">
-                            <Tag className="h-3 w-3 text-gray-400" />
+
+                    <div className="flex items-center gap-3">
+                        {activeTab === 'manufacturing' && (
                             <select
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="text-[10px] font-black bg-transparent outline-none text-gray-600 dark:text-gray-300 uppercase tracking-widest cursor-pointer"
+                                className={INPUT() + " w-48 h-10 border-gray-200 focus:border-[#E68A00]"}
                             >
                                 <option value="">All Categories</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
-                        </div>
-                        <button onClick={load} className="p-2 border border-[#a6a6a6] rounded hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors ml-auto">
-                            <RefreshCw className={`h-4 w-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                        )}
+                        <button
+                            onClick={load}
+                            className="h-10 w-10 flex items-center justify-center bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded text-gray-600 dark:text-gray-400 hover:text-[#E68A00] hover:border-[#E68A00] transition-colors"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                            onClick={() => { setEditCompany(null); setView('form'); }}
+                            className="h-10 px-6 bg-[#E68A00] hover:bg-[#C45500] text-white text-[11px] font-black uppercase tracking-widest rounded transition-all shadow-sm hover:shadow-orange-200 dark:hover:shadow-none flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" /> Add {activeTab === 'manufacturing' ? 'Company' : 'Supplier'}
                         </button>
                     </div>
                 </div>
-            </SectionCard>
 
-            {/* List Table */}
-            <SectionCard>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
-                                <th className="px-6 py-3">Organization</th>
-                                <th className="px-6 py-3">Contact info</th>
-                                <th className="px-6 py-3">Location</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                            {loading ? (
-                                Array(5).fill(0).map((_, i) => (
-                                    <tr key={i}><td colSpan={4} className="px-6 py-4 animate-pulse"><div className="h-4 bg-gray-100 rounded w-full" /></td></tr>
-                                ))
-                            ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                                        No companies found. Add a company to get started.
-                                    </td>
-                                </tr>
-                            ) : (
-                                filtered.map(c => (
-                                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="font-medium text-gray-900 dark:text-white">{c.name}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-0.5">NTN: {c.tax_number || 'NA'}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900 dark:text-white flex items-center gap-1.5"><Mail className="w-3 h-3" /> {c.email}</div>
-                                            <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5"><Phone className="w-3 h-3" /> {c.phone}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900 dark:text-white flex items-center gap-1.5"><MapPin className="w-3 h-3" /> {c.city}</div>
-                                            <div className="text-[10px] text-gray-400 truncate max-w-[200px] mt-0.5">{c.address}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {c.is_active !== false ? (
-                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-green-100 text-green-700">Active</span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-gray-100 text-gray-600">Inactive</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => { setEditCompany(c); setView('form'); }} className="p-1.5 text-gray-600 hover:text-[#E68A00] transition-colors font-medium">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                                <button onClick={() => setDeleteCompany(c)} className="p-1.5 text-gray-400 hover:text-red-600 transition-colors">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                {/* Content Logic */}
+                {activeTab === 'manufacturing' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {loading ? (
+                            Array(6).fill(0).map((_, i) => <div key={i} className="h-48 bg-white dark:bg-slate-800 animate-pulse rounded border border-gray-100 dark:border-slate-800"></div>)
+                        ) : filteredCompanies.length === 0 ? (
+                            <div className="col-span-full py-20 text-center text-gray-500 uppercase font-bold text-xs tracking-widest bg-gray-50 dark:bg-slate-800 rounded border border-dashed border-gray-300 dark:border-slate-700">No records found.</div>
+                        ) : (
+                            filteredCompanies.map(company => (
+                                <div key={company.id} className="group bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-5">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="w-10 h-10 bg-gray-50 dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-100 dark:border-slate-800">
+                                                <Building2 className="w-5 h-5 text-[#E68A00]" />
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </SectionCard>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setEditCompany(company); setView('form'); }} className="p-1.5 text-gray-400 hover:text-[#E68A00] transition-colors"><Edit className="w-4 h-4" /></button>
+                                                <button onClick={() => setDeleteCompany(company)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+
+                                        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-1 group-hover:text-[#E68A00] transition-colors uppercase tracking-tight">{company.name}</h3>
+                                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-4">{company.category_name || 'Standard'}</p>
+
+                                        <div className="space-y-2 pt-4 border-t border-gray-50 dark:border-slate-800">
+                                            {company.email && <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-medium"><Mail className="w-3 h-3 opacity-40" /> {company.email}</div>}
+                                            {company.city && <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-medium"><MapPin className="w-3 h-3 opacity-40" /> {company.city}</div>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {loading ? (
+                             Array(6).fill(0).map((_, i) => <div key={i} className="h-48 bg-white dark:bg-slate-800 animate-pulse rounded border border-gray-100 dark:border-slate-800"></div>)
+                        ) : filteredSuppliers.length === 0 ? (
+                            <div className="col-span-full py-20 text-center text-gray-500 uppercase font-bold text-xs tracking-widest bg-gray-50 dark:bg-slate-800 rounded border border-dashed border-gray-300 dark:border-slate-700">No registered suppliers found.</div>
+                        ) : (
+                            filteredSuppliers.map(sup => (
+                                <div key={sup.id} className="group bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-5">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center justify-center border border-amber-100 dark:border-slate-800 text-amber-600">
+                                                <Tag className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="p-1.5 text-gray-400 hover:text-[#E68A00] transition-colors"><Edit className="w-4 h-4" /></button>
+                                                <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+
+                                        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-1 group-hover:text-[#E68A00] transition-colors uppercase tracking-tight">{sup.name}</h3>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 font-black uppercase tracking-widest">Registered</span>
+                                            <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 font-black uppercase tracking-widest">{sup.product_count || 0} Products</span>
+                                        </div>
+
+                                        <div className="space-y-3 pt-4 border-t border-gray-50 dark:border-slate-800">
+                                            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-medium"><Globe className="w-3.5 h-3.5 opacity-40" /> {sup.city || 'Pakistan'}</div>
+                                            <div className="mt-2">
+                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Managed Products</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(sup.product_list || []).map((p: string, idx: number) => (
+                                                        <span key={idx} className="px-2 py-0.5 bg-gray-50 dark:bg-slate-800 text-[9px] text-gray-600 dark:text-gray-300 rounded border border-gray-100 dark:border-slate-800 font-bold">{p}</span>
+                                                    ))}
+                                                    {(sup.product_list?.length === 0) && <span className="text-[10px] text-gray-400 italic font-medium">No products listed</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Amazon-Style Delete Modal */}
             {deleteCompany && (
@@ -396,24 +446,13 @@ export default function CompanyPage() {
                         </div>
                         <div className="p-6">
                             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                Are you sure you want to delete the company <span className="font-bold text-gray-900 dark:text-white">"{deleteCompany.name}"</span>? This action is permanent.
+                                Are you sure you want to delete <span className="font-black text-gray-900 dark:text-white">"{deleteCompany.name}"</span>? This action is permanent.
                             </p>
                         </div>
                         <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
-                            <button
-                                onClick={() => setDeleteCompany(null)}
-                                disabled={deleting}
-                                className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] dark:border-slate-600 rounded shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                disabled={deleting}
-                                className="px-4 py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-xs font-medium text-[#111] transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
-                                Delete Company
+                            <button onClick={() => setDeleteCompany(null)} disabled={deleting} className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-bold uppercase tracking-tight transition-colors disabled:opacity-50">Cancel</button>
+                            <button onClick={confirmDelete} disabled={deleting} className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-tight transition-all flex items-center gap-2 disabled:opacity-50">
+                                {deleting && <Loader2 className="h-3 w-3 animate-spin" />} Delete Permanently
                             </button>
                         </div>
                     </div>
@@ -424,7 +463,7 @@ export default function CompanyPage() {
             {toast && (
                 <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#E68A00] z-[100] animate-in slide-in-from-bottom-5">
                     <CheckCircle className="h-5 w-5 text-green-400" />
-                    <span className="text-sm font-medium uppercase tracking-tight">{toast}</span>
+                    <span className="text-sm uppercase tracking-tight font-black">{toast}</span>
                 </div>
             )}
         </div>

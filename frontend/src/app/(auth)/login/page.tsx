@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authService } from '@/lib/auth';
-import { Eye, EyeOff, Loader2, ArrowRight, Mail, Lock, AlertCircle, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronRight } from 'lucide-react';
+
+const INPUT = (err?: boolean) =>
+    `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
+    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
+    ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
+
+const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
 
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
     const [success, setSuccess] = useState(false);
     const [formData, setFormData] = useState({ username: '', password: '', rememberMe: false });
     const [error, setError] = useState<string | null>(null);
@@ -20,12 +26,15 @@ export default function LoginPage() {
         const params = new URLSearchParams(window.location.search);
         const isRegisteredFlow = params.get('registered');
         const redirect = params.get('redirect') || '';
+        
         if (isRegisteredFlow) setSuccess(true);
+        
         if (user && !isRegisteredFlow) {
             if (redirect) router.push(redirect);
-            else if (user.role === 'admin' || user.is_staff || user.is_superuser) router.push('/admin/dashboard');
+            else if (user.role === 'admin' || user.is_staff || user.is_superuser || user.role === 'supplier' || user.role === 'Supplier') router.push('/admin/dashboard');
             else router.push('/dashboard');
         }
+        
         const saved = localStorage.getItem('rememberedUsername');
         if (saved) setFormData(p => ({ ...p, username: saved, rememberMe: true }));
     }, [router]);
@@ -38,175 +47,124 @@ export default function LoginPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true); setError(null);
+        setLoading(true);
+        setError(null);
         try {
             const { user } = await authService.login(formData.username, formData.password);
             if (formData.rememberMe) localStorage.setItem('rememberedUsername', formData.username);
             else localStorage.removeItem('rememberedUsername');
+            
             const redirect = new URLSearchParams(window.location.search).get('redirect');
             if (redirect) {
                 router.push(redirect);
-            } else if (user.role === 'admin' || user.is_staff || user.is_superuser) {
+            } else if (user.role === 'admin' || user.is_staff || user.is_superuser || user.role === 'supplier' || user.role === 'Supplier') {
                 router.push('/admin/dashboard');
             } else {
                 router.push('/dashboard');
             }
         } catch (err: any) {
             setError(err.message || 'Invalid credentials. Please try again.');
-        } finally { setLoading(false); }
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-white flex flex-col font-sans relative overflow-hidden">
-
-            {/* Ambient glow — matches admin dashboard */}
-            <div className="fixed inset-0 pointer-events-none -z-10">
-                <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#FF9900]/10 blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#FF9900]/8 blur-[100px]" />
-            </div>
-
-            {/* Top bar */}
-            <div className="bg-[#131921] py-4 px-6 flex items-center justify-center">
-                <Link href="/" className="flex flex-col items-center leading-none group">
-                    <span className="font-black text-xl text-white tracking-tight group-hover:text-[#FF9900] transition-colors">Al-Qavi Cosmetics</span>
-                    <span className="text-[9px] font-bold tracking-[0.3em] text-white/40 uppercase mt-0.5">Premium · Authentic · Pakistan</span>
+        <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
+            <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
+                <Link href="/" className="flex flex-col items-center">
+                    <span className="font-extrabold text-2xl text-[#111] tracking-tighter uppercase">AL-QAVI</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Cosmetics Distributor</span>
                 </Link>
-            </div>
+            </header>
 
-            {/* Main */}
-            <main className="flex-1 flex items-start justify-center py-10 px-4">
+            <main className="flex-1 flex flex-col items-center py-12 px-4">
                 <div className="w-full max-w-sm">
+                    <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4">
+                        <h1 className="text-2xl font-bold text-[#111] mb-5 tracking-tight text-left">Sign in</h1>
 
-                    {/* Card */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-
-                        {/* Header */}
-                        <div className="mb-6">
-                            <div className="w-11 h-11 bg-[#FF9900] rounded-xl flex items-center justify-center mb-4">
-                                <Lock className="h-5 w-5 text-[#131921]" strokeWidth={2.5} />
-                            </div>
-                            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Sign In</h1>
-                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1">Welcome back</p>
-                        </div>
-
-                        {/* Success banner */}
                         {success && (
-                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl p-3 mb-5 text-sm font-bold">
-                                <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                                Account created! Please sign in.
+                            <div className="flex items-start gap-2 border border-green-600 bg-white rounded p-3 mb-5 text-sm text-left">
+                                <div className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5 font-bold">✓</div>
+                                <div>
+                                    <p className="text-green-700 font-bold">Registration Successful</p>
+                                    <p className="text-gray-800 text-xs mt-1 leading-relaxed">Please sign in with your new account credentials.</p>
+                                </div>
                             </div>
                         )}
 
-                        {/* Error */}
                         {error && (
-                            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 mb-5 text-sm font-bold">
-                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                {error}
+                            <div className="flex items-start gap-2 border border-[#c40000] bg-white rounded p-3 mb-5 text-sm text-left">
+                                <AlertTriangle className="h-4 w-4 text-[#c40000] flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-[#c40000] font-bold">There was a problem</p>
+                                    <p className="text-gray-800 text-xs mt-1 leading-relaxed">{error}</p>
+                                </div>
                             </div>
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* Email/Username */}
                             <div>
-                                <label className="block text-xs font-black text-gray-700 uppercase tracking-widest mb-1.5">
-                                    Email or Username
-                                </label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <input
-                                        name="username" type="text" required autoComplete="username"
-                                        value={formData.username} onChange={handleChange}
-                                        placeholder="you@example.com"
-                                        className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none bg-gray-50 focus:bg-white focus:border-[#FF9900] focus:ring-2 focus:ring-[#FF9900]/20 transition-all"
-                                    />
-                                </div>
+                                <label className={LABEL}>Email or Username</label>
+                                <input
+                                    name="username" type="text" required
+                                    value={formData.username} onChange={handleChange}
+                                    className={INPUT(!!error)}
+                                />
                             </div>
 
-                            {/* Password */}
                             <div>
-                                <div className="flex justify-between items-center mb-1.5">
-                                    <label className="block text-xs font-black text-gray-700 uppercase tracking-widest">Password</label>
-                                    <Link href="/forgot-password" className="text-xs text-[#FF9900] hover:text-[#e68a00] font-bold transition-colors">
-                                        Forgot password?
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className={LABEL}>Password</label>
+                                    <Link href="/forgot-password" className="text-xs text-[#0066c0] hover:text-[#c45500] hover:underline">
+                                        Forgot your password?
                                     </Link>
                                 </div>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <input
-                                        name="password" type={showPassword ? 'text' : 'password'} required
-                                        value={formData.password} onChange={handleChange}
-                                        placeholder="••••••••"
-                                        className="w-full pl-9 pr-10 py-3 border border-gray-200 rounded-xl text-sm outline-none bg-gray-50 focus:bg-white focus:border-[#FF9900] focus:ring-2 focus:ring-[#FF9900]/20 transition-all"
-                                    />
-                                    <button type="button" onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </button>
-                                </div>
+                                <input
+                                    name="password" type="password" required
+                                    value={formData.password} onChange={handleChange}
+                                    className={INPUT(!!error)}
+                                />
                             </div>
 
-                            {/* Remember Me */}
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input name="rememberMe" type="checkbox" checked={formData.rememberMe} onChange={handleChange}
-                                    className="w-4 h-4 accent-[#FF9900] rounded" />
-                                <span className="text-sm text-gray-600 font-medium">Keep me signed in</span>
-                            </label>
-
-                            {/* Submit */}
                             <button type="submit" disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 py-3 bg-[#FF9900] hover:bg-[#e68a00] text-[#131921] font-black text-sm uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 active:scale-[0.98] shadow-sm">
-                                {loading
-                                    ? <Loader2 className="animate-spin h-4 w-4" />
-                                    : <><ArrowRight className="h-4 w-4" /> Sign In</>}
+                                className="w-full py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-sm font-bold text-[#111] transition-colors mt-6">
+                                {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" strokeWidth={3} /> : 'Sign in'}
                             </button>
+
+                            <div className="flex items-center gap-2 mt-4">
+                                <input
+                                    id="rememberMe" name="rememberMe" type="checkbox"
+                                    checked={formData.rememberMe} onChange={handleChange}
+                                    className="h-3.5 w-3.5 rounded border-[#d5d9d9] accent-[#e77600]"
+                                />
+                                <label htmlFor="rememberMe" className="text-xs text-gray-800 cursor-pointer">
+                                    Keep me signed in
+                                </label>
+                            </div>
                         </form>
 
-                        {/* Divider */}
-                        <div className="flex items-center gap-3 my-5">
-                            <hr className="flex-1 border-gray-100" />
-                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">or</span>
-                            <hr className="flex-1 border-gray-100" />
-                        </div>
-
-                        {/* New account */}
-                        <p className="text-sm text-gray-500 text-center font-medium">
-                            New to Al-Qavi?{' '}
-                            <Link href="/register" className="text-[#FF9900] hover:text-[#e68a00] font-black transition-colors">
-                                Create an account
-                            </Link>
+                        <p className="text-[11px] text-gray-800 mt-6 leading-relaxed text-left">
+                            By continuing, you agree to Al-Qavi's <span className="text-[#0066c0] hover:underline cursor-pointer">Conditions of Use</span> and <span className="text-[#0066c0] hover:underline cursor-pointer">Privacy Notice</span>.
                         </p>
-
-                        {/* Demo hint */}
-                        <div className="mt-5 p-3 bg-[#FF9900]/5 border border-[#FF9900]/20 rounded-xl text-center">
-                            <p className="text-xs text-gray-500">
-                                <span className="font-black text-gray-700">Demo Admin:</span> admin / admin12
-                            </p>
-                        </div>
                     </div>
 
-                    {/* Agree note */}
-                    <p className="text-xs text-gray-400 mt-4 text-center leading-relaxed px-2">
-                        By continuing, you agree to Al-Qavi's{' '}
-                        <span className="text-[#FF9900] hover:underline cursor-pointer font-medium">Conditions of Use</span> and{' '}
-                        <span className="text-[#FF9900] hover:underline cursor-pointer font-medium">Privacy Policy</span>.
-                    </p>
-
-                    {/* Secure badge */}
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-4">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure & Encrypted Login
+                    <div className="flex items-center gap-2 my-6">
+                        <hr className="flex-1 border-[#ddd]" />
+                        <span className="text-xs text-gray-500 whitespace-nowrap">New to Al-Qavi?</span>
+                        <hr className="flex-1 border-[#ddd]" />
                     </div>
+
+                    <Link href="/register" className="block w-full text-center py-1 border border-[#adb1b8] bg-[#e7e9ec] hover:bg-[#d8dadd] rounded text-xs shadow-sm shadow-black/5 transition-all text-gray-800 font-medium">
+                        Create your Al-Qavi account
+                    </Link>
+                </div>
+
+                {/* Minimal Footer */}
+                <div className="mt-8 text-center">
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Al-Qavi Cosmetics Distributor Network © 2026</p>
                 </div>
             </main>
-
-            {/* Footer */}
-            <footer className="bg-[#131921] py-4 px-6 text-center">
-                <div className="flex justify-center gap-6 text-xs text-gray-400">
-                    <span className="hover:text-[#FF9900] hover:underline cursor-pointer transition-colors">Conditions of Use</span>
-                    <span className="hover:text-[#FF9900] hover:underline cursor-pointer transition-colors">Privacy Policy</span>
-                    <span className="hover:text-[#FF9900] hover:underline cursor-pointer transition-colors">Help</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">© 2026 Al-Qavi Cosmetics. All rights reserved.</p>
-            </footer>
         </div>
     );
 }

@@ -26,9 +26,29 @@ def list_products(request):
         if request.method == 'GET':
             products = Product.objects.all().order_by('-created_at')
             
+            # Supplier Isolation Logic: 
+            # Suppliers only see their own products. 
+            # Staff/Admins see all products.
+            # Filter out inactive products for non-staff users
+            if not request.user.is_authenticated:
+                products = products.filter(status='active')
+            else:
+                is_privileged = request.user.is_staff or request.user.is_superuser or (
+                    request.user.role and request.user.role.name in ['Admin', 'admin']
+                )
+                
+                if not is_privileged:
+                    if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
+                        # Suppliers see their own products (active or inactive)
+                        products = products.filter(supplier=request.user.supplier_profile)
+                    else:
+                        # Customers or others hidden by default
+                        products = products.filter(status='active')
+            
             # Filtering
             search = request.query_params.get('search')
             category_name = request.query_params.get('category_name')
+            supplier_id = request.query_params.get('supplier')
             
             if search:
                 from django.db.models import Q
@@ -38,6 +58,9 @@ def list_products(request):
             
             if category_name:
                 products = products.filter(category__name=category_name)
+                
+            if supplier_id:
+                products = products.filter(supplier_id=supplier_id)
 
             # Option to bypass pagination for merged local-storage pagination in frontend
             if request.query_params.get('all_items') == 'true':
@@ -106,7 +129,36 @@ def product_detail(request, product_id):
         return err
 
     if request.method == 'GET':
+        # If public user or customer, block inactive products
+        if not request.user.is_authenticated or (
+            not request.user.is_staff and 
+            not request.user.is_superuser and 
+            not (getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin'])
+        ):
+            # Check if this user is the supplier (owner) of the product
+            # If not owner AND product is NOT active, hide it
+            is_owner = hasattr(request.user, 'supplier_profile') and product.supplier == request.user.supplier_profile
+            
+            if not is_owner and product.status != 'active':
+                return Response({'error': 'Product not found or inactive'}, status=status.HTTP_404_NOT_FOUND)
+                
         return Response(ProductSerializer(product, context={'request': request}).data)
+
+    # Ownership Check for Modification/Deletion
+    if request.user.is_authenticated:
+        is_admin = request.user.is_staff or request.user.is_superuser or (request.user.role and request.user.role.name == 'Admin')
+        if not is_admin:
+            if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
+                if product.supplier != request.user.supplier_profile:
+                    return Response({
+                        'error': 'Permission denied',
+                        'detail': 'You can only manage your own products.'
+                    }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                return Response({
+                    'error': 'Permission denied',
+                    'detail': 'You do not have permission to modify products.'
+                }, status=status.HTTP_403_FORBIDDEN)
 
     # if not request.user or not request.user.is_staff:
     #     return Response({'error': 'Admin permissions required'}, status=status.HTTP_403_FORBIDDEN)
@@ -134,6 +186,15 @@ def list_categories(request):
     """List all categories (public) or create a new one."""
     if request.method == 'GET':
         categories = Category.objects.all()
+        
+        # Public users and customers only see active categories
+        if not request.user.is_authenticated or (
+            not request.user.is_staff and 
+            not request.user.is_superuser and 
+            not (getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin'])
+        ):
+            categories = categories.filter(status='active')
+            
         return Response(CategorySerializer(categories, many=True).data)
 
     # POST
@@ -195,6 +256,15 @@ def list_main_categories(request):
     """List all main categories or create a new one."""
     if request.method == 'GET':
         main_categories = MainCategory.objects.all().order_by('name')
+        
+        # Public users and customers only see active categories
+        if not request.user.is_authenticated or (
+            not request.user.is_staff and 
+            not request.user.is_superuser and 
+            not (getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin'])
+        ):
+            main_categories = main_categories.filter(status='active')
+            
         serializer = MainCategorySerializer(main_categories, many=True, context={'request': request})
         return Response(serializer.data)
 

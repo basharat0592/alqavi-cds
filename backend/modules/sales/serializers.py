@@ -98,10 +98,12 @@ class OrderListSerializer(serializers.ModelSerializer):
             return obj.customer.get_full_name() or obj.customer.username or obj.customer.email
         return obj.guest_name or 'Guest'
     
+    customer_email = serializers.CharField(source='customer.email', read_only=True)
+
     class Meta:
         model = Order
         fields = [
-            'id', 'order_number', 'customer_name', 'guest_name', 'total_amount',
+            'id', 'order_number', 'customer_name', 'customer_email', 'guest_name', 'total_amount',
             'status', 'payment_status', 'item_count', 'created_at'
         ]
     

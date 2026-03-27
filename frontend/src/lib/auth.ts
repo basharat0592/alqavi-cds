@@ -2,7 +2,7 @@
 
 import api from './axios';
 
-export type UserRole = 'admin' | 'Customer' | 'staff' | 'manager';
+export type UserRole = 'admin' | 'customer' | 'supplier' | 'staff' | 'manager';
 
 export interface User {
     id: string;
@@ -24,24 +24,45 @@ export const authService = {
             const { data } = await api.post('/v1/users/register/', userData);
             return data as User;
         } catch (error: any) {
-            const detail = error.response?.data;
-            let errorMessage = "Registration failed.";
-            console.error("Registration Error Detail:", detail);
-            
-            if (detail) {
-                if (typeof detail === 'string') errorMessage = detail;
-                else if (typeof detail === 'object') {
-                    // Get the first error message from the object
-                    const field = Object.keys(detail)[0];
-                    if (field && Array.isArray(detail[field])) {
-                        errorMessage = `${field}: ${detail[field][0]}`;
-                    } else if (detail.detail) {
-                        errorMessage = detail.detail;
-                    }
+            throw authService.handleAuthError(error, "Registration failed.");
+        }
+    },
+
+    registerSupplier: async (userData: any): Promise<User> => {
+        try {
+            const { data } = await api.post('/v1/users/register/supplier/', userData);
+            return data as User;
+        } catch (error: any) {
+            throw authService.handleAuthError(error, "Supplier registration failed.");
+        }
+    },
+
+    registerAdmin: async (userData: any): Promise<User> => {
+        try {
+            const { data } = await api.post('/v1/users/register/admin/', userData);
+            return data as User;
+        } catch (error: any) {
+            throw authService.handleAuthError(error, "Admin registration failed.");
+        }
+    },
+
+    handleAuthError: (error: any, defaultMsg: string): Error => {
+        const detail = error.response?.data;
+        let errorMessage = defaultMsg;
+        console.error("Auth Error Detail:", detail);
+        
+        if (detail) {
+            if (typeof detail === 'string') errorMessage = detail;
+            else if (typeof detail === 'object') {
+                const field = Object.keys(detail)[0];
+                if (field && Array.isArray(detail[field])) {
+                    errorMessage = `${field}: ${detail[field][0]}`;
+                } else if (detail.detail) {
+                    errorMessage = detail.detail;
                 }
             }
-            throw new Error(errorMessage);
         }
+        return new Error(errorMessage);
     },
 
     // Login API
@@ -77,7 +98,7 @@ export const authService = {
         if (typeof window === 'undefined') return null;
         const token = localStorage.getItem('accessToken');
         if (!token) return null;
-        
+
         const userStr = localStorage.getItem(STORAGE_KEY_USER);
         if (!userStr || userStr === 'undefined') return null;
         try {

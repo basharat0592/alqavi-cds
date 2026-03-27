@@ -127,7 +127,7 @@ export default function ProfileDropdown({
     ];
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-[340px] bg-white dark:bg-[#1e293b] rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-3 w-[340px] bg-white dark:bg-[#1B1C1E] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
 
             {/* Toast */}
             {toast && (

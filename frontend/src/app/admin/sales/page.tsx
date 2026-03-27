@@ -19,7 +19,7 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_FILTERS = ['All', 'Ordered', 'Confirmed', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Rejected'];
+const STATUS_FILTERS = ['All', 'Ordered', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
 // ── Modals ───────────────────────────────────────────────────────────────────
 function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => void }) {
@@ -181,12 +181,10 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order, onClos
                         <select value={status} onChange={e => setStatus(e.target.value)} className={AMZ_INPUT}>
                             <option value="ordered">Ordered</option>
                             <option value="confirmed">Confirmed</option>
-                            <option value="pending">Pending</option>
                             <option value="processing">Processing</option>
                             <option value="shipped">Shipped</option>
                             <option value="delivered">Delivered</option>
                             <option value="cancelled">Cancelled</option>
-                            <option value="rejected">Rejected</option>
                         </select>
                     </div>
                     <div>
@@ -428,14 +426,9 @@ export default function SalesPage() {
                             <td className="px-6 py-4 text-right">
                                 <div className="flex justify-end gap-1">
                                     {o.status === 'ordered' && (
-                                        <>
-                                            <button onClick={() => handleStatusMove(o.id as string, 'confirmed')} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded bg-white border border-emerald-100 shadow-sm transition-all" title="Confirm Order">
-                                                <CheckCircle className="h-4 w-4" />
-                                            </button>
-                                            <button onClick={() => handleStatusMove(o.id as string, 'rejected')} className="p-1.5 text-red-500 hover:bg-red-50 rounded bg-white border border-red-100 shadow-sm transition-all" title="Reject Order">
-                                                <XCircle className="h-4 w-4" />
-                                            </button>
-                                        </>
+                                        <button onClick={() => handleStatusMove(o.id as string, 'confirmed')} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded bg-white border border-emerald-100 shadow-sm transition-all" title="Confirm Order">
+                                            <CheckCircle className="h-4 w-4" />
+                                        </button>
                                     )}
                                     <button onClick={() => handleViewOrder(o)} className="p-1.5 text-gray-400 hover:text-[#FF9900]" title="View Details">
                                         <Eye className="h-4 w-4" />

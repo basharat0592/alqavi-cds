@@ -100,7 +100,12 @@ export default function CustomerDashboard() {
                                             </div>
                                             <div>
                                                 <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{order.order_number}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</p>
+                                                    <span className="px-1 py-0.5 bg-slate-50 dark:bg-slate-800 rounded text-[8px] text-slate-400 font-black uppercase tracking-widest tabular-nums border border-gray-100 dark:border-slate-700">
+                                                        {new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-8 text-right">

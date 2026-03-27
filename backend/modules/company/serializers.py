@@ -35,6 +35,12 @@ class SupplierSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'contact_person', 'email', 'phone', 'whatsapp',
             'address', 'city', 'country', 'tax_number', 'is_active',
-            'notes', 'created_at', 'updated_at'
+            'notes', 'product_count', 'product_list', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    product_count = serializers.IntegerField(read_only=True)
+    product_list = serializers.SerializerMethodField()
+
+    def get_product_list(self, obj):
+        return [p.name for p in obj.products.all()[:5]] # Show first 5 names

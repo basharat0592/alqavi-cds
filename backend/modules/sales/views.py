@@ -7,7 +7,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.utils import timezone
-from django.db.models import Sum, Count, Q
+from django.db import models
+from django.db.models import Sum, Count, Q, F
 from django.db.models.functions import TruncDate
 from datetime import timedelta
 from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, PurchaseReturn, PurchaseReturnItem
@@ -25,12 +26,21 @@ from modules.users.models import UserActivityLog
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_orders(request):
-    """List all orders with proper pagination, search, and filtering."""
+    """List orders with proper isolation based on user role."""
     from rest_framework.pagination import PageNumberPagination
     
     orders = Order.objects.all().order_by('-created_at')
+
+    # Security: Non-superusers are restricted to their own domain
+    if not request.user.is_superuser:
+        if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
+            # Supplier case: See orders containing their items
+            orders = orders.filter(items__product__supplier=request.user.supplier_profile).distinct()
+        else:
+            # Customer case: Standard customers only see their specific orders
+            orders = orders.filter(customer=request.user)
 
     # Search by fields
     search = request.query_params.get('search')
@@ -51,7 +61,8 @@ def list_orders(request):
     # Exclude status filter
     exclude_status = request.query_params.get('exclude_status')
     if exclude_status:
-        orders = orders.exclude(status=exclude_status)
+        status_list = exclude_status.split(',')
+        orders = orders.exclude(status__in=status_list)
 
     # Payment status filter
     payment_status = request.query_params.get('payment_status')
@@ -110,7 +121,12 @@ def create_order(request):
     if serializer.is_valid():
         try:
             with transaction.atomic():
-                order = serializer.save()
+                # Automatically assign customer if user is logged in
+                save_kwargs = {}
+                if request.user.is_authenticated:
+                    save_kwargs['customer'] = request.user
+                
+                order = serializer.save(**save_kwargs)
                 
                 # Log Activity
                 UserActivityLog.objects.create(
@@ -321,7 +337,13 @@ def update_order(request, order_id):
                             )
             
             return Response(OrderSerializer(updated_order).data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Catch and print validation errors for debugging
+    print(f"DEBUG: Order update validation errors: {serializer.errors}")
+    return Response({
+        "error": "Record update failed validation",
+        "errors": serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['DELETE'])
@@ -342,57 +364,98 @@ def dashboard_stats(request):
     """Get comprehensive dashboard statistics for admin overview."""
     today = timezone.now().date()
     month_ago = today - timedelta(days=30)
+    
+    supplier = None
+    if request.user.is_authenticated and not request.user.is_superuser:
+        if hasattr(request.user, 'supplier_profile'):
+            supplier = request.user.supplier_profile
 
     # Basic Counts
-    total_orders = Order.objects.count()
-    orders_today = Order.objects.filter(created_at__date=today).count()
+    if supplier:
+        total_orders = Order.objects.filter(items__product__supplier=supplier).distinct().count()
+        orders_today = Order.objects.filter(items__product__supplier=supplier, created_at__date=today).distinct().count()
+    else:
+        total_orders = Order.objects.count()
+        orders_today = Order.objects.filter(created_at__date=today).count()
     
     # Revenue Calculations
-    # Gross Revenue from Sales
+    # Gross Revenue from Sales (Filtered by supplier's items if it's a supplier)
     valid_orders = Order.objects.filter(payment_status='completed')
-    gross_revenue = valid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    
-    # Expenses from Paid Purchase Orders
-    paid_purchases = PurchaseOrder.objects.filter(payment_status='paid')
-    total_expenses = paid_purchases.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    if supplier:
+        # For suppliers, we calculate revenue based on THEIR items sold
+        supplier_items = OrderItem.objects.filter(order__payment_status='completed', product__supplier=supplier)
+        gross_revenue = supplier_items.aggregate(revenue=Sum(models.F('price') * models.F('quantity')))['revenue'] or 0
+        
+        # Supplier's expenses (COGS based on their product costs) is usually internal, 
+        # but here we might just show revenue. In this system POs are typically from distributor to manufacturer.
+        # If POs are also supplier-linked... but PO model doesn't have supplier field yet.
+        total_expenses = 0 
+    else:
+        gross_revenue = valid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        paid_purchases = PurchaseOrder.objects.filter(payment_status='paid')
+        total_expenses = paid_purchases.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     
     # Net Revenue
     total_net_revenue = float(gross_revenue) - float(total_expenses)
 
-    revenue_today = (
-        valid_orders.filter(created_at__date=today)
-        .aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    )
-    expenses_today = (
-        paid_purchases.filter(created_at__date=today)
-        .aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    )
+    if supplier:
+        revenue_today = OrderItem.objects.filter(
+            order__payment_status='completed', 
+            order__created_at__date=today,
+            product__supplier=supplier
+        ).aggregate(revenue=Sum(models.F('price') * models.F('quantity')))['revenue'] or 0
+        expenses_today = 0
+    else:
+        revenue_today = (
+            valid_orders.filter(created_at__date=today)
+            .aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        )
+        expenses_today = (
+            paid_purchases.filter(created_at__date=today)
+            .aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        )
     net_revenue_today = float(revenue_today) - float(expenses_today)
 
     # 30-Day Revenue History
-    history = (
-        Order.objects.filter(created_at__date__gte=month_ago)
-        .annotate(date=TruncDate('created_at'))
-        .values('date')
-        .annotate(
-            revenue=Sum('total_amount', filter=Q(payment_status='completed')),
-            orders=Count('id')
+    if supplier:
+        history_data = (
+            OrderItem.objects.filter(
+                order__payment_status='completed',
+                order__created_at__date__gte=month_ago,
+                product__supplier=supplier
+            )
+            .annotate(date=TruncDate('order__created_at'))
+            .values('date')
+            .annotate(
+                revenue=Sum(models.F('price') * models.F('quantity')),
+                orders=Count('order_id', distinct=True)
+            )
+            .order_by('date')
         )
-        .order_by('date')
-    )
-    
-    # Purchase history for net calculation
-    purchase_history = (
-        PurchaseOrder.objects.filter(created_at__date__gte=month_ago, payment_status='paid')
-        .annotate(date=TruncDate('created_at'))
-        .values('date')
-        .annotate(expense=Sum('total_amount'))
-        .order_by('date')
-    )
-    purchase_map = {p['date'].strftime('%Y-%m-%d'): p['expense'] for p in purchase_history}
+        purchase_map = {}
+    else:
+        history_data = (
+            Order.objects.filter(created_at__date__gte=month_ago)
+            .annotate(date=TruncDate('created_at'))
+            .values('date')
+            .annotate(
+                revenue=Sum('total_amount', filter=Q(payment_status='completed')),
+                orders=Count('id')
+            )
+            .order_by('date')
+        )
+        # Purchase history for net calculation
+        purchase_history = (
+            PurchaseOrder.objects.filter(created_at__date__gte=month_ago, payment_status='paid')
+            .annotate(date=TruncDate('created_at'))
+            .values('date')
+            .annotate(expense=Sum('total_amount'))
+            .order_by('date')
+        )
+        purchase_map = {p['date'].strftime('%Y-%m-%d'): p['expense'] for p in purchase_history}
     
     # Format history for frontend
-    history_map = {h['date'].strftime('%Y-%m-%d'): h for h in history}
+    history_map = {h['date'].strftime('%Y-%m-%d'): h for h in history_data}
     formatted_history = []
     for i in range(30):
         d = today - timedelta(days=29-i)
@@ -406,16 +469,25 @@ def dashboard_stats(request):
         })
 
     # Recent Orders
-    recent = Order.objects.all().order_by('-created_at')[:5]
+    recent_qs = Order.objects.all()
+    if supplier:
+        recent_qs = recent_qs.filter(items__product__supplier=supplier).distinct()
+    recent = recent_qs.order_by('-created_at')[:5]
     recent_serialized = OrderListSerializer(recent, many=True).data
 
-    # Recent Purchase Orders
-    recent_purchases = PurchaseOrder.objects.all().order_by('-created_at')[:5]
-    recent_purchases_serialized = PurchaseOrderListSerializer(recent_purchases, many=True).data
+    # Recent Purchase Orders (Hide for suppliers as they are the ones usually being purchased from)
+    if supplier:
+        recent_purchases_serialized = []
+    else:
+        recent_purchases = PurchaseOrder.objects.all().order_by('-created_at')[:5]
+        recent_purchases_serialized = PurchaseOrderListSerializer(recent_purchases, many=True).data
 
     # Top Products
+    top_products_qs = OrderItem.objects.values('product', 'product__name')
+    if supplier:
+        top_products_qs = top_products_qs.filter(product__supplier=supplier)
     top_products_data = (
-        OrderItem.objects.values('product', 'product__name')
+        top_products_qs
         .annotate(sales=Sum('quantity'))
         .order_by('-sales')[:5]
     )
@@ -433,8 +505,8 @@ def dashboard_stats(request):
         'recent_orders': recent_serialized,
         'recent_purchases': recent_purchases_serialized,
         'top_products': formatted_top_products,
-        'pending_orders': Order.objects.filter(status='pending').count(),
-        'delivered_orders': Order.objects.filter(status='delivered').count(),
+        'pending_orders': Order.objects.filter(status='pending').count() if not supplier else Order.objects.filter(status='pending', items__product__supplier=supplier).distinct().count(),
+        'delivered_orders': Order.objects.filter(status='delivered').count() if not supplier else Order.objects.filter(status='delivered', items__product__supplier=supplier).distinct().count(),
     })
 
 

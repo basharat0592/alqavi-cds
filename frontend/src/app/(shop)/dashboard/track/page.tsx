@@ -6,7 +6,7 @@ import {
     Package, Truck, CheckCircle, Clock, 
     Search, MapPin, Calendar, CreditCard,
     ArrowRight, Info, AlertCircle, ShoppingBag,
-    ChevronRight, ExternalLink
+    ChevronRight, ExternalLink, XCircle, AlertTriangle
 } from 'lucide-react';
 import api from '@/lib/axios';
 
@@ -31,7 +31,7 @@ export default function TrackOrderDashboard() {
         }
     }, [searchParams]);
 
-    const handleTrack = async (e?: React.FormEvent, manualOrder?: string) => {
+    const handleTrack = async (e?: React.FormEvent | null, manualOrder?: string) => {
         if (e) e.preventDefault();
         const targetOrder = manualOrder || orderNumber;
         if (!targetOrder.trim()) return;
@@ -42,7 +42,8 @@ export default function TrackOrderDashboard() {
 
         try {
             const response = await api.get(`/v1/sales/track/${targetOrder.trim()}/`);
-            setOrder(response.data);
+            const orderData = response.data;
+            setOrder(orderData);
         } catch (err: any) {
             setError(err.response?.data?.error || 'Order not found. Please check the order number.');
         } finally {
@@ -50,18 +51,19 @@ export default function TrackOrderDashboard() {
         }
     };
 
-    const getCurrentStatusIndex = (currentStatus: string) => {
+    function getCurrentStatusIndex(currentStatus: string) {
         const index = STATUS_STEPS.findIndex(step => step.key === currentStatus.toLowerCase());
         if (index === -1 && currentStatus.toLowerCase() === 'completed') return 4;
         if (index === -1 && (currentStatus.toLowerCase() === 'rejected' || currentStatus.toLowerCase() === 'cancelled')) return -1;
         return index;
-    };
+    }
 
     const statusIndex = order ? getCurrentStatusIndex(order.status) : -1;
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 animate-in fade-in duration-500 pb-20 relative">
             
+
             {/* ── HEADER (Admin Style) ── */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
@@ -103,8 +105,10 @@ export default function TrackOrderDashboard() {
                             <div>
                                 <h3 className="text-lg font-black dark:text-white">{order.order_number}</h3>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status: {order.status}</span>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${order.status.toLowerCase() === 'rejected' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${order.status.toLowerCase() === 'rejected' ? 'text-red-500' : 'text-gray-400'}`}>
+                                        Status: {order.status}
+                                    </span>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -113,39 +117,62 @@ export default function TrackOrderDashboard() {
                             </div>
                         </div>
 
-                        {/* Flat Stepper */}
-                        <div className="relative pt-6 pb-2">
-                            <div className="absolute top-[2.75rem] left-[5%] right-[5%] h-[2px] bg-slate-100 dark:bg-slate-800" />
-                            <div 
-                                className="absolute top-[2.75rem] left-[5%] h-[2px] bg-[#FF9900] transition-all duration-1000" 
-                                style={{ width: `${Math.max(0, (statusIndex / 4) * 90)}%` }}
-                            />
-
-                            <div className="flex justify-between relative">
-                                {STATUS_STEPS.map((step, idx) => {
-                                    const Icon = step.icon;
-                                    const isActive = idx <= statusIndex;
-                                    const isCurrent = idx === statusIndex;
-                                    
-                                    return (
-                                        <div key={idx} className="flex flex-col items-center w-[18%]">
-                                            <div className={`
-                                                w-10 h-10 rounded shadow-sm flex items-center justify-center transition-all duration-500
-                                                ${isActive 
-                                                    ? 'bg-[#FF9900] text-[#131921] scale-110 z-10' 
-                                                    : 'bg-white dark:bg-slate-800 text-slate-300 border border-slate-100 dark:border-slate-700'
-                                                }
-                                            `}>
-                                                <Icon className="h-4 w-4" />
-                                            </div>
-                                            <p className={`mt-3 text-[9px] font-black uppercase tracking-tighter text-center ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                                                {step.label}
-                                            </p>
-                                        </div>
-                                    );
-                                })}
+                        {order.status.toLowerCase() === 'rejected' || order.status.toLowerCase() === 'cancelled' ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-700 bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/30 rounded shadow-sm">
+                                <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+                                    <AlertCircle className="h-8 w-8 text-red-600" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Order Cancelled</h2>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-8 max-w-sm px-6">
+                                    Your order <span className="font-bold text-red-600">{order.order_number}</span> has been cancelled. Please contact support if you need further assistance.
+                                </p>
+                                <div className="w-full max-w-xs px-6">
+                                    <button 
+                                        onClick={() => setOrder(null)}
+                                        className="w-full py-2.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded text-sm text-[#111] shadow-sm font-medium transition-all"
+                                    >
+                                        Track another package
+                                    </button>
+                                </div>
+                                <div className="mt-8 pt-8 border-t border-gray-100 dark:border-slate-800 w-full flex justify-center">
+                                    <span className="text-xs text-gray-400 font-medium">Order Reference: {order.order_number}</span>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            /* Flat Stepper */
+                            <div className="relative pt-6 pb-2">
+                                <div className="absolute top-[2.75rem] left-[5%] right-[5%] h-[2px] bg-slate-100 dark:bg-slate-800" />
+                                <div 
+                                    className="absolute top-[2.75rem] left-[5%] h-[2px] bg-[#FF9900] transition-all duration-1000" 
+                                    style={{ width: `${Math.max(0, (statusIndex / 4) * 90)}%` }}
+                                />
+
+                                <div className="flex justify-between relative">
+                                    {STATUS_STEPS.map((step, idx) => {
+                                        const Icon = step.icon;
+                                        const isActive = idx <= statusIndex;
+                                        const isCurrent = idx === statusIndex;
+                                        
+                                        return (
+                                            <div key={idx} className="flex flex-col items-center w-[18%]">
+                                                <div className={`
+                                                    w-10 h-10 rounded shadow-sm flex items-center justify-center transition-all duration-500
+                                                    ${isActive 
+                                                        ? 'bg-[#FF9900] text-[#131921] scale-110 z-10' 
+                                                        : 'bg-white dark:bg-slate-800 text-slate-300 border border-slate-100 dark:border-slate-700'
+                                                    }
+                                                `}>
+                                                    <Icon className="h-4 w-4" />
+                                                </div>
+                                                <p className={`mt-3 text-[9px] font-black uppercase tracking-tighter text-center ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                                                    {step.label}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Info Grid */}

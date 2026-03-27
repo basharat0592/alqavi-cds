@@ -5,11 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Package, ShoppingCart, Users,
-    Settings, LogOut, Warehouse,
+    Settings, LogOut, Warehouse, Clock,
     Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
-    BarChart3, Boxes, FolderTree, Bell, Sparkles,
+    BarChart3, Boxes, FolderTree, Bell,
     Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock
-} from 'lucide-react'; // Re-trigger HMR
+} from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService, orderService } from '@/lib/api';
 
@@ -21,7 +21,15 @@ interface Counts {
     lowStock: number;
     orders: number;
     pendingOrders: number;
-    customers: number;
+}
+
+interface MiniOrder {
+    id: string;
+    order_number: string;
+    total_amount: number;
+    status: string;
+    created_at?: string;
+    guest_name?: string;
 }
 
 interface NavItem {
@@ -49,16 +57,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
     const pathname = usePathname();
     const router = useRouter();
     const [adminUser, setAdminUser] = useState<any>(null);
-    const [counts, setCounts] = useState<Counts>({
-        products: 0, lowStock: 0, orders: 0, pendingOrders: 0, customers: 0
+    const [counts, setCounts] = useState({
+        products: 0, lowStock: 0, orders: 0, pendingOrders: 0
     });
+    const [recentOrders, setRecentOrders] = useState<MiniOrder[]>([]);
 
     useEffect(() => {
         const user = authService.getUser?.();
         if (user) setAdminUser(user);
 
-        const userStr = localStorage.getItem('registered_users');
-        const localUsers: any[] = (userStr && userStr !== 'undefined') ? JSON.parse(userStr) : [];
 
         Promise.allSettled([
             productService.getAll(),
@@ -76,9 +83,11 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                     return s > 0 && s < 10;
                 }).length,
                 orders: orders.length,
-                pendingOrders: orders.filter((o: any) => o.status === 'Pending' || o.status === 'Processing').length,
-                customers: localUsers.length + 1,
+                pendingOrders: orders.filter((o: any) => o.status === 'Pending' || o.status === 'Processing' || o.status === 'ordered').length,
             });
+
+            // Set Recent orders (last 5)
+            setRecentOrders(orders.slice(0, 5));
         });
     }, []);
 
@@ -87,7 +96,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             label: 'Operations',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Alerts & Tasks', href: '/admin/alerts', icon: Bell, badge: (counts.lowStock || 0) + (counts.pendingOrders || 0), alert: (counts.lowStock + counts.pendingOrders) > 0 },
+                { name: 'Recent Orders', href: '/admin/sales/recent', icon: Clock, badge: counts.pendingOrders, alert: counts.pendingOrders > 0 },
+                { name: 'Alerts', href: '/admin/alerts', icon: Bell, badge: counts.lowStock, alert: counts.lowStock > 0 },
             ],
         },
         {
@@ -95,6 +105,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             items: [
                 { name: 'Company', href: '/admin/company', icon: Building2 },
                 { name: 'Company Category', href: '/admin/company/categories', icon: Tag },
+                { name: 'Suppliers', href: '/admin/company/suppliers', icon: Users },
             ],
         },
         {
@@ -120,7 +131,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                 { name: 'POS  (Point of Sale)', href: '/admin/sale', icon: ShoppingCart },
                 { name: 'Sale Order List', href: '/admin/sales', icon: TrendingUp },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
-                { name: 'Client Registry', href: '/admin/customers', icon: Users, badge: counts.customers },
             ],
         },
         {
@@ -147,82 +157,101 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
         },
     ];
 
+    const userRole = (adminUser?.role_name || adminUser?.role || '').toString().toLowerCase();
+    const isSupplier = userRole === 'supplier';
+
+    const filteredGroups = menuGroups.map(group => {
+        if (isSupplier) {
+            if (group.label === 'Operations') {
+                return { ...group, items: group.items.filter(i => i.name === 'Dashboard') };
+            }
+            if (group.label === 'Catalog') {
+                return {
+                    ...group,
+                    items: group.items
+                        .filter(i => i.name === 'All Products')
+                        .map(i => ({ ...i, name: 'My Products' }))
+                };
+            }
+            if (group.label === 'Sales & Returns') {
+                return { ...group, items: group.items.filter(i => i.name === 'Sale Order List') };
+            }
+            if (group.label === 'Inventory') {
+                return { ...group, items: group.items.filter(i => i.name === 'Stock Management') };
+            }
+            return null;
+        }
+        return group;
+    }).filter(g => g !== null) as NavGroup[];
+
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
     return (
-        <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-[#F8FAFC] dark:bg-[#0F172A] h-screen flex flex-col flex-shrink-0 z-20 font-sans border-r border-[#e2e8f0] dark:border-[#1e293b] shadow-[10px_0_30px_-15px_rgba(0,0,0,0.1)] dark:shadow-[10px_0_30px_-15px_rgba(0,0,0,0.5)] relative transition-all duration-300 ease-in-out`}>
+        <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white dark:bg-[#1B1C1E] h-screen flex flex-col flex-shrink-0 z-20 font-sans border-r border-slate-100 dark:border-white/5 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.04)] dark:shadow-[4px_0_24px_-4px_rgba(0,0,0,0.6)] relative transition-all duration-300 ease-in-out`}>
 
             {/* ── Branded Header ── */}
-            <div className={`px-4 pt-8 pb-5 border-b border-slate-200 dark:border-[#1e293b] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} min-h-[73px] transition-all duration-300`}>
+            <div className={`px-4 pt-6 pb-4 border-b border-slate-100 dark:border-white/5 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} min-h-[66px] transition-all duration-300`}>
                 {!isCollapsed && (
                     <Link href="/admin/dashboard" className="flex items-center gap-3 group shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
-                        <div className="w-9 h-9 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center transition-all group-hover:scale-105 group-hover:bg-[#FF9900] group-hover:text-white border border-slate-200 dark:border-slate-700 shrink-0 shadow-sm group-hover:shadow-orange-200 dark:group-hover:shadow-none">
-                            <Sparkles className="h-5 w-5 text-[#FF9900] group-hover:text-white transition-colors" strokeWidth={2.5} />
+                        <div className="w-8 h-8 bg-[#FF9900] rounded-lg flex items-center justify-center shrink-0">
+                            <span className="text-sm font-black text-[#131921]">A</span>
                         </div>
                         <div className="flex flex-col">
-                            <h1 className="font-black text-slate-900 dark:text-white text-sm tracking-tight leading-none uppercase flex items-center gap-1 group-hover:text-[#ff9900] transition-colors">
-                                Al-Qavi
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff9900] animate-pulse"></span>
-                            </h1>
-                            <p className="text-[10px] font-black text-[#FF9900] dark:text-[#FFA41C] tracking-[0.2em] uppercase mt-1">Cosmetic Hub</p>
+                            <h1 className="font-black text-slate-900 dark:text-white text-[12px] tracking-tighter leading-none uppercase">Al-Qavi</h1>
+                            <p className="text-[9px] font-black text-[#FF9900] tracking-[0.2em] uppercase mt-0.5">Cosmetic Hub</p>
                         </div>
                     </Link>
                 )}
 
                 <button
                     onClick={onToggle}
-                    className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800/50 hover:bg-[#FF9900] dark:hover:bg-[#FF9900] text-slate-500 dark:text-slate-400 hover:text-white transition-all duration-300 transform active:scale-90 shadow-sm border border-slate-200 dark:border-slate-700/50 hover:border-orange-400 flex items-center justify-center`}
+                    className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-[#FF9900]/10 dark:hover:bg-[#FF9900]/10 text-slate-400 dark:text-slate-500 hover:text-[#FF9900] transition-all duration-200 border border-slate-100 dark:border-white/5 flex items-center justify-center"
                     title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                 >
                     {isCollapsed ? (
-                        <ChevronsRight className="w-5 h-5 animate-in zoom-in duration-500" />
+                        <ChevronsRight className="w-4 h-4 animate-in zoom-in duration-500" />
                     ) : (
-                        <ChevronsLeft className="w-5 h-5 animate-in fade-in slide-in-from-right-4 duration-500" />
+                        <ChevronsLeft className="w-4 h-4 animate-in fade-in slide-in-from-right-4 duration-500" />
                     )}
                 </button>
             </div>
 
             {/* ── Main Navigation ── */}
-            <nav className="flex-1 overflow-y-auto pt-4 pb-12 custom-scrollbar space-y-6">
-                {menuGroups.map((group, gIdx) => (
+            <nav className="flex-1 overflow-y-auto pt-4 pb-12 custom-scrollbar space-y-5">
+                {filteredGroups.map((group, gIdx) => (
                     <div key={group.label} className="px-3">
                         {!isCollapsed && (
-                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 px-3 mb-2 opacity-80 animate-in fade-in">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 px-3 mb-2">
                                 {group.label}
                             </p>
                         )}
-                        <div className="space-y-[2px]">
+                        <div className="space-y-[1px]">
                             {group.items.map(item => {
                                 const active = isActive(item.href);
                                 return (
                                     <Link key={item.name} href={item.href}
-                                        className={`group relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2.5 rounded-lg transition-all duration-200
+                                        className={`group relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2.5 rounded-xl transition-all duration-200
                                             ${active
-                                                ? 'bg-white dark:bg-[#1e293b] text-[#ff9900] dark:text-white shadow-sm border border-slate-200 dark:border-transparent'
-                                                : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-[#1e293b]/50 hover:text-slate-900 dark:hover:text-white hover:shadow-sm'}`}>
-
-                                        {/* Amazon Active Indicator */}
-                                        {active && (
-                                            <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#ff9900] rounded-r shadow-[0_0_8px_rgba(255,153,0,0.6)]"></div>
-                                        )}
+                                                ? 'bg-[#FF9900]/10 dark:bg-[#FF9900]/10 text-[#FF9900] border border-[#FF9900]/20 dark:border-[#FF9900]/15'
+                                                : 'text-slate-500 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent hover:border-slate-100 dark:hover:border-white/5'}`}>
 
                                         <div className="flex items-center gap-3">
-                                            <item.icon className={`h-5 w-5 shrink-0 transition-colors ${active ? 'text-[#ff9900]' : 'text-slate-400 dark:text-slate-500 group-hover:text-[#ff9900]'}`}
+                                            <item.icon className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-[#FF9900]' : 'text-slate-400 dark:text-white/30 group-hover:text-[#FF9900]'}`}
                                                 strokeWidth={active ? 2.5 : 2} />
-                                            {!isCollapsed && <span className="text-[13px] tracking-tight font-black animate-in fade-in slide-in-from-left-2">{item.name}</span>}
+                                            {!isCollapsed && <span className={`text-[11px] tracking-tight font-black uppercase animate-in fade-in slide-in-from-left-2 ${active ? 'text-[#FF9900]' : ''}`}>{item.name}</span>}
                                         </div>
 
                                         {!isCollapsed && item.badge !== undefined && item.badge > 0 && (
-                                            <span className={`text-[10px] px-1.5 py-0.5 font-black rounded min-w-[20px] text-center
+                                            <span className={`text-[9px] px-1.5 py-0.5 font-black rounded-full min-w-[18px] text-center
                                                 ${active
-                                                    ? 'bg-[#ff9900] text-[#131921] shadow-lg shadow-orange-500/20'
-                                                    : item.alert ? 'bg-red-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                                    ? 'bg-[#FF9900] text-[#131921]'
+                                                    : item.alert ? 'bg-red-500 text-white animate-blink-fast' : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-white/50'}`}>
                                                 {item.badge}
                                             </span>
                                         )}
 
                                         {isCollapsed && (
-                                            <div className="absolute left-full ml-4 px-2 py-1 bg-slate-900 text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+                                            <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-[#0f1012] border border-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-xl">
                                                 {item.name}
                                                 {item.badge !== undefined && item.badge > 0 && ` (${item.badge})`}
                                             </div>
@@ -236,16 +265,18 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             </nav>
 
             {/* ── System Footer ── */}
-            <div className={`mt-auto bg-white/30 dark:bg-[#000000]/10 border-t border-[#e2e8f0] dark:border-[#1e293b] p-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
-                <Link href="/admin/settings"
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-tight
-                        ${isActive('/admin/settings')
-                            ? 'bg-white dark:bg-[#1e293b] text-[#ff9900]'
-                            : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-[#1e293b] hover:text-slate-900 dark:hover:text-white'}`}>
-                    <Settings className={`h-5 w-5 ${isActive('/admin/settings') ? 'text-[#ff9900]' : 'text-slate-400'}`} />
-                    {!isCollapsed && <span>Control Panel</span>}
-                </Link>
-            </div>
+            {(true) && (
+                <div className={`mt-auto border-t border-slate-100 dark:border-white/5 p-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
+                    <Link href="/admin/settings"
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-[11px] font-black uppercase tracking-tight border
+                            ${isActive('/admin/settings')
+                                ? 'bg-[#FF9900]/10 text-[#FF9900] border-[#FF9900]/20'
+                                : 'text-slate-400 dark:text-white/30 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border-transparent hover:border-slate-100 dark:hover:border-white/5'}`}>
+                        <Settings className={`h-4 w-4 ${isActive('/admin/settings') ? 'text-[#FF9900]' : 'text-slate-400 dark:text-white/30'}`} />
+                        {!isCollapsed && <span>Control Panel</span>}
+                    </Link>
+                </div>
+            )}
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 3px; }
@@ -253,6 +284,14 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
                 .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.03); }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.1); }
+
+                @keyframes blink-fast {
+                    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+                    50% { opacity: 0.8; transform: scale(1.15); box-shadow: 0 0 12px 6px rgba(239, 68, 68, 0.15); }
+                }
+                .animate-blink-fast {
+                    animation: blink-fast 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+                }
             `}</style>
         </div>
     );

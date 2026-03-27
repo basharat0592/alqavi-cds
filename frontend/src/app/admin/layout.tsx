@@ -275,7 +275,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <AuthGuard allowedRoles={['admin']}>
-            <div className="h-screen bg-slate-50 dark:bg-[#0f172a] flex flex-col font-sans overflow-hidden transition-colors duration-500 print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]">
+            <div className="h-screen bg-[#f8fafc] dark:bg-[#111213] flex flex-col font-sans overflow-hidden transition-colors duration-500 print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]">
 
                 {/* Mobile top bar */}
                 <MobileTopBar
@@ -317,31 +317,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:overflow-visible print:min-h-auto">
 
                         {/* ═══ DESKTOP NAVBAR ═══ */}
-                        <div className="hidden md:flex glass-effect border-b border-white/40 px-8 py-4 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-[0_2px_15px_rgba(0,0,0,0.02)] relative print:hidden">
+                        <div className="hidden md:flex bg-white dark:bg-[#1B1C1E] border-b border-slate-100 dark:border-white/5 px-8 py-3.5 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-[0_2px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.4)] relative print:hidden">
 
                             {/* Search Bar */}
                             <div className="relative flex-1 max-w-lg">
-                                <div className="flex items-center gap-3 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 px-4 py-2.5 w-full focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500/50 transition-all duration-300">
-                                    <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                <div className="flex items-center gap-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 px-4 py-2.5 w-full focus-within:border-[#FF9900]/50 focus-within:ring-2 focus-within:ring-[#FF9900]/10 transition-all duration-300">
+                                    <Search className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                                     <input type="text" placeholder="Search product, order, customer..."
-                                        className="bg-transparent text-sm outline-none w-full text-slate-700 dark:text-slate-200 placeholder:text-slate-400 font-medium"
+                                        className="bg-transparent text-[12px] outline-none w-full text-slate-700 dark:text-slate-200 placeholder:text-slate-400 font-bold uppercase tracking-wide"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
                                         onBlur={closeSearch} />
-                                    {isSearching && <div className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin flex-shrink-0" />}
+                                    {isSearching && <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FF9900] border-t-transparent animate-spin flex-shrink-0" />}
                                 </div>
 
                                 {/* Search Dropdown */}
                                 {showSearchDropdown && (
-                                    <div className="absolute top-full mt-2 left-0 right-0 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                                    <div className="absolute top-full mt-2 left-0 right-0 bg-white dark:bg-[#0f1012] rounded-xl border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                                         <div className="max-h-96 overflow-y-auto p-2 space-y-2">
                                             {noResults && !isSearching && (
-                                                <p className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">No results for &quot;{searchQuery}&quot;</p>
+                                                <p className="p-4 text-center text-[11px] font-black text-slate-400 uppercase tracking-widest">No results for &quot;{searchQuery}&quot;</p>
                                             )}
                                             {sp.length > 0 && (
                                                 <div>
-                                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">Products</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Products</p>
                                                     {sp.map((p, i) => (
                                                         <SearchItem key={i} href="/admin/products" icon={Package}
                                                             iconBg="bg-orange-50" iconColor="text-orange-500"
@@ -352,7 +352,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             )}
                                             {so.length > 0 && (
                                                 <div>
-                                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">Orders</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Orders</p>
                                                     {so.map((o, i) => (
                                                         <SearchItem key={i} href="/admin/sales" icon={ShoppingCart}
                                                             iconBg="bg-blue-50" iconColor="text-blue-500"
@@ -364,7 +364,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             )}
                                             {su.length > 0 && (
                                                 <div>
-                                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">Users</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Users</p>
                                                     {su.map((u, i) => (
                                                         <SearchItem key={i} href="/admin/users" icon={User}
                                                             iconBg="bg-purple-50" iconColor="text-purple-500"
@@ -382,20 +382,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {/* Right Actions */}
                             <div className="flex items-center gap-2 relative">
                                 <Link href="/"
-                                    className="text-xs font-bold text-[#131921] bg-[#FF9900] px-4 py-2 rounded-xl border border-orange-600/10 shadow-lg shadow-orange-100 dark:shadow-none transition-all hover:bg-[#E68A00] hover:-translate-y-0.5 active:scale-95 flex items-center gap-2">
+                                    className="text-[10px] font-black text-[#131921] dark:text-[#131921] bg-[#FF9900] px-4 py-2 rounded-lg border border-orange-600/20 shadow-lg shadow-orange-200/50 dark:shadow-[#FF9900]/10 transition-all hover:bg-[#E68A00] uppercase tracking-widest flex items-center gap-2">
                                     View Store <ExternalLink className="h-3 w-3" />
                                 </Link>
 
-                                <div className="border-l border-slate-200 dark:border-slate-800 h-6 mx-2" />
+                                <div className="border-l border-slate-200 dark:border-white/10 h-6 mx-2" />
 
                                 {/* Notifications */}
                                 <div className="relative" ref={notifRef}>
                                     <button onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
-                                        className={`relative p-2.5 rounded-xl transition-all duration-300
-                                            ${notifOpen ? 'bg-[#FF9900]/10 text-[#FF9900] dark:text-[#FFA41C]' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>
-                                        <Bell className="h-5 w-5" strokeWidth={2} />
+                                        className={`relative p-2.5 rounded-xl transition-all duration-200
+                                            ${notifOpen ? 'bg-[#FF9900]/10 text-[#FF9900]' : 'hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-white/10'}`}>
+                                        <Bell className="h-4.5 w-4.5" strokeWidth={2} />
                                         {unreadCount > 0 && (
-                                            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#FF9900] text-[#131921] text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-[#1e293b] shadow-sm">
+                                            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#FF9900] text-[#131921] text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-[#0f1012] shadow-sm">
                                                 {unreadCount > 9 ? '9+' : unreadCount}
                                             </span>
                                         )}
@@ -412,32 +412,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                                 {/* Theme Toggle */}
                                 <button onClick={toggleTheme}
-                                    className="relative overflow-hidden p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all duration-300 ease-in-out flex items-center justify-center group w-10 h-10">
+                                    className="relative overflow-hidden p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all duration-200 border border-transparent hover:border-slate-200 dark:hover:border-white/10 flex items-center justify-center w-10 h-10">
                                     <div className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 scale-50 rotate-90' : 'opacity-100 scale-100 rotate-0'}`}>
-                                        <Moon className="h-5 w-5 group-hover:text-slate-800 transition-colors" />
+                                        <Moon className="h-4.5 w-4.5" />
                                     </div>
                                     <div className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 scale-50 -rotate-90' : 'opacity-100 scale-100 rotate-0'}`}>
-                                        <Sun className="h-5 w-5 text-[#FF9900]" />
+                                        <Sun className="h-4.5 w-4.5 text-[#FF9900]" />
                                     </div>
                                 </button>
 
                                 {/* Profile */}
                                 <div className="relative" ref={profileRef}>
                                     <button onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300
-                                            ${profileOpen ? 'bg-[#FF9900]/10 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'}`}>
-                                        <div className="w-10 h-10 bg-[#FF9900] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-100 dark:shadow-none overflow-hidden">
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border
+                                            ${profileOpen ? 'bg-[#FF9900]/10 border-[#FF9900]/20' : 'hover:bg-slate-50 dark:hover:bg-white/5 border-transparent hover:border-slate-200 dark:hover:border-white/10'}`}>
+                                        <div className="w-9 h-9 bg-[#FF9900] rounded-xl flex items-center justify-center flex-shrink-0 border border-orange-400/20 overflow-hidden">
                                             {adminAvatar ? (
                                                 <img src={adminAvatar} alt="Profile" className="w-full h-full object-cover" />
                                             ) : (
-                                                <span className="text-xs font-black text-white">
+                                                <span className="text-[11px] font-black text-[#131921]">
                                                     {adminName ? adminName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'A'}
                                                 </span>
                                             )}
                                         </div>
                                         <div className="hidden lg:block text-left min-w-0">
-                                            <p className="text-slate-900 dark:text-white font-bold text-sm leading-tight truncate max-w-[120px]">{adminName}</p>
-                                            <p className="text-[10px] text-[#FF9900] dark:text-[#FFA41C] font-bold uppercase tracking-wider truncate max-w-[120px]">{adminEmail || 'Administrator'}</p>
+                                            <p className="text-slate-900 dark:text-white font-black text-[11px] leading-tight truncate max-w-[120px] uppercase tracking-tight">{adminName}</p>
+                                            <p className="text-[9px] text-[#FF9900] font-black uppercase tracking-[0.15em] truncate max-w-[120px]">{adminEmail || 'Administrator'}</p>
                                         </div>
                                     </button>
 
