@@ -16,23 +16,23 @@ export default function ProfileDropdown({
     onUpdated: (name: string, email: string, avatar?: string) => void;
 }) {
     const initials = (user.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const inputCls = "w-full px-3.5 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#F7CA00]/10 focus:border-[#F7CA00] text-sm font-medium text-slate-700 dark:text-white transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600";
+    const inputCls = "w-full px-3.5 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#EEAF1C]/10 focus:border-[#EEAF1C] text-sm font-medium text-slate-700 dark:text-white transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600";
 
     const MENU_ITEMS = [
-        { icon: User, label: 'View Profile', href: '/admin/settings', color: 'text-[#F7CA00]', bg: 'bg-[#F7CA00]/10' },
+        { icon: User, label: 'View Profile', href: '/admin/settings', color: 'text-[#EEAF1C]', bg: 'bg-[#EEAF1C]/10' },
         { icon: Settings, label: 'Settings', href: '/admin/settings', color: 'text-slate-500', bg: 'bg-slate-100 dark:bg-white/5' },
     ];
 
     return (
-        <div className="absolute top-full right-0 mt-2.5 w-[280px] bg-white/95 dark:bg-[#1B1C1E]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-full right-0 mt-2.5 w-[280px] bg-white/95 dark:bg-[#0D1921]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
 
             {/* Compact Branded Header */}
-            <div className="bg-gradient-to-br from-[#1B1C1E] via-[#232F3E] to-[#F7CA00] px-4 pt-6 pb-5 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#0D1921] via-[#232F3E] to-[#EEAF1C] px-4 pt-6 pb-5 relative overflow-hidden">
                 {/* Decorative element */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl" />
                 
                 <div className="flex items-center gap-3 relative z-10">
-                    <div className="w-11 h-11 bg-[#F7CA00] rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-2xl border-2 border-white/20 group hover:rotate-6 transition-transform duration-500">
+                    <div className="w-11 h-11 bg-[#EEAF1C] rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-2xl border-2 border-white/20 group hover:rotate-6 transition-transform duration-500">
                         {user.avatar ? (
                             <img src={getImageUrl(user.avatar) || ''} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
@@ -63,8 +63,8 @@ export default function ProfileDropdown({
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${item.bg} transition-transform group-hover:scale-110 duration-500`}>
                             <item.icon className={`h-4 w-4 ${item.color}`} strokeWidth={2.5} />
                         </div>
-                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#F7CA00] dark:group-hover:text-[#F7CA00] flex-1 text-left uppercase tracking-wide transition-colors">{item.label}</span>
-                        <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-700 group-hover:text-[#F7CA00] group-hover:translate-x-1 transition-all" strokeWidth={3} />
+                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#EEAF1C] dark:group-hover:text-[#EEAF1C] flex-1 text-left uppercase tracking-wide transition-colors">{item.label}</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-700 group-hover:text-[#EEAF1C] group-hover:translate-x-1 transition-all" strokeWidth={3} />
                     </Link>
                 ))}
                 <div className="mx-3 my-1.5 border-t border-slate-100 dark:border-white/5" />
@@ -79,3 +79,4 @@ export default function ProfileDropdown({
         </div>
     );
 }
+

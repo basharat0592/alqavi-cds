@@ -105,7 +105,7 @@ export default function AddUserPage() {
                 <h1 className="text-2xl font-normal text-gray-900 dark:text-white uppercase tracking-tight">
                     Register New User
                 </h1>
-                <button onClick={() => router.push('/admin/users')} className="text-sm text-gray-400 hover:text-[#F7CA00] hover:underline flex items-center gap-1 uppercase font-bold tracking-tighter">
+                <button onClick={() => router.push('/admin/users')} className="text-sm text-gray-400 hover:text-[#EEAF1C] hover:underline flex items-center gap-1 uppercase font-bold tracking-tighter">
                     <ArrowLeft className="w-4 h-4" /> Back to list
                 </button>
             </div>
@@ -171,7 +171,7 @@ export default function AddUserPage() {
                         <button
                             type="submit"
                             disabled={saving}
-                            className="px-6 py-1.5 bg-[#F7CA00] border border-[#a88734] rounded text-sm hover:bg-[#ebae1e] shadow-sm flex items-center gap-2 disabled:opacity-50 font-bold uppercase tracking-widest text-white"
+                            className="px-6 py-1.5 bg-[#EEAF1C] border border-[#a88734] rounded text-sm hover:bg-[#ebae1e] shadow-sm flex items-center gap-2 disabled:opacity-50 font-bold uppercase tracking-widest text-white"
                         >
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Commit Registration
@@ -190,3 +190,4 @@ export default function AddUserPage() {
         </div>
     );
 }
+

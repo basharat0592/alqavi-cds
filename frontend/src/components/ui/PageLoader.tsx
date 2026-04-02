@@ -4,7 +4,7 @@ import React from 'react';
 
 const PageLoader = () => {
     return (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-[#F8FAFC]/90 dark:bg-[#0F1012]/95 transition-colors duration-500 animate-in fade-in">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-[#F8FAFC]/90 dark:bg-[#0D1921]/95 transition-colors duration-500 animate-in fade-in">
             {/* ─── BLANK / MINIMAL BACKGROUND GLASS ─── */}
             <div className="absolute inset-0 backdrop-blur-xl"></div>
 
@@ -54,3 +54,4 @@ const PageLoader = () => {
 };
 
 export default PageLoader;
+

@@ -25,14 +25,20 @@ export default function LoginPage() {
         const user = authService.getUser();
         const params = new URLSearchParams(window.location.search);
         const isRegisteredFlow = params.get('registered');
-        const redirect = params.get('redirect') || '';
+        const redirectParam = params.get('redirect') || '';
         
         if (isRegisteredFlow) setSuccess(true);
         
         if (user && !isRegisteredFlow) {
-            if (redirect) router.push(redirect);
-            else if (user.role === 'admin' || user.is_staff || user.is_superuser || user.role === 'supplier' || user.role === 'Supplier') router.push('/admin/dashboard');
-            else router.push('/dashboard');
+            const role = (user.role || '').toString().toLowerCase();
+            if (redirectParam) router.push(redirectParam);
+            else if (['admin', 'staff', 'superuser', 'manager'].some(r => role.includes(r)) || user.is_staff || user.is_superuser) {
+                router.push('/admin/dashboard');
+            } else if (role === 'supplier') {
+                router.push('/supplier/dashboard');
+            } else {
+                router.push('/dashboard');
+            }
         }
         
         const saved = localStorage.getItem('rememberedUsername');
@@ -54,13 +60,20 @@ export default function LoginPage() {
             if (formData.rememberMe) localStorage.setItem('rememberedUsername', formData.username);
             else localStorage.removeItem('rememberedUsername');
             
-            const redirect = new URLSearchParams(window.location.search).get('redirect');
-            if (redirect) {
-                router.push(redirect);
-            } else if (user.role === 'admin' || user.is_staff || user.is_superuser || user.role === 'supplier' || user.role === 'Supplier') {
-                router.push('/admin/dashboard');
+            const params = new URLSearchParams(window.location.search);
+            const redirectParam = params.get('redirect');
+            
+            if (redirectParam) {
+                router.push(redirectParam);
             } else {
-                router.push('/dashboard');
+                const role = (user.role || '').toString().toLowerCase();
+                if (['admin', 'staff', 'superuser', 'manager'].some(r => role.includes(r)) || user.is_staff || user.is_superuser) {
+                    router.push('/admin/dashboard');
+                } else if (role === 'supplier') {
+                    router.push('/supplier/dashboard');
+                } else {
+                    router.push('/dashboard');
+                }
             }
         } catch (err: any) {
             setError(err.message || 'Invalid credentials. Please try again.');

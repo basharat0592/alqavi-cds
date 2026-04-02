@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
    MODERN LOGISTICS UI COMPONENTS
    ═══════════════════════════════════════════════ */
 const TableCard = ({ children, title, subtitle, action }: { children: React.ReactNode; title: string; subtitle?: string; action?: any }) => (
-    <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50">
             <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
@@ -29,7 +29,7 @@ const TableCard = ({ children, title, subtitle, action }: { children: React.Reac
 );
 
 const MetricPill = ({ label, value, icon: Icon, color, bg }: { label: string; value: any; icon: any; color: string; bg: string }) => (
-    <div className={`p-5 rounded-xl bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 flex items-center gap-4 shadow-sm hover:shadow-md transition-all group`}>
+    <div className={`p-5 rounded-xl bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 flex items-center gap-4 shadow-sm hover:shadow-md transition-all group`}>
         <div className={`p-3 rounded-xl ${bg} ${color} bg-opacity-10 border border-current border-opacity-10 transition-transform group-hover:scale-110`}>
             <Icon className="h-5 w-5" />
         </div>
@@ -73,24 +73,24 @@ export default function StockReportsPage() {
     if (loading) return <PageLoader />;
 
     return (
-        <div className="max-w-[1400px] mx-auto px-4 py-8 bg-slate-50 dark:bg-[#111213] min-h-screen font-sans">
+        <div className="max-w-[1400px] mx-auto px-4 py-8 bg-slate-50 dark:bg-[#070F14] min-h-screen font-sans">
             
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-[#F7CA00] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 border border-white/10">
+                    <div className="w-14 h-14 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 border border-white/10">
                         <Boxes className="h-7 w-7 text-white" />
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter">Global Asset Registry</h1>
                         <div className="flex items-center gap-2 mt-1.5">
-                            <span className="px-2 py-0.5 bg-blue-50 text-[#F7CA00] text-[9px] font-black uppercase tracking-widest rounded border border-blue-100">Inventory Module</span>
+                            <span className="px-2 py-0.5 bg-blue-50 text-[#EEAF1C] text-[9px] font-black uppercase tracking-widest rounded border border-blue-100">Inventory Module</span>
                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Logistical Audit v2.0</span>
                         </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button onClick={loadData} className="p-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#F7CA00] transition-all shadow-sm">
+                    <button onClick={loadData} className="p-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#EEAF1C] transition-all shadow-sm">
                         <RefreshCw className="h-4.5 w-4.5" />
                     </button>
                     <button className="flex items-center gap-2 px-6 py-3 bg-[#131921] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-black/10 active:scale-95 border border-white/5">
@@ -110,18 +110,18 @@ export default function StockReportsPage() {
             {/* Control Matrix */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#F7CA00] transition-all" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#EEAF1C] transition-all" />
                     <input 
                         value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Scan for specific asset identifier or name..." 
-                        className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-[#F7CA00] focus:ring-4 focus:ring-[#F7CA00]/5 text-sm font-medium transition-all shadow-sm"
+                        className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/5 text-sm font-medium transition-all shadow-sm"
                     />
                 </div>
-                <div className="flex bg-white dark:bg-[#1B1C1E] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 gap-2 shadow-sm">
+                <div className="flex bg-white dark:bg-[#0D1921] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 gap-2 shadow-sm">
                     {(['all', 'low', 'out'] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)}
                             className={`px-5 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all
-                                ${filter === f ? 'bg-[#F7CA00] text-white shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
+                                ${filter === f ? 'bg-[#EEAF1C] text-white shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
                             {f === 'low' ? 'Attention Points' : f === 'out' ? 'Purge Required' : 'All Resources'}
                         </button>
                     ))}
@@ -147,7 +147,7 @@ export default function StockReportsPage() {
                                     <tr key={p.id} className="hover:bg-slate-50/30 dark:hover:bg-white/5 transition-colors group">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center font-black text-slate-400 text-xs border border-slate-200 dark:border-white/10 shadow-inner group-hover:bg-[#F7CA00] group-hover:text-white group-hover:border-[#F7CA00] transition-all">
+                                                <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center font-black text-slate-400 text-xs border border-slate-200 dark:border-white/10 shadow-inner group-hover:bg-[#EEAF1C] group-hover:text-white group-hover:border-[#EEAF1C] transition-all">
                                                     {(p.name || 'P')[0].toUpperCase()}
                                                 </div>
                                                 <div>
@@ -159,7 +159,7 @@ export default function StockReportsPage() {
                                         <td className="px-6 py-4 text-center font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(p.price)}</td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center">
-                                                <p className={`text-sm font-black ${stock < 10 ? 'text-red-500' : 'text-[#F7CA00]'}`}>{stock}</p>
+                                                <p className={`text-sm font-black ${stock < 10 ? 'text-red-500' : 'text-[#EEAF1C]'}`}>{stock}</p>
                                                 <div className="w-14 h-1.5 rounded-full bg-slate-100 dark:bg-white/10 mt-1.5 overflow-hidden">
                                                     <div className={`h-full ${stock < 10 ? 'bg-red-500' : 'bg-emerald-500'} transition-all`} style={{ width: `${Math.min(stock, 100)}%` }} />
                                                 </div>
@@ -183,7 +183,7 @@ export default function StockReportsPage() {
             </TableCard>
 
             {/* Strategic Footer Metrics */}
-            <div className="mt-8 bg-[#F7CA00] p-8 rounded-2xl text-white flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl relative overflow-hidden group">
+            <div className="mt-8 bg-[#EEAF1C] p-8 rounded-2xl text-white flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
                 <div className="relative z-10">
                     <h4 className="text-2xl font-bold uppercase tracking-tighter mb-2">Inventory Intelligence</h4>
@@ -204,3 +204,4 @@ export default function StockReportsPage() {
         </div>
     );
 }
+

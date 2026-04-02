@@ -97,14 +97,14 @@ export default function ProductsPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all font-bold"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all font-bold"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={() => router.push('/admin/products/add')}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         Add Product
@@ -120,14 +120,14 @@ export default function ProductsPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search products by name or SKU..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:flex items-center gap-2">
                     <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
                     >
                         <option value="">All Categories</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -136,14 +136,14 @@ export default function ProductsPage() {
                     <select
                         value={selectedCompany}
                         onChange={(e) => setSelectedCompany(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
                     >
                         <option value="">All Manufacturers</option>
                         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
 
                     <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                        <Activity className="h-3.5 w-3.5 text-[#F7CA00]" />
+                        <Activity className="h-3.5 w-3.5 text-[#EEAF1C]" />
                         <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
                             {filtered.length} Products Found
                         </span>
@@ -152,7 +152,7 @@ export default function ProductsPage() {
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -184,7 +184,7 @@ export default function ProductsPage() {
                                     <tr key={prod.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#F7CA00]/30 transition-colors">
+                                                <div className="w-10 h-10 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#EEAF1C]/30 transition-colors">
                                                     {(prod.image_url || prod.image) ? (
                                                         <img src={getImageUrl((prod.image_url || prod.image || '') as string) || undefined} alt="" className="max-w-full max-h-full object-contain p-1" />
                                                     ) : (
@@ -192,9 +192,9 @@ export default function ProductsPage() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#F7CA00] transition-colors leading-tight">{prod.name}</p>
+                                                    <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#EEAF1C] transition-colors leading-tight">{prod.name}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] text-[#F7CA00] font-bold uppercase">{prod.company_name || 'Generic'}</span>
+                                                        <span className="text-[10px] text-[#EEAF1C] font-bold uppercase">{prod.company_name || 'Generic'}</span>
                                                         <span className="text-slate-300 dark:text-slate-600 font-bold text-[8px]">•</span>
                                                         <span className="text-[10px] text-slate-400 font-bold uppercase">{prod.category_name || 'Standard'}</span>
                                                     </div>
@@ -232,7 +232,7 @@ export default function ProductsPage() {
                                              <div className="flex items-center justify-end gap-1">
                                                 <button 
                                                     onClick={() => router.push(`/admin/products/${prod.id}`)} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#F7CA00] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
@@ -283,7 +283,7 @@ export default function ProductsPage() {
             {/* Protocol Overlay (Modals) */}
             {deleteProd && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 font-bold">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 font-bold">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -295,7 +295,7 @@ export default function ProductsPage() {
                         </div>
                         <div className="p-8">
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                                Are you sure you want to delete <span className="text-[#F7CA00]">"{deleteProd.name}"</span>? This action cannot be undone.
+                                Are you sure you want to delete <span className="text-[#EEAF1C]">"{deleteProd.name}"</span>? This action cannot be undone.
                             </p>
                         </div>
                         <div className="px-6 py-4 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3 bg-slate-50/50 dark:bg-white/5">
@@ -314,3 +314,4 @@ export default function ProductsPage() {
         </div>
     );
 }
+

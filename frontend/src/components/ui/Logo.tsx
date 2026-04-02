@@ -27,3 +27,4 @@ export default function Logo({ className = '', size = 'md' }: LogoProps) {
         </div>
     );
 }
+

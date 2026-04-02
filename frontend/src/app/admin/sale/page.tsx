@@ -15,7 +15,7 @@ import {
 interface CartItem { product: any; quantity: number; }
 interface CardDetails { name: string; number: string; expiry: string; cvv: string; }
 
-const fieldCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200`;
+const fieldCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200`;
 
 export default function PointOfSalePage() {
     const { isAuthenticated } = useAdminAuth();
@@ -198,7 +198,7 @@ export default function PointOfSalePage() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Loader2 className="h-8 w-8 text-[#F7CA00] animate-spin" />
+                <Loader2 className="h-8 w-8 text-[#EEAF1C] animate-spin" />
                 <p className="text-sm text-slate-500">Initializing POS terminal...</p>
             </div>
         );
@@ -208,7 +208,7 @@ export default function PointOfSalePage() {
     if (successOrder) {
         return (
             <div className="max-w-lg mx-auto py-12 px-4 font-sans">
-                <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
                     <div className="p-8 text-center">
                         <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
                             <Check className="h-8 w-8 text-emerald-600" />
@@ -219,7 +219,7 @@ export default function PointOfSalePage() {
                         <div className="bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg p-4 text-left mb-6">
                             <div className="flex justify-between items-center mb-3 pb-3 border-b border-slate-200 dark:border-white/10">
                                 <span className="text-sm text-slate-500">Total Amount</span>
-                                <span className="text-2xl font-bold text-[#F7CA00]">{formatCurrency(successOrder.total_amount)}</span>
+                                <span className="text-2xl font-bold text-[#EEAF1C]">{formatCurrency(successOrder.total_amount)}</span>
                             </div>
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div>
@@ -239,7 +239,7 @@ export default function PointOfSalePage() {
                             <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
                                 <Printer className="h-4 w-4" /> Print Receipt
                             </button>
-                            <button onClick={resetPOS} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-[#F7CA00] hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
+                            <button onClick={resetPOS} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-[#EEAF1C] hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
                                 <Plus className="h-4 w-4" /> New Sale
                             </button>
                         </div>
@@ -294,7 +294,7 @@ export default function PointOfSalePage() {
             {/* ── Toast ── */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[500] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#F7CA00]' : 'bg-red-600'}`}>
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#EEAF1C]' : 'bg-red-600'}`}>
                         {toast.type === 'success' ? <Check className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
                         {toast.msg}
                     </div>
@@ -304,7 +304,7 @@ export default function PointOfSalePage() {
             {/* ── Page Header ── */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-[#F7CA00]/10 rounded-lg flex items-center justify-center text-[#F7CA00]">
+                    <div className="w-9 h-9 bg-[#EEAF1C]/10 rounded-lg flex items-center justify-center text-[#EEAF1C]">
                         <ShoppingCart className="h-5 w-5" />
                     </div>
                     <div>
@@ -312,8 +312,8 @@ export default function PointOfSalePage() {
                         <p className="text-xs text-slate-500">{currentTime.toLocaleTimeString()}</p>
                     </div>
                 </div>
-                <button onClick={() => loadData(true)} disabled={isRefreshing} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] transition-all disabled:opacity-50">
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-[#F7CA00]' : ''}`} />
+                <button onClick={() => loadData(true)} disabled={isRefreshing} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all disabled:opacity-50">
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-[#EEAF1C]' : ''}`} />
                 </button>
             </div>
 
@@ -331,21 +331,21 @@ export default function PointOfSalePage() {
                                 onChange={e => handleSearchChange(e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
                                 placeholder="Search or scan barcode / SKU..."
-                                className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                                className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                             />
                         </div>
                         <select
                             value={selectedCategory}
                             onChange={e => handleCategoryChange(e.target.value)}
-                            className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                            className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                         >
                             {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                         <div className="flex items-center bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden">
-                            <button onClick={() => setViewMode('grid')} className={`px-3 py-2 transition-colors ${viewMode === 'grid' ? 'bg-[#F7CA00] text-white' : 'text-slate-400 hover:text-slate-600'}`}>
+                            <button onClick={() => setViewMode('grid')} className={`px-3 py-2 transition-colors ${viewMode === 'grid' ? 'bg-[#EEAF1C] text-white' : 'text-slate-400 hover:text-slate-600'}`}>
                                 <LayoutGrid className="h-4 w-4" />
                             </button>
-                            <button onClick={() => setViewMode('list')} className={`px-3 py-2 transition-colors ${viewMode === 'list' ? 'bg-[#F7CA00] text-white' : 'text-slate-400 hover:text-slate-600'}`}>
+                            <button onClick={() => setViewMode('list')} className={`px-3 py-2 transition-colors ${viewMode === 'list' ? 'bg-[#EEAF1C] text-white' : 'text-slate-400 hover:text-slate-600'}`}>
                                 <List className="h-4 w-4" />
                             </button>
                         </div>
@@ -364,16 +364,16 @@ export default function PointOfSalePage() {
                                             key={p.id}
                                             disabled={isOutOfStock}
                                             onClick={() => addToCart(p)}
-                                            className={`group relative flex flex-col bg-white dark:bg-[#1B1C1E] border rounded-xl transition-all text-left overflow-hidden shadow-sm
-                                                ${isOutOfStock ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:border-[#F7CA00]/50 hover:shadow-md hover:-translate-y-0.5'}
-                                                ${inCart > 0 ? 'border-[#F7CA00] ring-2 ring-[#F7CA00]/10' : 'border-slate-200 dark:border-white/10'}`}
+                                            className={`group relative flex flex-col bg-white dark:bg-[#0D1921] border rounded-xl transition-all text-left overflow-hidden shadow-sm
+                                                ${isOutOfStock ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:border-[#EEAF1C]/50 hover:shadow-md hover:-translate-y-0.5'}
+                                                ${inCart > 0 ? 'border-[#EEAF1C] ring-2 ring-[#EEAF1C]/10' : 'border-slate-200 dark:border-white/10'}`}
                                         >
                                             <div className="aspect-square flex items-center justify-center bg-slate-50 dark:bg-white/5 relative p-4">
                                                 {p.image ? (
                                                     <img src={p.image} className="max-w-full max-h-full object-contain" alt="" />
                                                 ) : <Package className="h-10 w-10 text-slate-200 dark:text-white/10" />}
                                                 {inCart > 0 && (
-                                                    <div className="absolute top-2 right-2 w-6 h-6 bg-[#F7CA00] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md">
+                                                    <div className="absolute top-2 right-2 w-6 h-6 bg-[#EEAF1C] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md">
                                                         {inCart}
                                                     </div>
                                                 )}
@@ -381,7 +381,7 @@ export default function PointOfSalePage() {
                                             <div className="p-3 flex-1 flex flex-col">
                                                 <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 mb-2 flex-1">{p.name}</h3>
                                                 <div className="flex justify-between items-end">
-                                                    <span className="text-sm font-bold text-[#F7CA00]">{formatCurrency(p.price)}</span>
+                                                    <span className="text-sm font-bold text-[#EEAF1C]">{formatCurrency(p.price)}</span>
                                                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${stock < 5 ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}>
                                                         {stock}
                                                     </span>
@@ -392,7 +392,7 @@ export default function PointOfSalePage() {
                                 })}
                             </div>
                         ) : (
-                            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
@@ -418,12 +418,12 @@ export default function PointOfSalePage() {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-semibold text-[#F7CA00]">{formatCurrency(p.price)}</td>
+                                                    <td className="px-4 py-3 text-right font-semibold text-[#EEAF1C]">{formatCurrency(p.price)}</td>
                                                     <td className="px-4 py-3 text-right">
                                                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${stock < 5 ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}>{stock}</span>
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
-                                                        <button onClick={() => addToCart(p)} disabled={stock <= 0} className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-[#F7CA00] hover:text-white transition-colors disabled:opacity-30">
+                                                        <button onClick={() => addToCart(p)} disabled={stock <= 0} className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 hover:bg-[#EEAF1C] hover:text-white transition-colors disabled:opacity-30">
                                                             <Plus className="h-4 w-4" />
                                                         </button>
                                                     </td>
@@ -452,20 +452,20 @@ export default function PointOfSalePage() {
 
                 {/* ── RIGHT: Cart Panel ── */}
                 <div className="lg:col-span-4 lg:sticky lg:top-4">
-                    <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
 
                         {/* Customer selector */}
                         <div className="p-4 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
                             <div className="flex items-center gap-2 mb-3">
-                                <ShoppingBag className="h-4 w-4 text-[#F7CA00]" />
+                                <ShoppingBag className="h-4 w-4 text-[#EEAF1C]" />
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-white">Sale Cart</h3>
-                                {totalItems > 0 && <span className="ml-auto text-xs font-semibold px-2 py-0.5 bg-[#F7CA00]/10 text-[#F7CA00] rounded-full">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>}
+                                {totalItems > 0 && <span className="ml-auto text-xs font-semibold px-2 py-0.5 bg-[#EEAF1C]/10 text-[#EEAF1C] rounded-full">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>}
                             </div>
                             <div className="space-y-2">
                                 <select
                                     value={customerId || ''}
                                     onChange={e => setCustomerId(e.target.value || null)}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                                 >
                                     <option value="">Guest / Walk-in</option>
                                     {users.map((u: any) => (
@@ -479,7 +479,7 @@ export default function PointOfSalePage() {
                                         value={guestName}
                                         onChange={e => setGuestName(e.target.value)}
                                         placeholder="Guest name (optional)"
-                                        className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] placeholder:text-slate-400"
+                                        className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] placeholder:text-slate-400"
                                     />
                                 )}
                             </div>
@@ -517,7 +517,7 @@ export default function PointOfSalePage() {
                                                         <Plus className="h-3 w-3" />
                                                     </button>
                                                 </div>
-                                                <span className="text-sm font-semibold text-[#F7CA00]">{formatCurrency(String(parseFloat(item.product.price || 0) * (Number(item.quantity) || 0)))}</span>
+                                                <span className="text-sm font-semibold text-[#EEAF1C]">{formatCurrency(String(parseFloat(item.product.price || 0) * (Number(item.quantity) || 0)))}</span>
                                             </div>
                                         </div>
                                         <button onClick={() => removeFromCart(item.product.id)} className="p-1 text-slate-300 hover:text-red-500 transition-colors">
@@ -556,7 +556,7 @@ export default function PointOfSalePage() {
                             <button
                                 onClick={() => handleCompleteSale()}
                                 disabled={cart.length === 0 || isProcessing}
-                                className="w-full py-2.5 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-30 shadow-lg shadow-blue-500/30"
+                                className="w-full py-2.5 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-30 shadow-lg shadow-blue-500/30"
                             >
                                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" fill="currentColor" />}
                                 {isProcessing ? 'Processing...' : 'Complete Sale'}
@@ -576,10 +576,10 @@ export default function PointOfSalePage() {
             {showCardModal && (
                 <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCardModal(false)} />
-                    <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl max-w-sm w-full shadow-xl relative z-10 animate-in zoom-in-95 duration-200 overflow-hidden">
+                    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl max-w-sm w-full shadow-xl relative z-10 animate-in zoom-in-95 duration-200 overflow-hidden">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div className="flex items-center gap-2">
-                                <CardIcon className="h-4 w-4 text-[#F7CA00]" />
+                                <CardIcon className="h-4 w-4 text-[#EEAF1C]" />
                                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Card Details</h3>
                             </div>
                             <button onClick={() => setShowCardModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
@@ -607,7 +607,7 @@ export default function PointOfSalePage() {
                             </div>
                             <button
                                 onClick={() => { if (cardDetails?.number) { setShowCardModal(false); setShowConfirmModal(true); } }}
-                                className="w-full py-2.5 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                className="w-full py-2.5 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                             >
                                 Confirm Card
                             </button>
@@ -620,18 +620,18 @@ export default function PointOfSalePage() {
             {showConfirmModal && (
                 <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)} />
-                    <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl max-w-sm w-full shadow-xl relative z-10 animate-in zoom-in-95 duration-200 overflow-hidden">
+                    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl max-w-sm w-full shadow-xl relative z-10 animate-in zoom-in-95 duration-200 overflow-hidden">
                         <div className="p-6 text-center">
-                            <div className="w-14 h-14 bg-[#F7CA00]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                {paymentMethod === 'cash' ? <Banknote className="h-7 w-7 text-[#F7CA00]" /> : <CardIcon className="h-7 w-7 text-[#F7CA00]" />}
+                            <div className="w-14 h-14 bg-[#EEAF1C]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                {paymentMethod === 'cash' ? <Banknote className="h-7 w-7 text-[#EEAF1C]" /> : <CardIcon className="h-7 w-7 text-[#EEAF1C]" />}
                             </div>
                             <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Confirm {paymentMethod === 'cash' ? 'Cash' : 'Card'} Payment</h3>
                             <div className="bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg p-4 my-4">
                                 <p className="text-xs text-slate-500 mb-1">Total amount</p>
-                                <p className="text-2xl font-bold text-[#F7CA00]">{formatCurrency(String(cartTotal))}</p>
+                                <p className="text-2xl font-bold text-[#EEAF1C]">{formatCurrency(String(cartTotal))}</p>
                             </div>
                             <div className="flex flex-col gap-2">
-                                <button onClick={() => { setShowConfirmModal(false); handleCompleteSale(true); }} className="w-full py-2.5 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                                <button onClick={() => { setShowConfirmModal(false); handleCompleteSale(true); }} className="w-full py-2.5 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
                                     Confirm & Complete
                                 </button>
                                 <button onClick={() => { setShowConfirmModal(false); if (paymentMethod === 'card') setShowCardModal(true); }} className="w-full py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm font-medium text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
@@ -645,3 +645,4 @@ export default function PointOfSalePage() {
         </div>
     );
 }
+

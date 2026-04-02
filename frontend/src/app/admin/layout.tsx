@@ -42,7 +42,7 @@ function SearchItem({ href, icon: Icon, iconBg, iconColor, title, subtitle, onCl
                 <Icon className={`w-4 h-4 ${iconColor}`} />
             </div>
             <div className="min-w-0">
-                <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#F7CA00] dark:group-hover:text-[#FFA41C] truncate">{title}</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#EEAF1C] dark:group-hover:text-[#FFA41C] truncate">{title}</p>
                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{subtitle}</p>
             </div>
         </Link>
@@ -63,7 +63,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
             </button>
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center">
                 <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight">AL-QAVI</span>
-                <span className="text-[8px] font-black tracking-[0.2em] text-[#F7CA00] dark:text-[#F7CA00] -mt-0.5 uppercase">Cosmetics Hub</span>
+                <span className="text-[8px] font-black tracking-[0.2em] text-[#EEAF1C] dark:text-[#EEAF1C] -mt-0.5 uppercase">Cosmetics Hub</span>
             </Link>
             <div className="flex items-center gap-2">
                 <button onClick={onToggleNotifications} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition relative">
@@ -71,7 +71,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
                     {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-800" />}
                 </button>
                 <button onClick={onToggleProfile}
-                    className="w-10 h-10 bg-[#F7CA00] rounded-xl flex items-center justify-center text-[#131921] font-black text-xs hover:bg-[#1E40AF] transition-all shadow-lg shadow-blue-100 dark:shadow-none overflow-hidden">
+                    className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center text-[#131921] font-black text-xs hover:bg-[#1E40AF] transition-all shadow-lg shadow-blue-100 dark:shadow-none overflow-hidden">
                     {adminAvatar ? (
                         <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -186,7 +186,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 setCompactMode(s.compact_mode ?? false);
                 setAnimationsEnabled(s.animations ?? true);
                 setSidebarCollapsed(s.sidebar_collapsed ?? false);
-            }).catch(() => {});
+            }).catch(() => { });
         };
 
         refreshAdminState();
@@ -335,9 +335,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const noResults = sp.length === 0 && so.length === 0 && su.length === 0;
 
     return (
-        <AuthGuard allowedRoles={['admin']}>
+        <AuthGuard allowedRoles={['admin', 'staff', 'supplier']}>
             <div className={cn(
-                "h-screen bg-[#f8fafc] dark:bg-[#111213] flex flex-col font-sans overflow-hidden print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]",
+                "h-screen bg-[#f8fafc] dark:bg-[#070F14] flex flex-col font-sans overflow-hidden print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]",
                 animationsEnabled ? "transition-colors duration-500" : "transition-none",
                 theme,
                 compactMode ? "text-[12px]" : "text-sm",
@@ -384,19 +384,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:overflow-visible print:min-h-auto">
 
                         {/* ═══ PREMIUM COMMAND NAVBAR ═══ */}
-                        <div className="hidden md:flex bg-[#F9FAFB]/90 dark:bg-[#1B1C1E]/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5 px-8 py-3.5 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-xl print:hidden sticky top-0 transition-all duration-300">
+                        <div className="hidden md:flex bg-[#F9FAFB]/90 dark:bg-[#0D1921]/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5 px-8 py-3.5 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-xl print:hidden sticky top-0 transition-all duration-300">
 
                             {/* Refined Search Area */}
                             <div className="relative flex-1 max-w-lg group">
-                                <div className="flex items-center gap-3.5 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 px-5 py-2.5 w-full focus-within:border-[#F7CA00] focus-within:ring-4 focus-within:ring-[#F7CA00]/10 transition-all duration-500 shadow-sm group-hover:shadow-md">
-                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors duration-300" />
+                                <div className="flex items-center gap-3.5 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 px-5 py-2.5 w-full focus-within:border-[#EEAF1C] focus-within:ring-4 focus-within:ring-[#EEAF1C]/10 transition-all duration-500 shadow-sm group-hover:shadow-md">
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors duration-300" />
                                     <input type="text" placeholder="Command Search: products, orders, customers..."
                                         className="bg-transparent text-[11px] outline-none w-full text-slate-700 dark:text-slate-100 placeholder:text-slate-400/70 font-black uppercase tracking-wider"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
                                         onBlur={closeSearch} />
-                                    {isSearching && <div className="w-4 h-4 rounded-full border-2 border-[#F7CA00] border-t-transparent animate-spin flex-shrink-0" />}
+                                    {isSearching && <div className="w-4 h-4 rounded-full border-2 border-[#EEAF1C] border-t-transparent animate-spin flex-shrink-0" />}
                                     <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-white/5 text-[9px] font-black text-slate-400 uppercase tracking-tighter">
                                         <span>CMD</span>
                                         <span className="opacity-40">/</span>
@@ -406,7 +406,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                                 {/* Intelligent Search Dropdown */}
                                 {showSearchDropdown && (
-                                    <div className="absolute top-full mt-3 left-0 right-0 bg-white/95 dark:bg-[#0f1012]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <div className="absolute top-full mt-3 left-0 right-0 bg-white/95 dark:bg-[#070F14]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
                                         <div className="max-h-[32rem] overflow-y-auto p-3 space-y-3 custom-scrollbar">
                                             {noResults && !isSearching && (
                                                 <div className="p-8 text-center space-y-2">
@@ -418,7 +418,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             )}
                                             {sp.length > 0 && (
                                                 <div className="space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#F7CA00]/30 decoration-2 underline-offset-4">Logistics: Products</p>
+                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#EEAF1C]/30 decoration-2 underline-offset-4">Logistics: Products</p>
                                                     {sp.map((p, i) => (
                                                         <SearchItem key={i} href="/admin/products" icon={Package}
                                                             iconBg="bg-blue-50" iconColor="text-blue-500"
@@ -429,7 +429,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             )}
                                             {so.length > 0 && (
                                                 <div className="space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#F7CA00]/30 decoration-2 underline-offset-4">Operations: Orders</p>
+                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#EEAF1C]/30 decoration-2 underline-offset-4">Operations: Orders</p>
                                                     {so.map((o, i) => (
                                                         <SearchItem key={i} href="/admin/sales" icon={ShoppingCart}
                                                             iconBg="bg-blue-50" iconColor="text-blue-500"
@@ -441,7 +441,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             )}
                                             {su.length > 0 && (
                                                 <div className="space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#F7CA00]/30 decoration-2 underline-offset-4">Security: Personnel</p>
+                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#EEAF1C]/30 decoration-2 underline-offset-4">Security: Personnel</p>
                                                     {su.map((u, i) => (
                                                         <SearchItem key={i} href="/admin/users" icon={User}
                                                             iconBg="bg-purple-50" iconColor="text-purple-500"
@@ -459,7 +459,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {/* Right Tactical Actions */}
                             <div className="flex items-center gap-3 relative">
                                 <Link href="/"
-                                    className="hidden lg:flex items-center gap-2.5 text-[10px] font-black text-white bg-[#F7CA00] px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-[0.1em] border border-white/10 active:scale-95">
+                                    className="hidden lg:flex items-center gap-2.5 text-[10px] font-black text-white bg-[#EEAF1C] px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-[0.1em] border border-white/10 active:scale-95">
                                     Live Store Front <ExternalLink className="h-3.5 w-3.5" />
                                 </Link>
 
@@ -470,11 +470,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     <button onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
                                         className={`relative p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md
                                             ${notifOpen
-                                                ? 'bg-[#F7CA00] text-white border-[#F7CA00] shadow-[0_0_20px_rgba(29,78,216,0.4)]'
-                                                : 'bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-[#F7CA00]/30 hover:-translate-y-1'}`}>
+                                                ? 'bg-[#EEAF1C] text-white border-[#EEAF1C] shadow-[0_0_20px_rgba(29,78,216,0.4)]'
+                                                : 'bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-[#EEAF1C]/30 hover:-translate-y-1'}`}>
                                         <Bell className="h-5 w-5" strokeWidth={2.5} />
                                         {unreadCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-black rounded-lg flex items-center justify-center border-2 border-white dark:border-[#0f1012] shadow-xl animate-bounce">
+                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-black rounded-lg flex items-center justify-center border-2 border-white dark:border-[#070F14] shadow-xl animate-bounce">
                                                 {unreadCount}
                                             </span>
                                         )}
@@ -491,23 +491,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                                 {/* Dynamic Theme Integration */}
                                 <button onClick={toggleTheme}
-                                    className="relative p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-[#F7CA00] transition-all duration-500 hover:-translate-y-1 w-11 h-11 flex items-center justify-center group overflow-hidden">
+                                    className="relative p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-[#EEAF1C] transition-all duration-500 hover:-translate-y-1 w-11 h-11 flex items-center justify-center group overflow-hidden">
                                     <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100'}`}>
                                         <Moon className="h-5 w-5" />
                                     </div>
                                     <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 -translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100 rotate-0'}`}>
-                                        <Sun className="h-5 w-5 text-[#F7CA00]" />
+                                        <Sun className="h-5 w-5 text-[#EEAF1C]" />
                                     </div>
-                                    <div className="absolute inset-0 bg-[#F7CA00]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="absolute inset-0 bg-[#EEAF1C]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
 
                                 {/* Command Personnel Identity */}
                                 <div className="relative pl-1" ref={profileRef}>
                                     <button onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
                                         className={`flex items-center gap-3.5 px-3.5 py-2 rounded-2xl transition-all duration-500 border border-transparent group
-                                            ${profileOpen ? 'bg-[#F7CA00]/5 border-[#F7CA00]/20 ring-4 ring-[#F7CA00]/5' : 'hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-white/10'}`}>
+                                            ${profileOpen ? 'bg-[#EEAF1C]/5 border-[#EEAF1C]/20 ring-4 ring-[#EEAF1C]/5' : 'hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-white/10'}`}>
                                         <div className="relative">
-                                            <div className="w-10 h-10 bg-[#F7CA00] rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-white/10 overflow-hidden shadow-lg group-hover:rotate-6 transition-transform">
+                                            <div className="w-10 h-10 bg-[#EEAF1C] rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-white/10 overflow-hidden shadow-lg group-hover:rotate-6 transition-transform">
                                                 {adminAvatar ? (
                                                     <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
                                                 ) : (
@@ -516,13 +516,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#0f1012] rounded-full" />
+                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#070F14] rounded-full" />
                                         </div>
                                         <div className="hidden xl:block text-left min-w-0">
                                             <p className="text-slate-900 dark:text-white font-black text-[12px] leading-tight truncate max-w-[140px] uppercase tracking-wider">{adminName}</p>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className="w-1 h-1 rounded-full bg-[#F7CA00]" />
-                                                <p className="text-[9px] text-[#F7CA00] font-black uppercase tracking-[0.2em] truncate max-w-[140px] opacity-80">{adminEmail || 'Admin Node'}</p>
+                                                <div className="w-1 h-1 rounded-full bg-[#EEAF1C]" />
+                                                <p className="text-[9px] text-[#EEAF1C] font-black uppercase tracking-[0.2em] truncate max-w-[140px] opacity-80">{adminEmail || 'Admin Node'}</p>
                                             </div>
                                         </div>
                                     </button>
@@ -549,3 +549,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </AuthGuard>
     );
 }
+

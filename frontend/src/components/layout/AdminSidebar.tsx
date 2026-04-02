@@ -8,7 +8,7 @@ import {
     Settings, LogOut, Warehouse, Clock,
     Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
     BarChart3, Boxes, FolderTree, Bell, FileText, Database, Truck,
-    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock
+    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock, UserCheck
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService, orderService } from '@/lib/api';
@@ -105,11 +105,11 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
             ],
         },
         {
-            label: 'Company Hub',
+            label: 'Suppliers & Partners',
             items: [
                 { name: 'Company', href: '/admin/company', icon: Building2 },
-                { name: 'Company Category', href: '/admin/company/categories', icon: Tag },
-                { name: 'Suppliers', href: '/admin/company/suppliers', icon: Users },
+                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'Company categories', href: '/admin/company/categories', icon: Layers },
             ],
         },
         {
@@ -155,11 +155,13 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
         {
             label: 'Analytics & Reports',
             items: [
-                { name: 'Intelligence Center', href: '/admin/reports', icon: BarChart3 },
-                { name: 'Stock & Logistics', href: '/admin/reports/inventory', icon: Package },
-                { name: 'Client Matrix', href: '/admin/reports/customers', icon: Users },
-                { name: 'Procurement Audit', href: '/admin/reports/purchases', icon: Truck },
-                { name: 'Data Engine Hub', href: '/admin/reports/data-hub', icon: Database },
+                { name: 'Reports Hub', href: '/admin/reports', icon: BarChart3 },
+                { name: 'Reports Stock', href: '/admin/reports?type=stock', icon: Package },
+                { name: 'Stock Adjustments', href: '/admin/reports?type=inventory/adjustments', icon: Boxes },
+                { name: 'Procurement Audit', href: '/admin/reports?type=purchase_orders', icon: Truck },
+                { name: 'Sale & Returns', href: '/admin/reports?type=sales_returns', icon: RotateCcw },
+                { name: 'Sale Statements', href: '/admin/reports?type=sales', icon: FileText },
+                { name: 'Accounting', href: '/admin/reports?type=accounting', icon: Banknote },
             ],
         },
         {
@@ -175,16 +177,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
     const userRole = (adminUser?.role_name || adminUser?.role || '').toString().toLowerCase();
     const isSupplier = userRole === 'supplier';
 
-    const filteredGroups = menuGroups.map(group => {
-        if (isSupplier) {
-            if (group.label === 'Operations') return { ...group, items: group.items.filter(i => i.name === 'Dashboard') };
-            if (group.label === 'Catalog') return { ...group, items: group.items.filter(i => i.name === 'All Products').map(i => ({ ...i, name: 'My Products' })) };
-            if (group.label === 'Sales & Returns') return { ...group, items: group.items.filter(i => i.name === 'Sale Registry') };
-            if (group.label === 'Inventory') return { ...group, items: group.items.filter(i => i.name === 'Stock Management') };
-            return null;
-        }
-        return group;
-    }).filter(g => g !== null) as NavGroup[];
+    const filteredGroups = menuGroups;
 
     const getAllItems = () => {
         const items: string[] = [];
@@ -204,17 +197,17 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
 
     const isActive = (href: string) => activeHref === href;
     return (
-        <div className={`${isCollapsed ? 'w-20' : 'w-60'} bg-[#F9FAFB]/95 dark:bg-[#1B1C1E]/95 backdrop-blur-2xl h-screen flex flex-col flex-shrink-0 z-30 font-sans border-r border-slate-200/50 dark:border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.1)] dark:shadow-[0_0_50px_rgba(0,0,0,0.4)] relative transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]`}>
+        <div className={`${isCollapsed ? 'w-20' : 'w-60'} bg-[#F9FAFB]/95 dark:bg-[#111D29]/95 backdrop-blur-2xl h-screen flex flex-col flex-shrink-0 z-30 font-sans border-r border-slate-200/50 dark:border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.1)] dark:shadow-[0_0_50px_rgba(0,0,0,0.4)] relative transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]`}>
 
             {/* ── Branded Header ── */}
             <div className={`px-4 pt-8 pb-6 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} transition-all duration-500 relative`}>
                 {!isCollapsed && (
                     <Link href="/admin/dashboard" className="flex items-center gap-3 group shrink-0 animate-in fade-in slide-in-from-left-6 duration-700">
-                        <div className="w-9 h-9 bg-[#F7CA00] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30 group-hover:rotate-12 transition-all duration-500 border border-white/20">
+                        <div className="w-9 h-9 bg-[#EEAF1C] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30 group-hover:rotate-12 transition-all duration-500 border border-white/20">
                             <span className="text-sm font-black text-white">A</span>
                         </div>
                         <div className="flex flex-col">
-                            <h1 className="font-black text-slate-900 dark:text-white text-[12px] tracking-tighter leading-none uppercase">AL-QAVI <span className="text-[#F7CA00]">TRADES</span></h1>
+                            <h1 className="font-black text-slate-900 dark:text-white text-[12px] tracking-tighter leading-none uppercase">AL-QAVI <span className="text-[#EEAF1C]">TRADES</span></h1>
                             <p className="text-[8px] font-black text-slate-400 dark:text-white/30 tracking-[0.4em] uppercase mt-1">Executive Hub</p>
                         </div>
                     </Link>
@@ -222,13 +215,13 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
 
                 <button
                     onClick={onToggle}
-                    className={`p-1.5 rounded-lg bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-[#F7CA00]/10 text-slate-400 dark:text-slate-500 hover:text-[#F7CA00] transition-all duration-500 border border-slate-200/50 dark:border-white/10 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 ${isCollapsed ? 'mx-auto' : ''}`}
+                    className={`p-1.5 rounded-lg bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-[#EEAF1C]/10 text-slate-400 dark:text-slate-500 hover:text-[#EEAF1C] transition-all duration-500 border border-slate-200/50 dark:border-white/10 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 ${isCollapsed ? 'mx-auto' : ''}`}
                 >
                     {isCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
                 </button>
 
                 {/* Subtle top accent */}
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#F7CA00]/20 to-transparent" />
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#EEAF1C]/20 to-transparent" />
             </div>
 
             {/* ── Premium Navigation ── */}
@@ -237,7 +230,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                     <div key={group.label} className="space-y-1.5">
                         {!isCollapsed && (
                             <div className="px-3 mb-2">
-                                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-white/20 underline decoration-[#F7CA00]/20 decoration-2 underline-offset-4">
+                                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-white/20 underline decoration-[#EEAF1C]/20 decoration-2 underline-offset-4">
                                     {group.label}
                                 </p>
                             </div>
@@ -249,28 +242,28 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                                     <Link key={item.name} href={item.href}
                                         className={`group relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl transition-all duration-500
                                             ${active
-                                                ? 'bg-[#F7CA00]/10 text-[#F7CA00] border-l-4 border-[#F7CA00] scale-[1.01] z-10'
-                                                : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:text-[#F7CA00] border border-transparent hover:border-slate-100 dark:hover:border-white/5'}`}>
+                                                ? 'bg-[#EEAF1C]/10 text-[#EEAF1C] border-l-4 border-[#EEAF1C] scale-[1.01] z-10'
+                                                : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:text-[#EEAF1C] border border-transparent hover:border-slate-100 dark:hover:border-white/5'}`}>
 
                                         <div className="flex items-center gap-3">
-                                            <item.icon className={`h-4.5 w-4.5 shrink-0 transition-all duration-500 ${active ? 'text-[#F7CA00] drop-shadow-[0_0_8px_rgba(29,78,216,0.3)]' : 'text-slate-400 dark:text-slate-500 group-hover:text-[#F7CA00] group-hover:scale-110'}`} strokeWidth={active ? 3 : 2} />
+                                            <item.icon className={`h-4.5 w-4.5 shrink-0 transition-all duration-500 ${active ? 'text-[#EEAF1C] drop-shadow-[0_0_8px_rgba(29,78,216,0.3)]' : 'text-slate-400 dark:text-slate-500 group-hover:text-[#EEAF1C] group-hover:scale-110'}`} strokeWidth={active ? 3 : 2} />
                                             {!isCollapsed && <span className={`text-[10px] font-black uppercase tracking-wide transition-all duration-500 ${active ? 'translate-x-1' : ''}`}>{item.name}</span>}
                                         </div>
 
                                         {!isCollapsed && item.badge !== undefined && item.badge > 0 && (
                                             <span className={`text-[10px] px-2.5 py-0.5 font-black rounded-lg text-center min-w-[24px] transition-all duration-500
                                                 ${active
-                                                    ? 'bg-[#F7CA00] text-white shadow-md'
+                                                    ? 'bg-[#EEAF1C] text-white shadow-md'
                                                     : item.alert ? 'bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/30' : 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-slate-400'}`}>
                                                 {item.badge}
                                             </span>
                                         )}
 
                                         {isCollapsed && (
-                                            <div className="absolute left-full ml-6 px-4 py-2.5 bg-white dark:bg-[#0f1012] border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white text-[11px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 translate-x-[-15px] group-hover:translate-x-0 z-50 whitespace-nowrap shadow-[20px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[20px_0_40px_rgba(0,0,0,0.5)]">
+                                            <div className="absolute left-full ml-6 px-4 py-2.5 bg-white dark:bg-[#070F14] border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white text-[11px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 translate-x-[-15px] group-hover:translate-x-0 z-50 whitespace-nowrap shadow-[20px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[20px_0_40px_rgba(0,0,0,0.5)]">
                                                 {item.name}
                                                 {item.badge !== undefined && item.badge > 0 && (
-                                                    <span className="ml-2 text-[#F7CA00] opacity-100">{item.badge}</span>
+                                                    <span className="ml-2 text-[#EEAF1C] opacity-100">{item.badge}</span>
                                                 )}
                                             </div>
                                         )}
@@ -292,8 +285,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                 <Link href="/admin/settings"
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-500 text-[11px] font-black uppercase tracking-wider border border-transparent group
                         ${isActive('/admin/settings')
-                            ? 'bg-[#F7CA00] text-white shadow-xl shadow-blue-500/20'
-                            : 'text-slate-500 dark:text-slate-500 hover:bg-white dark:hover:bg-white/5 hover:text-[#F7CA00] hover:shadow-lg dark:hover:shadow-none hover:border-slate-100 dark:hover:border-white/5'}`}>
+                            ? 'bg-[#EEAF1C] text-white shadow-xl shadow-blue-500/20'
+                            : 'text-slate-500 dark:text-slate-500 hover:bg-white dark:hover:bg-white/5 hover:text-[#EEAF1C] hover:shadow-lg dark:hover:shadow-none hover:border-slate-100 dark:hover:border-white/5'}`}>
                     <Settings className={`h-4.5 w-4.5 transition-all duration-500 group-hover:rotate-90 ${isActive('/admin/settings') ? 'text-white' : ''}`} />
                     {!isCollapsed && <span>Control Center</span>}
                 </Link>
@@ -310,3 +303,4 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
         </div>
     );
 }
+

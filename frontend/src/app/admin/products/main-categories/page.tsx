@@ -11,8 +11,8 @@ import { mainCategoryService, productService } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border rounded-xl text-sm outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 export default function MainCategoriesPage() {
@@ -142,7 +142,7 @@ export default function MainCategoriesPage() {
                 <div className="mb-8">
                     <button 
                         onClick={() => setView('list')} 
-                        className="text-sm font-medium text-slate-500 hover:text-[#F7CA00] transition-colors mb-4 flex items-center gap-1"
+                        className="text-sm font-medium text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
                     >
                         <ChevronLeft className="h-4 w-4" /> Back to List
                     </button>
@@ -155,9 +155,9 @@ export default function MainCategoriesPage() {
                 <form onSubmit={handleSave} className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
-                            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                                 <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                    <Layers className="h-4 w-4 text-[#F7CA00]" />
+                                    <Layers className="h-4 w-4 text-[#EEAF1C]" />
                                     <h2 className="text-sm font-bold text-slate-800 dark:text-white">Category Details</h2>
                                 </div>
                                 <div className="p-6 space-y-5">
@@ -197,13 +197,13 @@ export default function MainCategoriesPage() {
                         </div>
 
                         <div className="lg:col-span-2 space-y-6">
-                             <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm h-full flex flex-col">
+                             <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm h-full flex flex-col">
                                 <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
                                     <div className="flex items-center gap-3">
-                                        <Package className="h-4 w-4 text-[#F7CA00]" />
+                                        <Package className="h-4 w-4 text-[#EEAF1C]" />
                                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">Link Products</h2>
                                     </div>
-                                    <span className="text-xs font-bold text-[#F7CA00] bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40">
+                                    <span className="text-xs font-bold text-[#EEAF1C] bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40">
                                         {form.product_ids.length} selected
                                     </span>
                                 </div>
@@ -214,7 +214,7 @@ export default function MainCategoriesPage() {
                                             value={prodSearch}
                                             onChange={e => setProdSearch(e.target.value)}
                                             placeholder="Filter products to link..."
-                                            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] transition-all"
+                                            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all"
                                         />
                                     </div>
                                 </div>
@@ -226,13 +226,13 @@ export default function MainCategoriesPage() {
                                                 key={p.id}
                                                 type="button"
                                                 onClick={() => toggleProductSelection(p.id)}
-                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left border transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10 border-[#F7CA00]/30' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-[#F7CA00]/20'}`}
+                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left border transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10 border-[#EEAF1C]/30' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-[#EEAF1C]/20'}`}
                                             >
-                                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#F7CA00] border-[#F7CA00]' : 'bg-white dark:bg-white/10 border-slate-300 dark:border-white/20'}`}>
+                                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#EEAF1C] border-[#EEAF1C]' : 'bg-white dark:bg-white/10 border-slate-300 dark:border-white/20'}`}>
                                                     {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#F7CA00]' : 'text-slate-700 dark:text-slate-300'}`}>{p.name}</p>
+                                                    <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#EEAF1C]' : 'text-slate-700 dark:text-slate-300'}`}>{p.name}</p>
                                                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">SKU: {p.sku}</p>
                                                 </div>
                                             </button>
@@ -254,7 +254,7 @@ export default function MainCategoriesPage() {
                         <button
                             type="submit"
                             disabled={saving}
-                            className="flex items-center gap-2 px-8 py-2.5 bg-[#F7CA00] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                            className="flex items-center gap-2 px-8 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Save Category
@@ -277,14 +277,14 @@ export default function MainCategoriesPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={handleNew}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         Add Main Category
@@ -300,11 +300,11 @@ export default function MainCategoriesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search categories..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                    <Activity className="h-3.5 w-3.5 text-[#F7CA00]" />
+                    <Activity className="h-3.5 w-3.5 text-[#EEAF1C]" />
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
                         {categories.length} Total Categories
                     </span>
@@ -312,7 +312,7 @@ export default function MainCategoriesPage() {
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -343,12 +343,12 @@ export default function MainCategoriesPage() {
                                 filtered.map((cat) => (
                                     <tr key={cat.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
-                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#F7CA00] transition-colors leading-tight">{cat.name}</p>
+                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#EEAF1C] transition-colors leading-tight">{cat.name}</p>
                                             {cat.description && <p className="text-[10px] text-slate-400 font-medium truncate max-w-[250px] mt-0.5">{cat.description}</p>}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-[#F7CA00] flex items-center justify-center text-xs font-bold border border-blue-100 dark:border-blue-900/30">
+                                                <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-[#EEAF1C] flex items-center justify-center text-xs font-bold border border-blue-100 dark:border-blue-900/30">
                                                     {cat.products?.length || cat.product_details?.length || 0}
                                                 </div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Products</span>
@@ -363,7 +363,7 @@ export default function MainCategoriesPage() {
                                             <div className="flex items-center justify-end gap-1">
                                                 <button 
                                                     onClick={() => handleEdit(cat)} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#F7CA00] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
@@ -385,7 +385,7 @@ export default function MainCategoriesPage() {
 
             {deleteItem && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                          <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -397,7 +397,7 @@ export default function MainCategoriesPage() {
                         </div>
                         <div className="p-8">
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                                Confirm permanent removal of <span className="text-[#F7CA00] font-bold">"{deleteItem.name}"</span>?
+                                Confirm permanent removal of <span className="text-[#EEAF1C] font-bold">"{deleteItem.name}"</span>?
                                 <br/><span className="text-[10px] text-red-500 font-bold uppercase mt-2 block">System hierarchy may be impacted.</span>
                             </p>
                         </div>
@@ -417,3 +417,4 @@ export default function MainCategoriesPage() {
         </div>
     );
 }
+

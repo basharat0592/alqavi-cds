@@ -24,10 +24,10 @@ const INPUT = ({ ...props }) => (
     />
 );
 
-const SELECT = `w-full px-5 py-3 bg-white/95 dark:bg-[#1B1C1E]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white outline-none focus:border-[#1D4ED8]/50 transition-all shadow-xl shadow-[#1D4ED8]/5 cursor-pointer disabled:opacity-50`;
+const SELECT = `w-full px-5 py-3 bg-white/95 dark:bg-[#0D1921]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white outline-none focus:border-[#1D4ED8]/50 transition-all shadow-xl shadow-[#1D4ED8]/5 cursor-pointer disabled:opacity-50`;
 
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white/95 dark:bg-[#1B1C1E]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-[#1D4ED8]/5 overflow-hidden ${className}`}>
+    <div className={`bg-white/95 dark:bg-[#0D1921]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-[#1D4ED8]/5 overflow-hidden ${className}`}>
         {children}
     </div>
 );

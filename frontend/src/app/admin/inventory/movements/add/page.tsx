@@ -78,7 +78,7 @@ export default function AddMovementPage() {
     const inputCls = (field: string) =>
         `w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border rounded text-sm font-medium text-gray-900 dark:text-white outline-none transition-all focus:bg-white dark:focus:bg-slate-900 ${errors[field]
             ? 'border-red-300 focus:border-red-400'
-            : 'border-gray-200 dark:border-slate-700 focus:border-[#F7CA00]'
+            : 'border-gray-200 dark:border-slate-700 focus:border-[#EEAF1C]'
         }`;
 
     const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-slate-400 mb-1.5";
@@ -88,7 +88,7 @@ export default function AddMovementPage() {
 
             {/* Page Header */}
             <div className="flex items-center gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
-                <Link href="/admin/inventory/movements" className="p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-gray-400 hover:text-[#F7CA00] transition-all shadow-sm">
+                <Link href="/admin/inventory/movements" className="p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-gray-400 hover:text-[#EEAF1C] transition-all shadow-sm">
                     <ArrowLeft className="h-4 w-4" />
                 </Link>
                 <div>
@@ -168,7 +168,7 @@ export default function AddMovementPage() {
                         Cancel
                     </Link>
                     <button type="submit" disabled={saving}
-                        style={{ backgroundColor: '#F7CA00' }}
+                        style={{ backgroundColor: '#EEAF1C' }}
                         className="flex items-center gap-2 px-8 py-2 text-white font-bold text-[10px] uppercase tracking-widest rounded transition-all shadow-sm disabled:opacity-50">
                         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                         {saving ? 'Recording...' : 'Commit Movement Record'}
@@ -178,3 +178,4 @@ export default function AddMovementPage() {
         </div>
     );
 }
+

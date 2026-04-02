@@ -10,8 +10,8 @@ import {
 import { companyCategoryService, CompanyCategory } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border rounded-xl text-sm outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 // ─── Category Form View ──────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ function CategoryForm({
             <div className="mb-8">
                 <button 
                     onClick={onCancel} 
-                    className="text-sm font-medium text-slate-500 hover:text-[#F7CA00] transition-colors mb-4 flex items-center gap-1"
+                    className="text-sm font-medium text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
                 >
                     <ChevronLeft className="h-4 w-4" /> Back to List
                 </button>
@@ -67,9 +67,9 @@ function CategoryForm({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                     <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <Tag className="h-4 w-4 text-[#F7CA00]" />
+                        <Tag className="h-4 w-4 text-[#EEAF1C]" />
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">Category Identification</h2>
                     </div>
                     <div className="p-6 space-y-6">
@@ -133,7 +133,7 @@ function CategoryForm({
                                     checked={form.is_active}
                                     onChange={e => setForm({ ...form, is_active: e.target.checked })}
                                 />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F7CA00]"></div>
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#EEAF1C]"></div>
                                 <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">Operational Active</span>
                             </label>
                         </div>
@@ -151,7 +151,7 @@ function CategoryForm({
                     <button
                         type="submit"
                         disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-[#F7CA00] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                        className="flex items-center gap-2 px-8 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                     >
                         {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {editCat ? 'Update Category' : 'Create Category'}
@@ -235,14 +235,14 @@ export default function CompanyCategoriesPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={load}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={() => { setEditCat(null); setView('form'); }}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         New Category
@@ -258,11 +258,11 @@ export default function CompanyCategoriesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search categories..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                    <Activity className="h-3.5 w-3.5 text-[#F7CA00]" />
+                    <Activity className="h-3.5 w-3.5 text-[#EEAF1C]" />
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
                         {categories.length} Nodes
                     </span>
@@ -270,7 +270,7 @@ export default function CompanyCategoriesPage() {
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -302,7 +302,7 @@ export default function CompanyCategoriesPage() {
                                 filtered.map((cat) => (
                                     <tr key={cat.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
-                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#F7CA00] transition-colors">{cat.name}</p>
+                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#EEAF1C] transition-colors">{cat.name}</p>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">{cat.code || '--'}</span>
@@ -324,7 +324,7 @@ export default function CompanyCategoriesPage() {
                                             <div className="flex items-center justify-end gap-1">
                                                 <button 
                                                     onClick={() => handleEdit(cat)} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#F7CA00] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
+                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
@@ -346,7 +346,7 @@ export default function CompanyCategoriesPage() {
 
             {deleteCat && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -358,7 +358,7 @@ export default function CompanyCategoriesPage() {
                         </div>
                         <div className="p-8">
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                                Confirm permanent removal of <span className="text-[#F7CA00] font-bold">"{deleteCat.name}"</span>?
+                                Confirm permanent removal of <span className="text-[#EEAF1C] font-bold">"{deleteCat.name}"</span>?
                                 <br/><span className="text-[10px] text-red-500 font-bold uppercase mt-2 block">This action cannot be undone.</span>
                             </p>
                         </div>
@@ -378,3 +378,4 @@ export default function CompanyCategoriesPage() {
         </div>
     );
 }
+

@@ -14,26 +14,26 @@ import PageLoader from '@/components/ui/PageLoader';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
 
-const PRIMARY_BTN = "bg-[#F7CA00] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
+const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 
 function MetricCard({ label, value, icon: Icon, color, link }: { label: string; value: string | number; icon: any; color: string; link: string }) {
     return (
-        <Link href={link} className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 p-5 rounded-xl shadow-sm hover:border-[#F7CA00]/30 transition-all group flex flex-col justify-between h-full">
+        <Link href={link} className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 p-5 rounded-xl shadow-sm hover:border-[#EEAF1C]/30 transition-all group flex flex-col justify-between h-full">
             <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-xl bg-slate-50 dark:bg-white/5 group-hover:bg-[#F7CA00] group-hover:text-white transition-all`}>
+                <div className={`p-2 rounded-xl bg-slate-50 dark:bg-white/5 group-hover:bg-[#EEAF1C] group-hover:text-white transition-all`}>
                     <Icon className={`h-5 w-5 transition-colors ${color} group-hover:text-white`} />
                 </div>
                 <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</div>
             </div>
             <div>
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-[#F7CA00] transition-colors">{label}</p>
-                <div className="flex items-center gap-1 text-[9px] text-[#F7CA00] font-black mt-1 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-[#EEAF1C] transition-colors">{label}</p>
+                <div className="flex items-center gap-1 text-[9px] text-[#EEAF1C] font-black mt-1 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
                     Access Grid <ChevronRight className="h-3 w-3" />
                 </div>
             </div>
@@ -84,7 +84,7 @@ export default function StockManagementOverview() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#F7CA00] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Activity className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -117,19 +117,19 @@ export default function StockManagementOverview() {
                     <SectionCard>
                         <div className="px-6 py-4 bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
                             <h2 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Logistics Framework</h2>
-                            <ShieldCheck className="h-4 w-4 text-[#F7CA00]" />
+                            <ShieldCheck className="h-4 w-4 text-[#EEAF1C]" />
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-white/5">
                             {tools.map((tool, idx) => (
                                 <Link key={idx} href={tool.link} className="flex items-center p-6 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                    <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl flex items-center justify-center mr-5 group-hover:bg-[#F7CA00] group-hover:text-white transition-all transform group-hover:rotate-12">
+                                    <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl flex items-center justify-center mr-5 group-hover:bg-[#EEAF1C] group-hover:text-white transition-all transform group-hover:rotate-12">
                                         <tool.icon className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-[#F7CA00] transition-colors">{tool.name}</h3>
+                                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-[#EEAF1C] transition-colors">{tool.name}</h3>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 opacity-60">{tool.desc}</p>
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#F7CA00] transition-all transform group-hover:translate-x-1" />
+                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#EEAF1C] transition-all transform group-hover:translate-x-1" />
                                 </Link>
                             ))}
                         </div>
@@ -168,15 +168,15 @@ export default function StockManagementOverview() {
                         </div>
                     </SectionCard>
 
-                    <SectionCard className="p-6 bg-[#F7CA00]/5 border-[#F7CA00]/10 shadow-none">
+                    <SectionCard className="p-6 bg-[#EEAF1C]/5 border-[#EEAF1C]/10 shadow-none">
                         <div className="flex items-center gap-2 mb-4">
-                            <ShieldCheck className="h-4 w-4 text-[#F7CA00]" />
+                            <ShieldCheck className="h-4 w-4 text-[#EEAF1C]" />
                             <h3 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-widest">Network Health</h3>
                         </div>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase leading-relaxed mb-6 tracking-tight">
                             Matrix heartbeat is nominal. Logistics nodes are synchronized across the global fulfillment mesh.
                         </p>
-                        <div className="flex items-center gap-2 text-[9px] font-black text-[#F7CA00] uppercase tracking-[0.2em] animate-pulse">
+                        <div className="flex items-center gap-2 text-[9px] font-black text-[#EEAF1C] uppercase tracking-[0.2em] animate-pulse">
                             <RefreshCw className="h-3 w-3 animate-spin" /> Live Telemetry Linked
                         </div>
                     </SectionCard>
@@ -185,3 +185,4 @@ export default function StockManagementOverview() {
         </div>
     );
 }
+

@@ -16,12 +16,12 @@ import toast from 'react-hot-toast';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
 
-const PRIMARY_BTN = "bg-[#F7CA00] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
+const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 
 const STATUS_LIST = [
@@ -62,9 +62,9 @@ function StatusDropdown({
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 hover:border-[#F7CA00]/50 transition-all shadow-sm group"
+                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 hover:border-[#EEAF1C]/50 transition-all shadow-sm group"
             >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#F7CA00] group-hover:animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EEAF1C] group-hover:animate-pulse"></span>
                 {activeStatus.label}
                 <ChevronDown className={`h-3 w-3 opacity-50 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -79,8 +79,8 @@ function StatusDropdown({
                                 onClick={() => { onChange(orderId, s.value); setIsOpen(false); }}
                                 className={`w-full flex items-center px-4 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all
                                     ${currentStatus === s.value
-                                        ? 'bg-[#F7CA00] text-white'
-                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-[#F7CA00]'}`}
+                                        ? 'bg-[#EEAF1C] text-white'
+                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-[#EEAF1C]'}`}
                             >
                                 {s.label}
                             </button>
@@ -143,7 +143,7 @@ export default function RecentOrdersPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#F7CA00] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Activity className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -163,13 +163,13 @@ export default function RecentOrdersPage() {
 
             <div className="space-y-4">
                 {/* ── Filters ── */}
-                <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
+                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
                     <div className="relative flex-1 group w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                         <input
                             type="text"
                             placeholder="Locate active trade identifier..."
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F7CA00] transition-all font-medium"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] transition-all font-medium"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -216,11 +216,11 @@ export default function RecentOrdersPage() {
                                             <tr key={o.id} className="group hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 bg-blue-50 dark:bg-blue-900/10 text-[#F7CA00] rounded-lg flex items-center justify-center font-black text-[10px] group-hover:bg-[#F7CA00] group-hover:text-white transition-all">
+                                                        <div className="h-8 w-8 bg-blue-50 dark:bg-blue-900/10 text-[#EEAF1C] rounded-lg flex items-center justify-center font-black text-[10px] group-hover:bg-[#EEAF1C] group-hover:text-white transition-all">
                                                             ID
                                                         </div>
                                                         <div>
-                                                            <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#F7CA00] transition-colors tracking-tight">#{o.order_number}</div>
+                                                            <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#EEAF1C] transition-colors tracking-tight">#{o.order_number}</div>
                                                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{formatDate(o.created_at)}</div>
                                                         </div>
                                                     </div>
@@ -240,7 +240,7 @@ export default function RecentOrdersPage() {
                                                     <div className="flex justify-end items-center gap-2">
                                                         <Link
                                                             href={`/admin/sales?id=${o.id}`}
-                                                            className="p-1.5 rounded-lg text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                                            className="p-1.5 rounded-lg text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                                                             title="View Packet"
                                                         >
                                                             <Eye className="h-4 w-4" />
@@ -264,3 +264,4 @@ export default function RecentOrdersPage() {
         </div>
     );
 }
+

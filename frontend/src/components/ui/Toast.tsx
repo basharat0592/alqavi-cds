@@ -38,3 +38,4 @@ export function Toast({ message, type = 'success', onClose }: ToastProps) {
         </div>
     );
 }
+

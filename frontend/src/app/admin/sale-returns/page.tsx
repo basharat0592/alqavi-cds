@@ -48,7 +48,7 @@ const MOCK_RETURNS = [
 function ReturnDetailModal({ returnData, onClose }: { returnData: any; onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                     <div>
@@ -67,7 +67,7 @@ function ReturnDetailModal({ returnData, onClose }: { returnData: any; onClose: 
                             { label: 'Order ID', value: returnData.order_id },
                             { label: 'Customer', value: returnData.customer },
                             { label: 'Status', value: <StatusPill status={returnData.status} /> },
-                            { label: 'Total Value', value: <span className="text-base font-bold text-[#F7CA00]">{formatCurrency(returnData.total_value)}</span> },
+                            { label: 'Total Value', value: <span className="text-base font-bold text-[#EEAF1C]">{formatCurrency(returnData.total_value)}</span> },
                         ].map(({ label, value }) => (
                             <div key={label} className="p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/10">
                                 <p className="text-xs text-slate-500 mb-1">{label}</p>
@@ -106,7 +106,7 @@ function ReturnDetailModal({ returnData, onClose }: { returnData: any; onClose: 
                         Close
                     </button>
                     {returnData.status === 'pending' && (
-                        <button className="px-4 py-2 text-sm font-medium text-white bg-[#F7CA00] hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
+                        <button className="px-4 py-2 text-sm font-medium text-white bg-[#EEAF1C] hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
                             Authorize Return
                         </button>
                     )}
@@ -142,7 +142,7 @@ export default function SaleReturnsPage() {
                     <h1 className="text-xl font-bold text-slate-900 dark:text-white">Return Management</h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage customer return requests and refunds</p>
                 </div>
-                <button className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all w-fit" title="Refresh">
+                <button className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all w-fit" title="Refresh">
                     <RefreshCw className="h-4 w-4" />
                 </button>
             </div>
@@ -156,13 +156,13 @@ export default function SaleReturnsPage() {
                         placeholder="Search by return ID, customer, or order..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="All">All Statuses</option>
                     <option value="pending">Pending</option>
@@ -177,7 +177,7 @@ export default function SaleReturnsPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -203,7 +203,7 @@ export default function SaleReturnsPage() {
                                 filtered.map(r => (
                                     <tr key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
                                         <td className="px-4 py-3">
-                                            <span className="text-[#F7CA00] font-medium">{r.id}</span>
+                                            <span className="text-[#EEAF1C] font-medium">{r.id}</span>
                                             <p className="text-xs text-slate-400">{formatDate(r.date, { dateStyle: 'medium' })}</p>
                                         </td>
                                         <td className="px-4 py-3">
@@ -226,7 +226,7 @@ export default function SaleReturnsPage() {
                                             <div className="flex justify-end items-center gap-1">
                                                 <button
                                                     onClick={() => setSelectedReturn(r)}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors"
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
                                                     title="View details"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -248,3 +248,4 @@ export default function SaleReturnsPage() {
         </div>
     );
 }
+

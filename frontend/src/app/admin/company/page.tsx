@@ -12,8 +12,8 @@ import { companyService, companyCategoryService, CompanyInfo, CompanyCategory } 
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border rounded-xl text-sm outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 const EMPTY: Partial<CompanyInfo> = {
@@ -91,7 +91,7 @@ function CompanyForm({
             <div className="mb-8">
                 <button 
                     onClick={onCancel} 
-                    className="text-sm font-medium text-slate-500 hover:text-[#F7CA00] transition-colors mb-4 flex items-center gap-1"
+                    className="text-sm font-medium text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
                 >
                     <ChevronLeft className="h-4 w-4" /> Back to Registry
                 </button>
@@ -102,9 +102,9 @@ function CompanyForm({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                     <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <Building2 className="h-4 w-4 text-[#F7CA00]" />
+                        <Building2 className="h-4 w-4 text-[#EEAF1C]" />
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">Professional Profile</h2>
                     </div>
                     <div className="p-6 space-y-6">
@@ -151,7 +151,7 @@ function CompanyForm({
                                         checked={form.is_active}
                                         onChange={(e) => setForm((p: any) => ({ ...p, is_active: e.target.checked }))}
                                     />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F7CA00]"></div>
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#EEAF1C]"></div>
                                     <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">Active Entity</span>
                                 </label>
                             </div>
@@ -170,7 +170,7 @@ function CompanyForm({
                     <button
                         type="submit"
                         disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-[#F7CA00] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                        className="flex items-center gap-2 px-8 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                     >
                         {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Commit Changes
@@ -268,14 +268,14 @@ export default function CompanyPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={load}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all font-bold"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all font-bold"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 font-bold ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={() => { setEditCompany(null); setView('form'); }}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         Register Entity
@@ -291,13 +291,13 @@ export default function CompanyPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search system registry..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer h-[38px]"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer h-[38px]"
                 >
                     <option value="">All Categories</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -305,7 +305,7 @@ export default function CompanyPage() {
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -321,7 +321,7 @@ export default function CompanyPage() {
                                 <tr>
                                     <td colSpan={4} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3">
-                                            <div className="h-8 w-8 border-2 border-[#F7CA00] border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="h-8 w-8 border-2 border-[#EEAF1C] border-t-transparent rounded-full animate-spin"></div>
                                             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sourcing Registry...</p>
                                         </div>
                                     </td>
@@ -338,12 +338,12 @@ export default function CompanyPage() {
                                     <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 text-slate-400 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-[#F7CA00] group-hover:text-white transition-all">
+                                                <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 text-slate-400 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-[#EEAF1C] group-hover:text-white transition-all">
                                                     <Building2 className="h-4 w-4" />
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</p>
-                                                    <p className="text-[10px] text-[#F7CA00] font-bold uppercase tracking-wider">Verified</p>
+                                                    <p className="text-[10px] text-[#EEAF1C] font-bold uppercase tracking-wider">Verified</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -366,7 +366,7 @@ export default function CompanyPage() {
                                             <div className="flex items-center justify-end gap-1">
                                                 <button 
                                                     onClick={() => { setEditCompany(item); setView('form'); }} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#F7CA00] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
+                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
@@ -388,7 +388,7 @@ export default function CompanyPage() {
 
             {deleteCompany && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -400,7 +400,7 @@ export default function CompanyPage() {
                         </div>
                         <div className="p-8">
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                                Confirm permanent removal of <span className="text-[#F7CA00] font-bold">"{deleteCompany.name}"</span> from system registry?
+                                Confirm permanent removal of <span className="text-[#EEAF1C] font-bold">"{deleteCompany.name}"</span> from system registry?
                             </p>
                         </div>
                         <div className="px-6 py-4 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3 bg-slate-50/50 dark:bg-white/5">
@@ -419,3 +419,4 @@ export default function CompanyPage() {
         </div>
     );
 }
+

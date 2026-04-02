@@ -117,14 +117,14 @@ export default function PurchasesPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={load}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={() => router.push('/admin/purchases/add')}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         New Purchase Order
@@ -140,13 +140,13 @@ export default function PurchasesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by PO number or supplier..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="">All Statuses</option>
                     <option value="draft">Draft</option>
@@ -163,7 +163,7 @@ export default function PurchasesPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -194,7 +194,7 @@ export default function PurchasesPage() {
                                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No purchase orders found.</p>
                                         <button
                                             onClick={() => router.push('/admin/purchases/add')}
-                                            className="text-sm text-[#F7CA00] hover:underline font-medium"
+                                            className="text-sm text-[#EEAF1C] hover:underline font-medium"
                                         >
                                             Create your first purchase order
                                         </button>
@@ -204,7 +204,7 @@ export default function PurchasesPage() {
                                 filtered.map(row => (
                                     <tr key={row.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
-                                            <span className="text-[#F7CA00] font-medium text-sm">#{row.purchase_number}</span>
+                                            <span className="text-[#EEAF1C] font-medium text-sm">#{row.purchase_number}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-slate-800 dark:text-slate-200 font-medium text-sm">{row.supplier_name || '—'}</span>
@@ -230,7 +230,7 @@ export default function PurchasesPage() {
                                             <div className="flex justify-end items-center gap-1">
                                                 <button
                                                     onClick={() => setViewRow(row)}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors"
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
                                                     title="View details"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -262,7 +262,7 @@ export default function PurchasesPage() {
             {/* ── View Modal ── */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Purchase Order #{viewRow.purchase_number}</h3>
@@ -293,7 +293,7 @@ export default function PurchasesPage() {
                             </div>
                             <div className="pt-3 border-t border-slate-100 dark:border-white/10">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Amount</p>
-                                <p className="text-2xl font-bold text-[#F7CA00]">{formatCurrency(viewRow.total_amount || 0)}</p>
+                                <p className="text-2xl font-bold text-[#EEAF1C]">{formatCurrency(viewRow.total_amount || 0)}</p>
                             </div>
                         </div>
                         <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
@@ -308,7 +308,7 @@ export default function PurchasesPage() {
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div className="w-9 h-9 bg-red-100 dark:bg-red-500/10 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
                                 <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -336,7 +336,7 @@ export default function PurchasesPage() {
             {/* ── Update Status Modal ── */}
             {editRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Update Order Status</h3>
                             <button onClick={() => setEditRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
@@ -349,7 +349,7 @@ export default function PurchasesPage() {
                                 <select
                                     value={editRow.status}
                                     onChange={e => setEditRow({ ...editRow, status: e.target.value })}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 text-slate-800 dark:text-slate-200 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="draft">Draft</option>
                                     <option value="ordered">Ordered</option>
@@ -363,7 +363,7 @@ export default function PurchasesPage() {
                                 <select
                                     value={editRow.payment_status}
                                     onChange={e => setEditRow({ ...editRow, payment_status: e.target.value })}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 text-slate-800 dark:text-slate-200 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="pending">Pending</option>
                                     <option value="partially_paid">Partially Paid</option>
@@ -378,7 +378,7 @@ export default function PurchasesPage() {
                             <button
                                 onClick={handleUpdateStatus}
                                 disabled={isUpdating}
-                                className="px-4 py-2 text-sm font-medium text-white bg-[#F7CA00] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#EEAF1C] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
                             >
                                 {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
                                 Save Changes
@@ -391,7 +391,7 @@ export default function PurchasesPage() {
             {/* ── Toast ── */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#F7CA00]' : 'bg-red-600'}`}>
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#EEAF1C]' : 'bg-red-600'}`}>
                         {toast.type === 'success'
                             ? <CheckCircle className="h-4 w-4 shrink-0" />
                             : <AlertTriangle className="h-4 w-4 shrink-0" />}
@@ -402,3 +402,4 @@ export default function PurchasesPage() {
         </div>
     );
 }
+

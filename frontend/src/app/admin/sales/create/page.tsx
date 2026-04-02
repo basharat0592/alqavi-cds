@@ -25,16 +25,16 @@ const FieldLabel = ({ children, required }: { children: React.ReactNode; require
 );
 
 const fieldCls = (err?: boolean) =>
-    `w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
+    `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
 
-const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
+const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
 
 // ── Section panel wrapper ─────────────────────────────────────────────────────
 const Panel = ({ title, icon: Icon, action, children }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
             <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-[#F7CA00]" />}
+                {Icon && <Icon className="h-4 w-4 text-[#EEAF1C]" />}
                 <span className="text-sm font-semibold text-slate-800 dark:text-white">{title}</span>
             </div>
             {action}
@@ -144,7 +144,7 @@ export default function CreateSalePage() {
     if (loading) {
         return (
             <div className="flex flex-col h-[60vh] items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 text-[#F7CA00] animate-spin" />
+                <Loader2 className="h-8 w-8 text-[#EEAF1C] animate-spin" />
                 <p className="text-sm text-slate-500">Loading order data...</p>
             </div>
         );
@@ -218,7 +218,7 @@ export default function CreateSalePage() {
                         action={
                             <button
                                 onClick={addItem}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F7CA00] bg-blue-50 dark:bg-[#F7CA00]/10 rounded-lg hover:bg-blue-100 dark:hover:bg-[#F7CA00]/20 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#EEAF1C] bg-blue-50 dark:bg-[#EEAF1C]/10 rounded-lg hover:bg-blue-100 dark:hover:bg-[#EEAF1C]/20 transition-colors"
                             >
                                 <Plus className="h-3.5 w-3.5" /> Add Item
                             </button>
@@ -334,14 +334,14 @@ export default function CreateSalePage() {
                                 </div>
                                 <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-white/10 mt-3">
                                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total</span>
-                                    <span className="text-xl font-bold text-[#F7CA00]">{formatCurrency(String(grandTotal))}</span>
+                                    <span className="text-xl font-bold text-[#EEAF1C]">{formatCurrency(String(grandTotal))}</span>
                                 </div>
                             </div>
 
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="w-full py-2.5 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 shadow-sm mt-2"
+                                className="w-full py-2.5 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 shadow-sm mt-2"
                             >
                                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                 {saving ? 'Creating...' : 'Create Sale Order'}
@@ -354,7 +354,7 @@ export default function CreateSalePage() {
             {/* ── Toast ── */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#F7CA00]' : 'bg-red-600'}`}>
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#EEAF1C]' : 'bg-red-600'}`}>
                         {toast.type === 'success'
                             ? <CheckCircle className="h-4 w-4 shrink-0" />
                             : <AlertTriangle className="h-4 w-4 shrink-0" />}
@@ -365,3 +365,4 @@ export default function CreateSalePage() {
         </div>
     );
 }
+

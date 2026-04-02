@@ -47,7 +47,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                     <div>
@@ -66,7 +66,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                     <div className="grid grid-cols-3 gap-3">
                         <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/10">
                             <div className="flex items-center gap-1.5 mb-1.5">
-                                <User className="h-3.5 w-3.5 text-[#F7CA00]" />
+                                <User className="h-3.5 w-3.5 text-[#EEAF1C]" />
                                 <p className="text-xs text-slate-500 font-medium">Customer</p>
                             </div>
                             <p className="text-sm font-semibold text-slate-800 dark:text-white">{customerName}</p>
@@ -128,7 +128,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                             </div>
                             <div className="flex justify-between text-sm font-bold pt-2 border-t border-slate-200 dark:border-white/10">
                                 <span className="text-slate-800 dark:text-white">Total</span>
-                                <span className="text-[#F7CA00] text-base">{formatCurrency(order.total_amount || 0, currency)}</span>
+                                <span className="text-[#EEAF1C] text-base">{formatCurrency(order.total_amount || 0, currency)}</span>
                             </div>
                         </div>
                     </div>
@@ -138,7 +138,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                     <button onClick={onClose} className="px-6 py-2 rounded-lg text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all">
                         Close
                     </button>
-                    <Link href={`/admin/sales/${order.id}/invoice`} className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-white bg-[#F7CA00] hover:bg-blue-700 rounded-lg transition-all shadow-sm">
+                    <Link href={`/admin/sales/${order.id}/invoice`} className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-white bg-[#EEAF1C] hover:bg-blue-700 rounded-lg transition-all shadow-sm">
                         <Printer className="h-4 w-4" /> View Invoice
                     </Link>
                 </div>
@@ -167,11 +167,11 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order; onClos
         finally { setLoading(false); }
     };
 
-    const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-800 dark:text-slate-200 cursor-pointer`;
+    const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer`;
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Update Order Status</h3>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
@@ -208,7 +208,7 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order; onClos
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-[#F7CA00] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm">
+                        <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-[#EEAF1C] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm">
                             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                             Save Changes
                         </button>
@@ -266,10 +266,10 @@ export default function SalesPage() {
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">View and manage all sales transactions</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadOrders} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all" title="Refresh">
+                    <button onClick={loadOrders} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all" title="Refresh">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button onClick={() => router.push('/admin/sales/create')} className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                    <button onClick={() => router.push('/admin/sales/create')} className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
                         <Plus className="h-4 w-4" /> New Sale
                     </button>
                 </div>
@@ -284,13 +284,13 @@ export default function SalesPage() {
                         placeholder="Search by order # or customer..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     {STATUS_FILTERS.map(f => <option key={f} value={f}>{f === 'All' ? 'All Statuses' : f}</option>)}
                 </select>
@@ -301,7 +301,7 @@ export default function SalesPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -337,7 +337,7 @@ export default function SalesPage() {
                                     return (
                                         <tr key={o.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                             <td className="px-4 py-3">
-                                                <span className="text-[#F7CA00] font-medium text-sm">{o.order_number || `#${String(o.id).slice(-6).toUpperCase()}`}</span>
+                                                <span className="text-[#EEAF1C] font-medium text-sm">{o.order_number || `#${String(o.id).slice(-6).toUpperCase()}`}</span>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{customerName}</p>
@@ -351,7 +351,7 @@ export default function SalesPage() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex justify-end items-center gap-1">
-                                                    <button onClick={() => setSelectedOrder(o)} className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors" title="View">
+                                                    <button onClick={() => setSelectedOrder(o)} className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors" title="View">
                                                         <Eye className="h-4 w-4" />
                                                     </button>
                                                     <button onClick={() => setUpdatingOrder(o)} className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Update Status">
@@ -376,3 +376,4 @@ export default function SalesPage() {
         </div>
     );
 }
+

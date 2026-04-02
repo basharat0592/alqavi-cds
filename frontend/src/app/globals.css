@@ -8,69 +8,70 @@
 
   /* Light mode base */
   :root {
-    --background: 255, 255, 255;
-    --foreground: 15, 23, 42;
+    --background: 248, 250, 252;
+    --foreground: 21, 60, 85;
     --card: 255, 255, 255;
-    --card-foreground: 15, 23, 42;
+    --card-foreground: 21, 60, 85;
     --popover: 255, 255, 255;
-    --popover-foreground: 15, 23, 42;
-    --primary: 15, 23, 42;
-    --primary-foreground: 255, 255, 255;
-    --secondary: 241, 245, 249;
-    --secondary-foreground: 15, 23, 42;
+    --popover-foreground: 21, 60, 85;
+    --primary: 21, 60, 85;
+    --primary-foreground: 238, 175, 28;
+    --secondary: 238, 175, 28;
+    --secondary-foreground: 21, 60, 85;
     --muted: 241, 245, 249;
     --muted-foreground: 100, 116, 139;
-    --accent: 29, 78, 216;
-    /* Corporate Blue #1D4ED8 */
-    --accent-foreground: 255, 255, 255;
-    --border: 226, 232, 240;
-    --input: 226, 232, 240;
-    --ring: 29, 78, 216;
+    --accent: 238, 175, 28;
+    /* Corporate Orange #EEAF1C */
+    --accent-foreground: 21, 60, 85;
+    --border: 21, 60, 85, 0.1;
+    --input: 21, 60, 85, 0.1;
+    --ring: 238, 175, 28;
     --radius: 0.75rem;
     /* Card color token */
     --card-bg: #ffffff;
-    --card-border: #e2e8f0;
+    --card-border: rgba(21, 60, 85, 0.08);
   }
 
-  /* Dark mode — all surfaces use #1B1C1E */
+  /* Dark mode — refined executive theme */
   .dark {
-    --background: 16, 17, 18;
+    --background: 11, 19, 26;
     --foreground: 248, 250, 252;
-    --card: 27, 28, 30;
+    --card: 17, 29, 41;
     --card-foreground: 248, 250, 252;
-    --popover: 27, 28, 30;
+    --popover: 17, 29, 41;
     --popover-foreground: 248, 250, 252;
-    --primary: 248, 250, 252;
-    --primary-foreground: 15, 23, 42;
-    --secondary: 27, 28, 30;
-    --secondary-foreground: 248, 250, 252;
-    --muted: 27, 28, 30;
+    --primary: 238, 175, 28;
+    --primary-foreground: 17, 29, 41;
+    --secondary: 17, 29, 41;
+    --secondary-foreground: 238, 175, 28;
+    --muted: 17, 29, 41;
     --muted-foreground: 148, 163, 184;
-    --accent: 29, 78, 216;
-    --accent-foreground: 248, 250, 252;
-    --border: 255, 255, 255, 0.07;
-    --input: 255, 255, 255, 0.07;
-    --ring: 29, 78, 216;
+    --accent: 238, 175, 28;
+    --accent-dark: 212, 149, 16; /* Darker hover for buttons */
+    --accent-foreground: 17, 29, 41;
+    --border: 255, 255, 255, 0.08;
+    --input: 255, 255, 255, 0.08;
+    --ring: 238, 175, 28;
     /* Card color token */
-    --card-bg: #1B1C1E;
-    --card-border: rgba(255, 255, 255, 0.07);
+    --card-bg: #111D29;
+    --card-border: rgba(238, 175, 28, 0.1);
   }
 
   /* ─── Remap Tailwind slate greys to the design system card color ─── */
   .dark .dark\:bg-slate-800 {
-    background-color: #1B1C1E !important;
+    background-color: #111D29 !important;
   }
 
   .dark .dark\:bg-slate-900 {
-    background-color: #1B1C1E !important;
+    background-color: #111D29 !important;
   }
 
   .dark .dark\:bg-slate-800\/50 {
-    background-color: rgba(27, 28, 30, 0.5) !important;
+    background-color: rgba(17, 29, 41, 0.5) !important;
   }
 
   .dark .dark\:bg-slate-800\/20 {
-    background-color: rgba(27, 28, 30, 0.2) !important;
+    background-color: rgba(17, 29, 41, 0.2) !important;
   }
 
   .dark .dark\:border-slate-800 {
@@ -97,16 +98,16 @@
 
   /* ─── Admin Card (Recent Orders Design System) ─── */
   .admin-card {
-    @apply bg-white dark:bg-[#1B1C1E] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all duration-200;
+    @apply bg-white dark:bg-[#111D29] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all duration-200;
   }
 
   /* ─── Glass Effect (Solid Navbar Style) ─── */
   .glass-effect {
-    @apply bg-white dark:bg-[#1B1C1E];
+    @apply bg-white dark:bg-[#111D29];
   }
 
   .glass {
-    @apply bg-white/70 dark:bg-[#0f1012]/70 backdrop-blur-md border border-white/20 dark:border-white/5;
+    @apply bg-white/70 dark:bg-[#0B131A]/70 backdrop-blur-md border border-white/20 dark:border-white/5;
   }
 
   .nav-link {
@@ -153,6 +154,14 @@
   .luxury-gradient {
     background: radial-gradient(circle at top right, rgba(255, 153, 0, 0.02), transparent 40%),
       radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.01), transparent 40%);
+  }
+
+  /* Global Button Hover for Brand Primary */
+  .bg-\[\#EEAF1C\] {
+    transition: background-color 0.3s ease;
+  }
+  .bg-\[\#EEAF1C\]:hover {
+    background-color: #D49510 !important;
   }
 }
 

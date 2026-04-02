@@ -19,7 +19,7 @@ type Tab = 'profile' | 'store' | 'notifications' | 'security' | 'appearance';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -27,7 +27,7 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
 const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
     <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-[#F7CA00]" />
+            <Icon className="h-4 w-4 text-[#EEAF1C]" />
             <div>
                 <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
                 {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
@@ -36,10 +36,10 @@ const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: a
     </div>
 );
 
-const PRIMARY_BTN = "bg-[#F7CA00] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
+const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 
-const INPUT_CLS = "w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F7CA00] focus:ring-4 focus:ring-[#F7CA00]/10 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400";
+const INPUT_CLS = "w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400";
 const LABEL_CLS = "text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 block";
 
 /* ─── Field Layout ─── */
@@ -58,13 +58,13 @@ function Toggle({ enabled, onChange, label, description }: { enabled: boolean; o
     return (
         <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-white/5 last:border-0 group">
             <div className="pr-4">
-                <p className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-[#F7CA00] transition-colors">{label}</p>
+                <p className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-[#EEAF1C] transition-colors">{label}</p>
                 {description && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{description}</p>}
             </div>
             <button
                 type="button"
                 onClick={() => onChange(!enabled)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none ${enabled ? 'bg-[#F7CA00]' : 'bg-slate-200 dark:bg-white/10'}`}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none ${enabled ? 'bg-[#EEAF1C]' : 'bg-slate-200 dark:bg-white/10'}`}
             >
                 <span
                     aria-hidden="true"
@@ -113,7 +113,7 @@ export default function SettingsPage() {
     /* ── Appearance ── */
     const [appearanceSaving, setAppearanceSaving] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
-    const [accentColor, setAccentColor] = useState('#F7CA00');
+    const [accentColor, setAccentColor] = useState('#EEAF1C');
     const [compactMode, setCompactMode] = useState(false);
     const [animations, setAnimations] = useState(true);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -179,7 +179,7 @@ export default function SettingsPage() {
                         notif_sms: s.notif_sms ?? false,
                     });
                     setTheme((s.theme as 'light' | 'dark') || 'light');
-                    setAccentColor(s.accent_color || '#F7CA00');
+                    setAccentColor(s.accent_color || '#EEAF1C');
                     setCompactMode(s.compact_mode ?? false);
                     setAnimations(s.animations ?? true);
                     setSidebarCollapsed(s.sidebar_collapsed ?? false);
@@ -368,7 +368,7 @@ export default function SettingsPage() {
     if (pageLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <RefreshCw className="h-8 w-8 text-[#F7CA00] animate-spin" />
+                <RefreshCw className="h-8 w-8 text-[#EEAF1C] animate-spin" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 animate-pulse">Initializing Control Plane...</p>
             </div>
         );
@@ -380,7 +380,7 @@ export default function SettingsPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#F7CA00] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Settings className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -407,8 +407,8 @@ export default function SettingsPage() {
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 group
                                     ${active 
-                                        ? 'bg-[#F7CA00] text-white shadow-xl shadow-blue-500/20' 
-                                        : 'bg-white dark:bg-[#1B1C1E] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:border-[#F7CA00]/30 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                                        ? 'bg-[#EEAF1C] text-white shadow-xl shadow-blue-500/20' 
+                                        : 'bg-white dark:bg-[#0D1921] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:border-[#EEAF1C]/30 hover:bg-slate-50 dark:hover:bg-white/5'}`}
                             >
                                 <div className="flex items-center gap-3">
                                     <tab.icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${active ? 'text-white' : 'text-slate-400'}`} />
@@ -431,27 +431,27 @@ export default function SettingsPage() {
                                 <div className="p-6">
                                     <div className="flex flex-col md:flex-row items-center gap-8 mb-8 pb-8 border-b border-slate-100 dark:border-white/5">
                                         <div className="relative group">
-                                            <div className="w-24 h-24 bg-slate-100 dark:bg-white/5 rounded-2xl overflow-hidden flex items-center justify-center border-2 border-slate-200 dark:border-white/10 group-hover:border-[#F7CA00] transition-all duration-500 shadow-inner">
+                                            <div className="w-24 h-24 bg-slate-100 dark:bg-white/5 rounded-2xl overflow-hidden flex items-center justify-center border-2 border-slate-200 dark:border-white/10 group-hover:border-[#EEAF1C] transition-all duration-500 shadow-inner">
                                                 {avatarPreview || profile.avatar ? (
                                                     <img src={avatarPreview || getImageUrl(profile.avatar) || ''} alt="Avatar" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <User className="h-10 w-10 text-slate-300" />
                                                 )}
                                             </div>
-                                            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#F7CA00] text-white rounded-lg shadow-lg flex items-center justify-center hover:scale-110 transition-all active:scale-95 group-hover:rotate-12">
+                                            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#EEAF1C] text-white rounded-lg shadow-lg flex items-center justify-center hover:scale-110 transition-all active:scale-95 group-hover:rotate-12">
                                                 <Camera className="h-4 w-4" />
                                             </button>
                                             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                                         </div>
                                         <div className="flex-1 text-center md:text-left">
-                                            <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/10 text-[#F7CA00] text-[9px] font-black uppercase tracking-widest mb-1 shadow-sm border border-blue-100 dark:border-blue-900/20">
+                                            <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/10 text-[#EEAF1C] text-[9px] font-black uppercase tracking-widest mb-1 shadow-sm border border-blue-100 dark:border-blue-900/20">
                                                 Active Session
                                             </div>
                                             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-1">{profile.firstName} {profile.lastName}</h2>
                                             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">{profile.email}</p>
                                             <div className="flex justify-center md:justify-start gap-4">
                                                 <div className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">{userRole || 'Admin'}</div>
-                                                <div className="flex items-center gap-1.5 text-[9px] font-black text-[#F7CA00] uppercase tracking-widest">
+                                                <div className="flex items-center gap-1.5 text-[9px] font-black text-[#EEAF1C] uppercase tracking-widest">
                                                     <ShieldCheck className="h-3 w-3" /> Encrypted Access
                                                 </div>
                                             </div>
@@ -467,13 +467,13 @@ export default function SettingsPage() {
                                         </Field>
                                         <Field label="Network Email">
                                             <div className="relative group">
-                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                                                 <input className={`${INPUT_CLS} pl-10`} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} />
                                             </div>
                                         </Field>
                                         <Field label="Identity Phone">
                                             <div className="relative group">
-                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                                                 <input className={`${INPUT_CLS} pl-10`} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} />
                                             </div>
                                         </Field>
@@ -497,13 +497,13 @@ export default function SettingsPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <Field label="Organization Label">
                                         <div className="relative group">
-                                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                                             <input className={`${INPUT_CLS} pl-10`} value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} />
                                         </div>
                                     </Field>
                                     <Field label="Public Mesh Portal (Website)">
                                         <div className="relative group">
-                                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                                             <input className={`${INPUT_CLS} pl-10`} value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} />
                                         </div>
                                     </Field>
@@ -521,7 +521,7 @@ export default function SettingsPage() {
                                     </Field>
                                     <Field label="Fiscal Registry (Tax ID)">
                                         <div className="relative group">
-                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                                             <input className={`${INPUT_CLS} pl-10`} value={store.tax_number} onChange={e => setStore(s => ({ ...s, tax_number: e.target.value }))} />
                                         </div>
                                     </Field>
@@ -547,7 +547,7 @@ export default function SettingsPage() {
                             <SectionHeader title="Alert Protocols" icon={Bell} subtitle="System event notification mesh" />
                             <div className="p-6">
                                 <div className="bg-slate-50 dark:bg-white/5 px-4 py-2 border border-blue-100 dark:border-blue-900/20 rounded-lg mb-6">
-                                    <p className="text-[10px] font-black text-[#F7CA00] uppercase tracking-widest">Network Alert Configuration</p>
+                                    <p className="text-[10px] font-black text-[#EEAF1C] uppercase tracking-widest">Network Alert Configuration</p>
                                 </div>
                                 <div className="space-y-4">
                                     <Toggle enabled={notif.notif_new_order} onChange={v => setNotif(n => ({ ...n, notif_new_order: v }))} label="Inbound Fulfillment Alerts" description="Notify on new order packet arrival" />
@@ -575,7 +575,7 @@ export default function SettingsPage() {
                                         <div className="md:col-span-2">
                                             <Field label="Current Verification Code (Old Password)">
                                                 <div className="relative group">
-                                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                                                     <input type={showOld ? 'text' : 'password'} className={`${INPUT_CLS} pl-10 pr-10`} value={passwords.old} onChange={e => setPasswords(p => ({ ...p, old: e.target.value }))} />
                                                     <button onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                                                         {showOld ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -640,7 +640,7 @@ export default function SettingsPage() {
                                                 {(['light', 'dark'] as const).map(t => (
                                                     <button key={t} 
                                                         onClick={() => { setTheme(t); handleSaveAppearance({ theme: t }); }} 
-                                                        className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${theme === t ? 'bg-[#F7CA00] text-white border-[#F7CA00] shadow-lg shadow-blue-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#F7CA00]/30'}`}>
+                                                        className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${theme === t ? 'bg-[#EEAF1C] text-white border-[#EEAF1C] shadow-lg shadow-blue-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#EEAF1C]/30'}`}>
                                                         {t === 'light' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                                                         <span className="text-[11px] font-black uppercase tracking-widest">{t}</span>
                                                     </button>
@@ -653,7 +653,7 @@ export default function SettingsPage() {
                                                 {[false, true].map(v => (
                                                     <button key={String(v)} 
                                                         onClick={() => { setCompactMode(v); handleSaveAppearance({ compactMode: v }); }} 
-                                                        className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${compactMode === v ? 'bg-[#F7CA00] text-white border-[#F7CA00] shadow-lg shadow-blue-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#F7CA00]/30'}`}>
+                                                        className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${compactMode === v ? 'bg-[#EEAF1C] text-white border-[#EEAF1C] shadow-lg shadow-blue-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#EEAF1C]/30'}`}>
                                                         <Monitor className="h-5 w-5" />
                                                         <span className="text-[11px] font-black uppercase tracking-widest">{v ? 'Compact' : 'Standard'}</span>
                                                     </button>
@@ -691,3 +691,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+

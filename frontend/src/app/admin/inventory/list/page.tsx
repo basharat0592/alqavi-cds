@@ -186,38 +186,38 @@ export default function InventoryListPage() {
                     </div>
                 </div>
 
-                <form onSubmit={handleSave} className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm max-w-4xl">
+                <form onSubmit={handleSave} className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm max-w-4xl">
                     <div className="p-5 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Product</label>
-                                <select required className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 cursor-pointer w-full" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })}>
+                                <select required className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 cursor-pointer w-full" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })}>
                                     <option value="">Select Product...</option>
                                     {allProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Warehouse</label>
-                                <select required className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 cursor-pointer w-full" value={form.warehouse} onChange={(e) => setForm({ ...form, warehouse: e.target.value })}>
+                                <select required className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 cursor-pointer w-full" value={form.warehouse} onChange={(e) => setForm({ ...form, warehouse: e.target.value })}>
                                     <option value="">Select Warehouse...</option>
                                     {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">SKU</label>
-                                <input className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400" placeholder="System Assigned" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+                                <input className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" placeholder="System Assigned" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Batch Identifier</label>
-                                <input className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400" placeholder="e.g. LOT-01" value={form.batch_number} onChange={(e) => setForm({ ...form, batch_number: e.target.value })} />
+                                <input className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" placeholder="e.g. LOT-01" value={form.batch_number} onChange={(e) => setForm({ ...form, batch_number: e.target.value })} />
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Available Quantity</label>
-                                <input type="number" required min="0" className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400" value={form.quantity_available} onChange={(e) => setForm({ ...form, quantity_available: Number(e.target.value) })} />
+                                <input type="number" required min="0" className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" value={form.quantity_available} onChange={(e) => setForm({ ...form, quantity_available: Number(e.target.value) })} />
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Reorder Level</label>
-                                <input type="number" min="0" className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400" value={form.reorder_level} onChange={(e) => setForm({ ...form, reorder_level: Number(e.target.value) })} />
+                                <input type="number" min="0" className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" value={form.reorder_level} onChange={(e) => setForm({ ...form, reorder_level: Number(e.target.value) })} />
                             </div>
                         </div>
                     </div>
@@ -226,7 +226,7 @@ export default function InventoryListPage() {
                         <button type="button" onClick={() => setView('list')} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50">
+                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50">
                             {isSubmitting ? 'Saving...' : 'Save'}
                         </button>
                     </div>
@@ -247,14 +247,14 @@ export default function InventoryListPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={handleAddClick}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         New Stock Entry
@@ -270,13 +270,13 @@ export default function InventoryListPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by SKU or product..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={selectedWarehouse}
                     onChange={e => setSelectedWarehouse(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="">All Warehouses</option>
                     {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
@@ -289,7 +289,7 @@ export default function InventoryListPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -318,7 +318,7 @@ export default function InventoryListPage() {
                                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No stock records found.</p>
                                         <button
                                             onClick={handleAddClick}
-                                            className="text-sm text-[#F7CA00] hover:underline font-medium"
+                                            className="text-sm text-[#EEAF1C] hover:underline font-medium"
                                         >
                                             Create your first stock entry
                                         </button>
@@ -331,7 +331,7 @@ export default function InventoryListPage() {
                                     return (
                                         <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                             <td className="px-4 py-3">
-                                                <span className="text-[#F7CA00] font-medium text-sm">#{item.sku || 'N/A'}</span>
+                                                <span className="text-[#EEAF1C] font-medium text-sm">#{item.sku || 'N/A'}</span>
                                             </td>
                                             <td className="px-4 py-3 max-w-[180px]">
                                                 <span className="text-slate-800 dark:text-slate-200 font-medium text-sm truncate block" title={item.product_name}>
@@ -353,7 +353,7 @@ export default function InventoryListPage() {
                                                 <div className="flex justify-end items-center gap-1">
                                                     <button
                                                         onClick={() => setViewRow(item)}
-                                                        className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors"
+                                                        className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
                                                         title="View details"
                                                     >
                                                         <Eye className="h-4 w-4" />
@@ -386,7 +386,7 @@ export default function InventoryListPage() {
             {/* ── View Modal ── */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Stock #{viewRow.sku || 'N/A'}</h3>
@@ -417,7 +417,7 @@ export default function InventoryListPage() {
                             </div>
                             <div className="pt-3 border-t border-slate-100 dark:border-white/10">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Quantity</p>
-                                <p className="text-2xl font-bold text-[#F7CA00]">{Number(viewRow.quantity_available).toLocaleString()}</p>
+                                <p className="text-2xl font-bold text-[#EEAF1C]">{Number(viewRow.quantity_available).toLocaleString()}</p>
                             </div>
                         </div>
                         <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
@@ -432,7 +432,7 @@ export default function InventoryListPage() {
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-5 text-center">
                             <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -465,3 +465,4 @@ export default function InventoryListPage() {
         </div>
     );
 }
+

@@ -1,353 +1,278 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { 
-    BarChart3, TrendingUp, Package, Users, DollarSign, 
-    Calendar, Download, ArrowUpRight, ArrowDownRight,
-    Search, Filter, RefreshCw, FileText, PieChart as PieIcon,
-    ArrowRight, CheckCircle, Clock, AlertTriangle, Truck,
-    TrendingDown, ShoppingCart, ShoppingBag, Layers, Warehouse,
-    Printer, FileSpreadsheet, ChevronRight
+    BarChart3, Calendar, RefreshCw, Printer, FileStack, FileSpreadsheet,
+    ListFilter, Search, Download, ClipboardList, Info, CheckCircle
 } from 'lucide-react';
-import { 
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line
-} from 'recharts';
+import { useSearchParams } from 'next/navigation';
 import { productService, orderService, userService, purchaseService } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 
 /* ═══════════════════════════════════════════════
-   MODERN ENTERPRISE UI COMPONENTS (SaaS Blue Style)
+   TYPES & MAPPINGS
    ═══════════════════════════════════════════════ */
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
+type ReportType = 'stock' | 'adjustments' | 'purchases' | 'sales' | 'sales_statements' | 'accounting';
 
-const SummaryCard = ({ title, value, sub, icon: Icon, trend, color }: {
-    title: string; value: string | number; sub?: string; icon: any; trend?: string; color: string;
-}) => (
-    <Card className="p-5 flex flex-col justify-between group hover:shadow-md transition-all duration-300">
-        <div className="flex justify-between items-start">
-            <div className={`p-2.5 rounded-xl ${color} bg-opacity-10 border border-current border-opacity-20 transition-transform group-hover:scale-110`}>
-                <Icon className={`h-5 w-5 ${color}`} />
-            </div>
-            {trend && (
-                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                    {trend}
-                </div>
-            )}
-        </div>
-        <div className="mt-4">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-2">{title}</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter leading-none">{value}</p>
-            {sub && <p className="text-[10px] text-slate-400 mt-2 font-medium">{sub}</p>}
-        </div>
-    </Card>
-);
+const CATEGORIES = [
+    { id: 'stock', label: 'Reports Stock' },
+    { id: 'adjustments', label: 'Opening / Damage / Short / Excess Stock' },
+    { id: 'purchases', label: 'Purchase Order / Purchase / Purchase Return' },
+    { id: 'sales', label: 'Sale / Sale Return' },
+    { id: 'sales_statements', label: 'Sale Statements' },
+    { id: 'accounting', label: 'Accounting' },
+];
 
-const TabButton = ({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) => (
-    <button 
-        onClick={onClick}
-        className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2
-            ${active 
-                ? 'border-[#F7CA00] text-[#F7CA00] bg-blue-50/10' 
-                : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
-    >
-        {label}
-    </button>
-);
+const SUB_OPTIONS: Record<string, string[]> = {
+    stock: [
+        'Stock Taking List', 'Company-wise Stock of all Products', 'Company Stock (Specific)',
+        'Product-wise Stock (Above Min Qty)', 'Product-wise Stock (Below Min Qty)',
+        'Product-wise Stock (Non zero Qty)', 'Product-wise Stock (zero Qty)',
+        'Stock Position', 'Company-wise Stock Summary'
+    ],
+    adjustments: [
+        'Opening Stock Add By Date-wise', 'Opening Stock Add By Product-Wise',
+        'Opening Stock Less By Date-wise', 'Opening Stock Less By Product-Wise',
+        'Damage Stock By Date-wise', 'Damage Stock By Product-Wise',
+        'Stock excess By Date-Wise', 'Stock short By Date-Wise'
+    ],
+    purchases: [
+        'Purchase Order By Date-wise', 'Purchase Order By Invoice No', 'Purchase Order By Supplier-Wise',
+        'Purchase Detail By Date-wise', 'Purchase Detail By Invoice No', 'Purchase Detail By Product-Wise',
+        'Purchase Return By Date-wise', 'Purchase Return By Invoice No', 'Purchase / Pur.Return Summary'
+    ],
+    sales: [
+        'Sale Invoice By Date', 'Sale Invoice By Invoice No', 'Sale Invoice By Customer',
+        'Sale Return Invoice By Date', 'Sale Return Invoice By Invoice No',
+        'Area-Wise Delivery Challan', 'Area-Wise Customer List', 'Sale Invoice List'
+    ],
+    sales_statements: [
+        'Date-wise', 'Saleman Area-wise', 'Saleman Comp-wise', 'Customer-Wise',
+        'Company-Wise', 'Area-Wise', 'Daily Sale Summary Order By Profit'
+    ],
+    accounting: [
+        'Chart of Accounts', 'General Ledger', 'General Journal by Date', 'General Journal by voucher No',
+        'Trial Balance(Detail)', 'Income Statement (Short)', 'Balance Sheet (Detail)'
+    ]
+};
 
-/* ═══════════════════════════════════════════════
-   UNIFIED REPORTS DASHBOARD
-   ═══════════════════════════════════════════════ */
-export default function UnifiedReportsDashboard() {
+function ReportsEngineInner() {
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'sales' | 'inventory' | 'customers' | 'purchases'>('sales');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
-
-    const [data, setData] = useState({
-        orders: [] as any[],
-        products: [] as any[],
-        users: [] as any[],
-        purchases: [] as any[]
+    const [generating, setGenerating] = useState(false);
+    
+    // ── Filters State ───────────────────────────────────────────────────────────
+    const [filters, setFilters] = useState({
+        dateFrom: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        dateTo: new Date().toISOString().split('T')[0],
+        type: (searchParams.get('type') as ReportType) || '' as any,
+        subType: ''
     });
 
-    const loadData = async () => {
+    const [data, setData] = useState({ orders: [], products: [], buys: [] });
+    const [reportResult, setReportResult] = useState<any[]>([]);
+
+    useEffect(() => {
+        const type = searchParams.get('type') as ReportType;
+        if (type) setFilters(f => ({ ...f, type, subType: '' }));
+    }, [searchParams]);
+
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [o, p, u, pu] = await Promise.all([
-                orderService.getAll(),
-                productService.getAll(),
-                userService.getAll(),
-                purchaseService.getAll()
-            ]);
-            setData({
-                orders: Array.isArray(o) ? o : [],
-                products: Array.isArray(p) ? p : [],
-                users: Array.isArray(u) ? u : [],
-                purchases: Array.isArray(pu) ? pu : []
-            });
-        } catch {
-            toast.error('Failed to synchronize business data.');
-        } finally {
-            setLoading(false);
-        }
+            const [o, p, pu] = await Promise.all([orderService.getAll(), productService.getAll(), purchaseService.getAll()]);
+            setData({ orders: o || [], products: p || [], buys: pu || [] });
+        } catch { toast.error('Failed to sync report data nodes.'); }
+        finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    const generateReport = () => {
+        if (!filters.type) { toast.error('Select a report category'); return; }
+        if (!filters.subType) { toast.error('Select a specific view'); return; }
+        
+        setGenerating(true);
+        setTimeout(() => {
+            let result = [];
+            const { type, subType, dateFrom, dateTo } = filters;
+            const isDateMatch = (dateStr: string) => {
+                const d = new Date(dateStr);
+                return d >= new Date(dateFrom) && d <= new Date(dateTo + 'T23:59:59');
+            };
+
+            if (type === 'sales' || type === 'sales_statements') result = data.orders.filter(o => isDateMatch(o.created_at));
+            else if (type === 'purchases') result = data.buys.filter(p => isDateMatch(p.created_at || p.order_date));
+            else if (type === 'stock' || type === 'adjustments') result = data.products;
+            else result = data.orders.filter(o => isDateMatch(o.created_at));
+
+            setReportResult(result);
+            setGenerating(false);
+            if (result.length > 0) toast.success(`Generated: ${result.length} results.`);
+            else toast.error('No matching records found.');
+        }, 600);
     };
-
-    useEffect(() => { loadData(); }, []);
-
-    // ── DATA TRANSFORMATIONS ──
-    const analytics = useMemo(() => {
-        const orders = data.orders;
-        const totalRevenue = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
-        const totalProfit = totalRevenue * 0.15; // Simulated profit margin
-        const totalStockValue = data.products.reduce((s, p) => s + (Number(p.price || 0) * Number(p.stock || 0)), 0);
-
-        // Chart Data (Last 7 Days)
-        const days = [...Array(7)].map((_, i) => {
-            const d = new Date(); d.setDate(d.getDate() - i);
-            return d.toISOString().split('T')[0];
-        }).reverse();
-
-        const chartData = days.map(d => ({
-            date: formatDate(d).split(',')[0],
-            revenue: orders.filter(o => (o.created_at || '').startsWith(d)).reduce((s, o) => s + Number(o.total_amount), 0),
-            orders: orders.filter(o => (o.created_at || '').startsWith(d)).length,
-            purchases: data.purchases.filter(p => (p.created_at || '').startsWith(d)).reduce((s, p) => s + Number(p.total_amount), 0)
-        }));
-
-        const categories = {} as any;
-        data.products.forEach(p => categories[p.category_name || 'General'] = (categories[p.category_name || 'General'] || 0) + 1);
-        const pieData = Object.entries(categories).map(([name, value]) => ({ name, value })).sort((a: any, b: any) => b.value - a.value).slice(0, 5);
-
-        return { totalRevenue, totalProfit, totalStockValue, chartData, pieData };
-    }, [data]);
-
-    const COLORS = ['#F7CA00', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD'];
 
     if (loading) return <PageLoader />;
 
     return (
-        <div className="max-w-[1600px] mx-auto px-4 py-8 bg-slate-50 dark:bg-[#111213] min-h-screen font-sans">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-6 font-sans">
             
-            {/* ── Dashboard Header ── */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
-                <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#F7CA00] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
-                        <TrendingUp className="h-8 w-8 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">Intelligence Command</h1>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Real-Time Data Matrix Active</p>
-                        </div>
-                    </div>
+            {/* ── Page Header (Purchase Style) ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-200 dark:border-white/10">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Central Intelligence Reports</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Cross-departmental diagnostic and analytical manifest</p>
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex gap-2 p-1 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
-                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-3 py-2 text-xs font-bold outline-none bg-transparent text-slate-600 dark:text-white" />
-                        <span className="self-center text-slate-300">to</span>
-                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-3 py-2 text-xs font-bold outline-none bg-transparent text-slate-600 dark:text-white" />
-                    </div>
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#F7CA00] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
-                        <Download className="h-4 w-4" /> Export Master Report
+                <div className="flex items-center gap-2">
+                    <button onClick={loadData} className="p-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all shadow-sm">
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
-                    <button onClick={() => window.print()} className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#F7CA00] transition-all shadow-sm">
-                        <Printer className="h-4.5 w-4.5" />
+                    <div className="h-8 w-px bg-slate-200 dark:bg-white/10 mx-1 hidden sm:block" />
+                    <button className="p-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-emerald-600 transition-all shadow-sm">
+                        <FileSpreadsheet className="h-4 w-4" />
+                    </button>
+                    <button className="p-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all shadow-sm">
+                        <Printer className="h-4 w-4" />
                     </button>
                 </div>
             </div>
 
-            {/* ── Executive Summary Strips ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <SummaryCard title="Gross Transaction Volume" value={formatCurrency(analytics.totalRevenue)} sub="Total revenue across all channels" icon={DollarSign} trend="+14.2%" color="text-indigo-600" />
-                <SummaryCard title="Operational Net Profit" value={formatCurrency(analytics.totalProfit)} sub="Estimated margin after tax & cost" icon={TrendingUp} trend="+8.4%" color="text-emerald-600" />
-                <SummaryCard title="System Order Velocity" value={data.orders.length} sub="Total processed sales manifest" icon={ShoppingCart} trend="+24" color="text-blue-600" />
-                <SummaryCard title="Total Asset Valuation" value={formatCurrency(analytics.totalStockValue)} sub="Current inventory stock value" icon={Package} color="text-amber-600" />
-            </div>
-
-            {/* ── Tactical Navigation ── */}
-            <div className="flex border-b border-slate-200 dark:border-white/10 mb-8 overflow-x-auto no-scrollbar">
-                <TabButton active={activeTab === 'sales'} label="Sales Analytics" onClick={() => setActiveTab('sales')} />
-                <TabButton active={activeTab === 'inventory'} label="Logistics & Stock" onClick={() => setActiveTab('inventory')} />
-                <TabButton active={activeTab === 'customers'} label="Client Intelligence" onClick={() => setActiveTab('customers')} />
-                <TabButton active={activeTab === 'purchases'} label="Procurement Audit" onClick={() => setActiveTab('purchases')} />
-            </div>
-
-            {/* ── Main Analytical Matrix ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-                
-                {/* Visual Chart Deck */}
-                <div className="lg:col-span-8 space-y-8">
-                    <Card>
-                        <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/30">
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Performance Trajectory</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Live data feed comparison</p>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#F7CA00]" /> <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Revenue</span></div>
-                                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500" /> <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Procurement</span></div>
-                            </div>
-                        </div>
-                        <div className="p-8 h-[450px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={analytics.chartData}>
-                                    <defs>
-                                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F7CA00" stopOpacity={0.15}/><stop offset="95%" stopColor="#F7CA00" stopOpacity={0}/></linearGradient>
-                                        <linearGradient id="colorPur" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
-                                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }} />
-                                    <Area type="monotone" dataKey="revenue" stroke="#F7CA00" strokeWidth={4} fill="url(#colorRev)" animationDuration={1000} />
-                                    <Area type="monotone" dataKey="purchases" stroke="#10b981" strokeWidth={4} fill="url(#colorPur)" animationDuration={1000} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Card>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card>
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5">
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">Catalog Distribution</h3>
-                            </div>
-                            <div className="p-4 h-[320px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={analytics.pieData} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value">
-                                            {analytics.pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'black', paddingTop: '10px' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </Card>
-
-                        <Card>
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5">
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-tight">Order Intensity</h3>
-                            </div>
-                            <div className="p-4 h-[320px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={analytics.chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700 }} />
-                                        <Tooltip cursor={{ fill: 'rgba(29, 78, 216, 0.05)' }} />
-                                        <Bar dataKey="orders" fill="#F7CA00" radius={[4, 4, 0, 0]} barSize={25} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </Card>
+            {/* ── Filters Bar (Purchase Style) ── */}
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl p-5 mb-6 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">1. Category</label>
+                        <select 
+                            value={filters.type}
+                            onChange={e => setFilters({...filters, type: e.target.value as any, subType: ''})}
+                            className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all cursor-pointer font-bold text-slate-700 dark:text-slate-200"
+                        >
+                            <option value="">Select Department...</option>
+                            {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                        </select>
                     </div>
-                </div>
 
-                {/* Tactical Ledger Side Panel */}
-                <div className="lg:col-span-4 space-y-8">
-                    <Card>
-                        <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 flex items-center justify-between">
-                            <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Alpha Product Index</h3>
-                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">High Velocity</span>
-                        </div>
-                        <div className="divide-y divide-slate-50 dark:divide-white/5">
-                            {data.products.slice(0, 8).map((p, i) => (
-                                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-xs font-bold text-slate-300 dark:text-slate-700 w-4 group-hover:text-blue-600">0{i+1}</span>
-                                        <div>
-                                            <p className="text-[11px] font-bold text-slate-900 dark:text-white uppercase leading-tight tracking-tight max-w-[150px] truncate">{p.name}</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">{p.category_name || 'General'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-bold text-slate-900 dark:text-white">{p.stock || 0}</p>
-                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">In Warehouse</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="p-4 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5">
-                            <button className="w-full py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-[#F7CA00] hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
-                                Audit All Assets <ArrowRight className="h-3 w-3" />
-                            </button>
-                        </div>
-                    </Card>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">2. Manifest View</label>
+                        <select 
+                            value={filters.subType}
+                            onChange={e => setFilters({...filters, subType: e.target.value})}
+                            disabled={!filters.type}
+                            className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all cursor-pointer font-bold text-slate-700 dark:text-slate-200 disabled:opacity-50"
+                        >
+                            <option value="">Select View Type...</option>
+                            {filters.type && SUB_OPTIONS[filters.type]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                    </div>
 
-                    <Card className="p-6 bg-[#131921] text-white">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-amber-500 rounded-lg">
-                                <AlertTriangle className="h-5 w-5 text-[#131921]" />
-                            </div>
-                            <h3 className="text-sm font-bold uppercase tracking-widest">Operational Health</h3>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">3. From Date</label>
+                        <div className="relative">
+                            <input 
+                                type="date" value={filters.dateFrom} 
+                                onChange={e => setFilters({...filters, dateFrom: e.target.value})}
+                                className="w-full pl-4 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all font-bold text-slate-700 dark:text-slate-200"
+                            />
                         </div>
-                        <div className="space-y-4">
-                            {[
-                                { l: 'Zero Stock Manifest', v: data.products.filter(p => !p.stock || p.stock === 0).length, c: 'text-red-400' },
-                                { l: 'Shortage Warning', v: data.products.filter(p => p.stock > 0 && p.stock < 10).length, c: 'text-amber-400' },
-                                { l: 'Pending Consignments', v: data.orders.filter(o => o.status === 'ordered').length, c: 'text-blue-400' },
-                            ].map((h, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl backdrop-blur-md">
-                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">{h.l}</span>
-                                    <span className={`text-sm font-black ${h.c}`}>{h.v}</span>
-                                </div>
-                            ))}
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">4. To Date</label>
+                        <div className="relative">
+                            <input 
+                                type="date" value={filters.dateTo} 
+                                onChange={e => setFilters({...filters, dateTo: e.target.value})}
+                                className="w-full pl-4 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all font-bold text-slate-700 dark:text-slate-200"
+                            />
                         </div>
-                        <button className="w-full mt-8 py-3.5 bg-[#FFA41C] text-[#131921] rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#F5A623] transition-all hover:-translate-y-1 active:translate-y-0">
-                            Launch Logistics Audit
+                    </div>
+
+                    <div className="flex items-end">
+                        <button 
+                            onClick={generateReport}
+                            disabled={generating || !filters.subType}
+                            className="w-full py-2.5 bg-[#EEAF1C] hover:bg-blue-700 text-white text-sm font-black rounded-lg shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+                            Run Report
                         </button>
-                    </Card>
+                    </div>
                 </div>
             </div>
 
-            {/* ── Recent Analytical Log ── */}
-            <Card>
-                <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Recent Historical Transactions</h3>
-                    <button className="text-xs font-bold text-[#F7CA00] hover:underline flex items-center gap-1">View Full Registry <ChevronRight className="h-3 w-3" /></button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead>
-                            <tr className="bg-slate-50/30 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/10 uppercase text-[10px] font-black text-slate-400 tracking-wider">
-                                <th className="px-6 py-4">Transaction ID</th>
-                                <th className="px-6 py-4">Identity</th>
-                                <th className="px-6 py-4">Fulfillment Status</th>
-                                <th className="px-6 py-4 text-center">Date Manifest</th>
-                                <th className="px-6 py-4 text-right">Value</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                            {data.orders.slice(0, 10).map((o, i) => (
-                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                                    <td className="px-6 py-4 font-bold text-[#F7CA00]">#{o.order_number || o.id.slice(0, 8)}</td>
-                                    <td className="px-6 py-4">
-                                        <p className="font-bold text-slate-800 dark:text-slate-200">{o.guest_name || o.customer_name || 'Walk-in'}</p>
-                                        <p className="text-[10px] text-slate-400 uppercase font-medium">{o.customer_type || 'Retail'}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border
-                                            ${o.status === 'delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                            {o.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-center text-slate-500 font-bold text-[11px]">{formatDate(o.created_at)}</td>
-                                    <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">{formatCurrency(o.total_amount)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+            {/* ── Table (Purchase Style) ── */}
+            {reportResult.length > 0 ? (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                    <div className="flex items-center justify-between px-2">
+                         <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
+                            Audit Result: {reportResult.length} Matches Found
+                         </p>
+                         <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
+                            Net Valuation: <span className="text-[#EEAF1C] font-black underline decoration-2 underline-offset-4">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.total_amount || r.price || 0), 0))}</span>
+                         </p>
+                    </div>
 
+                    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                        <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Reference Node</th>
+                                        <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Date Manifest</th>
+                                        <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Subject Entity</th>
+                                        <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
+                                        <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Gross Valuation</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                                    {reportResult.map((row, idx) => (
+                                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <span className="text-[#EEAF1C] font-black">#{row.purchase_number || row.order_number || row.id.slice(0, 8)}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                                                {formatDate(row.created_at || row.order_date)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-slate-900 dark:text-white font-black uppercase text-xs tracking-tight">{row.supplier_name || row.customer_name || row.guest_name || 'System Auto'}</span>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{filters.type} Record</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`inline-block px-2.5 py-1 rounded text-[10px] font-black uppercase border
+                                                    ${row.status === 'received' || row.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                                    {row.status || 'Verified'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">
+                                                {formatCurrency(row.total_amount || row.price || 0)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#0D1921] text-center px-10">
+                    <BarChart3 className="h-12 w-12 text-slate-200 dark:text-white/10 mb-5" />
+                    <h3 className="text-lg font-bold text-slate-400 mb-2">Awaiting Diagnostic Configuration</h3>
+                    <p className="text-sm text-slate-400 font-medium max-w-sm lowercase tracking-tight leading-relaxed">Select a category and view from the filter bar above to manifestation audit records.</p>
+                </div>
+            )}
         </div>
+    );
+}
+
+export default function MasterReportsEngine() {
+    return (
+        <Suspense fallback={<PageLoader />}>
+            <ReportsEngineInner />
+        </Suspense>
     );
 }

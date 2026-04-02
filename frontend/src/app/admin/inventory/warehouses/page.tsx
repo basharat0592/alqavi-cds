@@ -84,14 +84,14 @@ export default function WarehousesPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadWarehouses}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <Link
                         href="/admin/inventory/warehouses/add"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         New Warehouse
@@ -107,7 +107,7 @@ export default function WarehousesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by name, code or city..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -118,7 +118,7 @@ export default function WarehousesPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -147,7 +147,7 @@ export default function WarehousesPage() {
                                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No logistic nodes found.</p>
                                         <Link
                                             href="/admin/inventory/warehouses/add"
-                                            className="text-sm text-[#F7CA00] hover:underline font-medium"
+                                            className="text-sm text-[#EEAF1C] hover:underline font-medium"
                                         >
                                             Create your first warehouse
                                         </Link>
@@ -157,7 +157,7 @@ export default function WarehousesPage() {
                                 filtered.map((wh) => (
                                     <tr key={wh.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
-                                            <span className="text-[#F7CA00] font-medium text-sm">
+                                            <span className="text-[#EEAF1C] font-medium text-sm">
                                                 {wh.code || 'SYS-NODE'}
                                             </span>
                                         </td>
@@ -188,7 +188,7 @@ export default function WarehousesPage() {
                                             <div className="flex justify-end items-center gap-1">
                                                 <button
                                                     onClick={() => setViewRow(wh)}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors"
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
                                                     title="View details"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -220,7 +220,7 @@ export default function WarehousesPage() {
             {/* ── View Modal ── */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Warehouse Node</h3>
@@ -258,7 +258,7 @@ export default function WarehousesPage() {
                                 </div>
                                 <div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Linked Records</p>
-                                    <Link href={`/admin/inventory/list?warehouse=${viewRow.id}`} className="text-sm font-semibold text-[#F7CA00] hover:underline">
+                                    <Link href={`/admin/inventory/list?warehouse=${viewRow.id}`} className="text-sm font-semibold text-[#EEAF1C] hover:underline">
                                         View Stock Ledger
                                     </Link>
                                 </div>
@@ -276,7 +276,7 @@ export default function WarehousesPage() {
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-5 text-center">
                             <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -312,3 +312,4 @@ export default function WarehousesPage() {
         </div>
     );
 }
+

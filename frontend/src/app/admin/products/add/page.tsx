@@ -13,8 +13,8 @@ import { authService } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border rounded-xl text-sm outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 export default function AddEditProductPage() {
@@ -47,7 +47,7 @@ export default function AddEditProductPage() {
         retail_price: '',
         status: 'active',
         batch_number: '',
-        main_category: '', 
+        main_category: '',
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -173,9 +173,9 @@ export default function AddEditProductPage() {
     return (
         <div className="max-w-6xl mx-auto py-8 px-6 font-sans pb-20">
             <div className="mb-8">
-                <button 
-                    onClick={() => router.push('/admin/products')} 
-                    className="text-sm font-bold text-slate-500 hover:text-[#F7CA00] transition-colors mb-4 flex items-center gap-1"
+                <button
+                    onClick={() => router.push('/admin/products')}
+                    className="text-sm font-bold text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
                 >
                     <ChevronLeft className="h-4 w-4" /> Back to List
                 </button>
@@ -189,9 +189,9 @@ export default function AddEditProductPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Data Arrays */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                <Tag className="h-4 w-4 text-[#F7CA00]" />
+                                <Tag className="h-4 w-4 text-[#EEAF1C]" />
                                 <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Product Information</h2>
                             </div>
                             <div className="p-6 space-y-6">
@@ -236,9 +236,9 @@ export default function AddEditProductPage() {
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                <DollarSign className="h-4 w-4 text-[#F7CA00]" />
+                                <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
                                 <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Pricing & Logistics</h2>
                             </div>
                             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -271,15 +271,15 @@ export default function AddEditProductPage() {
                                     <div className="flex items-center gap-6">
                                         {['active', 'inactive', 'archived'].map(s => (
                                             <label key={s} className="flex items-center gap-2 cursor-pointer group">
-                                                <input 
-                                                    type="radio" 
-                                                    name="status" 
-                                                    value={s} 
-                                                    checked={formData.status === s} 
+                                                <input
+                                                    type="radio"
+                                                    name="status"
+                                                    value={s}
+                                                    checked={formData.status === s}
                                                     onChange={handleChange}
-                                                    className="w-4 h-4 text-[#F7CA00]" 
+                                                    className="w-4 h-4 text-[#EEAF1C]"
                                                 />
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase tracking-tight text-slate-400 border border-slate-200 dark:border-white/10 font-bold group-hover:text-[#F7CA00] transition-colors">{s}</span>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase tracking-tight text-slate-400 border border-slate-200 dark:border-white/10 font-bold group-hover:text-[#EEAF1C] transition-colors">{s}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -290,9 +290,9 @@ export default function AddEditProductPage() {
 
                     {/* Right Column: Visual Assets */}
                     <div className="space-y-6">
-                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                <ImageIcon className="h-4 w-4 text-[#F7CA00]" />
+                                <ImageIcon className="h-4 w-4 text-[#EEAF1C]" />
                                 <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Primary Visual</h2>
                             </div>
                             <div className="p-6">
@@ -307,7 +307,7 @@ export default function AddEditProductPage() {
                                     )}
                                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-tight shadow-lg hover:scale-105 transition-all text-slate-900 border">
-                                           Modify Asset
+                                            Modify Asset
                                         </button>
                                     </div>
                                 </div>
@@ -315,13 +315,13 @@ export default function AddEditProductPage() {
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
                                 <div className="flex items-center gap-3">
-                                    <Layers className="h-4 w-4 text-[#F7CA00]" />
+                                    <Layers className="h-4 w-4 text-[#EEAF1C]" />
                                     <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Gallery Manifest</h2>
                                 </div>
-                                <button type="button" onClick={() => galleryInputRef.current?.click()} className="p-1.5 bg-[#F7CA00]/10 text-[#F7CA00] rounded-lg hover:bg-blue-600 hover:text-white transition-all">
+                                <button type="button" onClick={() => galleryInputRef.current?.click()} className="p-1.5 bg-[#EEAF1C]/10 text-[#EEAF1C] rounded-lg hover:bg-blue-600 hover:text-white transition-all">
                                     <Plus className="h-4 w-4" />
                                 </button>
                             </div>
@@ -344,7 +344,7 @@ export default function AddEditProductPage() {
                                     onClick={() => galleryInputRef.current?.click()}
                                     className="aspect-square border border-dashed border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
                                 >
-                                    <Plus className="h-5 w-5 text-slate-300 group-hover:text-[#F7CA00] transition-colors" />
+                                    <Plus className="h-5 w-5 text-slate-300 group-hover:text-[#EEAF1C] transition-colors" />
                                 </button>
                                 <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
                             </div>
@@ -354,7 +354,7 @@ export default function AddEditProductPage() {
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="w-full py-3.5 bg-[#F7CA00] text-white rounded-xl text-sm font-bold uppercase tracking-tight shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-3.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-bold uppercase tracking-tight shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
                                 {isEdit ? 'Save Changes' : 'Add Product'}
@@ -362,7 +362,7 @@ export default function AddEditProductPage() {
                             <button
                                 type="button"
                                 onClick={() => router.push('/admin/products')}
-                                className="w-full py-3 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 transition-all uppercase tracking-tight"
+                                className="w-full py-3 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 transition-all uppercase tracking-tight"
                             >
                                 Discard Protocol
                             </button>
@@ -373,3 +373,4 @@ export default function AddEditProductPage() {
         </div>
     );
 }
+
