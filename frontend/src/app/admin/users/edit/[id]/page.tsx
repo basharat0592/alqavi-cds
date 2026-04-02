@@ -8,6 +8,7 @@ import {
     ArrowLeft, User, Mail, Phone, KeyRound,
     Shield, Building2, CheckCircle, XCircle, Save, Loader2, Zap, Calendar, History
 } from 'lucide-react';
+import PageLoader from '@/components/ui/PageLoader';
 
 export default function EditUserPage() {
     const router = useRouter();
@@ -97,17 +98,12 @@ export default function EditUserPage() {
 
     const sellerRoleId = roles.find(r => r.name.toLowerCase() === 'seller')?.id;
 
-    if (loading) return (
-        <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-slate-950 flex-col gap-4">
-            <Loader2 className="h-10 w-10 text-[#FF9900] animate-spin" />
-            <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest italic animate-pulse">Retrieving Profile...</p>
-        </div>
-    );
+    if (loading) return <PageLoader />;
 
     const inputCls = (field: string) =>
         `w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border rounded text-sm font-medium text-gray-900 dark:text-white outline-none transition-all focus:bg-white dark:focus:bg-slate-900 ${errors[field]
             ? 'border-red-300 focus:border-red-400'
-            : 'border-gray-200 dark:border-slate-700 focus:border-[#FF9900]'
+            : 'border-gray-200 dark:border-slate-700 focus:border-[#1D4ED8]'
         }`;
 
     const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-slate-400 mb-1.5";
@@ -129,7 +125,7 @@ export default function EditUserPage() {
 
             {/* Page Header */}
             <div className="flex items-center gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
-                <Link href="/admin/users" className="p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-gray-400 hover:text-[#FF9900] transition-all shadow-sm">
+                <Link href="/admin/users" className="p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-gray-400 hover:text-[#1D4ED8] transition-all shadow-sm">
                     <ArrowLeft className="h-4 w-4" />
                 </Link>
                 <div>
@@ -188,7 +184,7 @@ export default function EditUserPage() {
                             <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded">
                                 <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest pl-2">Account State</span>
                                 <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#FF9900]' : 'bg-gray-300 dark:bg-slate-600'}`}>
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#1D4ED8]' : 'bg-gray-300 dark:bg-slate-600'}`}>
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </button>
                             </div>
@@ -220,7 +216,7 @@ export default function EditUserPage() {
                         Abort
                     </Link>
                     <button type="submit" disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2 bg-[#FF9900] hover:bg-[#e68a00] text-[#131921] font-bold text-[10px] uppercase tracking-widest rounded transition-all shadow-sm disabled:opacity-50">
+                        className="flex items-center gap-2 px-8 py-2 bg-[#1D4ED8] hover:bg-[#1D4ED8] text-white font-bold text-[10px] uppercase tracking-widest rounded transition-all shadow-sm disabled:opacity-50">
                         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                         {saving ? 'UPDATING...' : 'COMMIT PROFILE'}
                     </button>

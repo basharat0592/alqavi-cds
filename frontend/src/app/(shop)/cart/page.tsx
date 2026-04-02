@@ -30,7 +30,7 @@ export default function CartPage() {
                     <div className="space-y-4">
                         <h1 className="text-3xl font-bold dark:text-white">Your Shopping Cart is empty.</h1>
                         <p className="text-gray-500 text-sm max-w-sm mx-auto">Your Shopping Cart lives to serve. Give it purpose — fill it with cosmetics, skincare, and more.</p>
-                        <Link href="/shop" className="inline-block px-10 py-2.5 bg-[#ffd814] hover:bg-[#f7ca00] text-[#111] font-bold rounded-lg shadow-sm text-sm">
+                        <Link href="/shop" className="inline-block px-10 py-2.5 bg-[#F7CA00] hover:bg-[#F7CA00] text-white font-bold rounded-lg shadow-sm text-sm">
                             Continue Shopping
                         </Link>
                     </div>
@@ -69,7 +69,7 @@ export default function CartPage() {
                                             <div className="flex-1 space-y-2">
                                                 <div className="flex justify-between items-start gap-4">
                                                     <Link href={`/product/${item.id}`}>
-                                                        <h3 className="text-lg font-bold text-[#007185] hover:text-[#C45500] hover:underline cursor-pointer line-clamp-2 max-w-xl items-baseline">
+                                                        <h3 className="text-lg font-bold text-[#007185] hover:text-[#F7CA00] hover:underline cursor-pointer line-clamp-2 max-w-xl items-baseline">
                                                             {item.name}
                                                         </h3>
                                                     </Link>
@@ -79,19 +79,19 @@ export default function CartPage() {
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">{item.category}</p>
                                                 <div className="flex items-center gap-6 mt-8">
                                                     <QuantityController item={item} updateQuantity={updateQuantity} />
-                                                    
+
                                                     <div className="h-4 w-[1px] bg-gray-200 dark:bg-slate-700" />
-                                                    
-                                                    <button 
-                                                        onClick={() => removeFromCart(item.id)} 
-                                                        className="text-xs text-[#007185] hover:text-[#C45500] hover:underline transition-all tracking-tight font-medium"
+
+                                                    <button
+                                                        onClick={() => removeFromCart(item.id)}
+                                                        className="text-xs text-[#007185] hover:text-[#F7CA00] hover:underline transition-all tracking-tight font-medium"
                                                     >
                                                         Delete Item
                                                     </button>
-                                                    
+
                                                     <div className="h-4 w-[1px] bg-gray-200 dark:bg-slate-700 hidden sm:block" />
-                                                    
-                                                    <button className="hidden sm:block text-xs text-[#007185] hover:text-[#C45500] hover:underline transition-all tracking-tight font-medium">
+
+                                                    <button className="hidden sm:block text-xs text-[#007185] hover:text-[#F7CA00] hover:underline transition-all tracking-tight font-medium">
                                                         Save for later
                                                     </button>
                                                 </div>
@@ -119,7 +119,7 @@ export default function CartPage() {
                                         <div className="w-full h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                             <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${(cartTotal / shippingThreshold) * 100}%` }} />
                                         </div>
-                                        <p className="text-xs text-gray-500 leading-tight">Add PKR <span className="font-bold text-[#C45500] underline">{remainingForFree.toLocaleString()}</span> for free shipping.</p>
+                                        <p className="text-xs text-gray-500 leading-tight">Add PKR <span className="font-bold text-[#F7CA00] underline">{remainingForFree.toLocaleString()}</span> for free shipping.</p>
                                     </div>
                                 )}
 
@@ -128,10 +128,10 @@ export default function CartPage() {
                                     <p className="text-2xl font-black dark:text-white tracking-widest mt-1">PKR {cartTotal.toLocaleString()}</p>
                                 </div>
 
-                                <Link href="/checkout" className="block w-full py-2 bg-[#ffd814] hover:bg-[#f7ca00] text-[#111] font-bold rounded-lg text-sm text-center shadow-sm active:shadow-inner active:scale-[0.98] transition-all">
+                                <Link href="/checkout" className="block w-full py-2 bg-[#F7CA00] hover:bg-[#F7CA00] text-white font-bold rounded-lg text-sm text-center shadow-sm active:shadow-inner active:scale-[0.98] transition-all">
                                     Proceed to Checkout
                                 </Link>
-                                
+
                                 <div className="pt-2">
                                     <div className="flex items-center gap-2 p-3 border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 rounded pointer-events-none">
                                         <ShieldCheck className="h-4 w-4 text-gray-400" />
@@ -139,11 +139,11 @@ export default function CartPage() {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm">
                                 <h4 className="text-sm font-bold dark:text-white mb-2 uppercase tracking-tighter">Your Browsing History</h4>
                                 <div className="text-[10px] text-gray-500 italic">Explore recently viewed items in the collection.</div>
-                                <Link href="/shop" className="block text-xs text-[#007185] hover:text-[#C45500] hover:underline mt-4 font-bold tracking-widest uppercase">Visit Store Catalog</Link>
+                                <Link href="/shop" className="block text-xs text-[#007185] hover:text-[#F7CA00] hover:underline mt-4 font-bold tracking-widest uppercase">Visit Store Catalog</Link>
                             </div>
                         </div>
 
@@ -177,15 +177,15 @@ function QuantityController({ item, updateQuantity }: { item: any, updateQuantit
     return (
         <div className="flex flex-col gap-1.5 min-w-[100px]">
             <div className="flex items-center gap-0 border border-gray-200 dark:border-slate-700 rounded shadow-sm overflow-hidden bg-gray-50 dark:bg-slate-800 h-10">
-                <button 
-                    onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} 
+                <button
+                    onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
                     className="px-3 h-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-r dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled={item.quantity <= 1}
                 >
                     <Minus className="h-3 w-3 text-gray-600 dark:text-gray-400" />
                 </button>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     value={localVal}
                     onFocus={() => setIsFocused(true)}
                     onChange={(e) => {
@@ -219,8 +219,8 @@ function QuantityController({ item, updateQuantity }: { item: any, updateQuantit
                     className="w-12 text-center text-sm font-bold bg-transparent dark:text-white focus:outline-none [appearance:textfield]"
                     placeholder=""
                 />
-                <button 
-                    onClick={() => updateQuantity(item.id, Math.min(maxStock, item.quantity + 1))} 
+                <button
+                    onClick={() => updateQuantity(item.id, Math.min(maxStock, item.quantity + 1))}
                     className="px-3 h-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border-l dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled={isMax}
                 >

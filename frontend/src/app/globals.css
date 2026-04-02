@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 @layer base {
+
   /* Light mode base */
   :root {
     --background: 255, 255, 255;
@@ -19,11 +20,12 @@
     --secondary-foreground: 15, 23, 42;
     --muted: 241, 245, 249;
     --muted-foreground: 100, 116, 139;
-    --accent: 255, 153, 0; /* Amazon Orange */
-    --accent-foreground: 15, 23, 42;
+    --accent: 29, 78, 216;
+    /* Corporate Blue #1D4ED8 */
+    --accent-foreground: 255, 255, 255;
     --border: 226, 232, 240;
     --input: 226, 232, 240;
-    --ring: 255, 153, 0;
+    --ring: 29, 78, 216;
     --radius: 0.75rem;
     /* Card color token */
     --card-bg: #ffffff;
@@ -44,28 +46,47 @@
     --secondary-foreground: 248, 250, 252;
     --muted: 27, 28, 30;
     --muted-foreground: 148, 163, 184;
-    --accent: 255, 153, 0;
-    --accent-foreground: 19, 25, 33;
+    --accent: 29, 78, 216;
+    --accent-foreground: 248, 250, 252;
     --border: 255, 255, 255, 0.07;
     --input: 255, 255, 255, 0.07;
-    --ring: 255, 153, 0;
+    --ring: 29, 78, 216;
     /* Card color token */
     --card-bg: #1B1C1E;
-    --card-border: rgba(255,255,255,0.07);
+    --card-border: rgba(255, 255, 255, 0.07);
   }
+
   /* ─── Remap Tailwind slate greys to the design system card color ─── */
-  .dark .dark\:bg-slate-800 { background-color: #1B1C1E !important; }
-  .dark .dark\:bg-slate-900 { background-color: #1B1C1E !important; }
-  .dark .dark\:bg-slate-800\/50 { background-color: rgba(27,28,30,0.5) !important; }
-  .dark .dark\:bg-slate-800\/20 { background-color: rgba(27,28,30,0.2) !important; }
-  .dark .dark\:border-slate-800 { border-color: rgba(255,255,255,0.07) !important; }
-  .dark .dark\:border-slate-700 { border-color: rgba(255,255,255,0.07) !important; }
+  .dark .dark\:bg-slate-800 {
+    background-color: #1B1C1E !important;
+  }
+
+  .dark .dark\:bg-slate-900 {
+    background-color: #1B1C1E !important;
+  }
+
+  .dark .dark\:bg-slate-800\/50 {
+    background-color: rgba(27, 28, 30, 0.5) !important;
+  }
+
+  .dark .dark\:bg-slate-800\/20 {
+    background-color: rgba(27, 28, 30, 0.2) !important;
+  }
+
+  .dark .dark\:border-slate-800 {
+    border-color: rgba(255, 255, 255, 0.07) !important;
+  }
+
+  .dark .dark\:border-slate-700 {
+    border-color: rgba(255, 255, 255, 0.07) !important;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Plus Jakarta Sans', sans-serif;
@@ -73,11 +94,12 @@
 }
 
 @layer components {
+
   /* ─── Admin Card (Recent Orders Design System) ─── */
   .admin-card {
     @apply bg-white dark:bg-[#1B1C1E] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all duration-200;
   }
-  
+
   /* ─── Glass Effect (Solid Navbar Style) ─── */
   .glass-effect {
     @apply bg-white dark:bg-[#1B1C1E];
@@ -90,12 +112,12 @@
   .nav-link {
     @apply relative py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground;
   }
-  
+
   .nav-link::after {
     content: '';
     @apply absolute bottom-0 left-0 h-0.5 w-0 bg-accent transition-all duration-300;
   }
-  
+
   .nav-link:hover::after {
     @apply w-full;
   }
@@ -103,8 +125,8 @@
 
 @layer utilities {
   .premium-shadow {
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.04), 
-                0 4px 20px -5px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.04),
+      0 4px 20px -5px rgba(0, 0, 0, 0.02);
   }
 
   .premium-shadow-hover {
@@ -130,13 +152,20 @@
 
   .luxury-gradient {
     background: radial-gradient(circle at top right, rgba(255, 153, 0, 0.02), transparent 40%),
-                radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.01), transparent 40%);
+      radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.01), transparent 40%);
   }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-slide-up {

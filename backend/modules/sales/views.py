@@ -33,8 +33,12 @@ def list_orders(request):
     
     orders = Order.objects.all().order_by('-created_at')
 
-    # Security: Non-superusers are restricted to their own domain
-    if not request.user.is_superuser:
+    # Security: Isolation based on role
+    is_admin = request.user.is_superuser or request.user.is_staff or (
+        request.user.role and request.user.role.name in ['Admin', 'admin']
+    )
+    
+    if not is_admin:
         if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
             # Supplier case: See orders containing their items
             orders = orders.filter(items__product__supplier=request.user.supplier_profile).distinct()
@@ -347,15 +351,72 @@ def update_order(request, order_id):
 
 
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def delete_order(request, order_id):
-    """Delete an order (admin only)."""
+    """Delete an order (owner or admin only)."""
+    order, err = get_or_404_response(Order, id=order_id)
+    if err:
+        return err
+    
+    # Ownership Check
+    is_admin = request.user.is_superuser or request.user.is_staff or (
+        request.user.role and request.user.role.name in ['Admin', 'admin']
+    )
+    
+    if not is_admin:
+        # Check if this user owns the order
+        if order.customer != request.user:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            
+    order.delete()
+    return Response({'message': 'Order deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_order(request, order_id):
+    """Cancel or request cancellation (owner or admin only)."""
     order, err = get_or_404_response(Order, id=order_id)
     if err:
         return err
 
-    order.delete()
-    return Response({'message': 'Order deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    # Identity Registry: Is privileged admin?
+    is_admin = request.user.is_superuser or request.user.is_staff or (
+        request.user.role and request.user.role.name in ['Admin', 'admin']
+    )
+    
+    if is_admin:
+        # Full Registry Authority — Force Cancel
+        order.status = 'cancelled'
+        order.save()
+        UserActivityLog.objects.create(
+            user=request.user,
+            action='cancel',
+            description=f'Admin cancelled order {order.order_number}'
+        )
+        return Response({'message': 'Order registration voided by administrator', 'status': 'cancelled'})
+
+    # Customer Logic: Request Cancellation
+    if order.customer != request.user:
+        return Response({'error': 'Identity mismatch. Unauthorized request.'}, status=status.HTTP_403_FORBIDDEN)
+            
+    # Status Pipeline Check: Only ordered, confirmed, or pending are eligible for request
+    if order.status.lower() not in ['ordered', 'confirmed', 'pending']:
+        return Response({
+            'error': f'Cancellation cannot be requested for registry in "{order.status}" status. Please contact the administrative desk.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Move to Review State
+    order.status = 'cancel_requested'
+    order.save()
+    
+    UserActivityLog.objects.create(
+        user=request.user,
+        action='cancel_request',
+        description=f'Customer requested cancellation for {order.order_number}'
+    )
+    
+    return Response({'message': 'Cancellation request submitted for administrative review', 'status': 'cancel_requested'}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

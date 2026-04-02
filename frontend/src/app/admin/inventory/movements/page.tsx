@@ -1,13 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { 
-    Search, Filter, History, ArrowUpRight, ArrowDownRight, 
-    ArrowRightLeft, ShoppingCart, Truck, RefreshCw, Warehouse,
-    Download, Calendar, User, Boxes, TrendingUp
+import {
+    Search, RefreshCw, ShoppingCart, Truck, 
+    ArrowRightLeft, History, Download, ChevronLeft,
+    Package, Calendar, MapPin
 } from 'lucide-react';
-import Link from 'next/link';
 import { inventoryService } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
+
+const StatusPill = ({ type }: { type: string }) => {
+    let bg = 'bg-slate-100 text-slate-600 border-slate-200';
+    const text = type || 'Unknown';
+
+    if (text === 'Purchase') bg = 'bg-blue-50 text-blue-700 border-blue-200';
+    else if (text === 'Sale') bg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    else if (text.includes('Transfer')) bg = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    else if (text === 'Adjustment') bg = 'bg-amber-50 text-amber-700 border-amber-200';
+    else if (text === 'Return') bg = 'bg-red-50 text-red-600 border-red-200';
+
+    return (
+        <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-semibold capitalize ${bg}`}>
+            {text}
+        </span>
+    );
+};
 
 export default function StockMovementsPage() {
     const [movements, setMovements] = useState<any[]>([]);
@@ -17,38 +34,26 @@ export default function StockMovementsPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState('');
     const [warehouses, setWarehouses] = useState<any[]>([]);
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [movData, whData] = await Promise.all([
-                    inventoryService.getMovements(),
-                    inventoryService.getWarehouses()
-                ]);
-                setMovements(movData);
-                setWarehouses(whData);
-            } catch (error) {
-                console.error("Failed to load movements", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, []);
-
-    const getTypeConfig = (type: string) => {
-        switch (type) {
-            case 'Purchase': return { icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', arrow: ArrowUpRight };
-            case 'Sale': return { icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', arrow: ArrowDownRight };
-            case 'Transfer In': return { icon: ArrowRightLeft, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', arrow: ArrowUpRight };
-            case 'Transfer Out': return { icon: ArrowRightLeft, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', arrow: ArrowDownRight };
-            case 'Adjustment': return { icon: RefreshCw, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20', arrow: ArrowRightLeft };
-            case 'Return': return { icon: History, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', arrow: ArrowUpRight };
-            default: return { icon: History, color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-slate-800', arrow: ArrowRightLeft };
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [movData, whData] = await Promise.all([
+                inventoryService.getMovements(),
+                inventoryService.getWarehouses()
+            ]);
+            setMovements(movData || []);
+            setWarehouses(whData || []);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
         }
     };
 
+    useEffect(() => { loadData(); }, []);
+
     const filtered = movements.filter(m => {
-        const matchesSearch = 
+        const matchesSearch =
             (m.product_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (m.reference_id?.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = !filterType || m.movement_type === filterType;
@@ -57,60 +62,46 @@ export default function StockMovementsPage() {
     });
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+            
+            {/* ── Page Header ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <History className="h-5 w-5 text-[#E68A00]" />
-                        Movement History
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Real-time ledger of all inventory transactions and warehouse activities</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Movement Ledger</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Global transaction log of all inventory shifts</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded shadow-sm text-xs font-bold uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
-                        <Download className="w-4 h-4" /> Download Report
-                    </button>
-                    <Link 
-                        href="/admin/inventory/movements/add"
-                        style={{ backgroundColor: '#E68A00' }}
-                        className="text-white px-6 py-2 rounded shadow-sm text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all hover:opacity-90"
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={loadData}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        title="Refresh"
                     >
-                        <RefreshCw className="w-4 h-4" /> Log Movement
-                    </Link>
-                    <button onClick={() => setLoading(true)} className="p-2 border border-gray-200 dark:border-slate-800 rounded hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-400 transition-colors">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+                        <Download className="h-4 w-4" />
+                        Export Ledger
+                    </button>
                 </div>
             </div>
 
-            {/* Metrics Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <MetricBox label="Today's Ops" value={movements.filter(m => new Date(m.created_at).toDateString() === new Date().toDateString()).length} icon={TrendingUp} color="text-emerald-500" />
-                <MetricBox label="Sales Out" value={movements.filter(m => m.movement_type === 'Sale').length} icon={Truck} color="text-blue-500" />
-                <MetricBox label="Purchases In" value={movements.filter(m => m.movement_type === 'Purchase').length} icon={ShoppingCart} color="text-indigo-500" />
-                <MetricBox label="Total Records" value={movements.length} icon={Boxes} />
-            </div>
-
-            {/* Filters */}
-            <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-t p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                <div className="relative md:col-span-2">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                    <input 
-                        type="text" 
-                        placeholder="Search by Product or Ref ID..."
-                        className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded px-10 py-2 text-sm outline-none focus:ring-1 focus:ring-[#e47911] dark:text-white"
+            {/* ── Filters Bar ── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        placeholder="Search product or reference..."
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
-                <select 
-                    className="bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none cursor-pointer dark:text-white"
+                <select
                     value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
+                    onChange={e => setFilterType(e.target.value)}
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
-                    <option value="">All Movement Types</option>
+                    <option value="">All Transactions</option>
                     <option value="Purchase">Purchase</option>
                     <option value="Sale">Sale</option>
                     <option value="Transfer In">Transfer In</option>
@@ -118,102 +109,99 @@ export default function StockMovementsPage() {
                     <option value="Adjustment">Adjustment</option>
                     <option value="Return">Return</option>
                 </select>
-                <select 
-                    className="bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded px-3 py-2 text-sm outline-none cursor-pointer dark:text-white"
+                <select
                     value={selectedWarehouse}
-                    onChange={(e) => setSelectedWarehouse(e.target.value)}
+                    onChange={e => setSelectedWarehouse(e.target.value)}
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
-                    <option value="">All Warehouses</option>
+                    <option value="">All Node Locations</option>
                     {warehouses.map(wh => (
                         <option key={wh.id} value={wh.id}>{wh.name}</option>
                     ))}
                 </select>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-b shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">
-                            <th className="px-6 py-4">Transaction Details</th>
-                            <th className="px-6 py-4">Type</th>
-                            <th className="px-6 py-4">Node / Location</th>
-                            <th className="px-6 py-4 text-right">Delta</th>
-                            <th className="px-6 py-4 text-right">Balance</th>
-                            <th className="px-6 py-4 text-right">Agent / Date</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                        {loading ? (
-                            Array(5).fill(0).map((_, i) => (
-                                <tr key={i} className="animate-pulse h-20"><td colSpan={6} className="bg-gray-50/20 dark:bg-slate-800/20"></td></tr>
-                            ))
-                        ) : filtered.length === 0 ? (
-                            <tr><td colSpan={6} className="px-6 py-24 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">No movement records found in this scope.</td></tr>
-                        ) : filtered.map((m) => {
-                            const config = getTypeConfig(m.movement_type);
-                            return (
-                                <tr key={m.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-[#E68A00] transition-colors leading-tight">{m.product_name}</div>
-                                        <div className="text-[10px] text-gray-400 dark:text-slate-500 font-bold tracking-tight mt-1 flex items-center gap-1.5 uppercase">
-                                            <span>Ref: {m.reference_id || 'AUTO'}</span>
-                                            {m.notes && (
-                                                <>
-                                                    <span className="text-gray-300 dark:text-slate-700">•</span>
-                                                    <span className="italic normal-case font-medium opacity-60 truncate max-w-[150px]">{m.notes}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase border dark:border-transparent ${config.bg} ${config.color}`}>
-                                            <config.icon className="w-3 h-3" />
-                                            {m.movement_type}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
-                                            <Warehouse className="w-3.5 h-3.5 text-gray-400 dark:text-slate-600" strokeWidth={2.5} />
-                                            {m.warehouse_name}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className={`font-black text-sm flex items-center justify-end gap-1 ${Number(m.quantity) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {Number(m.quantity) >= 0 ? '+' : ''}{m.quantity}
-                                            <config.arrow className="w-3.5 h-3.5" strokeWidth={3} />
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase mb-0.5">Final</div>
-                                        <div className="text-sm font-black text-gray-900 dark:text-white">{m.new_quantity}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="text-[10px] text-gray-500 dark:text-slate-400 font-bold flex items-center justify-end gap-1.5 mb-1 uppercase tracking-tighter">
-                                            <User className="w-3 h-3" /> {m.user_name || 'System'}
-                                        </div>
-                                        <div className="text-[10px] text-gray-400 dark:text-slate-500 tracking-tighter uppercase font-bold">
-                                            {new Date(m.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })} • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </div>
+            {/* ── Results count ── */}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
+            </p>
+
+            {/* ── Table ── */}
+            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Date & Time</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Reference</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Type</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Product</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Qty</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Warehouse</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                            {loading && filtered.length === 0 ? (
+                                Array(10).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan={6} className="px-4 py-4">
+                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-4 py-16 text-center">
+                                        <History className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">No movement history discovered.</p>
                                     </td>
                                 </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                            ) : (
+                                filtered.map((m) => (
+                                    <tr key={m.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                                <span>{new Date(m.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-[#F7CA00] font-semibold">#{m.reference_id || 'ADJ-XXX'}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusPill type={m.movement_type} />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded bg-slate-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                    {m.product_image ? (
+                                                        <img src={m.product_image} alt="" className="w-full h-full object-cover" />
+                                                    ) : <Package className="h-4 w-4 text-slate-400" />}
+                                                </div>
+                                                <div className="truncate max-w-[150px]">
+                                                    <p className="font-medium text-slate-800 dark:text-slate-200 truncate">{m.product_name}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className={`font-bold flex items-center gap-1 ${m.quantity > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {m.quantity > 0 ? '+' : ''}{m.quantity}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                                                <MapPin className="h-3.5 w-3.5 text-slate-300" />
+                                                <span>{m.warehouse_name || 'Generic Node'}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
         </div>
     );
 }
-
-function MetricBox({ label, value, icon: Icon, color = 'text-gray-900 dark:text-white' }: { label: string; value: string | number; icon: any; color?: string }) {
-    return (
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded shadow-sm hover:border-[#E68A00] transition-colors group">
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest group-hover:text-[#E68A00] transition-colors">{label}</p>
-                <Icon className="h-4 w-4 text-gray-300 dark:text-slate-700 group-hover:text-[#E68A00]/40 transition-colors" />
-            </div>
-            <p className={`text-2xl font-bold tracking-tight ${color}`}>{value}</p>
-        </div>
-    );
-}
-

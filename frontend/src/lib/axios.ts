@@ -4,10 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 10000, // 10s — more realistic for local dev
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    timeout: 30000, // 30s — more robust for local dev while backend optimizes queries
 });
 
 api.interceptors.request.use(

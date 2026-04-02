@@ -86,6 +86,7 @@ const config: Config = {
                 'marquee': 'marquee 25s linear infinite',
                 'fade-in-up': 'fade-in-up 0.5s ease-out',
                 'float': 'float 6s ease-in-out infinite',
+                'gradient-x': 'gradient-x 3s linear infinite',
             },
             keyframes: {
                 marquee: {

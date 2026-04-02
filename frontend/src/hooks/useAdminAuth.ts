@@ -29,6 +29,7 @@ export const useAdminAuth = () => {
                     name: authUser.name || (authUser as any).username || 'Admin',
                     email: authUser.email || '',
                     role: authUser.role || 'admin',
+                    avatar: authUser.avatar,
                     permissions: (authUser as any).permissions || [],
                 });
                 setIsAuthenticated(true);

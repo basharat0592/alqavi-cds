@@ -1,197 +1,314 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { 
-    Plus, Warehouse, MapPin, Phone, Mail, 
-    MoreVertical, Edit, Trash2, ShieldCheck, 
-    X, AlertCircle, Info, ChevronRight, Download,
-    Boxes, Building2, Globe, Activity, AlertTriangle
+import {
+    Plus, Search, RefreshCw, Trash2, Edit2, Eye,
+    Warehouse, X, AlertTriangle, Building2, MapPin, Phone
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { inventoryService } from '@/lib/api';
-import toast from 'react-hot-toast';
+
+const StatusPill = ({ status }: { status: string }) => {
+    let bg = 'bg-slate-100 text-slate-600 border-slate-200';
+    let text = status || 'Unknown';
+
+    if (text.toLowerCase() === 'active') {
+        bg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    } else if (text.toLowerCase() === 'inactive') {
+        bg = 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+
+    return (
+        <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-semibold capitalize ${bg}`}>
+            {text}
+        </span>
+    );
+};
 
 export default function WarehousesPage() {
+    const router = useRouter();
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [selectedWH, setSelectedWH] = useState<any>(null);
-    const [formData, setFormData] = useState({
-        name: '', code: '', type: 'Main', address: '', city: '', 
-        state: '', country: 'Pakistan', postal_code: '', 
-        contact_person: '', contact_phone: '', email: '', 
-        capacity: '0', status: 'Active'
-    });
-
-    useEffect(() => { loadWarehouses(); }, []);
+    const [search, setSearch] = useState('');
+    
+    const [viewRow, setViewRow] = useState<any | null>(null);
+    const [deleteRow, setDeleteRow] = useState<any | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const loadWarehouses = async () => {
+        setLoading(true);
         try {
             const data = await inventoryService.getWarehouses();
-            setWarehouses(data);
+            setWarehouses(data || []);
         } catch (error) {
-            toast.error("Failed to load warehouses");
+            console.error(error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await inventoryService.createWarehouse(formData);
-            toast.success("Warehouse registered successfully");
-            setIsCreateModalOpen(false);
-            loadWarehouses();
-            setFormData({
-                name: '', code: '', type: 'Main', address: '', city: '', 
-                state: '', country: 'Pakistan', postal_code: '', 
-                contact_person: '', contact_phone: '', email: '', 
-                capacity: '0', status: 'Active'
-            });
-        } catch (error) {
-            toast.error("Failed to create warehouse");
-        }
-    };
+    useEffect(() => { loadWarehouses(); }, []);
 
     const handleDelete = async () => {
-        if (!selectedWH) return;
+        if (!deleteRow) return;
+        setIsSubmitting(true);
         try {
-            await inventoryService.deleteWarehouse(selectedWH.id);
-            toast.success("Entry removed from registry");
-            setIsDeleteModalOpen(false);
+            await inventoryService.deleteWarehouse(deleteRow.id);
+            setDeleteRow(null);
             loadWarehouses();
         } catch (error) {
-            toast.error("Protected node: Cannot delete");
+            console.error(error);
+            alert("Security Violation: Cannot retire protected hub.");
+        } finally {
+            setIsSubmitting(false);
+            setDeleteRow(null);
         }
     };
 
-    return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
+    const filtered = warehouses.filter(wh =>
+        (wh.name?.toLowerCase().includes(search.toLowerCase())) ||
+        (wh.code?.toLowerCase().includes(search.toLowerCase())) ||
+        (wh.city?.toLowerCase().includes(search.toLowerCase()))
+    );
 
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
+    return (
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+            
+            {/* ── Page Header ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-[#E68A00]" />
-                        Warehouses
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage warehouses, storage capacity and hub status</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Warehouses</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage network nodes and logistics hubs</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded shadow-sm text-xs font-bold uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
-                        <Download className="w-4 h-4" /> Export Config
-                    </button>
-                    <Link 
-                        href="/admin/inventory/warehouses/add"
-                        style={{ backgroundColor: '#E68A00' }}
-                        className="text-white px-6 py-2 rounded shadow-sm text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all hover:opacity-90"
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={loadWarehouses}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        title="Refresh"
                     >
-                        <Plus className="w-4 h-4" strokeWidth={3} /> Add Warehouse
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <Link
+                        href="/admin/inventory/warehouses/add"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Warehouse
                     </Link>
                 </div>
             </div>
 
-            {/* Metrics Bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <MetricBox label="Active Centers" value={warehouses.filter(w => w.status === 'Active').length} icon={Activity} color="text-emerald-500" />
-                <MetricBox label="Global Locations" value={new Set(warehouses.map(w => w.city)).size} icon={Globe} color="text-blue-500" />
-                <MetricBox label="Total Capacity" value={`${warehouses.reduce((a, b) => a + Number(b.capacity || 0), 0).toLocaleString()} SQFT`} icon={Boxes} color="text-indigo-500" />
-                <MetricBox label="System Nodes" value={warehouses.length} icon={Warehouse} />
+            {/* ── Filters Bar ── */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search by name, code or city..."
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                    />
+                </div>
             </div>
 
-            {/* Grid View */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading ? (
-                    Array(6).fill(0).map((_, i) => <div key={i} className="h-64 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded-lg animate-pulse"></div>)
-                ) : warehouses.length === 0 ? (
-                    <div className="col-span-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-20 text-center">
-                        <Building2 className="w-16 h-16 mx-auto mb-4 opacity-10" />
-                        <p className="text-sm font-bold uppercase tracking-widest text-gray-400">No fulfillment nodes registered in the network.</p>
-                    </div>
-                ) : warehouses.map((wh) => (
-                    <div key={wh.id} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg shadow-sm hover:shadow-md transition-all flex flex-col group overflow-hidden">
-                        <div className="p-6">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg group-hover:bg-[#E68A00]/10 transition-colors">
-                                    <Warehouse className="w-6 h-6 text-gray-400 dark:text-slate-500 group-hover:text-[#E68A00]" />
+            {/* ── Results count ── */}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
+            </p>
+
+            {/* ── Table ── */}
+            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Node ID</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Warehouse Name</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Location</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Contact</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Status</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                            {loading && filtered.length === 0 ? (
+                                Array(6).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan={6} className="px-4 py-4">
+                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-4 py-16 text-center">
+                                        <Building2 className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No logistic nodes found.</p>
+                                        <Link
+                                            href="/admin/inventory/warehouses/add"
+                                            className="text-sm text-[#F7CA00] hover:underline font-medium"
+                                        >
+                                            Create your first warehouse
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map((wh) => (
+                                    <tr key={wh.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-4 py-3">
+                                            <span className="text-[#F7CA00] font-medium text-sm">
+                                                {wh.code || 'SYS-NODE'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 max-w-[200px]">
+                                            <span className="text-slate-800 dark:text-slate-200 font-medium text-sm truncate block" title={wh.name}>
+                                                {wh.name}
+                                            </span>
+                                            <span className="text-xs text-slate-400 block mt-0.5">{wh.type} Hub</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                                                <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                                <span className="truncate max-w-[200px]" title={`${wh.address || 'Address Restricted'}, ${wh.city}`}>
+                                                    {wh.city}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                                                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                                <span>{wh.contact_phone || 'Non-disclosed'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusPill status={wh.status} />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex justify-end items-center gap-1">
+                                                <button
+                                                    onClick={() => setViewRow(wh)}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors"
+                                                    title="View details"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                                <Link
+                                                    href={`/admin/inventory/warehouses/edit/${wh.id}`}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </Link>
+                                                <button
+                                                    onClick={() => setDeleteRow(wh)}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* ── View Modal ── */}
+            {viewRow && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Warehouse Node</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Location details</p>
+                            </div>
+                            <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Name</p>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.name || '—'}</p>
                                 </div>
-                                <div className="flex gap-1.5">
-                                    <Link href={`/admin/inventory/warehouses/edit/${wh.id}`} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                                        <Edit className="w-4 h-4" />
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Code</p>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.code || 'SYS-NODE'}</p>
+                                </div>
+                                <div className="col-span-2">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Address</p>
+                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{viewRow.address || 'Address Restricted'}, {viewRow.city}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Hub Type</p>
+                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{viewRow.type} Hub</span>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Network Status</p>
+                                    <StatusPill status={viewRow.status} />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Contact Phone</p>
+                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{viewRow.contact_phone || 'Non-disclosed'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Linked Records</p>
+                                    <Link href={`/admin/inventory/list?warehouse=${viewRow.id}`} className="text-sm font-semibold text-[#F7CA00] hover:underline">
+                                        View Stock Ledger
                                     </Link>
-                                    <button onClick={() => { setSelectedWH(wh); setIsDeleteModalOpen(true); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-gray-400 hover:text-red-600 transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-[#E68A00] transition-colors tracking-tight">{wh.name}</h3>
-                            <div className="text-[10px] font-black text-gray-400 dark:text-slate-500 flex items-center gap-2 uppercase tracking-widest mb-4">
-                                <span>ID: {wh.code || 'SYS-NODE'}</span>
-                                <span className="text-gray-200 dark:text-slate-800">|</span>
-                                <span className="text-[#007185] dark:text-[#4caec2]">{wh.type} HUB</span>
-                            </div>
-                            <div className="space-y-3 mb-2">
-                                <div className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-slate-400">
-                                    <MapPin className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
-                                    <span className="truncate">{wh.address || 'Location Pending'}, {wh.city}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-slate-400">
-                                    <Phone className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
-                                    <span>{wh.contact_phone || '-- -- --'}</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="mt-auto px-6 py-4 bg-gray-50/50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                            <div className={`flex items-center gap-2 px-2 py-0.5 rounded text-[9px] font-black uppercase ${wh.status === 'Active' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${wh.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                                {wh.status}
-                            </div>
-                            <Link href={`/admin/inventory/list?warehouse=${wh.id}`} className="text-[10px] font-black text-[#007185] dark:text-[#4caec2] hover:text-[#E68A00] flex items-center gap-1 uppercase tracking-tight group-hover:translate-x-1 transition-transform">
-                                Node Details <ChevronRight className="w-3 h-3" />
-                            </Link>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Amazon Style Delete Confirmation */}
-            {isDeleteModalOpen && selectedWH && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-slate-900 rounded border border-gray-300 dark:border-slate-700 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-[#e47911]" />
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">System Purge</h3>
-                            </div>
-                        </div>
-                        <div className="p-6 text-sm text-gray-700 dark:text-gray-300">
-                            Permanently delete node <span className="font-bold text-gray-900 dark:text-white">{selectedWH.name}</span>? This will orphan any stock records at this location.
-                        </div>
-                        <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-bold shadow-sm">Cancel</button>
-                            <button onClick={handleDelete} className="px-4 py-1.5 bg-[#f0c14b] border border-[#a88734] rounded text-xs font-bold text-[#111] hover:bg-[#ebae1e] shadow-sm flex items-center gap-2">
-                                <Trash2 className="h-3 w-3" />
-                                Commit Erasure
+                        <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
+                            <button onClick={() => setViewRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
+                                Close
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* ── Delete Modal ── */}
+            {deleteRow && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-5 text-center">
+                            <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
+                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Delete Item</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+                                Are you sure? This will permanently remove <br/><strong className="text-slate-700 dark:text-slate-300">"{deleteRow.name}"</strong>.
+                            </p>
+                            <p className="text-xs font-semibold text-red-500 bg-red-50 p-2 rounded-lg mb-5 border border-red-100">
+                                This will orphan all stock records at this location.
+                            </p>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setDeleteRow(null)}
+                                    disabled={isSubmitting}
+                                    className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={isSubmitting}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
+                                >
+                                    {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Delete'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
-
-function MetricBox({ label, value, icon: Icon, color = 'text-gray-900 dark:text-white' }: { label: string; value: string | number; icon: any; color?: string }) {
-    return (
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded shadow-sm hover:border-[#E68A00] transition-colors group">
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest group-hover:text-[#E68A00] transition-colors">{label}</p>
-                <Icon className="h-4 w-4 text-gray-300 dark:text-slate-700 group-hover:text-[#E68A00]/40 transition-colors" />
-            </div>
-            <p className={`text-2xl font-bold tracking-tight ${color}`}>{value}</p>
-        </div>
-    );
-}
-

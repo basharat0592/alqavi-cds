@@ -34,10 +34,10 @@ export default function SubModuleStub({ title, section, description }: SubModule
                 <div className="bg-[#232F3E] p-10 text-white relative overflow-hidden">
                     <div className="relative z-10">
                         <div className="flex items-center gap-4 mb-4">
-                            <div className="w-12 h-12 bg-[#FF9900] rounded shadow-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-[#F7CA00] rounded shadow-lg flex items-center justify-center">
                                 <Construction className="w-7 h-7 text-white" />
                             </div>
-                            <span className="bg-[#ffffff20] text-[#FF9900] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#ffffff10]">
+                            <span className="bg-[#ffffff20] text-[#F7CA00] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#ffffff10]">
                                 System Engineering Mode
                             </span>
                         </div>
@@ -50,7 +50,7 @@ export default function SubModuleStub({ title, section, description }: SubModule
                     </div>
 
                     {/* Decorative Background Element */}
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#FF9900]/10 rounded-full blur-3xl" />
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#F7CA00]/10 rounded-full blur-3xl" />
                 </div>
 
                 {/* Content Area */}
@@ -64,7 +64,7 @@ export default function SubModuleStub({ title, section, description }: SubModule
                             We are configuring the backend tables and frontend schemas for <strong>{title}</strong>. This section will feature full CRUD capabilities and seamless integration with the core ERP database.
                         </p>
                         <div className="flex items-center justify-center gap-4">
-                            <Link href="/admin/dashboard" className="px-8 py-3 bg-[#FF9900] border border-[#a88734] text-gray-900 font-black text-xs uppercase tracking-widest rounded hover:bg-[#F0982D] transition-all shadow-md active:scale-95 flex items-center gap-2">
+                            <Link href="/admin/dashboard" className="px-8 py-3 bg-[#F7CA00] border border-[#a88734] text-gray-900 font-black text-xs uppercase tracking-widest rounded hover:bg-[#F0982D] transition-all shadow-md active:scale-95 flex items-center gap-2">
                                 <LayoutDashboard size={14} strokeWidth={2.5} /> Return to Cockpit
                             </Link>
                         </div>
@@ -81,7 +81,7 @@ export default function SubModuleStub({ title, section, description }: SubModule
                         ].map((item, i) => (
                             <div key={i} className="bg-white border border-[#D5D9D9] p-5 rounded shadow-sm">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-[10px] font-black text-[#FF9900] uppercase tracking-widest">Phase {item.step}</span>
+                                    <span className="text-[10px] font-black text-[#F7CA00] uppercase tracking-widest">Phase {item.step}</span>
                                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${item.status === 'Wait' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                         {item.status}
                                     </span>

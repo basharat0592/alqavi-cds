@@ -1,41 +1,22 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
     Package, Tag, Image as ImageIcon, Plus, Trash2,
     Save, Loader2, ArrowLeft, DollarSign, Database,
-    X, AlertTriangle, CheckCircle, Barcode, Hash
+    X, AlertTriangle, CheckCircle, Barcode, Hash, Building2, Layers, ChevronLeft
 } from 'lucide-react';
 import { productService, companyCategoryService, companyService, CompanyInfo, mainCategoryService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import { authService } from '@/lib/auth';
+import toast from 'react-hot-toast';
+import PageLoader from '@/components/ui/PageLoader';
 
-// ─── Shared Utilities (Same to same as Company pages) ────────────────────────────────
-const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
-    ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border rounded-xl text-sm outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
-const LABEL = 'block text-xs font-bold text-gray-900 dark:text-gray-200 mb-1';
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
-
-const SectionHeader = ({ title, icon: Icon, action }: { title: string; icon?: any; action?: React.ReactNode }) => (
-    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
-            <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
-        </div>
-        {action}
-    </div>
-);
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function AddEditProductPage() {
     const router = useRouter();
     const { id } = useParams();
@@ -43,7 +24,6 @@ export default function AddEditProductPage() {
 
     const [loading, setLoading] = useState(isEdit);
     const [saving, setSaving] = useState(false);
-    const [toast, setToast] = useState<string | null>(null);
 
     // Data State
     const [productCategories, setProductCategories] = useState<any[]>([]);
@@ -67,7 +47,7 @@ export default function AddEditProductPage() {
         retail_price: '',
         status: 'active',
         batch_number: '',
-        main_category: '', // single selection for UI
+        main_category: '', 
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -77,11 +57,6 @@ export default function AddEditProductPage() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
-
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 3000);
-    };
 
     useEffect(() => {
         const fetchInitial = async () => {
@@ -127,8 +102,6 @@ export default function AddEditProductPage() {
                 }
             } catch (error: any) {
                 console.error('Fetch Initial Error:', error);
-                const msg = error?.message || 'Failed to load initial data.';
-                alert(msg);
             } finally {
                 setLoading(false);
             }
@@ -181,211 +154,222 @@ export default function AddEditProductPage() {
 
             if (isEdit) {
                 await productService.update(id as string, data);
-                showToast('Product updated.');
+                toast.success('Product updated successfully.');
             } else {
                 await productService.create(data);
-                showToast('Product created.');
+                toast.success('Product registered successfully.');
             }
-            setTimeout(() => router.push('/admin/products'), 1000);
+            router.push('/admin/products');
         } catch (err: any) {
             console.error(err);
-            const detail = err.response?.data ? JSON.stringify(err.response.data).slice(0, 100) : 'Failed to save.';
-            alert(`Error: ${detail}`);
+            toast.error(`Error saving asset record.`);
         } finally {
             setSaving(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-[#E68A00]" />
-            </div>
-        );
-    }
+    if (loading) return <PageLoader />;
 
     return (
-        <div className="max-w-6xl mx-auto py-8 px-4">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-normal text-gray-900 dark:text-white uppercase tracking-tight">
-                    {isEdit ? 'Update Product Listing' : 'New Product Entry'}
-                </h1>
-                <button onClick={() => router.push('/admin/products')} className="text-sm text-gray-400 hover:text-[#C45500] hover:underline flex items-center gap-1 uppercase font-bold tracking-tighter">
-                    <ArrowLeft className="w-4 h-4" /> Back to list
+        <div className="max-w-6xl mx-auto py-8 px-6 font-sans pb-20">
+            <div className="mb-8">
+                <button 
+                    onClick={() => router.push('/admin/products')} 
+                    className="text-sm font-bold text-slate-500 hover:text-[#F7CA00] transition-colors mb-4 flex items-center gap-1"
+                >
+                    <ChevronLeft className="h-4 w-4" /> Back to List
                 </button>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-tight">
+                    {isEdit ? 'Edit Product' : 'Add New Product'}
+                </h1>
+                <p className="text-sm text-slate-500">Enter product details and stock information</p>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column: Essential Info */}
+                    {/* Left Column: Data Arrays */}
                     <div className="lg:col-span-2 space-y-6">
-                        <SectionCard>
-                            <SectionHeader title="General Information" icon={Tag} />
-                            <div className="p-6 space-y-4">
+                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
+                                <Tag className="h-4 w-4 text-[#F7CA00]" />
+                                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Product Information</h2>
+                            </div>
+                            <div className="p-6 space-y-6">
                                 <div>
-                                    <label className={LABEL}>Product Name <span className="text-red-700">*</span></label>
-                                    <input required name="name" value={formData.name} onChange={handleChange} className={INPUT()} placeholder="e.g. Premium Lavender Moisturizer" />
+                                    <label className={labelCls}>Product Name <span className="text-red-500">*</span></label>
+                                    <input required name="name" value={formData.name} onChange={handleChange} className={inputCls()} placeholder="e.g. Premium Lavender Moisturizer" />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className={LABEL}>Main Category</label>
-                                        <select name="main_category" value={formData.main_category} onChange={handleChange} className={INPUT()}>
-                                            <option value="">Standard/None</option>
+                                        <label className={labelCls}>Main Category</label>
+                                        <select name="main_category" value={formData.main_category} onChange={handleChange} className={selectCls}>
+                                            <option value="">Select Main Tier</option>
                                             {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={LABEL}>Sub Category</label>
-                                        <select name="category" value={formData.category} onChange={handleChange} className={INPUT()}>
-                                            <option value="">Standard / None</option>
+                                        <label className={labelCls}>Sub Category</label>
+                                        <select name="category" value={formData.category} onChange={handleChange} className={selectCls}>
+                                            <option value="">Select Sub Tier</option>
                                             {productCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={LABEL}>Manufacturing Company</label>
-                                        <select name="company" value={formData.company} onChange={handleChange} className={INPUT()}>
-                                            <option value="">Unspecified</option>
+                                        <label className={labelCls}>Manufacturer Node</label>
+                                        <select name="company" value={formData.company} onChange={handleChange} className={selectCls}>
+                                            <option value="">Select Manufacturer</option>
                                             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div className={user?.role_name?.toLowerCase().includes('supplier') ? 'hidden' : 'block'}>
-                                        <label className={LABEL}>Partner / Supplier</label>
-                                        <select name="supplier" value={formData.supplier} onChange={handleChange} className={INPUT()}>
-                                            <option value="">None (Internal)</option>
+                                        <label className={labelCls}>Strategic Supplier</label>
+                                        <select name="supplier" value={formData.supplier} onChange={handleChange} className={selectCls}>
+                                            <option value="">Select Supplier Node</option>
                                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className={LABEL}>Description</label>
-                                    <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT() + " resize-none"} placeholder="Detailed product specifications..." />
+                                    <label className={labelCls}>Description</label>
+                                    <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className={inputCls() + " resize-none"} placeholder="Detailed product description..." />
                                 </div>
                             </div>
-                        </SectionCard>
+                        </div>
 
-                        <SectionCard>
-                            <SectionHeader title="Pricing & Identification" icon={DollarSign} />
-                            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
+                                <DollarSign className="h-4 w-4 text-[#F7CA00]" />
+                                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Pricing & Logistics</h2>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
-                                    <label className={LABEL}>Trade Price (Cost)</label>
-                                    <input type="number" step="0.01" name="cost" value={formData.cost} onChange={handleChange} className={INPUT()} placeholder="0.00" />
+                                    <label className={labelCls}>TP (Cost Basis)</label>
+                                    <input type="number" step="0.01" name="cost" value={formData.cost} onChange={handleChange} className={inputCls()} placeholder="0.00" />
                                 </div>
                                 <div>
-                                    <label className={LABEL}>Selling Price (Base)</label>
-                                    <input type="number" step="0.01" name="price" value={formData.price} onChange={handleChange} className={INPUT()} placeholder="0.00" />
+                                    <label className={labelCls}>Selling Valuation</label>
+                                    <input type="number" step="0.01" name="price" value={formData.price} onChange={handleChange} className={inputCls()} placeholder="0.00" />
                                 </div>
                                 <div>
-                                    <label className={LABEL}>Retail Price (MRP)</label>
-                                    <input type="number" step="0.01" name="retail_price" value={formData.retail_price} onChange={handleChange} className={INPUT()} placeholder="0.00" />
+                                    <label className={labelCls}>MRP (Retail Cap)</label>
+                                    <input type="number" step="0.01" name="retail_price" value={formData.retail_price} onChange={handleChange} className={inputCls()} placeholder="0.00" />
                                 </div>
                                 <div>
-                                    <label className={LABEL}>Batch Number</label>
-                                    <input name="batch_number" value={formData.batch_number} onChange={handleChange} className={INPUT()} placeholder="e.g. BATCH-2024" />
+                                    <label className={labelCls}>Batch Assignment</label>
+                                    <input name="batch_number" value={formData.batch_number} onChange={handleChange} className={inputCls()} placeholder="e.g. BATCH-2024" />
                                 </div>
                                 <div>
-                                    <label className={LABEL}>SKU <span className="text-gray-400 font-normal ml-1 tracking-tight italic">(Leave for auto-gen)</span></label>
-                                    <input name="sku" value={formData.sku} onChange={handleChange} className={INPUT()} placeholder="SKU-XXXX" />
+                                    <label className={labelCls}>SKU Unique ID</label>
+                                    <input name="sku" value={formData.sku} onChange={handleChange} className={inputCls()} placeholder="SKU-XXXX" />
                                 </div>
                                 <div>
-                                    <label className={LABEL}>Barcode / UPC</label>
-                                    <input name="barcode" value={formData.barcode} onChange={handleChange} className={INPUT()} placeholder="Barcode" />
+                                    <label className={labelCls}>Global Barcode</label>
+                                    <input name="barcode" value={formData.barcode} onChange={handleChange} className={inputCls()} placeholder="UPC / EAN" />
                                 </div>
-                                <div>
-                                    <label className={LABEL}>Listing Status</label>
-                                    <select name="status" value={formData.status} onChange={handleChange} className={INPUT()}>
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                        <option value="archived">Archived</option>
-                                    </select>
+                                <div className="md:col-span-3 pt-4 border-t border-slate-100 dark:border-white/5">
+                                    <label className={labelCls}>Operational Status</label>
+                                    <div className="flex items-center gap-6">
+                                        {['active', 'inactive', 'archived'].map(s => (
+                                            <label key={s} className="flex items-center gap-2 cursor-pointer group">
+                                                <input 
+                                                    type="radio" 
+                                                    name="status" 
+                                                    value={s} 
+                                                    checked={formData.status === s} 
+                                                    onChange={handleChange}
+                                                    className="w-4 h-4 text-[#F7CA00]" 
+                                                />
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase tracking-tight text-slate-400 border border-slate-200 dark:border-white/10 font-bold group-hover:text-[#F7CA00] transition-colors">{s}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </SectionCard>
+                        </div>
                     </div>
 
-                    {/* Right Column: Images */}
+                    {/* Right Column: Visual Assets */}
                     <div className="space-y-6">
-                        <SectionCard>
-                            <SectionHeader title="Cover Image" icon={ImageIcon} />
-                            <div className="p-6 space-y-4 flex flex-col items-center">
-                                <div className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-800 overflow-hidden relative group">
+                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
+                                <ImageIcon className="h-4 w-4 text-[#F7CA00]" />
+                                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Primary Visual</h2>
+                            </div>
+                            <div className="p-6">
+                                <div className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center overflow-hidden relative group">
                                     {mainImagePreview ? (
-                                        <img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain" />
+                                        <img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105" />
                                     ) : (
                                         <div className="text-center">
-                                            <ImageIcon className="mx-auto h-12 w-12 text-gray-300" />
-                                            <p className="mt-2 text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Primary Foto</p>
+                                            <ImageIcon className="h-10 w-10 text-slate-200 mx-auto mb-2" />
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Awaiting Manifest</p>
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-xl hover:scale-105 transition-transform">
-                                            {mainImagePreview ? 'Change' : 'Upload'}
+                                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-tight shadow-lg hover:scale-105 transition-all text-slate-900 border">
+                                           Modify Asset
                                         </button>
                                     </div>
                                 </div>
                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleMainImageChange} />
-                                <p className="text-[10px] text-gray-400 text-center italic">Supported: PNG, JPG, WEBP</p>
                             </div>
-                        </SectionCard>
+                        </div>
 
-                        <SectionCard>
-                            <SectionHeader
-                                title="Gallery"
-                                icon={Database}
-                                action={<button type="button" onClick={() => galleryInputRef.current?.click()} className="p-1 hover:text-[#E68A00] transition-colors"><Plus className="h-4 w-4" /></button>}
-                            />
-                            <div className="p-4 grid grid-cols-4 gap-2">
+                        <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
+                                <div className="flex items-center gap-3">
+                                    <Layers className="h-4 w-4 text-[#F7CA00]" />
+                                    <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Gallery Manifest</h2>
+                                </div>
+                                <button type="button" onClick={() => galleryInputRef.current?.click()} className="p-1.5 bg-[#F7CA00]/10 text-[#F7CA00] rounded-lg hover:bg-blue-600 hover:text-white transition-all">
+                                    <Plus className="h-4 w-4" />
+                                </button>
+                            </div>
+                            <div className="p-4 grid grid-cols-3 gap-3">
                                 {existingGallery.map((img, i) => (
-                                    <div key={i} className="aspect-square bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded overflow-hidden">
+                                    <div key={i} className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden">
                                         <img src={getImageUrl(img.image_url || img.image) || ""} className="w-full h-full object-cover" alt="" />
                                     </div>
                                 ))}
                                 {additionalImages.map((file, i) => (
-                                    <div key={i} className="aspect-square bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded overflow-hidden relative group">
+                                    <div key={i} className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden relative group">
                                         <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="" />
-                                        <button onClick={() => removeNewGalleryImage(i)} className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <X className="h-2 w-2" />
+                                        <button onClick={() => removeNewGalleryImage(i)} className="absolute inset-0 bg-red-600/60 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <X className="h-4 w-4 font-bold" />
                                         </button>
                                     </div>
                                 ))}
                                 <button
                                     type="button"
                                     onClick={() => galleryInputRef.current?.click()}
-                                    className="aspect-square border-2 border-dashed border-gray-200 dark:border-slate-800 rounded flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                                    className="aspect-square border border-dashed border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
                                 >
-                                    <Plus className="h-6 w-6 text-gray-300" />
+                                    <Plus className="h-5 w-5 text-slate-300 group-hover:text-[#F7CA00] transition-colors" />
                                 </button>
                                 <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
                             </div>
-                        </SectionCard>
+                        </div>
 
                         <div className="pt-4 space-y-3">
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="w-full py-3 bg-[#f0c14b] border border-[#a88734] rounded text-sm font-bold shadow-sm hover:bg-[#ebae1e] transition-all flex items-center justify-center gap-2 uppercase tracking-widest disabled:opacity-50"
+                                className="w-full py-3.5 bg-[#F7CA00] text-white rounded-xl text-sm font-bold uppercase tracking-tight shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                                {isEdit ? 'Update Listing' : 'Publish Product'}
+                                {isEdit ? 'Save Changes' : 'Add Product'}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => router.push('/admin/products')}
-                                className="w-full py-2 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors shadow-sm uppercase tracking-widest"
+                                className="w-full py-3 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 transition-all uppercase tracking-tight"
                             >
-                                Discard Changes
+                                Discard Protocol
                             </button>
                         </div>
                     </div>
                 </div>
             </form>
-
-            {/* Simple Toast */}
-            {toast && (
-                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#E68A00] z-[100] animate-in slide-in-from-bottom-5">
-                    <CheckCircle className="h-5 w-5 text-green-400" />
-                    <span className="text-sm font-medium uppercase tracking-tight">{toast}</span>
-                </div>
-            )}
         </div>
     );
 }

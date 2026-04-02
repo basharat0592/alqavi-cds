@@ -12,6 +12,7 @@ import { useCart } from "@/context/CartContext";
 import { getImageUrl } from "@/lib/utils";
 import { authService, User as AuthUser } from '@/lib/auth';
 import { productService, mainCategoryService } from '@/lib/api';
+import Logo from "@/components/ui/Logo";
 
 const CATEGORIES = [
     { name: 'All Departments', href: '/shop' },
@@ -111,30 +112,24 @@ export default function Navbar() {
                     <div className="flex items-center justify-between gap-6 h-14">
 
                         {/* BRAND / LOGO */}
-                        <Link href="/" className="flex items-center gap-2 group shrink-0">
-                            <div className="w-10 h-10 bg-[#FF9900] rounded-xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-105">
-                                <Star className="h-6 w-6 fill-white" />
-                            </div>
-                            <div className="flex flex-col leading-none">
-                                <span className="font-extrabold text-xl tracking-tight text-[#1d252c]">AL-QAVI</span>
-                                <span className="text-[9px] font-black tracking-widest text-[#FF9900] uppercase">Marketplace</span>
-                            </div>
+                        <Link href="/" className="flex items-center gap-2 group shrink-0 transition-all hover:opacity-90">
+                            <Logo size="sm" className="scale-[1.3] py-2" />
                         </Link>
 
                         {/* SEARCH SYSTEM */}
                         <div className="hidden lg:flex flex-1 max-w-xl relative" ref={searchRef}>
                             <form onSubmit={handleSearch} className="w-full flex h-11">
                                 <div className="flex-1 relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#FF9900] transition-colors" />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
                                     <input
                                         type="text"
-                                        className="w-full h-full bg-slate-100/50 border border-slate-200 focus:border-[#FF9900]/30 rounded-l-xl pl-11 pr-4 text-sm text-[#1d252c] outline-none transition-all placeholder:text-slate-400"
+                                        className="w-full h-full bg-slate-100/50 border border-slate-200 focus:border-[#F7CA00]/30 rounded-l-xl pl-11 pr-4 text-sm text-[#1d252c] outline-none transition-all placeholder:text-slate-400"
                                         placeholder="Search premium products..."
                                         value={searchQuery}
                                         onChange={(e) => handleQueryChange(e.target.value)}
                                     />
                                 </div>
-                                <button className="px-6 bg-[#FF9900] hover:bg-[#e68a00] text-white rounded-r-xl transition-colors flex items-center justify-center shadow-lg shadow-[#FF9900]/20">
+                                <button className="px-6 bg-[#F7CA00] hover:bg-[#F7CA00] text-white rounded-r-xl transition-colors flex items-center justify-center shadow-lg shadow-[#F7CA00]/20">
                                     <Search className="h-4 w-4 stroke-[3]" />
                                 </button>
                             </form>
@@ -148,10 +143,10 @@ export default function Navbar() {
                                                 <img src={getImageUrl(p.image_url || p.image) || ''} className="w-full h-full object-contain" alt="" />
                                             </div>
                                             <div className="flex-1">
-                                                <div className="text-sm font-bold text-[#1d252c] group-hover/res:text-[#FF9900] transition-colors">{p.name}</div>
+                                                <div className="text-sm font-bold text-[#1d252c] group-hover/res:text-[#F7CA00] transition-colors">{p.name}</div>
                                                 <div className="text-[10px] text-slate-400 uppercase font-black">{p.category_name || p.category}</div>
                                             </div>
-                                            <div className="text-sm font-black text-[#FF9900]">PKR {p.price}</div>
+                                            <div className="text-sm font-black text-[#F7CA00]">PKR {p.price}</div>
                                         </Link>
                                     ))}
                                 </div>
@@ -161,7 +156,7 @@ export default function Navbar() {
                         {/* NAV & ACCOUNT */}
                         <div className="flex items-center gap-2">
                             <nav className="hidden xl:flex items-center gap-1 mr-2 font-bold text-[10px] text-slate-500 uppercase tracking-widest">
-                                <Link href="/shop" className="px-4 py-2 rounded-lg text-[#FF9900] hover:bg-[#FF9900]/5">Catalog</Link>
+                                <Link href="/shop" className="px-4 py-2 rounded-lg text-[#F7CA00] hover:bg-[#F7CA00]/5">Catalog</Link>
                                 {mainCategories.slice(0, 3).map(l => (
                                     <Link key={l.id} href={`/shop?mcat=${l.slug || l.name}`} className="px-4 py-2 rounded-lg hover:text-[#1d252c] hover:bg-slate-100 transition-all">{l.name}</Link>
                                 ))}
@@ -180,7 +175,7 @@ export default function Navbar() {
                                             {user ? user.name.split(' ')[0] : 'Profile'}
                                         </span>
                                     </div>
-                                    <ChevronDown className="h-4 w-4 text-slate-300 group-hover:text-[#FF9900] transition-colors" />
+                                    <ChevronDown className="h-4 w-4 text-slate-300 group-hover:text-[#F7CA00] transition-colors" />
                                 </div>
 
                                 {userMenuOpen && (
@@ -191,7 +186,7 @@ export default function Navbar() {
                                                     <div className="text-[#1d252c] font-bold">Welcome</div>
                                                     <div className="text-[10px] text-slate-400 uppercase font-black">Access your account</div>
                                                 </div>
-                                                <Link href="/login" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-[#FF9900] text-white text-[11px] font-black tracking-widest uppercase hover:bg-[#e68a00] transition-all justify-center">
+                                                <Link href="/login" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-[#F7CA00] text-white text-[11px] font-black tracking-widest uppercase hover:bg-[#F7CA00] transition-all justify-center">
                                                     Sign In
                                                 </Link>
                                                 <Link href="/register" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 text-[#1d252c] text-[11px] font-black tracking-widest uppercase hover:bg-slate-50 transition-all justify-center">
@@ -204,10 +199,10 @@ export default function Navbar() {
                                                     <div className="text-[#1d252c] font-bold truncate">{user?.name}</div>
                                                     <div className="text-[10px] text-slate-400 uppercase font-black">{user?.role} status</div>
                                                 </div>
-                                                <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/dashboard'} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-[11px] font-black tracking-widest uppercase text-slate-600 hover:text-[#FF9900] transition-colors">
+                                                <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/dashboard'} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-[11px] font-black tracking-widest uppercase text-slate-600 hover:text-[#F7CA00] transition-colors">
                                                     <LayoutDashboard className="h-4 w-4" /> Dashboard
                                                 </Link>
-                                                <Link href="/dashboard/orders" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-[11px] font-black tracking-widest uppercase text-slate-600 hover:text-[#FF9900] transition-colors">
+                                                <Link href="/dashboard/orders" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-[11px] font-black tracking-widest uppercase text-slate-600 hover:text-[#F7CA00] transition-colors">
                                                     <Package className="h-4 w-4" /> My Orders
                                                 </Link>
                                                 <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-[11px] font-black tracking-widest uppercase text-red-500 transition-colors">
@@ -219,10 +214,10 @@ export default function Navbar() {
                                 )}
                             </div>
 
-                            <Link href="/cart" className="relative w-11 h-11 flex items-center justify-center bg-slate-100 hover:bg-[#FF9900]/10 rounded-xl transition-all group/cart">
-                                <ShoppingCart className="h-5 w-5 text-[#1d252c] group-hover/cart:text-[#FF9900] transition-colors" />
+                            <Link href="/cart" className="relative w-11 h-11 flex items-center justify-center bg-slate-100 hover:bg-[#F7CA00]/10 rounded-xl transition-all group/cart">
+                                <ShoppingCart className="h-5 w-5 text-[#1d252c] group-hover/cart:text-[#F7CA00] transition-colors" />
                                 {cartCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-[#FF9900] text-white text-[10px] font-black w-6 h-6 rounded-lg flex items-center justify-center ring-4 ring-white shadow-md">
+                                    <span className="absolute -top-1.5 -right-1.5 bg-[#F7CA00] text-white text-[10px] font-black w-6 h-6 rounded-lg flex items-center justify-center ring-4 ring-white shadow-md">
                                         {cartCount}
                                     </span>
                                 )}
@@ -243,7 +238,7 @@ export default function Navbar() {
                     <div className="absolute right-4 top-4 bottom-4 w-[280px] bg-white border border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
                         <div className="p-6 border-b border-slate-50 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-[#FF9900] rounded-lg flex items-center justify-center">
+                                <div className="w-10 h-10 bg-[#F7CA00] rounded-lg flex items-center justify-center">
                                     <Star className="h-6 w-6 fill-white text-white" />
                                 </div>
                                 <span className="font-extrabold text-[#1d252c] text-lg tracking-tight uppercase">AL-QAVI</span>
@@ -254,11 +249,11 @@ export default function Navbar() {
                             <div className="space-y-3">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Main Menu</p>
                                 <div className="grid gap-2">
-                                    <Link href="/shop" onClick={() => setMobileOpen(false)} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 text-[11px] font-black uppercase text-[#1d252c] hover:bg-[#FF9900] hover:text-white transition-all">
+                                    <Link href="/shop" onClick={() => setMobileOpen(false)} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 text-[11px] font-black uppercase text-[#1d252c] hover:bg-[#F7CA00] hover:text-white transition-all">
                                         Browse Products <ChevronRight className="h-4 w-4" />
                                     </Link>
                                     {mainCategories.map(l => (
-                                        <Link key={l.id} href={`/shop?mcat=${l.slug || l.name}`} onClick={() => setMobileOpen(false)} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 text-[11px] font-black uppercase text-slate-500 hover:text-[#FF9900] transition-all">
+                                        <Link key={l.id} href={`/shop?mcat=${l.slug || l.name}`} onClick={() => setMobileOpen(false)} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 text-[11px] font-black uppercase text-slate-500 hover:text-[#F7CA00] transition-all">
                                             {l.name} <ChevronRight className="h-4 w-4" />
                                         </Link>
                                     ))}

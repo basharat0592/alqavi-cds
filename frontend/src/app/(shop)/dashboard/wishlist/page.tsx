@@ -1,14 +1,15 @@
 'use client';
 
-import { 
-    Heart, 
-    ShoppingBag, 
-    Search, 
-    Package, 
+import {
+    Heart,
+    ShoppingBag,
+    Search,
+    Package,
     ChevronRight,
     ArrowRight,
     Trash2,
-    ShoppingCart
+    ShoppingCart,
+    Plus
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -36,103 +37,81 @@ export default function WishlistDashboard() {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 pb-20">
-            
-            {/* ── HEADER (Admin Style) ── */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="max-w-[900px] mx-auto animate-in fade-in duration-500 pb-20">
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b pb-6 mb-8">
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">My Wishlist</h1>
-                    <p className="text-[10px] font-bold text-[#FF9900] tracking-[0.2em] uppercase mt-0.5">Your curated beauty collection</p>
+                    <h1 className="text-3xl font-medium text-slate-900">Your Wishlist</h1>
+                    <p className="text-sm text-slate-500 mt-1 font-medium">Items you've saved for later. Prices and availability may change.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded border border-gray-100 dark:border-slate-700">
-                        {wishlist.length} Items Saved
-                    </span>
-                    <Link href="/shop" className="px-5 py-2.5 bg-[#FF9900] text-[#131921] font-black text-[10px] uppercase tracking-widest rounded shadow-lg shadow-[#FF9900]/20 hover:bg-[#e68a00] transition-all">
-                        Explore Shop
-                    </Link>
-                </div>
+                <Link href="/shop" className="text-sm font-bold text-[#007185] hover:text-[#F7CA00] hover:underline flex items-center gap-1">
+                    Continue Shopping <ChevronRight className="h-4 w-4" />
+                </Link>
             </div>
 
             {wishlist.length > 0 ? (
-                <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800">
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Price</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Date Added</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                                {wishlist.map((item) => (
-                                    <tr key={item.id} className="group hover:bg-slate-50/30 dark:hover:bg-slate-800/20 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-1 flex-shrink-0">
-                                                    <img 
-                                                        src={getImageUrl(item.image) || '/placeholder.png'} 
-                                                        alt="" 
-                                                        className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" 
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <Link href={`/product/${item.id}`} className="text-sm font-black text-slate-900 dark:text-white hover:text-[#FF9900] transition-colors leading-tight">
-                                                        {item.name}
-                                                    </Link>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{item.category}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="text-sm font-black text-slate-900 dark:text-white tracking-widest">
-                                                PKR {parseFloat(item.price.toString()).toLocaleString()}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
-                                                {new Date(item.addedAt).toLocaleDateString()}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button 
-                                                    onClick={() => handleAddToCart(item, true)}
-                                                    className="p-2.5 bg-slate-900 text-white rounded hover:bg-black transition-all flex items-center gap-2"
-                                                    title="Buy Now"
-                                                >
-                                                    <ShoppingCart className="h-4 w-4" />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest hidden md:inline">Buy Now</span>
-                                                </button>
-                                                <button 
-                                                    onClick={() => removeFromWishlist(item.id)}
-                                                    className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded transition-all"
-                                                    title="Remove from Wishlist"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                <div className="space-y-1">
+                    {wishlist.map((item) => (
+                        <div key={item.id} className="flex flex-col md:flex-row items-center gap-8 py-8 border-b border-gray-100 last:border-0 group">
+                            
+                            {/* Product Image */}
+                            <div className="w-40 h-40 bg-white border border-gray-100 rounded-lg p-2 flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
+                                <img
+                                    src={getImageUrl(item.image) || '/placeholder.png'}
+                                    alt=""
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+
+                            {/* Product Details */}
+                            <div className="flex-1 text-center md:text-left">
+                                <div className="mb-2">
+                                    <Link href={`/product/${item.id}`} className="text-lg font-bold text-slate-900 hover:text-[#F7CA00] transition-colors line-clamp-2 leading-snug">
+                                        {item.name}
+                                    </Link>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1.5">{item.category}</p>
+                                </div>
+                                <div className="flex items-center justify-center md:justify-start gap-4 mt-4">
+                                    <p className="text-xl font-bold text-slate-900 tracking-tight">
+                                        PKR {parseFloat(item.price.toString()).toLocaleString()}
+                                    </p>
+                                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded border border-emerald-100">In Stock</span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 mt-2 italic">Added on {new Date(item.addedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            </div>
+
+                            {/* Actions Column */}
+                            <div className="flex flex-col gap-2.5 w-full md:w-52">
+                                <button
+                                    onClick={() => handleAddToCart(item, false)}
+                                    className="w-full py-2 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#F0C14B] rounded-full text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <ShoppingCart className="h-4 w-4" /> Add to Cart
+                                </button>
+                                <button
+                                    onClick={() => handleAddToCart(item, true)}
+                                    className="w-full py-2 bg-[#F7CA00] text-white hover:bg-[#1E40AF] rounded-full text-xs font-bold shadow-sm transition-all"
+                                >
+                                    Buy it now
+                                </button>
+                                <button
+                                    onClick={() => removeFromWishlist(item.id)}
+                                    className="w-full py-2 text-[#007185] hover:text-red-700 hover:underline text-xs font-medium mt-1 flex items-center justify-center gap-1.5"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" /> Delete from list
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
-                <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm p-16 text-center">
-                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-700">
-                        <Heart className="h-10 w-10 text-slate-200" />
-                    </div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Workspace Empty</h3>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 max-w-[250px] mx-auto leading-relaxed">
-                        No items found in your collection. Explore the store and tap the heart icon to save products.
-                    </p>
-                    <Link href="/shop" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded hover:bg-black transition-all">
-                        <span>Go Shopping</span>
-                        <ArrowRight className="h-3 w-3" />
+                <div className="py-24 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <Heart className="h-12 w-12 text-gray-200 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">Your wishlist is empty</h3>
+                    <p className="text-sm text-slate-500 max-w-sm mx-auto mb-8">Save items you're interested in by tapping the heart icon on any product in our store.</p>
+                    <Link href="/shop" className="px-10 py-2 bg-[#F7CA00] text-white font-bold rounded-lg hover:bg-[#1E40AF] transition-all">
+                        Go Shopping
                     </Link>
                 </div>
             )}

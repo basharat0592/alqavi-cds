@@ -1,5 +1,7 @@
 'use client';
 
+import PageLoader from '@/components/ui/PageLoader';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -7,7 +9,8 @@ import {
     Clock, AlertTriangle, ArrowRight,
     Activity, ArrowUpRight, ArrowDownRight,
     Crown, TrendingUp, RefreshCw,
-    Building2, Mail, Phone, MapPin, Globe, Pencil
+    Building2, Mail, Phone, MapPin, Globe, Pencil,
+    Truck, FileText
 } from 'lucide-react';
 import { useAdminDashboard, useAdminAuth } from '@/hooks';
 import { companyService, CompanyInfo } from '@/lib/api';
@@ -20,19 +23,19 @@ import {
    THEME CONSTANTS
 ═══════════════════════════════════════════════════════ */
 const THEME = {
-    primary: '#FF9900',   // Amazon Orange
+    primary: '#1D4ED8',   // Corporate Blue
     secondary: '#1B1C1E', // Dark Card
-    dark: '#1e293b',      // Slate 800
-    hover: '#E68A00',
-    link: '#FF9900',
+    dark: '#0f172a',      // Slate 900
+    hover: '#1e40af',
+    link: '#1D4ED8',
 } as const;
 
 const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
-    processing: 'bg-blue-50 text-blue-700 border-blue-200',
-    shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    cancelled: 'bg-red-50 text-red-700 border-red-200',
+    pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    processing: 'bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/20',
+    shipped: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+    delivered: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    cancelled: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -43,21 +46,20 @@ interface StatCardProps {
     label: string;
     value: string | number;
     change?: number;
-    accent: string;     // e.g. 'emerald', 'orange', 'purple'
     href: string;
 }
 
-function StatCard({ icon: Icon, label, value, change, accent, href }: StatCardProps) {
+function StatCard({ icon: Icon, label, value, change, href }: StatCardProps) {
     const up = change === undefined || change >= 0;
 
     return (
         <Link href={href}
-            className="group block admin-card p-6 border-white/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-orange-50 dark:bg-[#FF9900]/10 border border-orange-100 dark:border-[#FF9900]/20 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-                    <Icon className="h-6 w-6 text-[#FF9900]" strokeWidth={2} />
+            className="group block bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl p-5 hover:border-[#1D4ED8]/30 transition-all shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-[#1D4ED8]" />
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">{label}</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</p>
             </div>
 
             <div className="flex items-end justify-between">
@@ -88,24 +90,24 @@ function OrderRow({ order }: { order: any }) {
     const statusCls = STATUS_COLORS[status.toLowerCase()] || STATUS_COLORS.pending;
 
     return (
-        <div className="flex items-center justify-between py-3 px-4 border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+        <div className="flex items-center justify-between py-3 px-4 border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded flex items-center justify-center">
-                    <ShoppingBag className="h-4 w-4 text-gray-400" />
+                <div className="w-8 h-8 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center">
+                    <ShoppingBag className="h-4 w-4 text-slate-400 group-hover:text-[#1D4ED8] transition-colors" />
                 </div>
                 <div>
-                    <Link href="/admin/sales" className="text-sm font-bold text-slate-900 dark:text-white hover:text-[#FF9900] dark:hover:text-[#FFA41C] transition-colors">
+                    <Link href="/admin/sales" className="text-sm font-bold text-slate-900 dark:text-white hover:text-[#1D4ED8] transition-colors">
                         {num}
                     </Link>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{name}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase">{name}</p>
                 </div>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
                 <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">PKR {amount.toFixed(0)}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">{date}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">Rs. {amount.toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{date}</p>
                 </div>
-                <div className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${statusCls}`}>
+                <div className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${statusCls}`}>
                     {status}
                 </div>
             </div>
@@ -147,9 +149,9 @@ function ActivityItem({ order }: { order: any }) {
     return (
         <div className="flex gap-4 group">
             <div className="relative flex flex-col items-center">
-                <div className="w-10 h-10 bg-orange-50 dark:bg-[#FF9900]/10 border border-orange-100 dark:border-[#FF9900]/20 rounded-xl flex items-center justify-center z-10
-                                group-hover:bg-[#FF9900] group-hover:text-[#131921] transition-all duration-300 shadow-sm">
-                    <ShoppingBag className="h-4 w-4" strokeWidth={2} />
+                <div className="w-10 h-10 bg-[#1D4ED8]/10 dark:bg-[#1D4ED8]/20 border border-[#1D4ED8]/20 rounded-xl flex items-center justify-center z-10
+                                group-hover:bg-[#1D4ED8] group-hover:text-white transition-all duration-500 shadow-lg shadow-[#1D4ED8]/20">
+                    <ShoppingBag className="h-4.5 w-4.5" strokeWidth={2.5} />
                 </div>
                 <div className="w-px flex-1 bg-slate-100 dark:bg-slate-800 group-last:hidden" />
             </div>
@@ -173,10 +175,12 @@ function ActivityItem({ order }: { order: any }) {
 function ChartTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-2xl border border-gray-100 dark:border-slate-800">
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.1em] mb-2">{label}</p>
-            <p className="text-xl font-black text-[#FF9900]">PKR {payload[0].value.toLocaleString()}</p>
-            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1">{payload[1]?.value || 0} total orders</p>
+        <div className="bg-white dark:bg-[#1B1C1E] p-4 rounded-xl shadow-xl border border-slate-200 dark:border-white/10">
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tighter">Rs. {payload[0].value.toLocaleString()}</p>
+            <p className="text-[10px] font-bold text-[#1D4ED8] mt-1 uppercase">
+                {payload[1]?.value || 0} Products Sold
+            </p>
         </div>
     );
 }
@@ -186,7 +190,7 @@ function ChartTooltip({ active, payload, label }: any) {
 ═══════════════════════════════════════════════════════ */
 function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`admin-card border-white/40 ${className}`}>
+        <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 shadow-sm rounded-[16px] overflow-hidden ${className}`}>
             {children}
         </div>
     );
@@ -199,14 +203,14 @@ function SectionHeader({ icon: Icon, title, subtitle, action }: {
     action?: React.ReactNode;
 }) {
     return (
-        <div className="px-6 py-5 border-b border-slate-100/50 dark:border-slate-800 bg-white/20 dark:bg-slate-900/40 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <div className="p-2 bg-orange-50 dark:bg-[#FF9900]/10 rounded-lg">
-                    <Icon className="h-5 w-5 text-[#FF9900]" />
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg">
+                    <Icon className="h-4 w-4 text-[#1D4ED8]" />
                 </div>
                 <div>
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h2>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">{subtitle}</p>
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{subtitle}</p>
                 </div>
             </div>
             {action}
@@ -235,33 +239,31 @@ function EmptyState({ icon: Icon, title, description }: {
    TOP PRODUCT ROW
 ═══════════════════════════════════════════════════════ */
 const RANK_STYLES = [
-    'bg-[#FF9900]/10 border-[#FF9900]/30 text-[#FF9900]',
-    'bg-[#232F3E]/10 border-[#232F3E]/20 text-[#232F3E]',
-    'bg-gray-100 border-gray-200 text-gray-500',
-    'bg-gray-50 border-gray-100 text-gray-400',
+    'bg-[#1D4ED8]/10 border-[#1D4ED8]/30 text-[#1D4ED8]',
+    'bg-slate-100 border-slate-200 text-slate-500',
+    'bg-slate-50 border-slate-100 text-slate-400',
+    'bg-transparent border-transparent text-slate-300',
 ];
 
 function ProductRow({ product, rank }: { product: any; rank: number }) {
-    const pct = Math.max(10, 100 - rank * 18);
-
     return (
-        <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-between gap-4">
+        <div className="px-4 py-3.5 border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors flex items-center justify-between gap-4 group">
             <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="w-8 h-8 rounded bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex items-center justify-center font-bold text-gray-500 dark:text-slate-400 text-xs flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center font-bold text-[#1D4ED8] text-xs shrink-0">
                     {rank + 1}
                 </div>
                 <div className="min-w-0 flex-1">
-                    <Link href={`/admin/products/${product.id}`} className="text-sm font-bold text-[#007185] dark:text-[#00A8C1] hover:text-[#C45500] dark:hover:text-[#FF9900] hover:underline truncate block">
+                    <Link href={`/admin/products/${product.id}`} className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#1D4ED8] transition-colors truncate block uppercase tracking-tight">
                         {product.name}
                     </Link>
-                    <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden max-w-[120px]">
-                        <div className="h-full bg-[#FF9900] rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+                    <div className="h-1 w-full bg-slate-100 dark:bg-white/10 rounded-full mt-2 overflow-hidden max-w-[120px]">
+                        <div className="h-full bg-[#1D4ED8] rounded-full transition-all duration-1000" style={{ width: `${Math.max(20, 100 - rank * 20)}%` }} />
                     </div>
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{product.sales || 0}</p>
-                <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">units</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{product.sales || 0}</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Units Sold</p>
             </div>
         </div>
     );
@@ -292,53 +294,92 @@ export default function AdminDashboard() {
         .slice(0, 5);
 
     const stockDist = [
-        { name: 'Low Stock', value: products.filter(p => p.quantity_in_stock <= 10 && p.quantity_in_stock > 0).length, color: '#FF9900' },
+        { name: 'Low Stock', value: products.filter(p => p.quantity_in_stock <= 10 && p.quantity_in_stock > 0).length, color: '#1D4ED8' },
         { name: 'Out of Stock', value: products.filter(p => p.quantity_in_stock === 0).length, color: '#ef4444' },
     ];
 
-    if (loading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-10 h-10 border-4 border-gray-100 border-t-[#FF9900] rounded-full animate-spin" />
-        </div>
-    );
+    if (loading) return <PageLoader />;
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-4">
+        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
 
-            {/* ── SELLER CENTRAL HEADER ── */}
-            <div className="bg-white dark:bg-slate-900 p-6 mb-8 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-8">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Dashboard Overview</h1>
-                        <p className="text-xs font-bold text-[#FF9900] dark:text-[#FFA41C] tracking-widest uppercase mt-0.5">Al-Qavi Distributor Management</p>
-                    </div>
-                    <div className="h-10 w-px bg-slate-100 dark:bg-slate-800 hidden md:block" />
-                    <div className="hidden md:flex items-center gap-3 group cursor-pointer text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all duration-300">
-                        <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 transition-colors">
-                            <Globe className="w-4 h-4" />
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Main Node | Pakistan</span>
+            {/* ── UNIFIED EXECUTIVE METRICS STRIP (Overview) ── */}
+            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[20px] p-1 mb-6 shadow-sm flex flex-wrap lg:flex-nowrap items-stretch divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-white/5 overflow-hidden">
+                <div className="flex-1 min-w-[140px] p-6 group cursor-default">
+                    <p className="text-[9px] font-bold text-[#1D4ED8] uppercase tracking-widest mb-2">{isSupplier ? "MY REVENUE" : "NET REVENUE"}</p>
+                    <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">Rs. {stats?.totalRevenue?.toLocaleString() ?? 0}</span>
+                        {stats?.revenueChange !== undefined && (
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-lg ${stats.revenueChange >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                {stats.revenueChange >= 0 ? '▲' : '▼'}{Math.abs(stats.revenueChange)}%
+                            </span>
+                        )}
                     </div>
                 </div>
-                <div className="flex items-center gap-6">
-                    <button onClick={() => refetch?.()} className="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-[#FF9900]/10 rounded-xl transition-all duration-300 text-slate-400 hover:text-[#FF9900] shadow-sm border border-slate-100 dark:border-slate-700">
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
-                    <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Live Status</p>
-                        <p className="text-xs font-black text-slate-900 dark:text-white">{new Date().toLocaleTimeString()}</p>
+
+                <div className="flex-1 min-w-[140px] p-6 group cursor-default">
+                    <p className="text-[9px] font-bold text-[#1D4ED8] uppercase tracking-widest mb-2">UNITS SOLD</p>
+                    <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{stats?.totalOrders?.toLocaleString() || '0'}</span>
+                        {stats?.ordersChange !== undefined && (
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-lg ${stats.ordersChange >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                {stats.ordersChange >= 0 ? '▲' : '▼'}{Math.abs(stats.ordersChange)}%
+                            </span>
+                        )}
                     </div>
                 </div>
+
+                <div className="flex-1 min-w-[140px] p-6 group cursor-default">
+                    <p className="text-[9px] font-bold text-[#1D4ED8] uppercase tracking-widest mb-2">TODAY'S ORDERS</p>
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{stats?.ordersToday?.toLocaleString() || '0'}</span>
+                </div>
+
+                <div className="flex-1 min-w-[140px] p-6 group cursor-default">
+                    <p className="text-[9px] font-bold text-[#1D4ED8] uppercase tracking-widest mb-2">TOTAL PRODUCTS</p>
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{stats?.totalProducts || '0'}</span>
+                </div>
+
+                {!isSupplier && (
+                    <div className="flex-1 min-w-[140px] p-6 group cursor-default">
+                        <p className="text-[9px] font-bold text-[#1D4ED8] uppercase tracking-widest mb-2">CUSTOMERS</p>
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{stats?.totalCustomers || '0'}</span>
+                    </div>
+                )}
             </div>
 
-            {/* ── CORE METRICS BOARD (Horizontal Strip) ── */}
-            <div className={`grid grid-cols-2 md:grid-cols-3 ${isSupplier ? 'lg:grid-cols-5' : 'lg:grid-cols-6'} gap-4 mb-6`}>
-                <MetricBox label={isSupplier ? "MY REVENUE" : "NET BALANCE"} value={`PKR ${stats?.totalRevenue?.toLocaleString()}`} change={stats?.revenueChange} />
-                <MetricBox label="UNITS SOLD" value={stats?.totalOrders?.toLocaleString() || '0'} change={stats?.ordersChange} />
-                <MetricBox label="TODAY'S ORDERS" value={stats?.ordersToday?.toLocaleString() || '0'} />
-                <MetricBox label="PENDING" value={stats?.pendingOrders?.toLocaleString() || '0'} />
-                <MetricBox label="MY PRODUCTS" value={stats?.totalProducts || '0'} />
-                {!isSupplier && <MetricBox label="CUSTOMERS" value={stats?.totalCustomers || '0'} />}
+            {/* ── COMMAND CENTER : COMPREHENSIVE QUICK ACTIONS ── */}
+            <div className="mb-8 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[20px] p-5 shadow-sm">
+                <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-white/5 pb-4">
+                    <div className="w-8 h-8 rounded-lg bg-[#1D4ED8]/10 flex items-center justify-center">
+                        <Activity className="w-4 h-4 text-[#1D4ED8]" />
+                    </div>
+                    <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                        Command Center
+                    </h2>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                    {[
+                        { label: 'Sale Order', icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', href: '/admin/sale' },
+                        { label: 'Purchase', icon: Truck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-500/10', href: '/admin/purchases/add' },
+                        { label: 'Products', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10', href: '/admin/products' },
+                        { label: 'Inventory', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-500/10', href: '/admin/inventory' },
+                        { label: 'Invoices', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-500/10', href: '/admin/invoices' },
+                        { label: 'Payments', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-500/10', href: '/admin/payments' },
+                        { label: 'Returns', icon: RefreshCw, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-500/10', href: '/admin/sale-returns' },
+                        { label: 'Users', icon: Users, color: 'text-teal-600', bg: 'bg-teal-50 dark:bg-teal-500/10', href: '/admin/users' },
+                    ].map((action, idx) => (
+                        <Link key={idx} href={action.href}
+                            className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all active:scale-[0.97]">
+                            <div className={`w-12 h-12 ${action.bg} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
+                                <action.icon className={`h-5 w-5 ${action.color}`} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-[9px] font-black text-slate-600 dark:text-slate-400 group-hover:text-[#1D4ED8] uppercase tracking-widest text-center leading-tight transition-colors">
+                                {action.label}
+                            </span>
+                        </Link>
+                    ))}
+                </div>
             </div>
 
             {/* ── MAIN DASHBOARD GRID ── */}
@@ -348,51 +389,54 @@ export default function AdminDashboard() {
                 <div className="lg:col-span-8 space-y-6">
 
                     {/* 1. SALES TREND CHART */}
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded">
-                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-gray-800 dark:text-white">Sales Trend</h2>
-                            <div className="flex bg-gray-100 dark:bg-slate-800 p-0.5 rounded border border-gray-200 dark:border-slate-700">
+                    <div className="bg-white/95 dark:bg-[#1B1C1E]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden">
+                        <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-white/5">
+                            <div>
+                                <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Revenue Trends</h2>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Real-time Sales Performance</p>
+                            </div>
+                            <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10">
                                 {(['7', '30'] as const).map(r => (
                                     <button key={r} onClick={() => setChartRange(r)}
-                                        className={`px-3 py-1 text-[10px] font-bold rounded transition-all
-                                                    ${chartRange === r ? 'bg-white dark:bg-slate-700 text-[#007185] dark:text-[#00A8C1] shadow-sm border border-gray-200 dark:border-slate-600' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white'}`}>
-                                        {r}D
+                                        className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest
+                                                    ${chartRange === r ? 'bg-white dark:bg-white/10 text-[#1D4ED8] shadow-sm border border-slate-200 dark:border-white/10' : 'text-slate-400 hover:text-[#1D4ED8]'}`}>
+                                        {r} Days
                                     </button>
                                 ))}
                             </div>
                         </div>
-                        <div className="p-5 h-[320px]">
+                        <div className="p-6 h-[400px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={chartData}>
                                     <defs>
-                                        <linearGradient id="amazonGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#007185" stopOpacity={0.1} /><stop offset="95%" stopColor="#007185" stopOpacity={0} />
+                                        <linearGradient id="tacticalGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#1D4ED8" stopOpacity={0.2} /><stop offset="95%" stopColor="#1D4ED8" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
-                                    <Tooltip content={<ChartTooltip />} />
-                                    <Area type="monotone" dataKey="revenue" stroke="#FF9900" strokeWidth={3} fill="url(#amazonGradient)" />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} tickFormatter={(v) => `PKR ${v / 1000}k`} />
+                                    <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#1D4ED8', strokeWidth: 2, strokeDasharray: '5 5' }} />
+                                    <Area type="monotone" dataKey="revenue" stroke="#1D4ED8" strokeWidth={4} fill="url(#tacticalGradient)" animationDuration={2000} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
                     {/* 2. ORDER VOLUME BAR CHART */}
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded">
-                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-gray-50/30 dark:bg-slate-800/20">
-                            <h2 className="text-sm font-bold text-gray-800 dark:text-white">Order Volume</h2>
-                            <Link href="/admin/sales" className="text-[10px] font-bold text-[#007185] dark:text-[#00A8C1] hover:underline uppercase tracking-wider">Expand Details</Link>
+                    <div className="bg-white/95 dark:bg-[#1B1C1E]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-white/40 dark:bg-white/5">
+                            <h2 className="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Inventory Flow Velocity</h2>
+                            <Link href="/admin/sales" className="text-[9px] font-black text-[#1D4ED8] hover:underline uppercase tracking-[0.2em] transition-all">Deep Analytics Portal</Link>
                         </div>
-                        <div className="p-5 h-[280px]">
+                        <div className="p-6 h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#666' }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#666' }} />
-                                    <Tooltip cursor={{ fill: '#f7f7f7' }} />
-                                    <Bar dataKey="orders" fill="#FF9900" radius={[2, 2, 0, 0]} barSize={32} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 700 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 700 }} />
+                                    <Tooltip cursor={{ fill: 'rgba(29,78,216,0.05)' }} content={<ChartTooltip />} />
+                                    <Bar dataKey="orders" fill="#1D4ED8" radius={[4, 4, 0, 0]} barSize={24} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -408,7 +452,7 @@ export default function AdminDashboard() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie data={pieData} innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
-                                            {pieData.map((_, index) => <Cell key={index} fill={['#FF9900', '#232F3E', '#007185', '#C45500', '#37475A'][index % 5]} />)}
+                                            {pieData.map((_, index) => <Cell key={index} fill={['#1D4ED8', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'][index % 5]} />)}
                                         </Pie>
                                         <Tooltip />
                                         <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: 'bold', paddingTop: '10px' }} />
@@ -450,8 +494,8 @@ export default function AdminDashboard() {
                                     <span className="text-sm font-black" style={{ color: item.color }}>{item.value} ITEMS</span>
                                 </div>
                             ))}
-                            <Link href="/admin/products" className="block text-center py-2 text-[11px] font-bold text-[#007185] dark:text-[#00A8C1] border border-[#007185]/20 dark:border-[#007185]/40 rounded hover:bg-[#007185]/5 dark:hover:bg-[#007185]/10 transition-colors">
-                                MANAGE ALL PRODUCTS
+                            <Link href="/admin/products" className="block text-center py-2.5 text-[10px] font-black text-[#1D4ED8] bg-[#1D4ED8]/5 border border-[#1D4ED8]/20 rounded-xl hover:bg-[#1D4ED8]/10 tracking-[0.2em] transition-all uppercase">
+                                Full Inventory Audit
                             </Link>
                         </div>
                     </div>
@@ -464,9 +508,9 @@ export default function AdminDashboard() {
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
                             {recentOrders.map(o => (
-                                <div key={o.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                <div key={o.id} className="p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                                     <div className="flex justify-between mb-1">
-                                        <span className="text-xs font-bold text-[#007185] dark:text-[#00A8C1] group-hover:underline uppercase tracking-tighter transition-all">ORDER {o.orderNumber || o.id}</span>
+                                        <span className="text-xs font-bold text-[#1D4ED8] uppercase tracking-tight">ORDER {o.orderNumber || o.id}</span>
                                         <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(o.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
@@ -500,7 +544,7 @@ export default function AdminDashboard() {
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-[10px] text-slate-400 italic text-center py-6 uppercase tracking-widest font-bold">No purchase records</p>
+                                    <p className="text-[10px] text-slate-400 text-center py-6 uppercase tracking-widest font-bold">No purchase records</p>
                                 )}
                             </div>
                         </div>
@@ -508,8 +552,8 @@ export default function AdminDashboard() {
 
                     {/* REAL-TIME ACTIVITY LOGS */}
                     <div className="bg-white/40 dark:bg-slate-900/40 glass-effect p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
-                        <div className="flex items-center gap-3 mb-6 text-[#FF9900]">
-                            <div className="p-2 bg-orange-50 dark:bg-[#FF9900]/10 rounded-lg">
+                        <div className="flex items-center gap-3 mb-6 text-[#1D4ED8]">
+                            <div className="p-2 bg-orange-50 dark:bg-[#1D4ED8]/10 rounded-lg">
                                 <Activity className="w-5 h-5" />
                             </div>
                             <h3 className="text-sm font-bold uppercase tracking-widest">System Activity</h3>
@@ -517,11 +561,11 @@ export default function AdminDashboard() {
                         <div className="space-y-4">
                             {activityLogs.length > 0 ? (
                                 activityLogs.map((log: any) => (
-                                    <div key={log.id} className="border-l-4 border-[#FF9900] pl-4 py-2 bg-white/40 dark:bg-slate-800/40 rounded-r-xl transition-all hover:bg-white/60 dark:hover:bg-slate-800/60">
-                                        <p className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight uppercase tracking-tight">{log.action_display || log.action}</p>
-                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">{log.description}</p>
+                                    <div key={log.id} className="border-l-4 border-[#1D4ED8] pl-4 py-3 bg-white dark:bg-white/10 rounded-r-xl transition-all hover:bg-slate-50 dark:hover:bg-white/15 group">
+                                        <p className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight uppercase tracking-tight group-hover:text-[#1D4ED8] transition-colors">{log.action_display || log.action}</p>
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1 uppercase tracking-wider">{log.description}</p>
                                         <div className="flex items-center gap-2 mt-2">
-                                            <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                            <Clock className="w-3 h-3 text-[#1D4ED8]" />
                                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                                 {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
@@ -529,7 +573,7 @@ export default function AdminDashboard() {
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-[10px] text-slate-500 italic text-center py-4">No recent activity found.</p>
+                                <p className="text-[10px] text-slate-500 text-center py-4 uppercase tracking-widest font-bold">No recent activity found.</p>
                             )}
                         </div>
                     </div>
@@ -545,13 +589,14 @@ export default function AdminDashboard() {
 function MetricBox({ label, value, change }: { label: string; value: string | number; change?: number }) {
     const up = change === undefined || change >= 0;
     return (
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-4 rounded shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:border-[#FF9900] transition-colors group">
-            <p className="text-[10px] font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest mb-1 group-hover:text-[#FF9900] transition-colors">{label}</p>
-            <div className="flex items-baseline justify-between">
-                <span className="text-lg font-black text-gray-900 dark:text-white tracking-tight">{value}</span>
+        <div className="bg-white/95 dark:bg-[#1B1C1E]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-5 rounded-2xl shadow-xl shadow-black/5 hover:border-[#1D4ED8] transition-all duration-500 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-[#1D4ED8]/5 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-[#1D4ED8]/10 transition-colors" />
+            <p className="text-[9px] font-black text-[#1D4ED8] uppercase tracking-[0.3em] mb-2 group-hover:translate-x-1 transition-transform">{label}</p>
+            <div className="flex items-baseline justify-between relative z-10">
+                <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</span>
                 {change !== undefined && (
-                    <span className={`text-[10px] font-bold ${up ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {up ? '▲' : '▼'} {Math.abs(change)}%
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg ${up ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'} flex items-center gap-1`}>
+                        {up ? '▲' : '▼'}{Math.abs(change)}%
                     </span>
                 )}
             </div>

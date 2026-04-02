@@ -57,7 +57,7 @@ export default function EditRolePage() {
     if (fetching) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-[#FF9900]" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#1D4ED8]" />
                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Role</p>
             </div>
         );
@@ -73,7 +73,7 @@ export default function EditRolePage() {
                     </Link>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-[#FF9900]" />
+                            <Shield className="h-5 w-5 text-[#1D4ED8]" />
                             Edit Role
                         </h1>
                         <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Update platform access privileges</p>
@@ -97,7 +97,7 @@ export default function EditRolePage() {
                             value={formData.name}
                             onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                             placeholder="e.g. Content Manager"
-                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#FF9900] focus:ring-1 focus:ring-[#FF9900] transition-all text-sm dark:text-white"
+                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] transition-all text-sm dark:text-white"
                             required
                         />
                     </div>
@@ -109,7 +109,7 @@ export default function EditRolePage() {
                             onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Provide a brief description of what this role entails..."
                             rows={4}
-                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#FF9900] focus:ring-1 focus:ring-[#FF9900] transition-all text-sm dark:text-white resize-none"
+                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] transition-all text-sm dark:text-white resize-none"
                         />
                     </div>
                 </div>
@@ -121,7 +121,7 @@ export default function EditRolePage() {
                     <button
                         type="submit"
                         disabled={loading || !formData.name.trim()}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-[#FF9900] hover:bg-[#e68a00] disabled:bg-[#FF9900]/50 disabled:cursor-not-allowed text-[#131921] text-xs font-bold uppercase tracking-wider rounded transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[#1D4ED8] hover:bg-[#1D4ED8] disabled:bg-[#1D4ED8]/50 disabled:cursor-not-allowed text-[#131921] text-xs font-bold uppercase tracking-wider rounded transition-colors shadow-sm"
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Changes

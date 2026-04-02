@@ -54,7 +54,7 @@ export default function DeleteRolePage() {
     if (fetching) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-[#FF9900]" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#1D4ED8]" />
                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Role</p>
             </div>
         );

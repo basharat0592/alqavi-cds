@@ -32,6 +32,7 @@ class Order(BaseModel, TimestampMixin):
         ('processing', 'Processing'),
         ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),
+        ('cancel_requested', 'Cancellation Requested'),
         ('cancelled', 'Cancelled'),
         ('rejected', 'Rejected'),
     ]

@@ -1,41 +1,22 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import {
     Plus, Search, Edit, Trash2, Layers,
     RefreshCw, CheckCircle, Package,
-    Save, Loader2, X, ArrowLeft, AlertTriangle,
-    ChevronRight, ChevronLeft, Filter
+    Save, ChevronLeft, X, AlertTriangle,
+    Activity, Loader2
 } from 'lucide-react';
-import { mainCategoryService, productService, MainCategorySerializer } from '@/lib/api';
-import { getImageUrl } from '@/lib/utils';
+import { mainCategoryService, productService } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
-// ─── Shared Utilities ────────────────────────────────────────────────────────
-const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
-    ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border rounded-xl text-sm outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
-const LABEL = 'block text-xs font-bold text-gray-900 dark:text-gray-200 mb-1';
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
-
-const SectionHeader = ({ title, icon: Icon, action }: { title: string; icon?: any; action?: React.ReactNode }) => (
-    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
-            <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
-        </div>
-        {action}
-    </div>
-);
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function MainCategoriesPage() {
+    const router = useRouter();
     const [view, setView] = useState<'list' | 'form'>('list');
     const [categories, setCategories] = useState<any[]>([]);
     const [allProducts, setAllProducts] = useState<any[]>([]);
@@ -43,7 +24,6 @@ export default function MainCategoriesPage() {
     const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [prodSearch, setProdSearch] = useState('');
-    const [toast, setToast] = useState<string | null>(null);
     const [editMode, setEditMode] = useState<any | null>(null);
     const [deleteItem, setDeleteItem] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -74,18 +54,13 @@ export default function MainCategoriesPage() {
 
     useEffect(() => { loadData(); }, []);
 
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 3000);
-    };
-
     const handleEdit = (cat: any) => {
         setEditMode(cat);
         setForm({
             name: cat.name,
             description: cat.description || '',
             status: cat.status || 'active',
-            product_ids: (cat.product_details || []).map((p: any) => p.id)
+            product_ids: (cat.product_details || []).map((p: any) => p.id) || []
         });
         setView('form');
     };
@@ -120,16 +95,16 @@ export default function MainCategoriesPage() {
 
             if (editMode) {
                 await mainCategoryService.update(editMode.id, payload);
-                showToast('Main Category updated.');
+                toast.success('Main category updated!');
             } else {
                 await mainCategoryService.create(payload);
-                showToast('Main Category created.');
+                toast.success('Main category created!');
             }
             loadData();
             setView('list');
         } catch (e: any) {
             console.error(e);
-            alert('Failed to save category.');
+            toast.error('Failed to save category registry.');
         } finally {
             setSaving(false);
         }
@@ -141,144 +116,149 @@ export default function MainCategoriesPage() {
         try {
             await mainCategoryService.delete(deleteItem.id);
             setCategories(prev => prev.filter(c => c.id !== deleteItem.id));
-            showToast('Category deleted successfully.');
+            toast.success('Category removed.');
         } catch (e) {
             console.error(e);
+            toast.error('Failed to remove category.');
         } finally {
             setDeleting(false);
             setDeleteItem(null);
         }
     };
 
-    const filteredCats = categories.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase())
+    const filtered = (categories || []).filter(c =>
+        c.name?.toLowerCase().includes(search.toLowerCase()) ||
+        (c.description || '').toLowerCase().includes(search.toLowerCase())
     );
 
-    const filteredProducts = allProducts.filter(p =>
-        p.name.toLowerCase().includes(prodSearch.toLowerCase()) ||
-        (p.sku || '').toLowerCase().includes(prodSearch.toLowerCase())
+    const filteredProds = allProducts.filter(p =>
+        p.name?.toLowerCase().includes(prodSearch.toLowerCase()) ||
+        p.sku?.toLowerCase().includes(prodSearch.toLowerCase())
     );
 
     if (view === 'form') {
         return (
-            <div className="max-w-6xl mx-auto py-8 px-4">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {editMode ? 'Edit Main Category' : 'Create Main Category'}
-                        </h1>
-                        <p className="text-sm text-gray-500">Group your products for better organization and display</p>
-                    </div>
-                    <button onClick={() => setView('list')} className="text-sm text-gray-400 hover:text-[#C45500] hover:underline flex items-center gap-1 font-bold">
-                        <ArrowLeft className="w-4 h-4" /> BACK TO LIST
+            <div className="max-w-6xl mx-auto py-8 px-6 font-sans">
+                <div className="mb-8">
+                    <button 
+                        onClick={() => setView('list')} 
+                        className="text-sm font-medium text-slate-500 hover:text-[#F7CA00] transition-colors mb-4 flex items-center gap-1"
+                    >
+                        <ChevronLeft className="h-4 w-4" /> Back to List
                     </button>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                        {editMode ? 'Edit Main Category' : 'New Main Category'}
+                    </h1>
+                    <p className="text-sm text-slate-500">Define major inventory groups and link related products</p>
                 </div>
 
-                <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <SectionCard>
-                            <SectionHeader title="General Information" icon={Layers} />
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className={LABEL}>Category Name <span className="text-red-700">*</span></label>
-                                    <input
-                                        required
-                                        value={form.name}
-                                        onChange={e => setForm({ ...form, name: e.target.value })}
-                                        className={INPUT()}
-                                        placeholder="e.g. Premium Skincare Collection"
-                                    />
+                <form onSubmit={handleSave} className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1 space-y-6">
+                            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                                <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
+                                    <Layers className="h-4 w-4 text-[#F7CA00]" />
+                                    <h2 className="text-sm font-bold text-slate-800 dark:text-white">Category Details</h2>
                                 </div>
-                                <div>
-                                    <label className={LABEL}>Description</label>
-                                    <textarea
-                                        rows={4}
-                                        value={form.description}
-                                        onChange={e => setForm({ ...form, description: e.target.value })}
-                                        className={INPUT() + ' resize-none'}
-                                        placeholder="Briefly describe the purpose of this main category..."
-                                    />
-                                </div>
-                                <div>
-                                    <label className={LABEL}>Status</label>
-                                    <select
-                                        value={form.status}
-                                        onChange={e => setForm({ ...form, status: e.target.value as any })}
-                                        className={INPUT()}
-                                    >
-                                        <option value="active">Active (Visible)</option>
-                                        <option value="inactive">Inactive (Hidden)</option>
-                                    </select>
+                                <div className="p-6 space-y-5">
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Category Name <span className="text-red-500">*</span></label>
+                                        <input
+                                            required
+                                            value={form.name}
+                                            onChange={e => setForm({ ...form, name: e.target.value })}
+                                            className={inputCls()}
+                                            placeholder="e.g. Skin Care Pro"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Visibility status</label>
+                                        <select
+                                            value={form.status}
+                                            onChange={e => setForm({ ...form, status: e.target.value as any })}
+                                            className={selectCls}
+                                        >
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={labelCls}>Description</label>
+                                        <textarea
+                                            rows={4}
+                                            value={form.description}
+                                            onChange={e => setForm({ ...form, description: e.target.value })}
+                                            className={inputCls() + ' resize-none'}
+                                            placeholder="Define category scope..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </SectionCard>
+                        </div>
 
-                        <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-slate-800">
-                            <button
-                                type="button"
-                                onClick={() => setView('list')}
-                                className="px-6 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-800 rounded text-xs font-bold uppercase tracking-wider hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="px-8 py-2 bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                {editMode ? 'Save Changes' : 'Create Category'}
-                            </button>
+                        <div className="lg:col-span-2 space-y-6">
+                             <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm h-full flex flex-col">
+                                <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <Package className="h-4 w-4 text-[#F7CA00]" />
+                                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Link Products</h2>
+                                    </div>
+                                    <span className="text-xs font-bold text-[#F7CA00] bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40">
+                                        {form.product_ids.length} selected
+                                    </span>
+                                </div>
+                                <div className="p-4 border-b border-slate-100 dark:border-white/10">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                        <input
+                                            value={prodSearch}
+                                            onChange={e => setProdSearch(e.target.value)}
+                                            placeholder="Filter products to link..."
+                                            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="p-4 flex-1 overflow-y-auto max-h-[400px] grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {filteredProds.map(p => {
+                                        const isSelected = form.product_ids.includes(p.id);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => toggleProductSelection(p.id)}
+                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left border transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10 border-[#F7CA00]/30' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-[#F7CA00]/20'}`}
+                                            >
+                                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#F7CA00] border-[#F7CA00]' : 'bg-white dark:bg-white/10 border-slate-300 dark:border-white/20'}`}>
+                                                    {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#F7CA00]' : 'text-slate-700 dark:text-slate-300'}`}>{p.name}</p>
+                                                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">SKU: {p.sku}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <SectionCard>
-                            <SectionHeader title="Product Selection" icon={Package} />
-                            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-800">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 font-bold" />
-                                    <input
-                                        value={prodSearch}
-                                        onChange={e => setProdSearch(e.target.value)}
-                                        placeholder="Filter products..."
-                                        className={INPUT()}
-                                    />
-                                </div>
-                                <div className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                    {form.product_ids.length} selected
-                                </div>
-                            </div>
-                            <div className="h-[500px] overflow-y-auto p-2 space-y-1">
-                                {filteredProducts.map(p => {
-                                    const isSelected = form.product_ids.includes(p.id);
-                                    return (
-                                        <div 
-                                            key={p.id}
-                                            onClick={() => toggleProductSelection(p.id)}
-                                            className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition-all ${
-                                                isSelected 
-                                                ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800' 
-                                                : 'border-transparent hover:bg-gray-50 dark:hover:bg-slate-800'
-                                            }`}
-                                        >
-                                            <div className="w-10 h-10 rounded border bg-white dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                                                <img src={getImageUrl(p.image_url || p.image || '')} className="w-full h-full object-contain" alt="" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate uppercase">{p.name}</p>
-                                                <p className="text-[10px] text-gray-500 font-mono">{p.sku}</p>
-                                            </div>
-                                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                                                isSelected ? 'bg-[#E68A00] border-[#E68A00]' : 'border-gray-300 dark:border-slate-700'
-                                            }`}>
-                                                {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </SectionCard>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={() => setView('list')}
+                            className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
+                        >
+                            Abort
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="flex items-center gap-2 px-8 py-2.5 bg-[#F7CA00] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                        >
+                            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Save Category
+                        </button>
                     </div>
                 </form>
             </div>
@@ -286,136 +266,152 @@ export default function MainCategoriesPage() {
     }
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+            
+            {/* ── Page Header ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2 uppercase">
-                        <Layers className="h-6 w-6 text-[#E68A00]" /> Main Category Management
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">High-level collections and groupings for your store</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Main Categories</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Organize your products into major groups</p>
                 </div>
-                <button
-                    onClick={handleNew}
-                    className="bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
-                >
-                    <Plus className="h-4 w-4" /> New Main Category
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={loadData}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button
+                        onClick={handleNew}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Main Category
+                    </button>
+                </div>
             </div>
 
-            <SectionCard className="mb-6">
-                <div className="p-4 flex gap-4 bg-gray-50/50 dark:bg-slate-800/50">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Search categories..."
-                            className={INPUT()}
-                        />
-                    </div>
+            {/* ── Filters Bar ── */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search categories..."
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                    />
                 </div>
-            </SectionCard>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                    <Activity className="h-3.5 w-3.5 text-[#F7CA00]" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
+                        {categories.length} Total Categories
+                    </span>
+                </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading ? (
-                    Array(6).fill(0).map((_, i) => (
-                        <div key={i} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded h-40 animate-pulse" />
-                    ))
-                ) : filteredCats.length === 0 ? (
-                    <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded">
-                        <Layers className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500 font-bold uppercase text-xs tracking-widest">No main categories created yet</p>
-                    </div>
-                ) : (
-                    filteredCats.map(cat => (
-                        <div key={cat.id} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm hover:shadow-md transition-shadow group overflow-hidden flex flex-col">
-                            <div className="p-5 flex-1">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-tight leading-tight mb-1">{cat.name}</h3>
-                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${cat.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                                            {cat.status}
-                                        </span>
-                                    </div>
-                                    <div className="flex gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => handleEdit(cat)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-600 dark:text-gray-400">
-                                            <Edit className="h-4 w-4" />
-                                        </button>
-                                        <button onClick={() => setDeleteItem(cat)} className="p-2 hover:bg-red-50 text-gray-300 hover:text-red-600 rounded">
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                                <p className="text-xs text-gray-500 line-clamp-2 italic mb-4">
-                                    {cat.description || 'No description provided.'}
-                                </p>
-                            </div>
-                            <div className="px-5 py-3 border-t border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/30 flex items-center justify-between mt-auto">
-                                <div className="flex items-center gap-2">
-                                    <div className="flex -space-x-2">
-                                        {(cat.product_details || []).slice(0, 3).map((p: any) => (
-                                            <div key={p.id} className="w-6 h-6 rounded-full border border-white bg-white dark:bg-slate-800 overflow-hidden ring-2 ring-gray-50 dark:ring-slate-900">
-                                                <img src={getImageUrl(p.image_url || p.image || '')} className="w-full h-full object-contain" alt="" title={p.name} />
+            {/* ── Table ── */}
+            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Name</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Linked Products</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Status</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                            {loading && filtered.length === 0 ? (
+                                Array(6).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan={4} className="px-4 py-4">
+                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-4 py-20 text-center">
+                                        <Layers className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">No main categories found.</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map((cat) => (
+                                    <tr key={cat.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-4 py-3">
+                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#F7CA00] transition-colors leading-tight">{cat.name}</p>
+                                            {cat.description && <p className="text-[10px] text-slate-400 font-medium truncate max-w-[250px] mt-0.5">{cat.description}</p>}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-[#F7CA00] flex items-center justify-center text-xs font-bold border border-blue-100 dark:border-blue-900/30">
+                                                    {cat.products?.length || cat.product_details?.length || 0}
+                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Products</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase ml-2">
-                                        {cat.product_details?.length || 0} Products
-                                    </span>
-                                </div>
-                                <button onClick={() => handleEdit(cat)} className="text-[10px] font-bold text-[#C45500] hover:underline uppercase tracking-wider flex items-center gap-1">
-                                    Manage <ChevronRight className="h-3 w-3" />
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-0.5 rounded border text-[11px] font-semibold uppercase ${cat.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                                                {cat.status || 'Active'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button 
+                                                    onClick={() => handleEdit(cat)} 
+                                                    className="p-1.5 text-slate-400 hover:text-[#F7CA00] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => setDeleteItem(cat)} 
+                                                    className="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* Delete Confirmation */}
             {deleteItem && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded border border-gray-300 dark:border-slate-700 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
-                            <div className="flex items-center gap-2 uppercase tracking-tight">
-                                <AlertTriangle className="h-3 w-3 text-red-600" />
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Delete Main Category</h3>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Delete Category</h3>
                             </div>
-                            <button onClick={() => setDeleteItem(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-                                <X className="h-4 w-4" />
+                            <button onClick={() => setDeleteItem(null)} className="p-1 text-slate-400">
+                                <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="p-6">
-                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium capitalize">
-                                Are you sure you want to delete <span className="font-bold text-gray-900 dark:text-white">"{deleteItem.name}"</span>? 
-                                <br/><span className="text-[10px] text-red-500 uppercase mt-2 block font-black">This will not delete the associated products.</span>
+                        <div className="p-8">
+                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                                Confirm permanent removal of <span className="text-[#F7CA00] font-bold">"{deleteItem.name}"</span>?
+                                <br/><span className="text-[10px] text-red-500 font-bold uppercase mt-2 block">System hierarchy may be impacted.</span>
                             </p>
                         </div>
-                        <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
-                            <button 
-                                onClick={() => setDeleteItem(null)} 
-                                disabled={deleting}
-                                className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] dark:border-slate-600 rounded shadow-sm text-xs font-bold uppercase tracking-widest text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
+                        <div className="px-6 py-4 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3 bg-slate-50/50 dark:bg-white/5">
+                            <button onClick={() => setDeleteItem(null)} disabled={deleting} className="px-4 py-2 text-sm font-semibold text-slate-600 disabled:opacity-50 transition-colors">Abort</button>
                             <button 
                                 onClick={confirmDelete} 
-                                disabled={deleting}
-                                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded shadow-sm text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+                                disabled={deleting} 
+                                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
                             >
-                                {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
-                                DELETE CATEGORY
+                                {deleting && <Loader2 className="h-4 w-4 animate-spin" />} Confirm Delete
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {toast && (
-                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-[#E68A00] z-[100] animate-in slide-in-from-bottom-5">
-                    <CheckCircle className="h-5 w-5 text-green-400" />
-                    <span className="text-xs font-bold uppercase tracking-widest">{toast}</span>
                 </div>
             )}
         </div>

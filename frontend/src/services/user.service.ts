@@ -119,12 +119,7 @@ export const settingsService = {
         const { data } = await api.patch('/v1/users/settings/update/', payload);
         return data;
     },
-    updateProfile: async (userId: number, payload: {
-        first_name?: string;
-        last_name?: string;
-        email?: string;
-        phone?: string;
-    }): Promise<any> => {
+    updateProfile: async (userId: number, payload: any): Promise<any> => {
         const { data } = await api.patch(`/v1/users/${userId}/update/`, payload);
         return data;
     },

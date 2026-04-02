@@ -17,6 +17,7 @@ const ORDER_STATUS_CONFIG: Record<string, { label: string; cls: string; icon: Re
     processing: { label: 'Processing', cls: 'bg-blue-50    text-blue-700    border-blue-100',    icon: Package },
     shipped:    { label: 'Shipped',    cls: 'bg-indigo-50  text-indigo-700  border-indigo-100',  icon: Truck },
     delivered:  { label: 'Delivered',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle },
+    cancel_requested: { label: 'Cancel Requested', cls: 'bg-purple-50 text-purple-700 border-purple-100', icon: Clock },
     cancelled:  { label: 'Cancelled',  cls: 'bg-red-50     text-red-700     border-red-100',     icon: XCircle },
     rejected:   { label: 'Rejected',   cls: 'bg-rose-50    text-rose-700    border-rose-100',    icon: XCircle },
     default:    { label: 'Unknown',    cls: 'bg-gray-50    text-gray-700    border-gray-100',    icon: AlertCircle },

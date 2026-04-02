@@ -4,47 +4,34 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Search, RefreshCw, Trash2, Eye, Edit2,
-    X, CheckCircle, AlertTriangle, Package, ChevronDown, Loader2
+    X, CheckCircle, AlertTriangle, Package, Loader2, Filter
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
-import { productService } from '@/services/product.service';
-import { companyService } from '@/services/company.service';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import PageLoader from '@/components/ui/PageLoader';
 
-// ── Shared Styles ────────────────────────────────────────────────────────────
-const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
-     focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
-     ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
-
-const SELECT = () =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border border-[#a6a6a6] dark:border-slate-700 rounded text-sm outline-none transition-all focus:border-[#e77600]`;
-
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm ${className}`}>
-        {children}
-    </div>
-);
-
-const StatusBadge = ({ value }: { value: string }) => {
-    const statusColors: Record<string, string> = {
-        draft: 'bg-gray-100 text-gray-600 border-gray-200',
-        ordered: 'bg-blue-50 text-blue-700 border-blue-100',
-        received: 'bg-green-50 text-green-700 border-green-100',
-        partially_received: 'bg-amber-50 text-amber-700 border-amber-100',
-        cancelled: 'bg-red-50 text-red-600 border-red-100',
-        pending: 'bg-yellow-50 text-yellow-700 border-yellow-100',
-        partially_paid: 'bg-orange-50 text-orange-700 border-orange-100',
-        paid: 'bg-green-50 text-green-700 border-green-100',
-    };
+// ── Status pill ───────────────────────────────────────────────────────────────
+const statusStyle: Record<string, string> = {
+    draft:              'bg-slate-100 text-slate-600 border-slate-200',
+    ordered:            'bg-blue-50 text-blue-700 border-blue-200',
+    received:           'bg-emerald-50 text-emerald-700 border-emerald-200',
+    partially_received: 'bg-amber-50 text-amber-700 border-amber-200',
+    cancelled:          'bg-red-50 text-red-600 border-red-200',
+    pending:            'bg-amber-50 text-amber-700 border-amber-200',
+    partially_paid:     'bg-indigo-50 text-indigo-700 border-indigo-200',
+    paid:               'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+const StatusPill = ({ status }: { status: string }) => {
+    const s = (status || '').toLowerCase().replace(' ', '_');
     return (
-        <span className={`inline-flex px-2 py-0.5 rounded border text-[9px] font-black uppercase tracking-widest ${statusColors[value] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-            {value.replace('_', ' ')}
+        <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-semibold capitalize ${statusStyle[s] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+            {(status || '').replace('_', ' ')}
         </span>
     );
 };
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PurchasesPage() {
     const router = useRouter();
     const [purchases, setPurchases] = useState<any[]>([]);
@@ -52,15 +39,14 @@ export default function PurchasesPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    // Detail / delete
     const [viewRow, setViewRow] = useState<any | null>(null);
     const [editRow, setEditRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'alert' } | null>(null);
 
-    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     };
@@ -71,7 +57,7 @@ export default function PurchasesPage() {
             const data = await purchaseService.getAll({ search, status: statusFilter });
             setPurchases(Array.isArray(data) ? data : data.results || []);
         } catch {
-            showToast('Failed to load purchases', 'error');
+            showToast('Failed to load purchases', 'alert');
         } finally {
             setLoading(false);
         }
@@ -79,17 +65,18 @@ export default function PurchasesPage() {
 
     useEffect(() => { load(); }, [load]);
 
+    if (loading) return <PageLoader />;
+
     const handleDelete = async () => {
         if (!deleteRow) return;
         setDeleting(true);
         try {
             await purchaseService.delete(deleteRow.id);
-            showToast('Purchase order deleted successfully.');
+            showToast('Purchase order deleted.');
             setDeleteRow(null);
             load();
         } catch (e: any) {
-            const msg = e?.response?.data?.error || e?.message || 'Delete failed';
-            showToast(msg, 'error');
+            showToast(e?.response?.data?.error || e?.message || 'Delete failed', 'alert');
         } finally {
             setDeleting(false);
         }
@@ -103,11 +90,11 @@ export default function PurchasesPage() {
                 status: editRow.status,
                 payment_status: editRow.payment_status
             });
-            showToast('Status updated successfully!');
+            showToast('Status updated.');
             setEditRow(null);
             load();
         } catch (e: any) {
-            showToast(e?.response?.data?.error || 'Update failed', 'error');
+            showToast(e?.response?.data?.error || 'Update failed', 'alert');
         } finally {
             setIsUpdating(false);
         }
@@ -119,181 +106,250 @@ export default function PurchasesPage() {
     );
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
 
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-6 border border-gray-200 dark:border-slate-800 rounded shadow-sm">
+            {/* ── Page Header ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <ShoppingCart className="h-6 w-6 text-[#E68A00]" /> Purchase Orders
-                    </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage stock purchases from suppliers</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Purchase Orders</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage inbound procurement records</p>
                 </div>
-                <button
-                    onClick={() => router.push('/admin/purchases/add')}
-                    className="bg-[#E68A00] hover:bg-[#CC7A00] text-[#131921] px-6 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2"
-                >
-                    <Plus className="h-4 w-4" /> New Purchase
-                </button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {[
-                    { label: 'Total Orders', value: purchases.length },
-                    { label: 'Draft', value: purchases.filter(p => p.status === 'draft').length },
-                    { label: 'Ordered', value: purchases.filter(p => p.status === 'ordered').length },
-                    { label: 'Received', value: purchases.filter(p => p.status === 'received').length },
-                ].map(({ label, value }) => (
-                    <Card key={label} className="p-5">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">{label}</p>
-                        <p className="text-2xl font-black text-gray-900 dark:text-white">{value}</p>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Filters */}
-            <Card className="mb-6">
-                <div className="p-4 flex flex-col md:flex-row gap-3 items-center">
-                    <div className="relative flex-1 w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by PO number or supplier..." className={`${INPUT()} pl-9`} />
-                    </div>
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 bg-white dark:bg-slate-800 border border-[#a6a6a6] dark:border-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 outline-none focus:border-[#e77600]">
-                        <option value="">All Statuses</option>
-                        <option value="draft">Draft</option>
-                        <option value="ordered">Ordered</option>
-                        <option value="received">Received</option>
-                        <option value="partially_received">Partially Received</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                    <button onClick={load} className="p-2 border border-[#a6a6a6] rounded hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                        <RefreshCw className={`h-4 w-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={load}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button
+                        onClick={() => router.push('/admin/purchases/add')}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F7CA00] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Purchase Order
                     </button>
                 </div>
-            </Card>
+            </div>
 
-            {/* Table */}
-            <Card>
+            {/* ── Filters Bar ── */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search by PO number or supplier..."
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                    />
+                </div>
+                <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="draft">Draft</option>
+                    <option value="ordered">Ordered</option>
+                    <option value="received">Received</option>
+                    <option value="partially_received">Partially Received</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            {/* ── Results count ── */}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
+            </p>
+
+            {/* ── Table ── */}
+            <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                <th className="px-6 py-3">PO Number</th>
-                                <th className="px-6 py-3">Supplier</th>
-                                <th className="px-6 py-3">Products</th>
-                                <th className="px-6 py-3">Order Date</th>
-                                <th className="px-6 py-3">Total</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3">Payment</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
+                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">PO Number</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Supplier</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Items</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Order Date</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap">Total</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Status</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Payment</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                            {loading ? (
-                                Array(5).fill(0).map((_, i) => (
-                                    <tr key={i}><td colSpan={7} className="px-6 py-4 animate-pulse"><div className="h-4 bg-gray-100 rounded w-full" /></td></tr>
+                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                            {loading && filtered.length === 0 ? (
+                                Array(6).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan={8} className="px-4 py-4">
+                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
+                                        </td>
+                                    </tr>
                                 ))
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">No purchase orders found. <button onClick={() => router.push('/admin/purchases/add')} className="text-[#E68A00] font-bold underline">Create one</button></td></tr>
-                            ) : filtered.map(row => (
-                                <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">{row.purchase_number}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">{row.supplier_name || '—'}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-1 max-w-[200px]" title={row.purchased_items}>
-                                            {row.purchased_items || '—'}
-                                        </p>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{row.order_date}</td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">PKR {parseFloat(row.total_amount || 0).toLocaleString()}</p>
-                                    </td>
-                                    <td className="px-6 py-4"><StatusBadge value={row.status} /></td>
-                                    <td className="px-6 py-4"><StatusBadge value={row.payment_status} /></td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex justify-end gap-2">
-                                            <button onClick={() => setViewRow(row)} className="p-1.5 text-gray-500 hover:text-[#E68A00] transition-colors" title="View"><Eye className="h-4 w-4" /></button>
-                                            <button onClick={() => setEditRow({ ...row })} className="p-1.5 text-gray-500 hover:text-[#E68A00] transition-colors" title="Edit Status"><Edit2 className="h-4 w-4" /></button>
-                                            <button onClick={() => setDeleteRow(row)} className="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>
-                                        </div>
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-16 text-center">
+                                        <Package className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No purchase orders found.</p>
+                                        <button
+                                            onClick={() => router.push('/admin/purchases/add')}
+                                            className="text-sm text-[#F7CA00] hover:underline font-medium"
+                                        >
+                                            Create your first purchase order
+                                        </button>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filtered.map(row => (
+                                    <tr key={row.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-4 py-3">
+                                            <span className="text-[#F7CA00] font-medium text-sm">#{row.purchase_number}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-slate-800 dark:text-slate-200 font-medium text-sm">{row.supplier_name || '—'}</span>
+                                        </td>
+                                        <td className="px-4 py-3 max-w-[180px]">
+                                            <span className="text-slate-500 dark:text-slate-400 text-sm truncate block" title={row.purchased_items}>
+                                                {row.purchased_items || '—'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-slate-500 dark:text-slate-400 text-sm">{row.order_date || '—'}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <span className="text-slate-800 dark:text-slate-200 font-semibold text-sm">{formatCurrency(row.total_amount || 0)}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusPill status={row.status} />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusPill status={row.payment_status} />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex justify-end items-center gap-1">
+                                                <button
+                                                    onClick={() => setViewRow(row)}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors"
+                                                    title="View details"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditRow({ ...row })}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                                    title="Update status"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteRow(row)}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
-            </Card>
+            </div>
 
-            {/* View Modal */}
+            {/* ── View Modal ── */}
             {viewRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded border border-gray-300 dark:border-slate-700 w-full max-w-lg shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Order #{viewRow.purchase_number}</h3>
-                            <button onClick={() => setViewRow(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Purchase Order #{viewRow.purchase_number}</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Order details</p>
+                            </div>
+                            <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                                <X className="h-4 w-4" />
+                            </button>
                         </div>
-                        <div className="p-6 space-y-6">
+                        <div className="p-5 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Supplier</p><p className="font-bold text-gray-900 dark:text-white">{viewRow.supplier_name || '—'}</p></div>
-                                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Date</p><p className="font-medium text-gray-700 dark:text-gray-300">{viewRow.order_date}</p></div>
-                                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</p><StatusBadge value={viewRow.status} /></div>
-                                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Payment</p><StatusBadge value={viewRow.payment_status} /></div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Supplier</p>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.supplier_name || '—'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Order Date</p>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.order_date || '—'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Order Status</p>
+                                    <StatusPill status={viewRow.status} />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Payment Status</p>
+                                    <StatusPill status={viewRow.payment_status} />
+                                </div>
                             </div>
-                            <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Amount</p>
-                                <p className="text-2xl font-black text-[#E68A00]">PKR {parseFloat(viewRow.total_amount || 0).toLocaleString()}</p>
+                            <div className="pt-3 border-t border-slate-100 dark:border-white/10">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Amount</p>
+                                <p className="text-2xl font-bold text-[#F7CA00]">{formatCurrency(viewRow.total_amount || 0)}</p>
                             </div>
                         </div>
-                        <div className="px-5 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end">
-                            <button onClick={() => setViewRow(null)} className="px-6 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-bold uppercase tracking-wider">Close</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Confirmation */}
-            {deleteRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-slate-900 rounded border border-gray-300 dark:border-slate-700 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
-                            <AlertTriangle className="h-4 w-4 text-[#e47911]" />
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Confirm Delete</h3>
-                        </div>
-                        <div className="p-6">
-                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                Are you sure you want to delete purchase order <span className="font-bold text-gray-900 dark:text-white">"{deleteRow.purchase_number}"</span>? This action cannot be undone.
-                            </p>
-                        </div>
-                        <div className="flex justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
-                            <button onClick={() => setDeleteRow(null)} className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 transition-colors">Cancel</button>
-                            <button onClick={handleDelete} disabled={deleting} className="px-6 py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded text-xs font-bold text-[#111] transition-colors flex items-center gap-2 shadow-sm">
-                                {deleting ? <Loader2 className="h-3 w-3 animate-spin text-gray-800" /> : 'Confirm Delete'}
+                        <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
+                            <button onClick={() => setViewRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
+                                Close
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Edit Status Modal */}
-            {editRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-slate-900 rounded border border-gray-300 dark:border-slate-700 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Update Status</h3>
-                            <button onClick={() => setEditRow(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
-                        </div>
-                        <div className="p-6 space-y-4">
+            {/* ── Delete Modal ── */}
+            {deleteRow && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                            <div className="w-9 h-9 bg-red-100 dark:bg-red-500/10 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                            </div>
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5">Order Status</label>
-                                <select 
-                                    value={editRow.status} 
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Delete Purchase Order</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Are you sure you want to delete <span className="font-semibold text-slate-700 dark:text-slate-300">#{deleteRow.purchase_number}</span>? This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 px-5 py-3">
+                            <button onClick={() => setDeleteRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60">
+                                {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Update Status Modal ── */}
+            {editRow && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1B1C1E] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Update Order Status</h3>
+                            <button onClick={() => setEditRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Order Status</label>
+                                <select
+                                    value={editRow.status}
                                     onChange={e => setEditRow({ ...editRow, status: e.target.value })}
-                                    className={SELECT()}
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="draft">Draft</option>
                                     <option value="ordered">Ordered</option>
@@ -303,11 +359,11 @@ export default function PurchasesPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5">Payment Status</label>
-                                <select 
-                                    value={editRow.payment_status} 
+                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Payment Status</label>
+                                <select
+                                    value={editRow.payment_status}
                                     onChange={e => setEditRow({ ...editRow, payment_status: e.target.value })}
-                                    className={SELECT()}
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F7CA00] focus:ring-2 focus:ring-[#F7CA00]/10 text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="pending">Pending</option>
                                     <option value="partially_paid">Partially Paid</option>
@@ -315,30 +371,32 @@ export default function PurchasesPage() {
                                 </select>
                             </div>
                         </div>
-                        <div className="px-5 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
-                            <button onClick={() => setEditRow(null)} className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-[#adb1b8] rounded text-xs font-medium">Cancel</button>
-                            <button 
-                                onClick={handleUpdateStatus} 
+                        <div className="flex justify-end gap-2 px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10">
+                            <button onClick={() => setEditRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpdateStatus}
                                 disabled={isUpdating}
-                                className="px-6 py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded text-xs font-bold text-[#111] transition-colors flex items-center gap-2"
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#F7CA00] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm"
                             >
-                                {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Update Status'}
+                                {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Save Changes
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Toast Notifications */}
+            {/* ── Toast ── */}
             {toast && (
-                <div className={`fixed bottom-6 right-6 px-6 py-4 rounded shadow-2xl flex items-center gap-3 min-w-[320px] border-l-4 z-[100] animate-in slide-in-from-bottom-5 duration-300
-                    ${toast.type === 'success' ? 'bg-[#131921] text-white border-green-500' : 'bg-red-900 text-white border-red-500'}`}>
-                    {toast.type === 'success' ? <CheckCircle className="h-5 w-5 text-green-400" /> : <AlertTriangle className="h-5 w-5 text-yellow-400" />}
-                    <div className="flex-1">
-                        <p className="text-xs font-bold uppercase tracking-widest">{toast.type === 'success' ? 'Success' : 'Error'}</p>
-                        <p className="text-sm font-medium opacity-90">{toast.msg}</p>
+                <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#F7CA00]' : 'bg-red-600'}`}>
+                        {toast.type === 'success'
+                            ? <CheckCircle className="h-4 w-4 shrink-0" />
+                            : <AlertTriangle className="h-4 w-4 shrink-0" />}
+                        {toast.msg}
                     </div>
-                    <button onClick={() => setToast(null)} className="text-white/40 hover:text-white"><X className="h-4 w-4" /></button>
                 </div>
             )}
         </div>

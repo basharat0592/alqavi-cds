@@ -8,7 +8,7 @@ import { Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 const INPUT = (err?: boolean) =>
     `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
+    focus:border-[#F7CA00] focus:shadow-[0_0_3px_2px_rgba(29,78,216,0.3)] placeholder:text-gray-400
     ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
 
 const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
@@ -64,7 +64,7 @@ export default function CustomerRegisterPage() {
         <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
             <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
                 <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-2xl text-[#111] tracking-tighter">AL-QAVI</span>
+                    <span className="font-extrabold text-2xl text-[#F7CA00] tracking-tighter">AL-QAVI</span>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Customer Registration</span>
                 </Link>
             </header>
@@ -72,11 +72,11 @@ export default function CustomerRegisterPage() {
             <main className="flex-1 flex flex-col items-center py-12 px-4">
                 <div className="w-full max-w-sm">
                     <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4">
-                        <Link href="/register" className="text-xs text-[#0066c0] hover:text-[#c45500] hover:underline flex items-center gap-1 mb-4 text-left">
+                        <Link href="/register" className="text-xs text-[#0066c0] hover:text-[#F7CA00] hover:underline flex items-center gap-1 mb-4 text-left">
                             <ArrowLeft className="h-3 w-3" /> All Options
                         </Link>
                         
-                        <h1 className="text-2xl font-bold text-[#111] mb-5 tracking-tight text-left">Create Account</h1>
+                        <h1 className="text-2xl font-bold text-slate-800 mb-5 tracking-tight text-left">Create Account</h1>
 
                         {error && (
                             <div className="flex items-start gap-2 border border-[#c40000] bg-white rounded p-3 mb-5 text-sm text-left">
@@ -147,7 +147,7 @@ export default function CustomerRegisterPage() {
                             </div>
 
                             <button type="submit" disabled={loading}
-                                className="w-full py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-sm font-bold text-[#111] transition-colors mt-6">
+                                className="w-full py-1.5 bg-[#F7CA00] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded shadow-sm text-sm font-bold text-white transition-colors mt-6">
                                 {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" /> : 'Continue'}
                             </button>
                         </form>
@@ -161,7 +161,7 @@ export default function CustomerRegisterPage() {
                         </div>
 
                         <p className="text-xs text-gray-800 font-bold mb-2 text-left">Already have an account?</p>
-                        <Link href="/login" className="block w-full text-center py-1 border border-[#adb1b8] bg-[#e7e9ec] hover:bg-[#d8dadd] rounded text-xs shadow-sm shadow-black/5 transition-all">
+                        <Link href="/login" className="block w-full text-center py-1 border border-slate-200 bg-[#e7e9ec] hover:bg-[#d8dadd] rounded text-xs shadow-sm shadow-black/5 transition-all">
                             Sign In
                         </Link>
                     </div>

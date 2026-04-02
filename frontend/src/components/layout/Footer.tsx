@@ -5,13 +5,14 @@ import {
     Facebook, Instagram, Twitter, Youtube,
     Phone, Mail, ShoppingBag, Star, ShieldCheck, Truck, Globe
 } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
 export default function Footer() {
     return (
         <footer className="bg-slate-900 text-white font-sans border-t border-white/5">
             {/* Back to Top */}
-            <button 
-                className="w-full bg-slate-800 py-3 hover:bg-slate-700 transition-colors text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white" 
+            <button
+                className="w-full bg-slate-800 py-3 hover:bg-slate-700 transition-colors text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
                 Back to Top
@@ -20,11 +21,8 @@ export default function Footer() {
             <div className="container px-6 md:px-12 mx-auto pt-16 pb-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 pb-16 border-b border-white/5">
                     <div className="space-y-6">
-                        <Link href="/" className="flex items-center gap-2 group">
-                            <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-105">
-                                <Star className="h-5 w-5 fill-white" />
-                            </div>
-                            <span className="font-bold text-xl tracking-tight">Al-Qavi</span>
+                        <Link href="/" className="flex items-center gap-2 group transition-all hover:opacity-80">
+                            <Logo size="sm" className="scale-[1.1] grayscale brightness-[5] hover:grayscale-0 hover:brightness-100 transition-all duration-500" />
                         </Link>
                         <p className="text-sm text-slate-400 leading-relaxed font-medium">
                             Pakistan's premier distributor of authentic clinical grade skincare and luxury beauty formulations. Directly imported, verified for quality.

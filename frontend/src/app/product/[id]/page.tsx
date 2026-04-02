@@ -1,5 +1,7 @@
 'use client';
 
+import PageLoader from '@/components/ui/PageLoader';
+
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -59,7 +61,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         load();
     }, [id]);
 
-    if (loading) return <div className="min-h-screen bg-background"><Navbar /><div className="p-40 text-center"><div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full mx-auto" /></div></div>;
+    if (loading) return <PageLoader />;
     if (!product) return <div className="min-h-screen bg-background"><Navbar /><div className="p-40 text-center text-slate-500">Product not found.</div><Footer /></div>;
 
     const price = parseFloat(product.price || '0');
@@ -72,7 +74,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <Navbar />
 
             <main className="flex-1 pt-24 pb-24 container mx-auto px-6">
-                
+
                 {/* ── BREADCRUMBS ── */}
                 <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-10">
                     <Link href="/shop" className="hover:text-accent transition-colors">Shop</Link>
@@ -81,7 +83,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-16">
-                    
+
                     {/* ── LEFT: VISUALS ── */}
                     <div className="w-full lg:w-1/2 space-y-6">
                         <div className="relative group bg-white dark:bg-slate-900 rounded-2xl border border-border overflow-hidden aspect-square flex items-center justify-center p-8">
@@ -133,7 +135,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                 <span className="text-2xl font-bold tracking-tight dark:text-white">PKR {price.toLocaleString()}</span>
                                 <span className="text-slate-400 text-sm font-medium line-through">PKR {(price * 1.15).toLocaleString()}</span>
                             </div>
-                            
+
                             <div className="bg-slate-50 dark:bg-slate-900 border-l-4 border-accent p-6 rounded-r-2xl space-y-2">
                                 <div className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
                                     <Zap className="h-4 w-4 text-accent fill-accent" />

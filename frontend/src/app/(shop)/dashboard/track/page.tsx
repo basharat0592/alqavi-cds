@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { 
-    Package, Truck, CheckCircle, Clock, 
+import {
+    Package, Truck, CheckCircle, Clock,
     Search, MapPin, Calendar, CreditCard,
     ArrowRight, Info, AlertCircle, ShoppingBag,
     ChevronRight, ExternalLink, XCircle, AlertTriangle
@@ -62,13 +62,13 @@ export default function TrackOrderDashboard() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-20 relative">
-            
+
 
             {/* ── HEADER (Admin Style) ── */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Live Tracking</h1>
-                    <p className="text-[10px] font-bold text-[#FF9900] tracking-[0.2em] uppercase mt-0.5">Real-time order monitoring</p>
+                    <p className="text-[10px] font-bold text-[#F7CA00] tracking-[0.2em] uppercase mt-0.5">Real-time order monitoring</p>
                 </div>
 
                 <form onSubmit={(e) => handleTrack(e)} className="relative flex-1 max-w-md">
@@ -77,7 +77,7 @@ export default function TrackOrderDashboard() {
                         value={orderNumber}
                         onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
                         placeholder="ORD-XXXXX"
-                        className="w-full px-5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-sm font-bold tracking-widest focus:ring-1 focus:ring-[#FF9900] outline-none"
+                        className="w-full px-5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-sm font-bold tracking-widest focus:ring-1 focus:ring-[#F7CA00] outline-none"
                     />
                     <button
                         type="submit"
@@ -98,7 +98,7 @@ export default function TrackOrderDashboard() {
 
             {order ? (
                 <div className="space-y-6">
-                    
+
                     {/* Visual Stepper Section */}
                     <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded shadow-sm">
                         <div className="flex justify-between items-center mb-10 pb-6 border-b dark:border-slate-800">
@@ -113,7 +113,7 @@ export default function TrackOrderDashboard() {
                             </div>
                             <div className="text-right">
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Order Total</p>
-                                <p className="text-lg font-black text-[#FF9900]">PKR {order.total_amount?.toLocaleString()}</p>
+                                <p className="text-lg font-black text-[#F7CA00]">PKR {order.total_amount?.toLocaleString()}</p>
                             </div>
                         </div>
 
@@ -127,9 +127,9 @@ export default function TrackOrderDashboard() {
                                     Your order <span className="font-bold text-red-600">{order.order_number}</span> has been cancelled. Please contact support if you need further assistance.
                                 </p>
                                 <div className="w-full max-w-xs px-6">
-                                    <button 
+                                    <button
                                         onClick={() => setOrder(null)}
-                                        className="w-full py-2.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded text-sm text-[#111] shadow-sm font-medium transition-all"
+                                        className="w-full py-2.5 bg-[#F7CA00] hover:bg-[#ebae1e] border border-[#a88734] rounded text-sm text-white shadow-sm font-medium transition-all"
                                     >
                                         Track another package
                                     </button>
@@ -142,8 +142,8 @@ export default function TrackOrderDashboard() {
                             /* Flat Stepper */
                             <div className="relative pt-6 pb-2">
                                 <div className="absolute top-[2.75rem] left-[5%] right-[5%] h-[2px] bg-slate-100 dark:bg-slate-800" />
-                                <div 
-                                    className="absolute top-[2.75rem] left-[5%] h-[2px] bg-[#FF9900] transition-all duration-1000" 
+                                <div
+                                    className="absolute top-[2.75rem] left-[5%] h-[2px] bg-[#F7CA00] transition-all duration-1000"
                                     style={{ width: `${Math.max(0, (statusIndex / 4) * 90)}%` }}
                                 />
 
@@ -152,13 +152,13 @@ export default function TrackOrderDashboard() {
                                         const Icon = step.icon;
                                         const isActive = idx <= statusIndex;
                                         const isCurrent = idx === statusIndex;
-                                        
+
                                         return (
                                             <div key={idx} className="flex flex-col items-center w-[18%]">
                                                 <div className={`
                                                     w-10 h-10 rounded shadow-sm flex items-center justify-center transition-all duration-500
-                                                    ${isActive 
-                                                        ? 'bg-[#FF9900] text-[#131921] scale-110 z-10' 
+                                                    ${isActive
+                                                        ? 'bg-[#F7CA00] text-white scale-110 z-10'
                                                         : 'bg-white dark:bg-slate-800 text-slate-300 border border-slate-100 dark:border-slate-700'
                                                     }
                                                 `}>
@@ -212,7 +212,7 @@ export default function TrackOrderDashboard() {
                                 ))}
                                 <div className="pt-2 border-t dark:border-slate-800 flex justify-between">
                                     <span className="text-[11px] font-black dark:text-white uppercase tracking-widest">Payable</span>
-                                    <span className="text-sm font-black text-[#FF9900]">PKR {order.total_amount?.toLocaleString()}</span>
+                                    <span className="text-sm font-black text-[#F7CA00]">PKR {order.total_amount?.toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>

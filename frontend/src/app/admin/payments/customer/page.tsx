@@ -15,27 +15,32 @@ import {
    COMPONENTS & STYLES
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
 
-const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
-    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-        <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
+const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
+    <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-[#F7CA00]" />
+            <div>
+                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
+                {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
+            </div>
+        </div>
     </div>
 );
 
 const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
-    ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
+    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg text-sm outline-none transition-all
+    focus:border-[#F7CA00] focus:ring-4 focus:ring-[#F7CA00]/10 placeholder:text-slate-400
+    ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
 
-const LABEL = "block text-[11px] font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5";
+const LABEL = "block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-1.5";
 
-const PRIMARY_BTN = "bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] text-gray-900 font-bold rounded-[3px] shadow-sm text-sm py-2 px-4 transition-all flex items-center justify-center gap-2 active:bg-[#e2b13c]";
-const SECONDARY_BTN = "bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 border border-[#adb1b8] dark:border-slate-600 text-gray-700 dark:text-slate-200 rounded-[3px] shadow-sm text-sm font-medium py-2 px-4 transition-all flex items-center justify-center gap-2 active:bg-gray-100 dark:active:bg-slate-600";
+const PRIMARY_BTN = "bg-[#F7CA00] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2.5 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
+const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2.5 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
 
 interface Payment {
     id: number;
@@ -88,175 +93,166 @@ export default function CustomerPaymentsPage() {
     const totalInbound = filtered.reduce((sum, p) => sum + parseFloat(String(p.amount)), 0);
 
     return (
-        <div className="min-h-screen bg-[#f3f3f3] dark:bg-slate-950 p-4 lg:p-8">
-            <div className="max-w-[1400px] mx-auto space-y-6">
+        <div className="max-w-[1400px] mx-auto space-y-6 pb-12">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                    <div className="flex items-center gap-3">
-                        {formOpen ? (
-                            <button onClick={() => setFormOpen(false)} className="p-2 hover:bg-white border border-transparent hover:border-gray-300 rounded cursor-pointer transition-all">
-                                <ChevronDown className="h-6 w-6 transform rotate-90 text-gray-600" />
-                            </button>
-                        ) : (
-                            <div className="w-10 h-10 bg-[#FF9900] rounded flex items-center justify-center shadow-sm">
-                                <UserCheck className="h-6 w-6 text-white" strokeWidth={2.5} />
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#F7CA00] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <Users className="h-5 w-5 text-white" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Client Balances</h1>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Inbound Capital Registry</p>
+                    </div>
+                </div>
+
+                {!formOpen && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={load} className={SECONDARY_BTN}>
+                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            Sync Registry
+                        </button>
+                        <button onClick={() => setFormOpen(true)} className={PRIMARY_BTN}>
+                            <Plus className="h-3.5 w-3.5" />
+                            Record Receipt
+                        </button>
+                    </div>
+                )}
+                {formOpen && (
+                    <button onClick={() => setFormOpen(false)} className={SECONDARY_BTN}>
+                        <X className="h-3.5 w-3.5" />
+                        Cancel Entry
+                    </button>
+                )}
+            </div>
+
+            {formOpen ? (
+                <CreateView
+                    onClose={() => setFormOpen(false)}
+                    onSuccess={() => { setFormOpen(false); load(); showToast('Receipt recorded successfully'); }}
+                    categories={categories}
+                />
+            ) : (
+                <>
+                    {/* Summary Bar */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <SectionCard className="p-4 flex items-center justify-between border-emerald-500/10">
+                            <div>
+                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Collected</p>
+                                <p className="text-2xl font-black text-emerald-600 tracking-tighter leading-none">{formatCurrency(totalInbound)}</p>
                             </div>
-                        )}
-                        <div>
-                            <h1 className="text-2xl font-bold dark:text-white">{formOpen ? 'New Receipt Protocol' : 'Customer Receipts'}</h1>
-                            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">{formOpen ? 'Individual Entity Inbound' : 'Capital Inflow Journal'}</p>
+                            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
+                                <Banknote className="h-5 w-5 text-emerald-600" />
+                            </div>
+                        </SectionCard>
+                        <SectionCard className="p-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Registry Volume</p>
+                                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{filtered.length} Entries</p>
+                            </div>
+                            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                                <Users className="h-5 w-5 text-slate-400" />
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    {/* Search Hub */}
+                    <div className="bg-white dark:bg-[#1B1C1E] border border-slate-200 dark:border-white/10 rounded-xl p-3">
+                        <div className="relative group max-w-xl">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Search client entity or transaction ID..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F7CA00] focus:ring-4 focus:ring-[#F7CA00]/10 transition-all font-medium"
+                            />
                         </div>
                     </div>
 
-                    {!formOpen && (
-                        <div className="flex items-center gap-2">
-                            <button onClick={load} className={SECONDARY_BTN}>
-                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </button>
-                            <button onClick={() => setFormOpen(true)} className={PRIMARY_BTN}>
-                                <Plus className="h-4 w-4" />
-                                Record Receipt
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {formOpen ? (
-                    <CreateView
-                        onClose={() => setFormOpen(false)}
-                        onSuccess={() => { setFormOpen(false); load(); showToast('Receipt recorded successfully'); }}
-                        categories={categories}
-                    />
-                ) : (
-                    <>
-                        {/* Summary Bar */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <SectionCard className="p-4 flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30">
-                                <div>
-                                    <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-widest leading-none mb-1">Total Collected</p>
-                                    <p className="text-2xl font-bold text-emerald-600 tracking-tighter leading-none">{formatCurrency(totalInbound)}</p>
-                                </div>
-                                <div className="p-3 bg-white dark:bg-slate-800 rounded shadow-sm border border-emerald-100 dark:border-emerald-800">
-                                    <Banknote className="h-6 w-6 text-emerald-500" />
-                                </div>
-                            </SectionCard>
-                            <SectionCard className="p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">Receipt Volume</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white tracking-tighter leading-none">{filtered.length} Entries</p>
-                                </div>
-                                <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded shadow-sm border border-gray-100 dark:border-slate-800">
-                                    <Users className="h-6 w-6 text-gray-400" />
-                                </div>
-                            </SectionCard>
-                        </div>
-
-                        {/* Search Hub */}
-                        <SectionCard className="p-4">
-                            <div className="relative group max-w-xl">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#FF9900] transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Entity name or transaction ID..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className={INPUT() + " pl-10 h-10"}
-                                />
+                    {/* Journal Table */}
+                    <SectionCard>
+                        <SectionHeader title="Receipt Journal" icon={FileText} subtitle="Inbound client settlements" />
+                        {loading ? (
+                            <div className="py-20 flex flex-col items-center justify-center gap-3">
+                                <Loader2 className="h-8 w-8 text-[#F7CA00] animate-spin" />
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validating Registry...</p>
                             </div>
-                        </SectionCard>
-
-                        {/* Journal Table */}
-                        <SectionCard>
-                            <SectionHeader title="Receipt Log" icon={FileText} />
-                            {loading ? (
-                                <div className="py-20 flex flex-col items-center justify-center gap-3">
-                                    <Loader2 className="h-8 w-8 text-[#FF9900] animate-spin" />
-                                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Validating Registry...</p>
+                        ) : filtered.length === 0 ? (
+                            <div className="py-24 text-center">
+                                <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-white/10">
+                                    <ShoppingCart className="h-6 w-6 text-slate-300" />
                                 </div>
-                            ) : filtered.length === 0 ? (
-                                <div className="py-20 text-center">
-                                    <div className="w-16 h-16 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 dark:border-slate-700 shadow-inner">
-                                        <ShoppingCart className="h-6 w-6 text-gray-300" />
-                                    </div>
-                                    <h3 className="text-gray-900 dark:text-white font-bold">No Customer Receipts Found</h3>
-                                    <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">Refine your entity search or initiate a new inbound capital protocol.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-[#f6f6f6] dark:bg-slate-800/50 border-b border-[#ddd] dark:border-slate-800 text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                                                <th className="px-6 py-3 w-32">Index / Date</th>
-                                                <th className="px-6 py-3">Customer Entity</th>
-                                                <th className="px-6 py-3">Classification</th>
-                                                <th className="px-6 py-3">Protocol</th>
-                                                <th className="px-6 py-3 text-right">Valuation</th>
-                                                <th className="px-6 py-3 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                            {filtered.map((payment) => (
-                                                <tr key={payment.id} className="hover:bg-[#f6f6f6] dark:hover:bg-slate-800/30 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xs font-bold text-gray-900 dark:text-white">#{payment.id}</span>
-                                                            <span className="text-[10px] text-gray-400 uppercase">{formatDate(payment.date)}</span>
+                                <h3 className="text-slate-900 dark:text-white font-bold uppercase tracking-tight">No Receipts Found</h3>
+                                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 font-medium italic">Refine your search or record a new transaction.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                                            <th className="px-4 py-3 whitespace-nowrap">Receipt</th>
+                                            <th className="px-4 py-3 whitespace-nowrap">Client Entity</th>
+                                            <th className="px-4 py-3 whitespace-nowrap">Classification</th>
+                                            <th className="px-4 py-3 whitespace-nowrap">Protocol</th>
+                                            <th className="px-4 py-3 text-right whitespace-nowrap">Amount</th>
+                                            <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                        {filtered.map((payment) => (
+                                            <tr key={payment.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group text-sm">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-[#F7CA00]">#{payment.id}</span>
+                                                        <span className="text-[11px] text-slate-500 font-medium">{formatDate(payment.date)}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-[#F7CA00] uppercase border border-white/10">
+                                                            {payment.payer_payee[0]}
                                                         </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 rounded-full bg-[#131921] flex items-center justify-center text-[9px] font-bold text-[#FF9900] uppercase">
-                                                                {payment.payer_payee[0]}
-                                                            </div>
-                                                            <span className="text-xs font-bold text-gray-800 dark:text-slate-200">{payment.payer_payee}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-500 rounded-sm border border-gray-200 dark:border-slate-700 font-bold uppercase tracking-tighter">
-                                                            {payment.category_name}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase">{payment.method.replace('_', ' ')}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <span className="text-sm font-bold text-emerald-600 tracking-tight">+{formatCurrency(payment.amount)}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <button className="p-1.5 text-blue-600 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-blue-200 rounded shadow-sm transition-all">
-                                                                <Eye className="h-3.5 w-3.5" />
-                                                            </button>
-                                                            <button className="p-1.5 text-gray-600 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-gray-200 rounded shadow-sm transition-all">
-                                                                <Printer className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td colSpan={6} className="px-6 py-8 text-center bg-gray-50/50 dark:bg-slate-900/50">
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] italic">Electronic Ledger Termination</p>
+                                                        <span className="font-medium text-slate-800 dark:text-slate-200">{payment.payer_payee}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-block px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#F7CA00] text-[11px] font-semibold uppercase tracking-tight">
+                                                        {payment.category_name}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="text-slate-500 dark:text-slate-400 font-medium">{payment.method.replace('_', ' ')}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <span className="font-bold text-emerald-600 tracking-tight">+{formatCurrency(payment.amount)}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors" title="View Receipt">
+                                                            <Eye className="h-4 w-4" />
+                                                        </button>
+                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-[#F7CA00] hover:bg-blue-50 dark:hover:bg-[#F7CA00]/10 transition-colors" title="Print Statement">
+                                                            <Printer className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            )}
-                        </SectionCard>
-                    </>
-                )}
-            </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </SectionCard>
+                </>
+            )}
 
             {/* Notification Hub */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right duration-300">
-                    <div className={`flex items-center gap-3 px-6 py-3 rounded shadow-2xl border-l-[6px] ${toast.type === 'success' ? 'bg-[#232f3e] border-[#f0c14b] text-white' : 'bg-red-900 border-red-500 text-white'}`}>
-                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#f0c14b]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
+                    <div className={`flex items-center gap-3 px-6 py-3 rounded shadow-2xl border-l-[6px] ${toast.type === 'success' ? 'bg-[#232f3e] border-[#F7CA00] text-white' : 'bg-red-900 border-red-500 text-white'}`}>
+                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#F7CA00]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
                         <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
                         <button onClick={() => setToast(null)} className="ml-4 hover:opacity-70 transition-opacity">
                             <X className="h-4 w-4" />
@@ -314,14 +310,14 @@ function CreateView({ onClose, onSuccess, categories }: any) {
                                         value={formData.amount}
                                         onChange={e => set('amount', e.target.value)}
                                         placeholder="0.00"
-                                        className={INPUT() + " pl-10 text-xl font-bold text-emerald-600 focus:border-emerald-500 focus:shadow-[0_0_3px_2px_rgba(16,185,129,0.3)]"}
+                                        className={INPUT() + " pl-10 text-xl font-bold text-emerald-600"}
                                     />
                                 </div>
                             </div>
                             <div>
                                 <label className={LABEL}>Customer Identity</label>
                                 <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input
                                         required
                                         type="text"
@@ -334,8 +330,8 @@ function CreateView({ onClose, onSuccess, categories }: any) {
                             </div>
                         </div>
 
-                        {/* Remittance डिटेल */}
-                        <div className="space-y-6 lg:border-x lg:border-gray-100 lg:dark:border-slate-800 lg:px-8">
+                        {/* Remittance Detail */}
+                        <div className="space-y-6 lg:border-x lg:border-slate-100 lg:dark:border-white/5 lg:px-8">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={LABEL}>Protocol</label>
@@ -392,9 +388,9 @@ function CreateView({ onClose, onSuccess, categories }: any) {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-5 bg-gray-50 dark:bg-slate-800 border-t border-[#ddd] dark:border-slate-800 flex items-center justify-between">
+                <div className="px-8 py-5 bg-slate-50 dark:bg-white/5 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
                     <button type="button" onClick={onClose} className={SECONDARY_BTN + " !px-8"}>Discard Receipt</button>
-                    <button type="submit" disabled={loading} className={PRIMARY_BTN + " !px-10 uppercase tracking-widest border-b-2 border-b-[#a88734]"}>
+                    <button type="submit" disabled={loading} className={PRIMARY_BTN + " !px-10"}>
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {loading ? 'Processing...' : 'Authorize Receipt'}
                     </button>
@@ -403,4 +399,3 @@ function CreateView({ onClose, onSuccess, categories }: any) {
         </SectionCard>
     );
 }
-

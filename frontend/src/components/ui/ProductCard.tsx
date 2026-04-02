@@ -7,7 +7,7 @@ import { Star, ShoppingCart, Eye, Heart, Check, Package } from 'lucide-react';
 interface ProductCardProps {
     id?: string;
     title: string;
-    image: string;
+    image?: string;
     rating?: number;
     reviews?: number;
     price: number;
@@ -58,17 +58,17 @@ export default function ProductCard({
         Array.from({ length: 5 }).map((_, i) => (
             <Star
                 key={i}
-                className={`h-3 w-3 ${i < Math.floor(r) ? 'fill-[#FF9900] text-[#FF9900]' : i < r ? 'fill-[#FF9900]/50 text-[#FF9900]' : 'fill-gray-200 text-gray-200'}`}
+                className={`h-3 w-3 ${i < Math.floor(r) ? 'fill-[#F7CA00] text-[#F7CA00]' : i < r ? 'fill-[#F7CA00]/50 text-[#F7CA00]' : 'fill-gray-200 text-gray-200'}`}
             />
         ));
 
     return (
-        <div className="group relative bg-white dark:bg-[#1B1C1E] rounded-2xl border border-gray-100 dark:border-white/5 hover:border-[#FF9900]/30 hover:shadow-xl hover:shadow-[#FF9900]/8 transition-all duration-400 overflow-hidden flex flex-col">
+        <div className="group relative bg-white dark:bg-[#1B1C1E] rounded-2xl border border-gray-100 dark:border-white/5 hover:border-[#F7CA00]/30 hover:shadow-xl hover:shadow-[#F7CA00]/8 transition-all duration-400 overflow-hidden flex flex-col">
 
             {/* Badges Row */}
             <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
                 {badge && (
-                    <span className="px-2.5 py-1 bg-[#FF9900] text-[#131921] text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md">
+                    <span className="px-2.5 py-1 bg-[#F7CA00] text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md">
                         {badge}
                     </span>
                 )}
@@ -122,7 +122,7 @@ export default function ProductCard({
 
                 {/* Category + Rating */}
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-[9px] font-black text-[#FF9900] uppercase tracking-[0.18em]">{category}</span>
+                    <span className="text-[9px] font-black text-[#F7CA00] uppercase tracking-[0.18em]">{category}</span>
                     <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-0.5">{renderStars(rating)}</div>
                         <span className="text-[9px] font-black text-slate-400 dark:text-white/30">({reviews})</span>
@@ -131,7 +131,7 @@ export default function ProductCard({
 
                 {/* Title */}
                 <Link href={`/product/${id}`} className="block mb-3">
-                    <h3 className="text-sm font-black text-gray-900 dark:text-white line-clamp-2 group-hover:text-[#FF9900] transition-colors tracking-tight leading-snug">
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white line-clamp-2 group-hover:text-[#F7CA00] transition-colors tracking-tight leading-snug">
                         {title}
                     </h3>
                 </Link>
@@ -172,7 +172,7 @@ export default function ProductCard({
                             ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20'
                             : stock === 0
                                 ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/20 cursor-not-allowed'
-                                : 'bg-[#131921] dark:bg-white/10 border-[#131921] dark:border-white/10 text-white hover:bg-[#FF9900] hover:border-[#FF9900] hover:shadow-lg hover:shadow-[#FF9900]/20 active:scale-95'
+                                : 'bg-[#131921] dark:bg-white/10 border-[#131921] dark:border-white/10 text-white hover:bg-[#F7CA00] hover:border-[#F7CA00] hover:shadow-lg hover:shadow-[#F7CA00]/20 active:scale-95'
                         }`}
                 >
                     {added ? (

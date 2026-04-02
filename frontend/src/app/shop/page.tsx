@@ -1,5 +1,7 @@
 'use client';
 
+import PageLoader from '@/components/ui/PageLoader';
+
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -61,6 +63,8 @@ function ShopContent() {
         setTimeout(() => setToastMsg(''), 3000);
     };
 
+    if (loading) return <PageLoader />;
+
     return (
         <div className="min-h-screen bg-white dark:bg-background">
             <Navbar />
@@ -83,7 +87,7 @@ function ShopContent() {
 
             <main className="container mx-auto px-4 py-8">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    
+
                     {/* Simplified Amazon Sidebar */}
                     <aside className="w-full lg:w-64 flex-shrink-0 animate-in fade-in slide-in-from-left duration-500">
                         <div className="space-y-8 sticky top-24">
@@ -91,18 +95,18 @@ function ShopContent() {
                                 <h3 className="text-sm font-bold border-b border-gray-100 dark:border-slate-800 pb-2 mb-4 uppercase tracking-tighter">Related Department</h3>
                                 <ul className="space-y-2">
                                     <li>
-                                        <button 
+                                        <button
                                             onClick={() => setSelectedCat('')}
-                                            className={`text-sm tracking-tight ${!selectedCat ? 'font-bold text-[#C45500]' : 'text-[#007185] hover:text-[#C45500] hover:underline'}`}
+                                            className={`text-sm tracking-tight ${!selectedCat ? 'font-bold text-[#F7CA00]' : 'text-[#007185] hover:text-[#F7CA00] hover:underline'}`}
                                         >
                                             Every Item
                                         </button>
                                     </li>
                                     {cats.map(c => (
                                         <li key={c}>
-                                            <button 
+                                            <button
                                                 onClick={() => setSelectedCat(c)}
-                                                className={`text-sm tracking-tight ${selectedCat === c ? 'font-bold text-[#C45500]' : 'text-[#007185] hover:text-[#C45500] hover:underline'}`}
+                                                className={`text-sm tracking-tight ${selectedCat === c ? 'font-bold text-[#F7CA00]' : 'text-[#007185] hover:text-[#F7CA00] hover:underline'}`}
                                             >
                                                 {c}
                                             </button>
@@ -116,7 +120,7 @@ function ShopContent() {
                                 <ul className="space-y-2">
                                     {['Under 2,500', '2,500 – 7,500', '7,500 – 15,000', 'Above 15,000'].map(p => (
                                         <li key={p}>
-                                            <button className="text-sm text-[#007185] hover:text-[#C45500] hover:underline tracking-tight">
+                                            <button className="text-sm text-[#007185] hover:text-[#F7CA00] hover:underline tracking-tight">
                                                 {p}
                                             </button>
                                         </li>
@@ -148,7 +152,7 @@ function ShopContent() {
                                         key={p.id}
                                         id={String(p.id)}
                                         title={p.name}
-                                        image={getImageUrl(p.image_url || p.image || '') || ''}
+                                        image={getImageUrl(p.image_url || p.image || '') || undefined}
                                         price={typeof p.price === 'string' ? parseFloat(p.price) : (p.price || 0)}
                                         category={p.category_name || 'Beauty'}
                                         stock={p.quantity_in_stock}
@@ -163,7 +167,7 @@ function ShopContent() {
                                 <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                 <h2 className="text-xl font-bold dark:text-white">Empty Selection</h2>
                                 <p className="text-sm text-gray-500 max-w-sm mx-auto mt-2">The curated search axis is zero. Broaden your search parameters or explore the main collection.</p>
-                                <button onClick={() => { setSelectedCat(''); }} className="mt-8 px-8 py-2 bg-[#FF9900] hover:bg-[#e68a00] text-[#111] font-bold rounded text-xs uppercase shadow-sm">
+                                <button onClick={() => { setSelectedCat(''); }} className="mt-8 px-8 py-2 bg-[#F7CA00] hover:bg-[#F7CA00] text-white font-bold rounded text-xs uppercase shadow-sm">
                                     Reload Inventory
                                 </button>
                             </div>
@@ -180,7 +184,7 @@ function ShopContent() {
 
 export default function Shop() {
     return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<PageLoader />}>
             <ShopContent />
         </Suspense>
     );

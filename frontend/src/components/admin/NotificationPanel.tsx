@@ -42,13 +42,13 @@ export default function NotificationPanel({
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between bg-[#232F3E] rounded-t-2xl">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-[#FF9900] rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-[#F7CA00] rounded-lg flex items-center justify-center">
                         <Bell className="h-4 w-4 text-white" strokeWidth={2.5} />
                     </div>
                     <div>
                         <p className="font-black text-white text-sm">Recent Activity</p>
                         {unread > 0 && (
-                            <p className="text-[10px] font-bold text-[#FF9900] uppercase tracking-widest">
+                            <p className="text-[10px] font-bold text-[#F7CA00] uppercase tracking-widest">
                                 {unread} unread
                             </p>
                         )}
@@ -62,7 +62,7 @@ export default function NotificationPanel({
                     </button>
                     {unread > 0 && (
                         <button onClick={onMarkAllRead}
-                            className="text-[10px] font-black text-[#FF9900] hover:underline uppercase tracking-wider px-2 py-1 hover:bg-white/10 rounded-lg transition-colors">
+                            className="text-[10px] font-black text-[#F7CA00] hover:underline uppercase tracking-wider px-2 py-1 hover:bg-white/10 rounded-lg transition-colors">
                             Mark all read
                         </button>
                     )}
@@ -76,7 +76,7 @@ export default function NotificationPanel({
             <div className="max-h-[420px] overflow-y-auto">
                 {loading ? (
                     <div className="py-12 flex flex-col items-center justify-center gap-3">
-                        <div className="w-8 h-8 border-3 border-[#FF9900]/20 border-t-[#FF9900] rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-3 border-[#F7CA00]/20 border-t-[#F7CA00] rounded-full animate-spin" />
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading...</p>
                     </div>
                 ) : activities.length === 0 ? (
@@ -94,16 +94,16 @@ export default function NotificationPanel({
                             return (
                                 <Link key={item.id} href={item.href}
                                     onClick={() => { onMarkRead(item.id); onClose(); }}
-                                    className={`flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-all group ${!item.read ? 'bg-[#FF9900]/5 dark:bg-[#FF9900]/10' : ''}`}>
+                                    className={`flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-all group ${!item.read ? 'bg-[#F7CA00]/5 dark:bg-[#F7CA00]/10' : ''}`}>
                                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${item.bg} dark:bg-opacity-20`}>
                                         <Icon className={`h-4 w-4 ${item.color}`} strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between gap-2">
-                                            <p className={`text-sm font-bold leading-tight group-hover:text-[#FF9900] transition-colors ${!item.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300'}`}>
+                                            <p className={`text-sm font-bold leading-tight group-hover:text-[#F7CA00] transition-colors ${!item.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300'}`}>
                                                 {item.title}
                                             </p>
-                                            {!item.read && <span className="w-2 h-2 bg-[#FF9900] rounded-full flex-shrink-0 mt-1.5" />}
+                                            {!item.read && <span className="w-2 h-2 bg-[#F7CA00] rounded-full flex-shrink-0 mt-1.5" />}
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{item.desc}</p>
                                         <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-medium flex items-center gap-1">
@@ -120,7 +120,7 @@ export default function NotificationPanel({
 
             {/* Footer */}
             <div className="border-t border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/20 px-5 py-3 flex items-center justify-between rounded-b-2xl">
-                <Link href="/admin/sales" onClick={onClose} className="text-xs font-bold text-[#FF9900] hover:underline">
+                <Link href="/admin/sales" onClick={onClose} className="text-xs font-bold text-[#F7CA00] hover:underline">
                     View all orders →
                 </Link>
                 <Link href="/admin/settings" onClick={onClose}

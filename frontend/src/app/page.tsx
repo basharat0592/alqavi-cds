@@ -1,5 +1,7 @@
 'use client';
 
+import PageLoader from '@/components/ui/PageLoader';
+
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -55,7 +57,7 @@ function ProductRow({ title, subtitle, products, loading, onAdd }: { title: stri
                     <h2 className="text-2xl font-black tracking-tighter dark:text-white uppercase leading-none">{title}</h2>
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">{subtitle}</p>
                 </div>
-                <Link href={`/shop?cat=${title}`} className="text-[10px] font-black text-[#007185] hover:text-[#C45500] flex items-center gap-1.5 group uppercase tracking-widest border-b border-transparent hover:border-[#007185] transition-all pb-0.5">
+                <Link href={`/shop?cat=${title}`} className="text-[10px] font-black text-[#007185] hover:text-[#F7CA00] flex items-center gap-1.5 group uppercase tracking-widest border-b border-transparent hover:border-[#007185] transition-all pb-0.5">
                     VIEW RANGE <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </Link>
             </div>
@@ -74,7 +76,7 @@ function ProductRow({ title, subtitle, products, loading, onAdd }: { title: stri
                                 key={p.id}
                                 id={String(p.id)}
                                 title={p.name}
-                                image={getImageUrl(p.image_url || p.image || '') || ''}
+                                image={getImageUrl(p.image_url || p.image || '') || undefined}
                                 price={price}
                                 category={p.category_name || 'Beauty'}
                                 stock={p.quantity_in_stock}
@@ -124,6 +126,8 @@ export default function Home() {
         addToCart({ id: p.id, name: p.name, price: p.price, quantity: qty, image: p.image_url || p.image || '', category: p.category_name || 'Beauty', stock: p.quantity_in_stock });
     };
 
+    if (loading) return <PageLoader />;
+
     return (
         <div className="min-h-screen bg-background transition-colors duration-500">
             <Navbar />
@@ -138,9 +142,9 @@ export default function Home() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-900/20 to-transparent flex items-center">
                                     <div className="container mx-auto px-6 lg:px-12">
                                         <div className="max-w-2xl text-white space-y-6">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF9900]/20 backdrop-blur-md rounded-full border border-[#FF9900]/20">
-                                                <Sparkles className="h-4 w-4 text-[#FF9900]" />
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#FF9900]">Exclusive Wholesale Access</span>
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F7CA00]/20 backdrop-blur-md rounded-full border border-[#F7CA00]/20">
+                                                <Sparkles className="h-4 w-4 text-[#F7CA00]" />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#F7CA00]">Exclusive Wholesale Access</span>
                                             </div>
                                             <h1 className="text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] drop-shadow-2xl">
                                                 {slide.title}
@@ -149,7 +153,7 @@ export default function Home() {
                                                 {slide.sub}
                                             </p>
                                             <div className="flex items-center gap-4 pt-4">
-                                                <Link href={slide.href} className="px-8 py-4 bg-[#FF9900] hover:bg-[#E68A00] text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-[#FF9900]/20 flex items-center gap-2 group/btn">
+                                                <Link href={slide.href} className="px-8 py-4 bg-[#F7CA00] hover:bg-[#F7CA00] text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-[#F7CA00]/20 flex items-center gap-2 group/btn">
                                                     {slide.cta}
                                                     <ArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
                                                 </Link>
@@ -166,7 +170,7 @@ export default function Home() {
 
                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-30">
                         {HERO_SLIDES.map((_, i) => (
-                            <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1.5 transition-all duration-500 rounded-full ${currentSlide === i ? 'w-12 bg-[#FF9900]' : 'w-3 bg-white/40 hover:bg-white/60'}`} />
+                            <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1.5 transition-all duration-500 rounded-full ${currentSlide === i ? 'w-12 bg-[#F7CA00]' : 'w-3 bg-white/40 hover:bg-white/60'}`} />
                         ))}
                     </div>
                 </section>
@@ -181,7 +185,7 @@ export default function Home() {
                             { icon: <Clock className="h-5 w-5" />, label: "Top Support", sub: "Expert Assistance" },
                         ].map((m, i) => (
                             <div key={i} className="flex items-center gap-4 group">
-                                <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-[#FF9900]/10 border border-orange-100 dark:border-[#FF9900]/20 flex items-center justify-center text-[#FF9900] transition-transform group-hover:scale-110">
+                                <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-[#F7CA00]/10 border border-orange-100 dark:border-[#F7CA00]/20 flex items-center justify-center text-[#F7CA00] transition-transform group-hover:scale-110">
                                     {m.icon}
                                 </div>
                                 <div>
@@ -200,7 +204,7 @@ export default function Home() {
                             <h2 className="text-3xl lg:text-4xl font-bold tracking-tight dark:text-white">Shop by Category</h2>
                             <p className="text-slate-500 text-sm font-medium">Find the perfect products for your beauty routine.</p>
                         </div>
-                        <Link href="/shop" className="text-sm font-bold text-[#FF9900] hover:text-[#E68A00] flex items-center gap-2 group">
+                        <Link href="/shop" className="text-sm font-bold text-[#F7CA00] hover:text-[#F7CA00] flex items-center gap-2 group">
                             Browse All
                             <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </Link>
@@ -209,10 +213,10 @@ export default function Home() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {categories.map((cat, i) => (
                             <Link key={cat.id || cat.name} href={`/shop?cat=${cat.name}`} className="group relative aspect-[1/1] rounded-2xl border border-border/40 overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500">
-                                <img src={getImageUrl(cat.image) || CATEGORY_FALLBACK_IMAGES[i % CATEGORY_FALLBACK_IMAGES.length]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
+                                <img src={getImageUrl(cat.image) || CATEGORY_FALLBACK_IMAGES[i % CATEGORY_FALLBACK_IMAGES.length] || undefined} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex flex-col justify-end p-4 lg:p-6 text-center">
                                     <h3 className="text-sm lg:text-lg font-black text-white tracking-tighter uppercase leading-tight drop-shadow-md">{cat.name}</h3>
-                                    <span className="text-[7px] lg:text-[9px] font-bold uppercase tracking-[0.2em] text-[#FF9900] mt-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">EXPLORE COLLECTION</span>
+                                    <span className="text-[7px] lg:text-[9px] font-bold uppercase tracking-[0.2em] text-[#F7CA00] mt-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">EXPLORE COLLECTION</span>
                                 </div>
                             </Link>
                         ))}

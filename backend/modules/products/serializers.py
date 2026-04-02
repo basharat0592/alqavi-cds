@@ -2,7 +2,10 @@
 Products module serializers.
 """
 from rest_framework import serializers
-from .models import Product, Category, ProductGallery, MainCategory
+from .models import Product, Category, ProductGallery, MainCategory, Wishlist
+
+# Moved WishlistSerializer below ProductSerializer to avoid NameError
+
 from modules.company.models import Company, CompanyCategory
 
 
@@ -103,6 +106,16 @@ class ProductSerializer(serializers.ModelSerializer):
         from modules.inventory.serializers import BatchSerializer
         batches = obj.batch_set.all() if hasattr(obj, 'batch_set') else obj.batches.all()
         return BatchSerializer(batches, many=True).data
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+    """Serializer for Wishlist model."""
+    product_details = ProductSerializer(source='product', read_only=True)
+    
+    class Meta:
+        model = Wishlist
+        fields = ['id', 'user', 'product', 'product_details', 'created_at']
+        read_only_fields = ['id', 'created_at', 'product_details']
 
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):

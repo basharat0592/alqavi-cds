@@ -7,10 +7,13 @@ export type UserRole = 'admin' | 'customer' | 'supplier' | 'staff' | 'manager';
 export interface User {
     id: string;
     name: string;
+    first_name?: string;
+    last_name?: string;
     email: string;
     role: UserRole | string;
     avatar?: string;
     phone?: string;
+    phone_number?: string;
     is_staff?: boolean;
     is_superuser?: boolean;
 }

@@ -7,6 +7,7 @@ import { categoryService } from '@/lib/api';
 import {
     ArrowLeft, FolderTree, Save, Loader2, CheckCircle, XCircle, Grid, Type, Link as LinkIcon, Activity
 } from 'lucide-react';
+import PageLoader from '@/components/ui/PageLoader';
 import { ProductCategory } from '@/types';
 
 // ─── Shared Utilities ─────────────────────────────────────────────────────────
@@ -102,14 +103,7 @@ export default function EditProductCategoryPage() {
         }
     };
 
-    if (loading) return (
-        <div className="flex h-screen items-center justify-center bg-slate-50 flex-col gap-6">
-            <div className="w-16 h-16 bg-white rounded-3xl shadow-xl flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">Syncing Logic Hub...</p>
-        </div>
-    );
+    if (loading) return <PageLoader />;
 
     return (
         <div className="max-w-[1000px] mx-auto pb-24 font-sans px-8 mt-12 relative z-0">

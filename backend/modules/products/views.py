@@ -7,15 +7,63 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.pagination import PageNumberPagination
-from .models import Product, Category, MainCategory
+from .models import Product, Category, MainCategory, Wishlist
 from .serializers import (
     ProductSerializer,
     ProductCreateUpdateSerializer,
     CategorySerializer,
-    MainCategorySerializer
+    MainCategorySerializer,
+    WishlistSerializer
 )
-from modules.users.models import UserActivityLog
+
 from core.utils import get_or_404_response
+from modules.users.models import UserActivityLog
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_wishlist(request):
+    """List all products in the authenticated user's wishlist."""
+    # Optimized fetch to prevent N+1 performance bottlenecks
+    wishlist_items = Wishlist.objects.filter(user=request.user).select_related(
+        'product', 
+        'product__category', 
+        'product__company', 
+        'product__supplier',
+        'product__company_category'
+    ).prefetch_related(
+        'product__gallery',
+        'product__main_categories',
+        'product__batch_set'
+    )
+    
+    serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_to_wishlist(request):
+    """Add a product to the user's wishlist."""
+    product_id = request.data.get('product_id')
+    if not product_id:
+        return Response({'error': 'product_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    product, err = get_or_404_response(Product, id=product_id)
+    if err:
+        return err
+
+    wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
+    if created:
+        return Response(WishlistSerializer(wishlist_item, context={'request': request}).data, status=status.HTTP_201_CREATED)
+    return Response({'message': 'Product already in wishlist'}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_wishlist(request, product_id):
+    """Remove a product from the user's wishlist."""
+    Wishlist.objects.filter(user=request.user, product_id=product_id).delete()
+    return Response({'message': 'Product removed from wishlist'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', 'POST'])

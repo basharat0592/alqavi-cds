@@ -7,11 +7,11 @@ import { authService } from '@/lib/auth';
 import { Loader2, AlertTriangle, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 const INPUT = (err?: boolean) =>
-    `w-full px-3 py-1.5 bg-white border rounded text-xs outline-none transition-all
-    focus:border-red-600 focus:shadow-[0_0_3px_2px_rgba(220,38,38,0.5)] placeholder:text-gray-400
+    `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
+    focus:border-[#F7CA00] focus:ring-4 focus:ring-blue-50 placeholder:text-gray-400
     ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
 
-const LABEL = 'block text-[10px] font-black text-gray-900 mb-1.5 uppercase tracking-tight text-left';
+const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
 
 export default function AdminRegisterPage() {
     const router = useRouter();
@@ -62,35 +62,35 @@ export default function AdminRegisterPage() {
 
     return (
         <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
-            <header className="bg-white border-b border-[#ddd] py-3 shadow-sm flex items-center justify-center">
+            <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
                 <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-xl text-[#111] tracking-tighter">AL-QAVI</span>
-                    <span className="text-[9px] font-bold text-red-600 uppercase tracking-widest mt-0.5">Admin Provisioning</span>
+                    <span className="font-extrabold text-2xl text-[#F7CA00] tracking-tighter uppercase">AL-QAVI</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Admin Provisioning</span>
                 </Link>
             </header>
 
-            <main className="flex-1 flex flex-col items-center py-10 px-4">
+            <main className="flex-1 flex flex-col items-center py-12 px-4">
                 <div className="w-full max-w-sm">
                     <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4 relative overflow-hidden">
                         {/* Status bar */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-red-600" />
                         
-                        <Link href="/register" className="text-[10px] font-bold uppercase text-[#0066c0] hover:text-[#c45500] hover:underline flex items-center gap-1 mb-6 text-left">
+                        <Link href="/register" className="text-xs text-[#0066c0] hover:text-[#F7CA00] hover:underline flex items-center gap-1 mb-6 text-left">
                             <ArrowLeft className="h-3 w-3" /> All Options
                         </Link>
                         
                         <div className="flex items-center gap-2 mb-1">
                             <ShieldCheck className="h-5 w-5 text-red-600" />
-                            <h1 className="text-xl font-bold text-[#111] tracking-tight">System Administrator</h1>
+                            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">System Administrator</h1>
                         </div>
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-6 text-left">Internal Staff Registration</p>
 
                         {error && (
-                            <div className="flex items-start gap-2 border border-red-200 bg-red-50 rounded p-3 mb-6 text-sm text-left">
+                            <div className="flex items-start gap-2 border border-red-200 bg-red-50 rounded p-4 mb-6 text-sm text-left">
                                 <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-red-600 font-bold text-xs uppercase text-left">Auth Error</p>
-                                    <p className="text-gray-800 text-xs mt-0.5 leading-relaxed text-left">{error}</p>
+                                    <p className="text-red-600 font-bold text-xs uppercase text-left tracking-wider">Auth Error</p>
+                                    <p className="text-gray-800 text-xs mt-1 leading-relaxed text-left">{error}</p>
                                 </div>
                             </div>
                         )}
@@ -156,7 +156,7 @@ export default function AdminRegisterPage() {
                             </div>
 
                             <button type="submit" disabled={loading}
-                                className="w-full py-2 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-xs font-black uppercase tracking-widest text-[#111] transition-colors mt-6">
+                                className="w-full py-2.5 bg-[#F7CA00] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded text-xs font-black uppercase tracking-widest text-white transition-all mt-6 shadow-lg shadow-blue-500/10 active:scale-[0.98]">
                                 {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" strokeWidth={3} /> : 'Register Administrator'}
                             </button>
                         </form>

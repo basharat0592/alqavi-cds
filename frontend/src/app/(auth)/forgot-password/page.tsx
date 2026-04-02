@@ -6,7 +6,7 @@ import { Loader2, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 const INPUT = (err?: boolean) =>
     `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
+    focus:border-[#F7CA00] focus:shadow-[0_0_3px_2px_rgba(29,78,216,0.3)] placeholder:text-gray-400
     ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
 
 const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
             <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
                 <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-2xl text-[#111] tracking-tighter uppercase">AL-QAVI</span>
+                    <span className="font-extrabold text-2xl text-[#F7CA00] tracking-tighter uppercase">AL-QAVI</span>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Password Recovery</span>
                 </Link>
             </header>
@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
                     <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4">
                         {submitted ? (
                             <div className="text-left">
-                                <h1 className="text-2xl font-bold text-[#111] mb-2 tracking-tight">Check your email</h1>
+                                <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Check your email</h1>
                                 <p className="text-sm text-gray-700 leading-relaxed mb-4">
                                     We've sent password reset instructions to <span className="font-bold">{email}</span>.
                                 </p>
@@ -50,17 +50,17 @@ export default function ForgotPasswordPage() {
                                     If you don't see the email, check your spam or junk folder.
                                 </p>
                                 <Link href="/login"
-                                    className="block w-full text-center py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-sm font-bold text-[#111] transition-colors">
+                                    className="block w-full text-center py-1.5 bg-[#F7CA00] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded shadow-sm text-sm font-bold text-white transition-colors">
                                     Return to Sign In
                                 </Link>
                                 <button onClick={() => { setSubmitted(false); setEmail(''); }}
-                                    className="w-full text-center text-xs text-[#0066c0] hover:text-[#c45500] hover:underline mt-4">
+                                    className="w-full text-center text-xs text-[#0066c0] hover:text-[#F7CA00] hover:underline mt-4">
                                     Try a different email address
                                 </button>
                             </div>
                         ) : (
                             <>
-                                <h1 className="text-2xl font-bold text-[#111] mb-2 tracking-tight text-left">Password assistance</h1>
+                                <h1 className="text-2xl font-bold text-white mb-2 tracking-tight text-left">Password assistance</h1>
                                 <p className="text-xs text-gray-700 mb-5 leading-relaxed text-left">
                                     Enter the email address associated with your Al-Qavi account.
                                 </p>
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
                                     </div>
 
                                     <button type="submit" disabled={loading}
-                                        className="w-full py-1.5 bg-[#f0c14b] hover:bg-[#ebae1e] border border-[#a88734] rounded shadow-sm text-sm font-bold text-[#111] transition-colors mt-2">
+                                        className="w-full py-1.5 bg-[#F7CA00] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded shadow-sm text-sm font-bold text-white transition-colors mt-2">
                                         {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" strokeWidth={3} /> : 'Continue'}
                                     </button>
                                 </form>
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                                     <p className="text-xs text-gray-600 leading-relaxed mb-4">
                                         If you no longer use the email address associated with your Al-Qavi account, you may contact <span className="text-[#0066c0] hover:underline cursor-pointer">Customer Service</span> for help restoring access to your account.
                                     </p>
-                                    <Link href="/login" className="text-xs text-[#0066c0] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                                    <Link href="/login" className="text-xs text-[#0066c0] hover:text-[#F7CA00] hover:underline flex items-center gap-1">
                                         <ArrowLeft className="h-3 w-3" /> Back to Sign In
                                     </Link>
                                 </div>

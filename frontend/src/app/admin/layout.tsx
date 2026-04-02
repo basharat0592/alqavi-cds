@@ -10,9 +10,11 @@ import {
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { productService, orderService, userService, settingsService, inventoryService, paymentService } from '@/lib/api';
+import { getImageUrl, cn } from '@/lib/utils';
+import PageLoader from '@/components/ui/PageLoader';
 
 /* ═══════════════════════════════════════════════
    HELPERS
@@ -40,7 +42,7 @@ function SearchItem({ href, icon: Icon, iconBg, iconColor, title, subtitle, onCl
                 <Icon className={`w-4 h-4 ${iconColor}`} />
             </div>
             <div className="min-w-0">
-                <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#FF9900] dark:group-hover:text-[#FFA41C] truncate">{title}</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#F7CA00] dark:group-hover:text-[#FFA41C] truncate">{title}</p>
                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{subtitle}</p>
             </div>
         </Link>
@@ -61,7 +63,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
             </button>
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center">
                 <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight">AL-QAVI</span>
-                <span className="text-[8px] font-black tracking-[0.2em] text-[#FF9900] dark:text-[#FFA41C] -mt-0.5 uppercase">Cosmetics Hub</span>
+                <span className="text-[8px] font-black tracking-[0.2em] text-[#F7CA00] dark:text-[#F7CA00] -mt-0.5 uppercase">Cosmetics Hub</span>
             </Link>
             <div className="flex items-center gap-2">
                 <button onClick={onToggleNotifications} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition relative">
@@ -69,9 +71,9 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
                     {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-800" />}
                 </button>
                 <button onClick={onToggleProfile}
-                    className="w-10 h-10 bg-[#FF9900] rounded-xl flex items-center justify-center text-[#131921] font-black text-xs hover:bg-[#E68A00] transition-all shadow-lg shadow-orange-100 dark:shadow-none overflow-hidden">
+                    className="w-10 h-10 bg-[#F7CA00] rounded-xl flex items-center justify-center text-[#131921] font-black text-xs hover:bg-[#1E40AF] transition-all shadow-lg shadow-blue-100 dark:shadow-none overflow-hidden">
                     {adminAvatar ? (
-                        <img src={adminAvatar} alt="Profile" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                         adminName ? adminName[0].toUpperCase() : 'A'
                     )}
@@ -86,8 +88,16 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
 ═══════════════════════════════════════════════ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [isNavigating, setIsNavigating] = useState(false);
+
+    // Trigger loader on navigation
+    useEffect(() => {
+        setIsNavigating(true);
+        const t = setTimeout(() => setIsNavigating(false), 500);
+        return () => clearTimeout(t);
+    }, [pathname]);
 
     // User state
     const [adminName, setAdminName] = useState('Admin');
@@ -104,8 +114,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
 
-    // Theme state
+    // Workspace Visual Parameters (Real-time Mesh)
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const [compactMode, setCompactMode] = useState(false);
+    const [animationsEnabled, setAnimationsEnabled] = useState(true);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // Load theme
     useEffect(() => {
@@ -144,9 +157,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
     // Refs
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
+    // Settings state
+    const [notifSettings, setNotifSettings] = useState<any>(null);
 
     /* ── Load user ── */
     useEffect(() => {
@@ -161,9 +179,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             }
         };
 
-        refreshAdminState();
+        const refreshSettings = () => {
+            settingsService.getSettings().then(s => {
+                setNotifSettings(s);
+                setTheme((s.theme as 'light' | 'dark') || 'light');
+                setCompactMode(s.compact_mode ?? false);
+                setAnimationsEnabled(s.animations ?? true);
+                setSidebarCollapsed(s.sidebar_collapsed ?? false);
+            }).catch(() => {});
+        };
 
-        // Load full profile from DB initially as well
+        refreshAdminState();
+        refreshSettings();
+
+        // Load full profile from DB
         settingsService.getProfile().then(p => {
             setAdminId(String(p.id));
             setAdminName(p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : adminName);
@@ -173,54 +202,86 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         const onStorage = () => refreshAdminState();
         const onProfileUpdate = () => refreshAdminState();
+        const onSettingsUpdate = () => refreshSettings();
 
         window.addEventListener('storage', onStorage);
         window.addEventListener('profileUpdated', onProfileUpdate);
+        window.addEventListener('settingsUpdated', onSettingsUpdate);
 
         return () => {
             window.removeEventListener('storage', onStorage);
             window.removeEventListener('profileUpdated', onProfileUpdate);
+            window.removeEventListener('settingsUpdated', onSettingsUpdate);
         };
     }, []);
 
-    /* ── Fetch activity (Mock only as requested) ── */
+    /* ── Fetch Real Activity ── */
     const fetchActivity = async () => {
+        if (actLoading) return;
         setActLoading(true);
         try {
-            // Simulated delay for premium feel
-            await new Promise(r => setTimeout(r, 600));
+            // Respect settings: if settings not loaded yet, assume True
+            const showOrders = notifSettings?.notif_new_order ?? true;
+            const showAlerts = notifSettings?.notif_low_stock ?? true;
+            const showUsers = notifSettings?.notif_new_user ?? true;
 
-            const items: ActivityItem[] = [
-                {
-                    id: 'm1', type: 'order', title: 'New Order #12093', desc: 'Saeed Khan — PKR 12,500',
-                    time: '2 mins ago', timeRaw: Date.now() - 120000,
-                    href: '/admin/sales', read: false, icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50'
-                },
-                {
-                    id: 'm2', type: 'alert', title: 'Low Stock Alert', desc: 'Face Wash — 5 units left',
-                    time: '15 mins ago', timeRaw: Date.now() - 900000,
-                    href: '/admin/inventory', read: false, icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50'
-                },
-                {
-                    id: 'm3', type: 'product', title: 'New Product Added', desc: '"Gold Serum" is now live',
-                    time: '1 hour ago', timeRaw: Date.now() - 3600000,
-                    href: '/admin/products', read: false, icon: Package, color: 'text-green-600', bg: 'bg-green-50'
-                },
-                {
-                    id: 'm4', type: 'user', title: 'New User Registered', desc: 'Amna Ahmed joined',
-                    time: '2 hours ago', timeRaw: Date.now() - 7200000,
-                    href: '/admin/users', read: false, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50'
-                },
-                {
-                    id: 'm5', type: 'order', title: 'New Order #12094', desc: 'Zia Ahmed — PKR 8,700',
-                    time: '4 hours ago', timeRaw: Date.now() - 14400000,
-                    href: '/admin/sales', read: false, icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50'
-                }
-            ];
+            const [oRes, aRes, lRes] = await Promise.allSettled([
+                showOrders ? orderService.getAll({ limit: 5 }) : Promise.resolve([]),
+                showAlerts ? inventoryService.getAlerts({ limit: 5 }) : Promise.resolve([]),
+                showUsers ? userService.getAllActivityLogs(10) : Promise.resolve([]),
+            ]);
 
-            setActivities(items);
+            const liveItems: ActivityItem[] = [];
+
+            // 1) Process Real Orders
+            if (oRes.status === 'fulfilled' && Array.isArray(oRes.value)) {
+                oRes.value.forEach((o: any) => {
+                    liveItems.push({
+                        id: `order-${o.id}`, type: 'order',
+                        title: `Order #${o.order_number || o.id}`,
+                        desc: `${o.customer_name || 'Guest'} — PKR ${o.total_amount || o.total}`,
+                        time: timeAgo(o.created_at || Date.now()),
+                        timeRaw: new Date(o.created_at || Date.now()).getTime(),
+                        href: `/admin/sales`, read: false,
+                        icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50'
+                    });
+                });
+            }
+
+            // 2) Process Real Inventory Alerts
+            if (aRes.status === 'fulfilled' && Array.isArray(aRes.value)) {
+                aRes.value.forEach((a: any) => {
+                    liveItems.push({
+                        id: `alert-${a.id}`, type: 'alert',
+                        title: 'Low Stock Alert',
+                        desc: `${a.inventory_name || a.product_name} — ${a.stock_quantity || a.quantity} left`,
+                        time: timeAgo(a.created_at || Date.now()),
+                        timeRaw: new Date(a.created_at || Date.now()).getTime(),
+                        href: '/admin/inventory', read: false,
+                        icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50'
+                    });
+                });
+            }
+
+            // 3) Process Real Security Logs
+            if (lRes.status === 'fulfilled' && Array.isArray(lRes.value)) {
+                lRes.value.filter(l => l.action === 'create' || l.action === 'login').forEach((l: any) => {
+                    liveItems.push({
+                        id: `log-${l.id}`, type: 'user',
+                        title: l.action === 'login' ? 'User Identity Login' : 'New Mesh Genesis',
+                        desc: l.description || `${l.user_name} initialized`,
+                        time: timeAgo(l.timestamp || Date.now()),
+                        timeRaw: new Date(l.timestamp || Date.now()).getTime(),
+                        href: '/admin/users', read: false,
+                        icon: Users, color: 'text-violet-600', bg: 'bg-violet-50'
+                    });
+                });
+            }
+
+            // Sort by time descending
+            setActivities(liveItems.sort((a, b) => b.timeRaw - a.timeRaw).slice(0, 15));
         } catch (err) {
-            console.error('Activity mock fail', err);
+            console.error('Activity fetch failure:', err);
         } finally {
             setActLoading(false);
         }
@@ -275,7 +336,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <AuthGuard allowedRoles={['admin']}>
-            <div className="h-screen bg-[#f8fafc] dark:bg-[#111213] flex flex-col font-sans overflow-hidden transition-colors duration-500 print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]">
+            <div className={cn(
+                "h-screen bg-[#f8fafc] dark:bg-[#111213] flex flex-col font-sans overflow-hidden print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]",
+                animationsEnabled ? "transition-colors duration-500" : "transition-none",
+                theme,
+                compactMode ? "text-[12px]" : "text-sm",
+                !animationsEnabled && "[&_*]:transition-none"
+            )}>
 
                 {/* Mobile top bar */}
                 <MobileTopBar
@@ -316,43 +383,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {/* Main Content Area */}
                     <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:overflow-visible print:min-h-auto">
 
-                        {/* ═══ DESKTOP NAVBAR ═══ */}
-                        <div className="hidden md:flex bg-white dark:bg-[#1B1C1E] border-b border-slate-100 dark:border-white/5 px-8 py-3.5 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-[0_2px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.4)] relative print:hidden">
+                        {/* ═══ PREMIUM COMMAND NAVBAR ═══ */}
+                        <div className="hidden md:flex bg-[#F9FAFB]/90 dark:bg-[#1B1C1E]/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5 px-8 py-3.5 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-xl print:hidden sticky top-0 transition-all duration-300">
 
-                            {/* Search Bar */}
-                            <div className="relative flex-1 max-w-lg">
-                                <div className="flex items-center gap-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 px-4 py-2.5 w-full focus-within:border-[#FF9900]/50 focus-within:ring-2 focus-within:ring-[#FF9900]/10 transition-all duration-300">
-                                    <Search className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                                    <input type="text" placeholder="Search product, order, customer..."
-                                        className="bg-transparent text-[12px] outline-none w-full text-slate-700 dark:text-slate-200 placeholder:text-slate-400 font-bold uppercase tracking-wide"
+                            {/* Refined Search Area */}
+                            <div className="relative flex-1 max-w-lg group">
+                                <div className="flex items-center gap-3.5 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 px-5 py-2.5 w-full focus-within:border-[#F7CA00] focus-within:ring-4 focus-within:ring-[#F7CA00]/10 transition-all duration-500 shadow-sm group-hover:shadow-md">
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#F7CA00] transition-colors duration-300" />
+                                    <input type="text" placeholder="Command Search: products, orders, customers..."
+                                        className="bg-transparent text-[11px] outline-none w-full text-slate-700 dark:text-slate-100 placeholder:text-slate-400/70 font-black uppercase tracking-wider"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
                                         onBlur={closeSearch} />
-                                    {isSearching && <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FF9900] border-t-transparent animate-spin flex-shrink-0" />}
+                                    {isSearching && <div className="w-4 h-4 rounded-full border-2 border-[#F7CA00] border-t-transparent animate-spin flex-shrink-0" />}
+                                    <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-white/5 text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                        <span>CMD</span>
+                                        <span className="opacity-40">/</span>
+                                        <span>K</span>
+                                    </div>
                                 </div>
 
-                                {/* Search Dropdown */}
+                                {/* Intelligent Search Dropdown */}
                                 {showSearchDropdown && (
-                                    <div className="absolute top-full mt-2 left-0 right-0 bg-white dark:bg-[#0f1012] rounded-xl border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                                        <div className="max-h-96 overflow-y-auto p-2 space-y-2">
+                                    <div className="absolute top-full mt-3 left-0 right-0 bg-white/95 dark:bg-[#0f1012]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                                        <div className="max-h-[32rem] overflow-y-auto p-3 space-y-3 custom-scrollbar">
                                             {noResults && !isSearching && (
-                                                <p className="p-4 text-center text-[11px] font-black text-slate-400 uppercase tracking-widest">No results for &quot;{searchQuery}&quot;</p>
+                                                <div className="p-8 text-center space-y-2">
+                                                    <div className="w-12 h-12 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                        <Search className="w-5 h-5 text-slate-300" />
+                                                    </div>
+                                                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">No results found for &quot;{searchQuery}&quot;</p>
+                                                </div>
                                             )}
                                             {sp.length > 0 && (
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Products</p>
+                                                <div className="space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#F7CA00]/30 decoration-2 underline-offset-4">Logistics: Products</p>
                                                     {sp.map((p, i) => (
                                                         <SearchItem key={i} href="/admin/products" icon={Package}
-                                                            iconBg="bg-orange-50" iconColor="text-orange-500"
+                                                            iconBg="bg-blue-50" iconColor="text-blue-500"
                                                             title={p.name} subtitle={`PKR ${p.price}`}
                                                             onClick={closeDropdowns} />
                                                     ))}
                                                 </div>
                                             )}
                                             {so.length > 0 && (
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Orders</p>
+                                                <div className="space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#F7CA00]/30 decoration-2 underline-offset-4">Operations: Orders</p>
                                                     {so.map((o, i) => (
                                                         <SearchItem key={i} href="/admin/sales" icon={ShoppingCart}
                                                             iconBg="bg-blue-50" iconColor="text-blue-500"
@@ -363,8 +440,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                 </div>
                                             )}
                                             {su.length > 0 && (
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Users</p>
+                                                <div className="space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#F7CA00]/30 decoration-2 underline-offset-4">Security: Personnel</p>
                                                     {su.map((u, i) => (
                                                         <SearchItem key={i} href="/admin/users" icon={User}
                                                             iconBg="bg-purple-50" iconColor="text-purple-500"
@@ -379,24 +456,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 )}
                             </div>
 
-                            {/* Right Actions */}
-                            <div className="flex items-center gap-2 relative">
+                            {/* Right Tactical Actions */}
+                            <div className="flex items-center gap-3 relative">
                                 <Link href="/"
-                                    className="text-[10px] font-black text-[#131921] dark:text-[#131921] bg-[#FF9900] px-4 py-2 rounded-lg border border-orange-600/20 shadow-lg shadow-orange-200/50 dark:shadow-[#FF9900]/10 transition-all hover:bg-[#E68A00] uppercase tracking-widest flex items-center gap-2">
-                                    View Store <ExternalLink className="h-3 w-3" />
+                                    className="hidden lg:flex items-center gap-2.5 text-[10px] font-black text-white bg-[#F7CA00] px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-[0.1em] border border-white/10 active:scale-95">
+                                    Live Store Front <ExternalLink className="h-3.5 w-3.5" />
                                 </Link>
 
-                                <div className="border-l border-slate-200 dark:border-white/10 h-6 mx-2" />
+                                <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1 hidden lg:block" />
 
-                                {/* Notifications */}
+                                {/* Interactive Notification Center */}
                                 <div className="relative" ref={notifRef}>
                                     <button onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
-                                        className={`relative p-2.5 rounded-xl transition-all duration-200
-                                            ${notifOpen ? 'bg-[#FF9900]/10 text-[#FF9900]' : 'hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-white/10'}`}>
-                                        <Bell className="h-4.5 w-4.5" strokeWidth={2} />
+                                        className={`relative p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md
+                                            ${notifOpen
+                                                ? 'bg-[#F7CA00] text-white border-[#F7CA00] shadow-[0_0_20px_rgba(29,78,216,0.4)]'
+                                                : 'bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-[#F7CA00]/30 hover:-translate-y-1'}`}>
+                                        <Bell className="h-5 w-5" strokeWidth={2.5} />
                                         {unreadCount > 0 && (
-                                            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#FF9900] text-[#131921] text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-[#0f1012] shadow-sm">
-                                                {unreadCount > 9 ? '9+' : unreadCount}
+                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-black rounded-lg flex items-center justify-center border-2 border-white dark:border-[#0f1012] shadow-xl animate-bounce">
+                                                {unreadCount}
                                             </span>
                                         )}
                                     </button>
@@ -410,34 +489,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     )}
                                 </div>
 
-                                {/* Theme Toggle */}
+                                {/* Dynamic Theme Integration */}
                                 <button onClick={toggleTheme}
-                                    className="relative overflow-hidden p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all duration-200 border border-transparent hover:border-slate-200 dark:hover:border-white/10 flex items-center justify-center w-10 h-10">
-                                    <div className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 scale-50 rotate-90' : 'opacity-100 scale-100 rotate-0'}`}>
-                                        <Moon className="h-4.5 w-4.5" />
+                                    className="relative p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-[#F7CA00] transition-all duration-500 hover:-translate-y-1 w-11 h-11 flex items-center justify-center group overflow-hidden">
+                                    <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100'}`}>
+                                        <Moon className="h-5 w-5" />
                                     </div>
-                                    <div className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 scale-50 -rotate-90' : 'opacity-100 scale-100 rotate-0'}`}>
-                                        <Sun className="h-4.5 w-4.5 text-[#FF9900]" />
+                                    <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 -translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100 rotate-0'}`}>
+                                        <Sun className="h-5 w-5 text-[#F7CA00]" />
                                     </div>
+                                    <div className="absolute inset-0 bg-[#F7CA00]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
 
-                                {/* Profile */}
-                                <div className="relative" ref={profileRef}>
+                                {/* Command Personnel Identity */}
+                                <div className="relative pl-1" ref={profileRef}>
                                     <button onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 border
-                                            ${profileOpen ? 'bg-[#FF9900]/10 border-[#FF9900]/20' : 'hover:bg-slate-50 dark:hover:bg-white/5 border-transparent hover:border-slate-200 dark:hover:border-white/10'}`}>
-                                        <div className="w-9 h-9 bg-[#FF9900] rounded-xl flex items-center justify-center flex-shrink-0 border border-orange-400/20 overflow-hidden">
-                                            {adminAvatar ? (
-                                                <img src={adminAvatar} alt="Profile" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span className="text-[11px] font-black text-[#131921]">
-                                                    {adminName ? adminName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'A'}
-                                                </span>
-                                            )}
+                                        className={`flex items-center gap-3.5 px-3.5 py-2 rounded-2xl transition-all duration-500 border border-transparent group
+                                            ${profileOpen ? 'bg-[#F7CA00]/5 border-[#F7CA00]/20 ring-4 ring-[#F7CA00]/5' : 'hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-white/10'}`}>
+                                        <div className="relative">
+                                            <div className="w-10 h-10 bg-[#F7CA00] rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-white/10 overflow-hidden shadow-lg group-hover:rotate-6 transition-transform">
+                                                {adminAvatar ? (
+                                                    <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-[12px] font-black text-white">
+                                                        {adminName ? adminName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'A'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#0f1012] rounded-full" />
                                         </div>
-                                        <div className="hidden lg:block text-left min-w-0">
-                                            <p className="text-slate-900 dark:text-white font-black text-[11px] leading-tight truncate max-w-[120px] uppercase tracking-tight">{adminName}</p>
-                                            <p className="text-[9px] text-[#FF9900] font-black uppercase tracking-[0.15em] truncate max-w-[120px]">{adminEmail || 'Administrator'}</p>
+                                        <div className="hidden xl:block text-left min-w-0">
+                                            <p className="text-slate-900 dark:text-white font-black text-[12px] leading-tight truncate max-w-[140px] uppercase tracking-wider">{adminName}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <div className="w-1 h-1 rounded-full bg-[#F7CA00]" />
+                                                <p className="text-[9px] text-[#F7CA00] font-black uppercase tracking-[0.2em] truncate max-w-[140px] opacity-80">{adminEmail || 'Admin Node'}</p>
+                                            </div>
                                         </div>
                                     </button>
 
@@ -453,7 +539,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
 
                         {/* Page Content */}
-                        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0 print:h-auto transition-colors duration-500" onClick={closeDropdowns}>
+                        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0 print:h-auto transition-colors duration-500 relative" onClick={closeDropdowns}>
+                            {isNavigating && <PageLoader />}
                             {children}
                         </main>
                     </div>
