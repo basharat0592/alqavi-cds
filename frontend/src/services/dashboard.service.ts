@@ -1,7 +1,11 @@
+import api from '@/lib/axios';
 import { productService } from './product.service';
 import { orderService } from './order.service';
 
 export const dashboardService = {
+    getAnalytics: async () => {
+        return api.get('/v1/sales/dashboard/stats/');
+    },
     getStats: async () => {
         const [products, orders] = await Promise.all([
             productService.getAll(),

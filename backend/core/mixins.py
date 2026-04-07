@@ -30,6 +30,7 @@ class StatusMixin(models.Model):
         ('active', 'Active'),
         ('inactive', 'Inactive'),
         ('archived', 'Archived'),
+        ('pending_procurement', 'Pending Procurement'),
     )
     status = models.CharField(
         max_length=20,

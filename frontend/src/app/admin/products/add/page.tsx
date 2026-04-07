@@ -7,14 +7,14 @@ import {
     Save, Loader2, ArrowLeft, DollarSign, Database,
     X, AlertTriangle, CheckCircle, Barcode, Hash, Building2, Layers, ChevronLeft
 } from 'lucide-react';
-import { productService, companyCategoryService, companyService, CompanyInfo, mainCategoryService } from '@/lib/api';
+import { productService, companyCategoryService, companyService, CompanyInfo, mainCategoryService, userService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import { authService } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 export default function AddEditProductPage() {
@@ -61,18 +61,25 @@ export default function AddEditProductPage() {
     useEffect(() => {
         const fetchInitial = async () => {
             try {
-                const [pCats, cCats, comps, mCats, sups] = await Promise.all([
+                const [pCats, cCats, comps, mCats, usersRes, supsRes] = await Promise.allSettled([
                     productService.getCategories(),
                     companyCategoryService.getAll(),
                     companyService.getAll(),
                     mainCategoryService.getAll(),
-                    companyService.getSuppliers?.() || Promise.resolve([])
+                    userService.getAll(),
+                    (companyService as any).getSuppliers?.() ?? Promise.resolve([])
                 ]);
-                setProductCategories((pCats || []).filter((c: any) => c.status === 'active'));
-                setCompanyCategories((cCats || []).filter((c: any) => c.is_active !== false));
-                setCompanies((comps || []).filter((c: any) => c.is_active !== false));
-                setMainCategories(mCats || []);
-                setSuppliers(sups || []);
+
+                if (pCats.status === 'fulfilled') setProductCategories((pCats.value || []).filter((c: any) => c.status === 'active'));
+                if (cCats.status === 'fulfilled') setCompanyCategories((cCats.value || []).filter((c: any) => c.is_active !== false));
+                if (comps.status === 'fulfilled') setCompanies((comps.value || []).filter((c: any) => c.is_active !== false));
+                if (mCats.status === 'fulfilled') setMainCategories(mCats.value || []);
+
+                const sList = supsRes.status === 'fulfilled' ? (Array.isArray(supsRes.value) ? supsRes.value : []) : [];
+                
+                // Exclusively use validated Supplier profiles for the product-supplier mapping
+                // This ensures IDs match the backend Product model foreign key expectation
+                setSuppliers(sList);
 
                 const currentUser = authService.getUser();
                 setUser(currentUser);
@@ -189,7 +196,7 @@ export default function AddEditProductPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Data Arrays */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
                                 <Tag className="h-4 w-4 text-[#EEAF1C]" />
                                 <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Product Information</h2>
@@ -222,9 +229,9 @@ export default function AddEditProductPage() {
                                         </select>
                                     </div>
                                     <div className={user?.role_name?.toLowerCase().includes('supplier') ? 'hidden' : 'block'}>
-                                        <label className={labelCls}>Strategic Supplier</label>
+                                        <label className={labelCls}>Supplier <span className="text-red-500">*</span></label>
                                         <select name="supplier" value={formData.supplier} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Supplier Node</option>
+                                            <option value="">Select Supplier</option>
                                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
                                     </div>
@@ -236,7 +243,7 @@ export default function AddEditProductPage() {
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
                                 <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
                                 <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Pricing & Logistics</h2>
@@ -290,7 +297,7 @@ export default function AddEditProductPage() {
 
                     {/* Right Column: Visual Assets */}
                     <div className="space-y-6">
-                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
                                 <ImageIcon className="h-4 w-4 text-[#EEAF1C]" />
                                 <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Primary Visual</h2>
@@ -315,7 +322,7 @@ export default function AddEditProductPage() {
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
                                 <div className="flex items-center gap-3">
                                     <Layers className="h-4 w-4 text-[#EEAF1C]" />
@@ -362,7 +369,7 @@ export default function AddEditProductPage() {
                             <button
                                 type="button"
                                 onClick={() => router.push('/admin/products')}
-                                className="w-full py-3 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 transition-all uppercase tracking-tight"
+                                className="w-full py-3 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 transition-all uppercase tracking-tight"
                             >
                                 Discard Protocol
                             </button>
@@ -373,4 +380,3 @@ export default function AddEditProductPage() {
         </div>
     );
 }
-

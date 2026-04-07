@@ -23,21 +23,31 @@ from modules.users.models import UserActivityLog
 @permission_classes([IsAuthenticated])
 def list_wishlist(request):
     """List all products in the authenticated user's wishlist."""
-    # Optimized fetch to prevent N+1 performance bottlenecks
-    wishlist_items = Wishlist.objects.filter(user=request.user).select_related(
-        'product', 
-        'product__category', 
-        'product__company', 
-        'product__supplier',
-        'product__company_category'
-    ).prefetch_related(
-        'product__gallery',
-        'product__main_categories',
-        'product__batch_set'
-    )
-    
-    serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
-    return Response(serializer.data)
+    try:
+        # Optimized fetch to prevent N+1 performance bottlenecks
+        wishlist_items = Wishlist.objects.filter(user=request.user).select_related(
+            'product', 
+            'product__category', 
+            'product__company', 
+            'product__company_category',
+            'product__supplier'
+        ).prefetch_related(
+            'product__gallery',
+            'product__main_categories',
+            'product__batch_set'
+        ).order_by('-created_at')
+        
+        serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
+        return Response(serializer.data)
+    except Exception as e:
+        import traceback
+        print(f"DEBUG: Wishlist API error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': str(e),
+            'message': 'Internal Server Error occurred during wishlist operation.',
+            'traceback': traceback.format_exc()
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -74,29 +84,36 @@ def list_products(request):
         if request.method == 'GET':
             products = Product.objects.all().order_by('-created_at')
             
-            # Supplier Isolation Logic: 
-            # Suppliers only see their own products. 
-            # Staff/Admins see all products.
-            # Filter out inactive products for non-staff users
-            if not request.user.is_authenticated:
-                products = products.filter(status='active')
-            else:
-                is_privileged = request.user.is_staff or request.user.is_superuser or (
+            # Supplier/Admin Isolation & Pending Procurement Logic: 
+            # Suppliers only see their own products. Staff see all confirmed products.
+            include_pending = request.query_params.get('include_pending') == 'true'
+            
+            if request.user.is_authenticated:
+                is_admin = request.user.is_staff or request.user.is_superuser or (
                     request.user.role and request.user.role.name in ['Admin', 'admin']
                 )
                 
-                if not is_privileged:
-                    if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
-                        # Suppliers see their own products (active or inactive)
-                        products = products.filter(supplier=request.user.supplier_profile)
+                if not is_admin:
+                    # Check if they are a supplier
+                    if request.user.role and request.user.role.name.lower() == 'supplier':
+                        from modules.company.models import Supplier
+                        supplier = Supplier.objects.filter(user=request.user).first()
+                        if supplier:
+                            products = products.filter(supplier=supplier)
+                        else:
+                            products = products.filter(status='active', supplier__isnull=True)
                     else:
-                        # Customers or others hidden by default
                         products = products.filter(status='active')
+                else:
+                    # Admin Logic: Strictly hide pending procurement products unless explicitly requested
+                    if not include_pending:
+                        products = products.exclude(status='pending_procurement')
+            else:
+                products = products.filter(status='active')
             
             # Filtering
             search = request.query_params.get('search')
             category_name = request.query_params.get('category_name')
-            supplier_id = request.query_params.get('supplier')
             
             if search:
                 from django.db.models import Q
@@ -106,9 +123,12 @@ def list_products(request):
             
             if category_name:
                 products = products.filter(category__name=category_name)
-                
-            if supplier_id:
-                products = products.filter(supplier_id=supplier_id)
+
+            # Date range filters for business reports
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            if start_date: products = products.filter(created_at__date__gte=start_date)
+            if end_date: products = products.filter(created_at__date__lte=end_date)
 
             # Option to bypass pagination for merged local-storage pagination in frontend
             if request.query_params.get('all_items') == 'true':
@@ -121,10 +141,17 @@ def list_products(request):
             return paginator.get_paginated_response(serializer.data)
 
         elif request.method == 'POST':
-            # POST — allowed for anyone during development
+            # POST — restricted to Admin or Suppliers
             serializer = ProductCreateUpdateSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
-                product = serializer.save()
+                # Auto-assign supplier if user is a supplier
+                supplier_instance = None
+                if request.user.is_authenticated and request.user.role and request.user.role.name.lower() == 'supplier':
+                    from modules.company.models import Supplier
+                    supplier_instance = Supplier.objects.filter(user=request.user).first()
+                
+                # If explicit supplier provided in data, use that (for admins), otherwise use auto-assigned
+                product = serializer.save(supplier=request.data.get('supplier') or supplier_instance)
                 
                 # Auto-initialize inventory record to ensure visibility in Stock Management
                 try:
@@ -183,30 +210,28 @@ def product_detail(request, product_id):
             not request.user.is_superuser and 
             not (getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin'])
         ):
-            # Check if this user is the supplier (owner) of the product
-            # If not owner AND product is NOT active, hide it
-            is_owner = hasattr(request.user, 'supplier_profile') and product.supplier == request.user.supplier_profile
-            
-            if not is_owner and product.status != 'active':
+            # If product is NOT active, hide it
+            if product.status != 'active':
                 return Response({'error': 'Product not found or inactive'}, status=status.HTTP_404_NOT_FOUND)
                 
         return Response(ProductSerializer(product, context={'request': request}).data)
 
     # Ownership Check for Modification/Deletion
     if request.user.is_authenticated:
-        is_admin = request.user.is_staff or request.user.is_superuser or (request.user.role and request.user.role.name == 'Admin')
-        if not is_admin:
-            if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
-                if product.supplier != request.user.supplier_profile:
-                    return Response({
-                        'error': 'Permission denied',
-                        'detail': 'You can only manage your own products.'
-                    }, status=status.HTTP_403_FORBIDDEN)
-            else:
-                return Response({
-                    'error': 'Permission denied',
-                    'detail': 'You do not have permission to modify products.'
-                }, status=status.HTTP_403_FORBIDDEN)
+        # Check if user is Admin
+        is_admin = request.user.is_staff or request.user.is_superuser or (request.user.role and request.user.role.name.lower() in ['admin', 'owner'])
+        
+        # Check if user is Supplier owner
+        is_owner = False
+        if request.user.role and request.user.role.name.lower() == 'supplier':
+            # Check if product belongs to this supplier
+            is_owner = product.supplier and product.supplier.user == request.user
+        
+        if not is_admin and not is_owner:
+            return Response({
+                'error': 'Permission denied',
+                'detail': 'You do not have permission to modify this product.'
+            }, status=status.HTTP_403_FORBIDDEN)
 
     # if not request.user or not request.user.is_staff:
     #     return Response({'error': 'Admin permissions required'}, status=status.HTTP_403_FORBIDDEN)
@@ -303,18 +328,28 @@ def adjust_stock(request, product_id):
 def list_main_categories(request):
     """List all main categories or create a new one."""
     if request.method == 'GET':
-        main_categories = MainCategory.objects.all().order_by('name')
-        
-        # Public users and customers only see active categories
-        if not request.user.is_authenticated or (
-            not request.user.is_staff and 
-            not request.user.is_superuser and 
-            not (getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin'])
-        ):
-            main_categories = main_categories.filter(status='active')
+        try:
+            main_categories = MainCategory.objects.all().order_by('name')
             
-        serializer = MainCategorySerializer(main_categories, many=True, context={'request': request})
-        return Response(serializer.data)
+            # Public users and customers only see active categories
+            if not request.user.is_authenticated or (
+                not request.user.is_staff and 
+                not request.user.is_superuser and 
+                not (getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin'])
+            ):
+                main_categories = main_categories.filter(status='active')
+                
+            serializer = MainCategorySerializer(main_categories, many=True, context={'request': request})
+            return Response(serializer.data)
+        except Exception as e:
+            import traceback
+            print(f"DEBUG: MainCategory API error: {str(e)}")
+            print(traceback.format_exc())
+            return Response({
+                'error': str(e),
+                'message': 'Internal Server Error occurred during main category operation.',
+                'traceback': traceback.format_exc()
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     elif request.method == 'POST':
         serializer = MainCategorySerializer(data=request.data, context={'request': request})

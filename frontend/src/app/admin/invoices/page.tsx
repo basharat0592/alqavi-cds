@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
    DESIGN SYSTEM
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -89,7 +89,7 @@ export default function InvoicesPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadInvoices} className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0D1921] text-slate-500 hover:text-[#EEAF1C] transition-all">
+                    <button onClick={loadInvoices} className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a252f] text-slate-500 hover:text-[#EEAF1C] transition-all">
                         <RefreshCw className="h-4 w-4" />
                     </button>
                     <button 
@@ -129,7 +129,7 @@ export default function InvoicesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by invoice # or customer name..."
-                        className="w-full bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm font-medium outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm font-medium outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex bg-slate-50 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10 gap-1">
@@ -138,7 +138,7 @@ export default function InvoicesPage() {
                             key={s} 
                             onClick={() => setFilterStatus(s)}
                             className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all
-                                ${filterStatus === s ? 'bg-white dark:bg-[#0D1921] text-[#EEAF1C] shadow-sm shadow-black/5 ring-1 ring-slate-200 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600'}`}
+                                ${filterStatus === s ? 'bg-white dark:bg-[#1a252f] text-[#EEAF1C] shadow-sm shadow-black/5 ring-1 ring-slate-200 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             {s === 'delivered' ? 'Settled' : s}
                         </button>

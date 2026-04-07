@@ -14,7 +14,7 @@ import PageLoader from '@/components/ui/PageLoader';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -103,7 +103,7 @@ export default function UserRolesPage() {
             </div>
 
                 {/* Search & Header */}
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl p-3">
+                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3">
                     <div className="relative group max-w-xl">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                         <input
@@ -196,7 +196,7 @@ export default function UserRolesPage() {
             {/* Delete Modal */}
             {deleteRole && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />

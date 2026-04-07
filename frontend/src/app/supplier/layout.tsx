@@ -24,7 +24,8 @@ import { authService } from '@/lib/auth';
 import AuthGuard from '@/components/auth/AuthGuard';
 
 const SIDEBAR_LINKS = [
-    { href: '/supplier/dashboard', label: 'Your Hub', icon: Home },
+    { href: '/supplier/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/supplier/orders', label: 'Recent Orders', icon: ShoppingCart },
     { href: '/supplier/products', label: 'Your Catalog', icon: Package },
     { href: '/supplier/inventory', label: 'Warehouse Status', icon: Boxes },
     { href: '/supplier/sales', label: 'Sale Registry', icon: TrendingUp },
@@ -40,8 +41,6 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     useEffect(() => {
         setUser(authService.getUser());
     }, []);
-
-    const isRoot = pathname === '/supplier/dashboard';
 
     return (
         <AuthGuard allowedRoles={['supplier']}>
@@ -82,61 +81,57 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                 {/* Main Content Area: Responsive Split with Sidebar */}
                 <div className="flex-1 flex flex-col lg:flex-row max-w-[1250px] mx-auto w-full px-4 lg:px-8 py-6 gap-8 overflow-hidden">
                     
-                    {/* Minimalist Amazon Sidebar - Hidden on main dashboard root */}
-                    {!isRoot && (
-                        <aside className="w-full lg:w-64 shrink-0 space-y-6 animate-in slide-in-from-left duration-500">
-                            <div>
-                                <h2 className="text-xl font-bold text-slate-900 mb-6">Hub Settings</h2>
-                                <nav className="space-y-1">
-                                    {SIDEBAR_LINKS.map(link => {
-                                        const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
-                                        return (
-                                            <Link
-                                                key={link.href}
-                                                href={link.href}
-                                                className={`
-                                                    flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
-                                                    ${isActive 
-                                                        ? 'bg-blue-50 text-[#F7CA00] font-bold border border-blue-100' 
-                                                        : 'text-slate-600 hover:bg-gray-50 hover:text-[#F7CA00]'
-                                                    }
-                                                `}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <link.icon className={`h-4 w-4 ${isActive ? 'text-[#F7CA00]' : 'text-slate-400'}`} />
-                                                    <span>{link.label}</span>
-                                                </div>
-                                                <ChevronRight className={`h-3 w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-                                            </Link>
-                                        );
-                                    })}
-                                </nav>
-                            </div>
-                            
-                            <div className="pt-6 border-t font-bold">
-                                <button 
-                                    onClick={() => { authService.logout(); window.location.href = '/'; }}
-                                    className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:underline"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    <span>Logout Session</span>
-                                </button>
-                            </div>
-                        </aside>
-                    )}
+                    {/* Minimalist Amazon Sidebar */}
+                    <aside className="w-full lg:w-64 shrink-0 space-y-6 animate-in slide-in-from-left duration-500">
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900 mb-6">Menu Settings</h2>
+                            <nav className="space-y-1">
+                                {SIDEBAR_LINKS.map(link => {
+                                    const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
+                                    return (
+                                        <Link
+                                            key={link.href}
+                                            href={link.href}
+                                            className={`
+                                                flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
+                                                ${isActive 
+                                                    ? 'bg-blue-50 text-[#F7CA00] font-bold border border-blue-100' 
+                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F7CA00]'
+                                                }
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <link.icon className={`h-4 w-4 ${isActive ? 'text-[#F7CA00]' : 'text-slate-400'}`} />
+                                                <span>{link.label}</span>
+                                            </div>
+                                            <ChevronRight className={`h-3 w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                        </Link>
+                                    );
+                                })}
+                            </nav>
+                        </div>
+                        
+                        <div className="pt-6 border-t font-bold">
+                            <button 
+                                onClick={() => { authService.logout(); window.location.href = '/'; }}
+                                className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:underline"
+                            >
+                                <LogOut className="h-4 w-4" />
+                                <span>Logout Session</span>
+                            </button>
+                        </div>
+                    </aside>
 
                     {/* Content Area */}
-                    <main className={`flex-1 ${isRoot ? '' : 'lg:border-l lg:pl-8'} overflow-y-auto no-scrollbar`}>
-                        {/* Breadcrumb Style Navigation - Hidden on root dashboard */}
-                        {!isRoot && (
-                            <div className="flex items-center gap-2 text-xs mb-8 text-slate-500 font-medium uppercase tracking-wider">
-                                <Link href="/supplier/dashboard" className="hover:text-[#F7CA00] hover:underline">Supplier Hub</Link>
-                                <ChevronRight className="h-3 w-3" />
-                                <span className="text-slate-900 font-bold">
-                                    {SIDEBAR_LINKS.find(l => pathname.startsWith(l.href) && l.href !== '/supplier/dashboard')?.label || 'Overview'}
-                                </span>
-                            </div>
-                        )}
+                    <main className="flex-1 lg:border-l lg:pl-8 overflow-y-auto no-scrollbar">
+                        {/* Breadcrumb Style Navigation */}
+                        <div className="flex items-center gap-2 text-xs mb-8 text-slate-500 font-medium uppercase tracking-wider">
+                            <Link href="/supplier/dashboard" className="hover:text-[#F7CA00] hover:underline">Supplier Portal</Link>
+                            <ChevronRight className="h-3 w-3" />
+                            <span className="text-slate-900 font-bold">
+                                {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Overview'}
+                            </span>
+                        </div>
                         
                         {children}
                     </main>

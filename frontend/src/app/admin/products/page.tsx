@@ -120,14 +120,14 @@ export default function ProductsPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search products by name or SKU..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:flex items-center gap-2">
                     <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
                     >
                         <option value="">All Categories</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -136,7 +136,7 @@ export default function ProductsPage() {
                     <select
                         value={selectedCompany}
                         onChange={(e) => setSelectedCompany(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
                     >
                         <option value="">All Manufacturers</option>
                         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -152,7 +152,7 @@ export default function ProductsPage() {
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -283,7 +283,7 @@ export default function ProductsPage() {
             {/* Protocol Overlay (Modals) */}
             {deleteProd && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 font-bold">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 font-bold">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />

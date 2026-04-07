@@ -7,7 +7,7 @@ import {
     Edit, Trash2, X, Plus, CheckCircle,
     Mail, Calendar, AlertTriangle, Loader2, RefreshCw,
     UserCheck, MapPin, Phone, Building2, ShieldCheck,
-    Lock, MoreHorizontal
+    Lock, MoreHorizontal, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 import { userService, roleService, AppUser, AppRole } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -18,7 +18,7 @@ import PageLoader from '@/components/ui/PageLoader';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -49,6 +49,10 @@ export default function UsersPage() {
     const [activeStatus, setActiveStatus] = useState<'all' | 'active' | 'inactive'>('all');
     const [deleteUser, setDeleteUser] = useState<AppUser | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [selectedUserForView, setSelectedUserForView] = useState<AppUser | null>(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [resetting, setResetting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -100,6 +104,25 @@ export default function UsersPage() {
         }
     };
 
+    const confirmResetPassword = async () => {
+        if (!selectedUserForView || !newPassword) return;
+        setResetting(true);
+        try {
+            await userService.adminResetPassword(selectedUserForView.id, newPassword);
+            toast.success(`Password reset for ${selectedUserForView.first_name}.`);
+            
+            // Update local state to reflect the new plain password
+            setUsers(prev => prev.map(u => u.id === selectedUserForView.id ? { ...u, plain_password: newPassword } : u));
+            setSelectedUserForView(p => p ? { ...p, plain_password: newPassword } : null);
+            
+            setNewPassword('');
+        } catch {
+            toast.error('Failed to reset password.');
+        } finally {
+            setResetting(false);
+        }
+    };
+
     const filtered = users.filter(u => {
         const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
         const matchesRole = activeRole === 'all' || u.role_name?.toLowerCase().includes(activeRole.toLowerCase());
@@ -141,7 +164,7 @@ export default function UsersPage() {
             {/* Content Hub */}
             <div className="space-y-4">
                 {/* Search & Filter */}
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
+                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                         <input
@@ -255,6 +278,9 @@ export default function UsersPage() {
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
+                                                    <button onClick={() => setSelectedUserForView(user)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all" title="View Details">
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
                                                     <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
                                                         <Edit className="h-4 w-4" />
                                                     </button>
@@ -275,7 +301,7 @@ export default function UsersPage() {
             {/* Delete Confirmation */}
             {deleteUser && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -298,6 +324,115 @@ export default function UsersPage() {
                                 className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
                             >
                                 {deleting && <RefreshCw className="h-4 w-4 animate-spin" />} Confirm Purge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Amazon-Style User Identity Popup */}
+            {selectedUserForView && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4 transition-all duration-300 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-900 rounded border border-[#ddd] dark:border-slate-800 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        
+                        {/* Amazon Gray Header */}
+                        <div className="bg-[#f6f6f6] dark:bg-slate-800 px-5 py-2.5 border-b border-[#ddd] dark:border-slate-800 flex items-center justify-between">
+                            <span className="text-xs font-bold text-[#111] dark:text-white uppercase tracking-tight">Identity Registry</span>
+                            <button onClick={() => setSelectedUserForView(null)} className="text-gray-400 hover:text-black">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* USER NAME & AVATAR BOX */}
+                            <div className="flex items-center gap-3 pb-4 border-b border-[#eee] dark:border-white/5">
+                                <div className="w-12 h-12 bg-white dark:bg-slate-800 border border-[#ddd] dark:border-slate-800 flex items-center justify-center rounded">
+                                    <User className="h-6 w-6 text-gray-300" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-[#111] dark:text-white leading-none">
+                                        {selectedUserForView.first_name} {selectedUserForView.last_name}
+                                    </h3>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-widest">{selectedUserForView.role_name || 'Individual'}</p>
+                                </div>
+                            </div>
+
+                            {/* CENTRAL FOCUS: REAL PASSWORD BOX (Amazon Style) */}
+                            <div className="bg-[#fff8e1] dark:bg-yellow-900/10 border-[#ffeb3b] dark:border-yellow-700/30 border p-5 rounded shadow-sm text-center">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2">Real Security Access Key</label>
+                                
+                                {selectedUserForView.plain_password ? (
+                                    <div className="text-3xl font-black text-[#e77600] tracking-wider font-mono">
+                                        {selectedUserForView.plain_password}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <div className="text-xl font-bold text-red-600 uppercase tracking-tighter opacity-70">
+                                            Not Tracking
+                                        </div>
+                                        <button 
+                                            onClick={async () => {
+                                                const newKey = Math.random().toString(36).slice(-8); // Generate 8 char key
+                                                setResetting(true);
+                                                try {
+                                                    await userService.adminResetPassword(selectedUserForView.id, newKey);
+                                                    setSelectedUserForView(p => p ? { ...p, plain_password: newKey } : null);
+                                                    setUsers(prev => prev.map(u => u.id === selectedUserForView.id ? { ...u, plain_password: newKey } : u));
+                                                    toast.success("New access key established and tracking active.");
+                                                } catch {
+                                                    toast.error("Security vault busy. Try again.");
+                                                } finally {
+                                                    setResetting(false);
+                                                }
+                                            }}
+                                            disabled={resetting}
+                                            className="bg-[#e77600] border border-[#a88734] text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+                                        >
+                                            {resetting ? <RefreshCw className="h-3 w-3 animate-spin inline mr-1" /> : null}
+                                            Establish Direct Access Key
+                                        </button>
+                                        <p className="text-[9px] text-[#555] font-medium leading-tight">
+                                            This account was created before tracking. 
+                                            Click to generate a **REAL** password.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* SECONDARY INFO */}
+                            <div className="space-y-4 pt-2">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Email Access</span>
+                                    <span className="text-xs font-bold text-slate-800 dark:text-white">{selectedUserForView.email || 'N/A'}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Login ID</span>
+                                        <span className="text-xs font-bold text-slate-800 dark:text-white">@{selectedUserForView.username}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</span>
+                                        <span className={`text-[10px] font-black uppercase ${selectedUserForView.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                                            {selectedUserForView.is_active ? 'Active' : 'Revoked'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* AMAZON BUTTONS */}
+                        <div className="px-6 py-4 bg-[#f6f6f6] dark:bg-slate-800 border-t border-[#ddd] dark:border-slate-800 flex flex-col gap-2">
+                            <button 
+                                onClick={() => router.push(`/admin/users/edit/${selectedUserForView.id}`)}
+                                className="w-full bg-[#f0c14b] hover:bg-[#e2b13c] border border-[#a88734] text-[#111] font-bold py-2 rounded text-xs shadow-sm flex items-center justify-center gap-2"
+                            >
+                                <Edit className="h-3.5 w-3.5" /> Manage User Identity
+                            </button>
+                            <button 
+                                onClick={() => setSelectedUserForView(null)}
+                                className="w-full bg-[#e7e9ec] hover:bg-[#d8dadd] border border-[#adb1b8] text-[#111] font-bold py-1.5 rounded text-xs shadow-sm"
+                            >
+                                Close Popup
                             </button>
                         </div>
                     </div>

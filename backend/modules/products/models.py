@@ -69,6 +69,11 @@ class Product(BaseModel, StatusMixin):
     retail_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     quantity_in_stock = models.IntegerField(default=0)
     image = models.FileField(upload_to='products/', blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusMixin.STATUS_CHOICES,
+        default='pending_procurement'
+    )
     company_category = models.ForeignKey(
         'company.CompanyCategory',
         on_delete=models.SET_NULL,
@@ -91,8 +96,9 @@ class Product(BaseModel, StatusMixin):
         null=True,
         blank=True,
         related_name='products',
-        verbose_name='Supplier'
+        verbose_name='Strategic Supplier'
     )
+
     
     class Meta:
         ordering = ['-created_at']

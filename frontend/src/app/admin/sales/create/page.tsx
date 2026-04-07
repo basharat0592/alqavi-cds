@@ -25,13 +25,13 @@ const FieldLabel = ({ children, required }: { children: React.ReactNode; require
 );
 
 const fieldCls = (err?: boolean) =>
-    `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
+    `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
 
-const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
+const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
 
 // ── Section panel wrapper ─────────────────────────────────────────────────────
 const Panel = ({ title, icon: Icon, action, children }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
             <div className="flex items-center gap-2">
                 {Icon && <Icon className="h-4 w-4 text-[#EEAF1C]" />}
@@ -69,7 +69,7 @@ export default function CreateSalePage() {
             ]);
 
             setProducts(Array.isArray(prodsRes) ? prodsRes : (prodsRes as any)?.results || []);
-            
+
             const rawUsers = Array.isArray(usersRes) ? usersRes : (usersRes as any)?.results || [];
             const customerUsers = rawUsers.filter((u: any) => {
                 if (u.is_active === false) return false; // Exclude inactive accounts
@@ -118,8 +118,8 @@ export default function CreateSalePage() {
             showToast('Sale order created successfully!');
             setTimeout(() => router.push('/admin/sales'), 1500);
         } catch (e: any) {
-             console.error("Sale error:", e);
-             showToast(e?.response?.data?.error || 'Failed to create sale order', 'alert');
+            console.error("Sale error:", e);
+            showToast(e?.response?.data?.error || 'Failed to create sale order', 'alert');
         } finally {
             setSaving(false);
         }

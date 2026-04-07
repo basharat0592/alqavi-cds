@@ -7,21 +7,21 @@ import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
     ShoppingBag, Search, X, RefreshCw, Eye,
-    Plus, Printer, Loader2, Edit, User, Calendar, CreditCard
+    Plus, Printer, Loader2, Edit, User, Calendar, CreditCard, Trash2, AlertTriangle
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 const orderStatusStyle: Record<string, string> = {
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
-    confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
+    pending: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+    confirmed: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
     processing: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    cancelled: 'bg-red-50 text-red-600 border-red-200',
-    ordered: 'bg-blue-50 text-blue-700 border-blue-200',
-    completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    paid: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    delivered: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    cancelled: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
+    ordered: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+    completed: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    paid: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
     refunded: 'bg-purple-50 text-purple-700 border-purple-200',
 };
 const StatusPill = ({ status }: { status: string }) => {
@@ -47,7 +47,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                     <div>
@@ -160,18 +160,18 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order; onClos
         try {
             await orderService.update(order.id, { status, payment_status: paymentStatus, payment_method: paymentMethod });
             onSuccess();
-        } catch (error: any) { 
+        } catch (error: any) {
             console.error('Update failed:', error.response?.data || error.message);
             alert(`Update failed: ${JSON.stringify(error.response?.data || error.message)}`);
         }
         finally { setLoading(false); }
     };
 
-    const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer`;
+    const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer`;
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Update Order Status</h3>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
@@ -219,6 +219,54 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order; onClos
     );
 }
 
+// ── Delete Confirmation Modal ────────────────────────────────────────────────
+function DeleteConfirmModal({
+    orderNumber,
+    onClose,
+    onConfirm,
+    loading
+}: {
+    orderNumber: string;
+    onClose: () => void;
+    onConfirm: () => void;
+    loading: boolean;
+}) {
+    return (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                    <div className="w-9 h-9 bg-rose-50 dark:bg-rose-900/10 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
+                        <AlertTriangle className="h-4 w-4 text-rose-500" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Delete Order Record</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                            Are you sure you want to permanently delete order <span className="font-semibold text-[#EEAF1C]">#{orderNumber}</span>? This action cannot be reversed.
+                        </p>
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2 px-5 py-3 bg-slate-50 dark:bg-white/[0.02]">
+                    <button
+                        onClick={onClose}
+                        disabled={loading}
+                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-all flex items-center gap-2 disabled:opacity-60 shadow-sm"
+                    >
+                        {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+                        Delete Order
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function SalesPage() {
     const router = useRouter();
@@ -228,6 +276,8 @@ export default function SalesPage() {
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const loadOrders = async () => {
         setLoading(true);
@@ -236,6 +286,17 @@ export default function SalesPage() {
             setOrders(Array.isArray(data) ? data : (data as any).results || []);
         } catch { console.error('Failed to load orders'); }
         finally { setLoading(false); }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
+        try {
+            await orderService.delete(deleteTarget.id);
+            setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
+            setDeleteTarget(null);
+        } catch { alert('Failed to delete order.'); }
+        finally { setIsDeleting(false); }
     };
 
     useEffect(() => { loadOrders(); }, []);
@@ -284,13 +345,13 @@ export default function SalesPage() {
                         placeholder="Search by order # or customer..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     {STATUS_FILTERS.map(f => <option key={f} value={f}>{f === 'All' ? 'All Statuses' : f}</option>)}
                 </select>
@@ -301,7 +362,7 @@ export default function SalesPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -354,12 +415,24 @@ export default function SalesPage() {
                                                     <button onClick={() => setSelectedOrder(o)} className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors" title="View">
                                                         <Eye className="h-4 w-4" />
                                                     </button>
-                                                    <button onClick={() => setUpdatingOrder(o)} className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Update Status">
+                                                    <button
+                                                        onClick={() => setUpdatingOrder(o)}
+                                                        disabled={['delivered', 'cancelled', 'completed', 'rejected'].includes(o.status.toLowerCase())}
+                                                        className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title={['delivered', 'cancelled', 'completed', 'rejected'].includes(o.status.toLowerCase()) ? "Finalized" : "Update Status"}
+                                                    >
                                                         <Edit className="h-4 w-4" />
                                                     </button>
                                                     <Link href={`/admin/sales/${o.id}/invoice`} className="p-1.5 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors" title="Invoice">
                                                         <Printer className="h-4 w-4" />
                                                     </Link>
+                                                    <button
+                                                        onClick={() => setDeleteTarget(o)}
+                                                        className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                                                        title="Delete Order"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -373,6 +446,15 @@ export default function SalesPage() {
 
             {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
             {updatingOrder && <UpdateStatusModal order={updatingOrder} onClose={() => setUpdatingOrder(null)} onSuccess={() => { setUpdatingOrder(null); loadOrders(); }} />}
+
+            {deleteTarget && (
+                <DeleteConfirmModal
+                    orderNumber={deleteTarget.order_number || deleteTarget.id.toString().slice(-6).toUpperCase()}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDelete}
+                    loading={isDeleting}
+                />
+            )}
         </div>
     );
 }

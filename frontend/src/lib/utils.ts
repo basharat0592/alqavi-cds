@@ -106,5 +106,40 @@ export function getImageUrl(url: string | null | undefined): string | null {
     return fullUrl;
 }
 
+/**
+ * Export an array of objects to a CSV file.
+ */
+export function exportToCSV(data: any[], filename = 'export.csv') {
+    if (!data || data.length === 0) return;
+
+    // 1. Get unique headers from all objects
+    const headers = Array.from(new Set(data.flatMap(obj => Object.keys(obj))));
+    
+    // 2. Build CSV rows
+    const rows = data.map(obj => 
+        headers.map(header => {
+            const val = obj[header] === null || obj[header] === undefined ? '' : obj[header];
+            // Escape double quotes and wrap in double quotes to handle commas
+            const escaped = String(val).replace(/"/g, '""');
+            return `"${escaped}"`;
+        }).join(',')
+    );
+
+    // 3. Assemble full content
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    // 4. Trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 
 

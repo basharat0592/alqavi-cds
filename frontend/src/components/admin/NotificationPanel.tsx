@@ -38,9 +38,9 @@ export default function NotificationPanel({
     const unread = activities.filter(a => !a.read).length;
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-96 bg-white dark:bg-[#0D1921] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-3 w-96 bg-white dark:bg-[#232F3E] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between bg-[#232F3E] rounded-t-2xl">
+            <div className="px-5 py-4 border-b border-[#37475a] flex items-center justify-between bg-[#232F3E] rounded-t-2xl">
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 bg-[#EEAF1C] rounded-lg flex items-center justify-center">
                         <Bell className="h-4 w-4 text-white" strokeWidth={2.5} />
@@ -88,7 +88,7 @@ export default function NotificationPanel({
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Activity will appear here</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-50 dark:divide-slate-800 py-1">
+                    <div className="divide-y divide-gray-50 dark:divide-white/5 py-1">
                         {activities.map(item => {
                             const Icon = item.icon;
                             return (
@@ -119,16 +119,15 @@ export default function NotificationPanel({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/20 px-5 py-3 flex items-center justify-between rounded-b-2xl">
+            <div className="border-t border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 px-5 py-3 flex items-center justify-between rounded-b-2xl">
                 <Link href="/admin/sales" onClick={onClose} className="text-xs font-bold text-[#EEAF1C] hover:underline">
                     View all orders →
                 </Link>
                 <Link href="/admin/settings" onClick={onClose}
-                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white flex items-center gap-1">
+                    className="text-xs font-medium text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white flex items-center gap-1">
                     <Settings className="h-3 w-3" strokeWidth={2.5} /> Settings
                 </Link>
             </div>
         </div>
     );
 }
-

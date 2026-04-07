@@ -10,13 +10,13 @@ import { useRouter } from 'next/navigation';
 import { inventoryService } from '@/lib/api';
 
 const StatusPill = ({ status }: { status: string }) => {
-    let bg = 'bg-slate-100 text-slate-600 border-slate-200';
+    let bg = 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10';
     let text = status || 'Unknown';
 
     if (text.toLowerCase() === 'active') {
-        bg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        bg = 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
     } else if (text.toLowerCase() === 'inactive') {
-        bg = 'bg-amber-50 text-amber-700 border-amber-200';
+        bg = 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
     }
 
     return (
@@ -107,7 +107,7 @@ export default function WarehousesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by name, code or city..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -118,7 +118,7 @@ export default function WarehousesPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -220,7 +220,7 @@ export default function WarehousesPage() {
             {/* ── View Modal ── */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Warehouse Node</h3>
@@ -276,7 +276,7 @@ export default function WarehousesPage() {
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-5 text-center">
                             <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />

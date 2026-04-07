@@ -1,689 +1,308 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import {
-    Settings, User, Store, Bell, Shield, Palette,
-    Save, Camera, Eye, EyeOff, Check, X, Sun, Moon,
-    Mail, Phone, Globe, Lock, Key, AlertTriangle, Trash2,
-    Upload, Loader2, RefreshCw, CheckCircle, Building2,
-    Monitor, ShieldCheck, CreditCard, ChevronRight, Hash
+    User, Store, Bell, Shield, Palette,
+    Save, Camera, Eye, EyeOff, Sun, Moon,
+    RefreshCw, Globe, Lock, Key, ChevronRight
 } from 'lucide-react';
 import { settingsService, companyService } from '@/lib/api';
 import { authService } from '@/lib/auth';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-type Tab = 'profile' | 'store' | 'notifications' | 'security' | 'appearance';
-
 /* ══════════════════════════════════════════════
-   COMPONENTS & STYLES (Synchronized with Company Hub)
+   AMAZON DESIGN SYSTEM
    ══════════════════════════════════════════════ */
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
+const AmazonButton = ({ children, onClick, loading, variant = "primary", className = "" }: { children: React.ReactNode; onClick?: () => void; loading?: boolean; variant?: "primary" | "secondary"; className?: string }) => {
+    const base = "px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all shadow-sm border focus:ring-2 focus:ring-[#e77600] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2";
+    const styles = variant === "primary"
+        ? "bg-[#FFD814] hover:bg-[#F7CA00] border-[#FCD200] text-black"
+        : "bg-white hover:bg-[#F3F3F3] border-[#DDD] text-black";
 
-const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
-    <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-[#EEAF1C]" />
-            <div>
-                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
-                {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
-            </div>
-        </div>
-    </div>
-);
-
-const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
-const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
-
-const INPUT_CLS = "w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400";
-const LABEL_CLS = "text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 block";
-
-/* ─── Field Layout ─── */
-function Field({ label, children, description }: { label: string; children: React.ReactNode; description?: string }) {
     return (
-        <div className="flex flex-col">
-            <label className={LABEL_CLS}>{label}</label>
+        <button onClick={onClick} disabled={loading} className={`${base} ${styles} ${className}`}>
+            {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
             {children}
-            {description && <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-tight">{description}</p>}
-        </div>
+        </button>
     );
-}
+};
 
-/* ─── Toggle ─── */
-function Toggle({ enabled, onChange, label, description }: { enabled: boolean; onChange: (v: boolean) => void; label: string; description?: string; }) {
-    return (
-        <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-white/5 last:border-0 group">
-            <div className="pr-4">
-                <p className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-[#EEAF1C] transition-colors">{label}</p>
-                {description && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{description}</p>}
-            </div>
-            <button
-                type="button"
-                onClick={() => onChange(!enabled)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none ${enabled ? 'bg-[#EEAF1C]' : 'bg-slate-200 dark:bg-white/10'}`}
-            >
-                <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-300 ease-in-out ${enabled ? 'translate-x-4' : 'translate-x-0'}`}
-                />
-            </button>
-        </div>
-    );
-}
+const AmazonInput = ({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <input
+        className={`w-full px-3 py-1.5 border border-[#888c8e] rounded-[3px] text-[13px] focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] outline-none transition-all shadow-inner-sm ${className}`}
+        {...props}
+    />
+);
+
+const SimpleLabel = ({ children }: { children: React.ReactNode }) => (
+    <label className="text-[13px] font-bold text-[#111] mb-1 block">{children}</label>
+);
 
 /* ════════════════════════════════════════
-   MAIN PAGE
+   MAIN SETTINGS PAGE
    ════════════════════════════════════════ */
-export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState<Tab>('profile');
-    const [pageLoading, setPageLoading] = useState(true);
+type Tab = 'profile' | 'store' | 'notifications' | 'security' | 'display' | 'explorer';
 
-    /* ── Current user from localStorage ── */
+export default function SettingsPage() {
+    const [pageLoading, setPageLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<Tab>('profile');
     const [currentUser, setCurrentUser] = useState<any>(null);
 
-    /* ── Profile state ── */
+    /* ── State ── */
     const [profileSaving, setProfileSaving] = useState(false);
     const [profile, setProfile] = useState({ firstName: '', lastName: '', email: '', phone: '', avatar: '' });
     const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
-    /* ── Store / Company state ── */
     const [storeSaving, setStoreSaving] = useState(false);
     const [companyId, setCompanyId] = useState<number | null>(null);
     const [store, setStore] = useState({ name: '', email: '', phone: '', website: '', currency: 'PKR', tax_number: '', address: '' });
 
-    /* ── Notifications ── */
     const [notifSaving, setNotifSaving] = useState(false);
     const [notif, setNotif] = useState({ notif_new_order: true, notif_low_stock: true, notif_new_user: false, notif_weekly_report: true, notif_marketing: false, notif_sms: false });
 
-    /* ── Security ── */
     const [pwSaving, setPwSaving] = useState(false);
-    const [showOld, setShowOld] = useState(false);
-    const [showNew, setShowNew] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
     const [passwords, setPasswords] = useState({ old: '', new: '', confirm: '' });
-    const [secSaving, setSecSaving] = useState(false);
-    const [sessionTimeout, setSessionTimeout] = useState('30');
 
-    /* ── Appearance ── */
-    const [appearanceSaving, setAppearanceSaving] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
-    const [accentColor, setAccentColor] = useState('#EEAF1C');
-    const [compactMode, setCompactMode] = useState(false);
     const [animations, setAnimations] = useState(true);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-    /* ─── Load all data on mount ─── */
+    const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
+
     useEffect(() => {
+        const saved = localStorage.getItem('admin_sidebar_visibility');
+        if (saved) setSidebarVisibility(JSON.parse(saved));
+
         const loadAll = async () => {
             setPageLoading(true);
             try {
                 const user = authService.getUser();
-                const localId = user?.id;
-                setCurrentUser((u: any) => ({ ...user, dbId: localId }));
-
+                setCurrentUser(user);
                 const nameParts = (user?.name || '').split(' ');
-                setProfile({
-                    firstName: nameParts[0] || '',
-                    lastName: nameParts.slice(1).join(' ') || '',
-                    email: user?.email || '',
-                    phone: '',
-                    avatar: user?.avatar || '',
-                });
+                setProfile({ firstName: nameParts[0] || '', lastName: nameParts.slice(1).join(' ') || '', email: user?.email || '', phone: '', avatar: user?.avatar || '' });
 
-                // 2) Full profile from backend
                 try {
                     const profileData = await settingsService.getProfile();
-                    setProfile({
-                        firstName: profileData.first_name || nameParts[0] || '',
-                        lastName: profileData.last_name || nameParts.slice(1).join(' ') || '',
-                        email: profileData.email || user?.email || '',
-                        phone: profileData.phone || '',
-                        avatar: profileData.avatar || user?.avatar || '',
-                    });
-                    setCurrentUser((u: any) => ({ ...u, dbId: profileData.id }));
-                } catch { /* fallback to local */ }
+                    setProfile({ firstName: profileData.first_name || nameParts[0] || '', lastName: profileData.last_name || nameParts.slice(1).join(' ') || '', email: profileData.email || user?.email || '', phone: profileData.phone || '', avatar: profileData.avatar || user?.avatar || '' });
+                } catch { }
 
-                // 3) Company / Store
                 try {
                     const companies = await companyService.getAll();
                     if (companies.length > 0) {
                         const c = companies[0];
                         setCompanyId(c.id || null);
-                        setStore({
-                            name: c.name || '',
-                            email: c.email || '',
-                            phone: c.phone || '',
-                            website: c.website || '',
-                            currency: c.currency || 'PKR',
-                            tax_number: c.tax_number || '',
-                            address: c.address || '',
-                        });
+                        setStore({ name: c.name || '', email: c.email || '', phone: c.phone || '', website: c.website || '', currency: c.currency || 'PKR', tax_number: c.tax_number || '', address: c.address || '' });
                     }
-                } catch { /* keep defaults */ }
+                } catch { }
 
-                // 4) User Settings
                 try {
                     const s = await settingsService.getSettings();
-                    setNotif({
-                        notif_new_order: s.notif_new_order ?? true,
-                        notif_low_stock: s.notif_low_stock ?? true,
-                        notif_new_user: s.notif_new_user ?? false,
-                        notif_weekly_report: s.notif_weekly_report ?? true,
-                        notif_marketing: s.notif_marketing ?? false,
-                        notif_sms: s.notif_sms ?? false,
-                    });
+                    setNotif({ notif_new_order: s.notif_new_order ?? true, notif_low_stock: s.notif_low_stock ?? true, notif_new_user: s.notif_new_user ?? false, notif_weekly_report: s.notif_weekly_report ?? true, notif_marketing: s.notif_marketing ?? false, notif_sms: s.notif_sms ?? false });
                     setTheme((s.theme as 'light' | 'dark') || 'light');
-                    setAccentColor(s.accent_color || '#EEAF1C');
-                    setCompactMode(s.compact_mode ?? false);
                     setAnimations(s.animations ?? true);
                     setSidebarCollapsed(s.sidebar_collapsed ?? false);
-                } catch { /* offline fallback exists in api service logic usually */ }
-
-            } finally {
-                setPageLoading(false);
-            }
+                } catch { }
+            } finally { setPageLoading(false); }
         };
         loadAll();
     }, []);
 
+    const toggleSidebarItem = (href: string) => {
+        const newVisibility = { ...sidebarVisibility, [href]: sidebarVisibility[href] === false ? true : false };
+        setSidebarVisibility(newVisibility);
+        localStorage.setItem('admin_sidebar_visibility', JSON.stringify(newVisibility));
+        window.dispatchEvent(new Event('sidebarVisibilityChanged'));
+    };
+
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setSelectedAvatar(file);
-            setAvatarPreview(URL.createObjectURL(file));
-        }
+        if (file) { setSelectedAvatar(file); setAvatarPreview(URL.createObjectURL(file)); }
     };
 
     const handleSaveProfile = async () => {
         setProfileSaving(true);
-        const accessToken = localStorage.getItem('accessToken') || '';
-        const isDemo = accessToken.startsWith('demo-token-');
-
         try {
-            // Standardize ID retrieval from session
-            const userId = currentUser?.id;
-            if (!userId && !isDemo) {
-                throw new Error('Identity identifier lost. Sync protocol aborted.');
-            }
-            
             const fd = new FormData();
-            fd.append('first_name', profile.firstName || '');
-            fd.append('last_name', profile.lastName || '');
-            fd.append('email', profile.email || '');
-            fd.append('phone', profile.phone || '');
+            fd.append('first_name', profile.firstName); fd.append('last_name', profile.lastName); fd.append('email', profile.email); fd.append('phone', profile.phone);
             if (selectedAvatar) fd.append('avatar', selectedAvatar);
-
-            let updatedUserData = null;
-            if (userId && !isDemo) {
-                // Number() is safe for integer IDs even when represented as strings
-                updatedUserData = await settingsService.updateProfile(Number(userId), fd as any);
-                toast.success('Identity registry synchronized.');
-            } else if (isDemo) {
-                toast.success('Local cache updated (Demo Mode).');
-            }
-
-            // Reconstruct the user object for the session
-            const user = authService.getUser();
-            if (user) {
-                const updatedUser = {
-                    ...user,
-                    first_name: profile.firstName,
-                    last_name: profile.lastName,
-                    name: `${profile.firstName} ${profile.lastName}`.trim() || user.name,
-                    email: profile.email,
-                    phone: profile.phone,
-                    avatar: updatedUserData?.avatar || user.avatar
-                };
-                
-                // Persist to localStorage
-                authService.setSession(updatedUser, accessToken, localStorage.getItem('refreshToken') || undefined);
-                setCurrentUser(updatedUser);
-                
-                // Signal to layout/navbar to refresh state
-                window.dispatchEvent(new Event('profileUpdated'));
-                
-                // Also update the local profile state with what came back from DB
-                if (updatedUserData) {
-                    setProfile(prev => ({
-                        ...prev,
-                        avatar: updatedUserData.avatar || prev.avatar
-                    }));
-                }
-            }
-            setSelectedAvatar(null);
-            setAvatarPreview(null);
-        } catch (err: any) {
-            console.error("Profile sync failure:", err);
-            
-            // Extract meaningful error detail if possible
-            const errorDetail = err.response?.data?.detail 
-                || (typeof err.response?.data === 'object' ? Object.values(err.response.data)[0] : null)
-                || err.message 
-                || 'Identity sync failure. Verify network connection.';
-            
-            toast.error(typeof errorDetail === 'string' ? errorDetail : 'Identity mesh synchronization failed.');
-        } finally {
-            setProfileSaving(false);
-        }
+            const updated = await settingsService.updateProfile(Number(currentUser.id), fd as any);
+            authService.setSession(updated, localStorage.getItem('accessToken') || '', localStorage.getItem('refreshToken') || '');
+            window.dispatchEvent(new Event('profileUpdated'));
+            toast.success('Sync complete.');
+        } catch { toast.error('Sync failed.'); } finally { setProfileSaving(false); }
     };
 
     const handleSaveStore = async () => {
         setStoreSaving(true);
-        try {
-            const fd = new FormData();
-            fd.append('name', store.name);
-            fd.append('email', store.email);
-            fd.append('phone', store.phone);
-            fd.append('website', store.website);
-            fd.append('currency', store.currency);
-            fd.append('tax_number', store.tax_number);
-            fd.append('address', store.address);
-
-            if (companyId) {
-                await companyService.update(companyId, fd as any);
-            } else {
-                const created = await companyService.create(fd as any);
-                setCompanyId(created.id || null);
-            }
-            toast.success('Infrastructure settings updated.');
-        } catch (err: any) {
-            toast.error('Failed to update store metadata.');
-        } finally {
-            setStoreSaving(false);
-        }
-    };
-
-    const handleSaveNotifications = async () => {
-        setNotifSaving(true);
-        try {
-            await settingsService.updateSettings(notif);
-            toast.success('Protocol preferences updated.');
-        } catch (err: any) {
-            toast.error('Failed to sync preferences.');
-        } finally {
-            setNotifSaving(false);
-        }
-    };
-
-    const handleSavePassword = async () => {
-        if (!passwords.old) { toast.error('Verification code required.'); return; }
-        if (passwords.new.length < 8) { toast.error('Security sequence requires 8+ characters.'); return; }
-        if (passwords.new !== passwords.confirm) { toast.error('Security sequences do not match.'); return; }
-
-        setPwSaving(true);
-        try {
-            const userId = currentUser?.id;
-            if (!userId) throw new Error('Identity identifier lost.');
-
-            await settingsService.changePassword(Number(userId), passwords.old, passwords.new, passwords.confirm);
-            
-            setPasswords({ old: '', new: '', confirm: '' });
-            toast.success('Access credentials rotated successfully.');
-        } catch (err: any) {
-            console.error('Password sync failure:', err);
-            const msg = err.response?.data?.error || err.response?.data?.detail || 'Verification failure. Sequence rejected.';
-            toast.error(msg);
-        } finally {
-            setPwSaving(false);
-        }
+        try { if (companyId) await companyService.update(companyId, store as any); toast.success('Infrastructure updated.'); } catch { toast.error('Failed.'); } finally { setStoreSaving(false); }
     };
 
     const handleSaveAppearance = async (override?: any) => {
-        setAppearanceSaving(true);
-        const payload = { 
-            theme: override?.theme || theme, 
-            accent_color: override?.accentColor || accentColor, 
-            compact_mode: override?.compactMode ?? compactMode, 
-            animations: override?.animations ?? animations, 
-            sidebar_collapsed: override?.sidebarCollapsed ?? sidebarCollapsed 
-        };
-        try {
-            await settingsService.updateSettings(payload);
-            window.dispatchEvent(new Event('settingsUpdated'));
-            if (!override) toast.success('UI parameters synchronized.');
-        } catch (err: any) {
-            console.error('Appearance sync fail', err);
-        } finally {
-            setAppearanceSaving(false);
-        }
+        const payload = { theme: override?.theme || theme, animations: override?.animations ?? animations, sidebar_collapsed: override?.sidebarCollapsed ?? sidebarCollapsed };
+        try { await settingsService.updateSettings(payload); window.dispatchEvent(new Event('settingsUpdated')); } catch { }
     };
 
-    const userRole = (currentUser?.role_name || currentUser?.role || '').toString().toLowerCase();
-    const isSupplier = userRole === 'supplier';
+    const isSupplier = currentUser?.role?.toString().toLowerCase() === 'supplier';
+    if (pageLoading) return <div className="p-20 text-center font-bold text-slate-300">ADMIN PROTOCOL INITIALIZING...</div>;
 
-    const TABS: { id: Tab; label: string; icon: any }[] = [
-        { id: 'profile', label: 'Identity', icon: User },
-        { id: 'store', label: 'Nodes', icon: Store },
-        { id: 'notifications', label: 'Alerts', icon: Bell },
-        { id: 'security', label: 'Shield', icon: Shield },
-        { id: 'appearance', label: 'Display', icon: Palette },
-    ].filter(t => isSupplier ? ['profile', 'security', 'appearance'].includes(t.id) : true) as any;
-
-    if (pageLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <RefreshCw className="h-8 w-8 text-[#EEAF1C] animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 animate-pulse">Initializing Control Plane...</p>
-            </div>
-        );
-    }
+    const navItems = [
+        { id: 'profile' as Tab, title: 'Profile Info' },
+        { id: 'store' as Tab, title: 'Store Details', hidden: isSupplier },
+        { id: 'notifications' as Tab, title: 'Notifications', hidden: isSupplier },
+        { id: 'security' as Tab, title: 'Login & Security' },
+        { id: 'display' as Tab, title: 'Display Settings' },
+        { id: 'explorer' as Tab, title: 'All Pages', hidden: isSupplier },
+    ].filter(i => !i.hidden);
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans animate-in fade-in duration-500">
-            
-            {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Settings className="h-5 w-5 text-white" />
+        <div className="bg-[#EAEDED] min-h-screen font-sans">
+            <div className="bg-white border-b border-[#DDD] sticky top-0 z-40">
+                <div className="max-w-[1200px] mx-auto px-4 md:px-8">
+                    <div className="flex items-center gap-1 text-[11px] text-[#565959] py-2">
+                        <Link href="/admin/dashboard" className="hover:text-[#e77600] hover:underline">Your Account</Link>
+                        <ChevronRight className="h-2.5 w-2.5" /> <span className="text-[#c45500]">Settings</span>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Control Center</h1>
-                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Administrative Environment Configuration</p>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between pb-4">
+                        <h1 className="text-[24px] font-normal text-[#111]">Account Settings</h1>
+                        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-2">
+                            {navItems.map((item) => (
+                                <button key={item.id} onClick={() => setActiveTab(item.id)} className={`px-4 py-2 text-[13px] font-bold whitespace-nowrap rounded-md transition-all ${activeTab === item.id ? "bg-[#FFD814] border-[#FCD200] text-black shadow-sm" : "bg-white hover:bg-[#F3F3F3] border-transparent text-[#007185]"} border`}>{item.title}</button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={() => window.location.reload()} className={SECONDARY_BTN}>
-                        <RefreshCw className="h-3.5 w-3.5" />
-                    </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                
-                {/* ── Tab Sidebar (Vertical on Desktop) ── */}
-                <div className="lg:col-span-3 space-y-1">
-                    {TABS.map(tab => {
-                        const active = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 group
-                                    ${active 
-                                        ? 'bg-[#EEAF1C] text-white shadow-xl shadow-blue-500/20' 
-                                        : 'bg-white dark:bg-[#0D1921] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:border-[#EEAF1C]/30 hover:bg-slate-50 dark:hover:bg-white/5'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <tab.icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${active ? 'text-white' : 'text-slate-400'}`} />
-                                    <span className="text-[11px] font-black uppercase tracking-widest">{tab.label}</span>
-                                </div>
-                                {active && <ChevronRight className="h-4 w-4 animate-in slide-in-from-left-2 duration-300" />}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* ── Main Panel ── */}
-                <div className="lg:col-span-9 animate-in slide-in-from-right-4 duration-500">
-                    
-                    {/* PROFILE IDENTITIY */}
+            <div className="max-w-[1200px] mx-auto py-10 px-4 md:px-8">
+                <div className="animate-in fade-in duration-300">
                     {activeTab === 'profile' && (
-                        <div className="space-y-6">
-                            <SectionCard>
-                                <SectionHeader title="Operator Identity" icon={User} subtitle="Account profile nodes" />
-                                <div className="p-6">
-                                    <div className="flex flex-col md:flex-row items-center gap-8 mb-8 pb-8 border-b border-slate-100 dark:border-white/5">
-                                        <div className="relative group">
-                                            <div className="w-24 h-24 bg-slate-100 dark:bg-white/5 rounded-2xl overflow-hidden flex items-center justify-center border-2 border-slate-200 dark:border-white/10 group-hover:border-[#EEAF1C] transition-all duration-500 shadow-inner">
-                                                {avatarPreview || profile.avatar ? (
-                                                    <img src={avatarPreview || getImageUrl(profile.avatar) || ''} alt="Avatar" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <User className="h-10 w-10 text-slate-300" />
-                                                )}
-                                            </div>
-                                            <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#EEAF1C] text-white rounded-lg shadow-lg flex items-center justify-center hover:scale-110 transition-all active:scale-95 group-hover:rotate-12">
-                                                <Camera className="h-4 w-4" />
-                                            </button>
-                                            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                                        </div>
-                                        <div className="flex-1 text-center md:text-left">
-                                            <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/10 text-[#EEAF1C] text-[9px] font-black uppercase tracking-widest mb-1 shadow-sm border border-blue-100 dark:border-blue-900/20">
-                                                Active Session
-                                            </div>
-                                            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-1">{profile.firstName} {profile.lastName}</h2>
-                                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">{profile.email}</p>
-                                            <div className="flex justify-center md:justify-start gap-4">
-                                                <div className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">{userRole || 'Admin'}</div>
-                                                <div className="flex items-center gap-1.5 text-[9px] font-black text-[#EEAF1C] uppercase tracking-widest">
-                                                    <ShieldCheck className="h-3 w-3" /> Encrypted Access
-                                                </div>
-                                            </div>
-                                        </div>
+                        <div className="bg-white border border-[#DDD] rounded-lg overflow-hidden shadow-sm">
+                            <div className="bg-[#F6F6F6] px-5 py-3 border-b border-[#DDD] group flex items-center justify-between">
+                                <h2 className="text-[18px] font-bold">Profile Info</h2>
+                                <User className="h-4 w-4 text-slate-300 group-hover:text-[#e77600] transition-colors" />
+                            </div>
+                            <div className="p-8 flex flex-col md:flex-row gap-10">
+                                <div className="w-32 flex flex-col items-center gap-3">
+                                    <div className="w-24 h-24 rounded-full overflow-hidden border border-[#DDD] bg-[#F3F3F3] flex items-center justify-center">
+                                        {avatarPreview || profile.avatar ? <img src={avatarPreview || getImageUrl(profile.avatar) || ''} alt="Avatar" className="w-full h-full object-cover" /> : <User className="h-10 w-10 text-slate-200" />}
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <Field label="First Name Mapping">
-                                            <input className={INPUT_CLS} value={profile.firstName} onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} />
-                                        </Field>
-                                        <Field label="Last Name Mapping">
-                                            <input className={INPUT_CLS} value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} />
-                                        </Field>
-                                        <Field label="Network Email">
-                                            <div className="relative group">
-                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
-                                                <input className={`${INPUT_CLS} pl-10`} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} />
-                                            </div>
-                                        </Field>
-                                        <Field label="Identity Phone">
-                                            <div className="relative group">
-                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
-                                                <input className={`${INPUT_CLS} pl-10`} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} />
-                                            </div>
-                                        </Field>
-                                    </div>
-                                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                                        <button onClick={handleSaveProfile} disabled={profileSaving} className={PRIMARY_BTN}>
-                                            {profileSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                            Sync Identity
-                                        </button>
-                                    </div>
+                                    <AmazonButton variant="secondary" onClick={() => avatarInputRef.current?.click()} className="w-full text-[12px]">Change Photo</AmazonButton>
+                                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                                 </div>
-                            </SectionCard>
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                    <div><SimpleLabel>First Name</SimpleLabel><AmazonInput value={profile.firstName} onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} /></div>
+                                    <div><SimpleLabel>Last Name</SimpleLabel><AmazonInput value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} /></div>
+                                    <div><SimpleLabel>Email Address</SimpleLabel><AmazonInput value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} /></div>
+                                    <div><SimpleLabel>Phone Number</SimpleLabel><AmazonInput value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} /></div>
+                                    <div className="md:col-span-2 pt-4 flex justify-end"><AmazonButton loading={profileSaving} onClick={handleSaveProfile}>Save Changes</AmazonButton></div>
+                                </div>
+                            </div>
                         </div>
                     )}
-
-                    {/* INFRASTRUCTURE / STORE */}
-                    {activeTab === 'store' && (
-                        <SectionCard>
-                            <SectionHeader title="Infrastructure Metadata" icon={Store} subtitle="System node configuration" />
-                            <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <Field label="Organization Label">
-                                        <div className="relative group">
-                                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
-                                            <input className={`${INPUT_CLS} pl-10`} value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} />
-                                        </div>
-                                    </Field>
-                                    <Field label="Public Mesh Portal (Website)">
-                                        <div className="relative group">
-                                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
-                                            <input className={`${INPUT_CLS} pl-10`} value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} />
-                                        </div>
-                                    </Field>
-                                    <Field label="Support Mesh (Email)">
-                                        <input className={INPUT_CLS} value={store.email} onChange={e => setStore(s => ({ ...s, email: e.target.value }))} />
-                                    </Field>
-                                    <Field label="Regional Mesh (Phone)">
-                                        <input className={INPUT_CLS} value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} />
-                                    </Field>
-                                    <Field label="System Currency">
-                                        <select className={INPUT_CLS} value={store.currency} onChange={e => setStore(s => ({ ...s, currency: e.target.value }))}>
-                                            <option value="PKR">PKR — Pakistani Rupee</option>
-                                            <option value="USD">USD — US Dollar</option>
-                                        </select>
-                                    </Field>
-                                    <Field label="Fiscal Registry (Tax ID)">
-                                        <div className="relative group">
-                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
-                                            <input className={`${INPUT_CLS} pl-10`} value={store.tax_number} onChange={e => setStore(s => ({ ...s, tax_number: e.target.value }))} />
-                                        </div>
-                                    </Field>
-                                    <div className="md:col-span-2">
-                                        <Field label="Geographic Node (Address)">
-                                            <textarea rows={2} className={`${INPUT_CLS} resize-none`} value={store.address} onChange={e => setStore(s => ({ ...s, address: e.target.value }))} />
-                                        </Field>
+                    {activeTab === 'store' && !isSupplier && (
+                        <div className="bg-white border border-[#DDD] rounded-lg overflow-hidden shadow-sm">
+                            <div className="bg-[#F6F6F6] px-5 py-3 border-b border-[#DDD] flex items-center justify-between">
+                                <h2 className="text-[18px] font-bold">Store Details</h2>
+                                <Store className="h-4 w-4 text-slate-300" />
+                            </div>
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                <div><SimpleLabel>Store Name</SimpleLabel><AmazonInput value={store.name} onChange={e => setStore(s => ({ ...s, name: e.target.value }))} /></div>
+                                <div><SimpleLabel>Website</SimpleLabel><AmazonInput value={store.website} onChange={e => setStore(s => ({ ...s, website: e.target.value }))} /></div>
+                                <div><SimpleLabel>Regional Phone</SimpleLabel><AmazonInput value={store.phone} onChange={e => setStore(s => ({ ...s, phone: e.target.value }))} /></div>
+                                <div><SimpleLabel>Tax ID / NTN</SimpleLabel><AmazonInput value={store.tax_number} onChange={e => setStore(s => ({ ...s, tax_number: e.target.value }))} /></div>
+                                <div className="md:col-span-2"><SimpleLabel>Address</SimpleLabel><AmazonInput value={store.address} onChange={e => setStore(s => ({ ...s, address: e.target.value }))} /></div>
+                                <div className="md:col-span-2 pt-4 flex justify-end"><AmazonButton loading={storeSaving} onClick={handleSaveStore}>Update Store Info</AmazonButton></div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'notifications' && !isSupplier && (
+                        <div className="bg-white border border-[#DDD] rounded-lg overflow-hidden shadow-sm">
+                            <div className="bg-[#F6F6F6] px-5 py-3 border-b border-[#DDD] flex items-center justify-between"><h2 className="text-[18px] font-bold">Notifications</h2><Bell className="h-4 w-4 text-slate-300" /></div>
+                            <div className="p-8 space-y-4">
+                                {[{ k: 'notif_new_order', l: 'Inbound Fulfillment Alerts', d: 'Notify on new order arrival' }, { k: 'notif_low_stock', l: 'Inventory Threshold Alerts', d: 'Trigger on critical low stock' }, { k: 'notif_weekly_report', l: 'Analytical Mesh', d: 'Weekly system health reports' }, { k: 'notif_sms', l: 'SMS Trigger', d: 'Emergency cellular alerts' }].map(f => (
+                                    <div key={f.k} className="flex items-center justify-between py-3 border-b border-[#F3F3F3] last:border-0">
+                                        <div><p className="text-[14px] font-bold">{f.l}</p><p className="text-[12px] text-[#565959]">{f.d}</p></div>
+                                        <input type="checkbox" checked={(notif as any)[f.k]} onChange={e => setNotif(n => ({ ...n, [f.k]: e.target.checked }))} className="w-5 h-5 accent-[#e77600]" />
                                     </div>
-                                </div>
-                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                                    <button onClick={handleSaveStore} disabled={storeSaving} className={PRIMARY_BTN}>
-                                        {storeSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                        Initialize Metadata
-                                    </button>
-                                </div>
+                                ))}
+                                <div className="pt-6 flex justify-end"><AmazonButton loading={notifSaving} onClick={async () => { setNotifSaving(true); try { await settingsService.updateSettings(notif); toast.success('Alerts synced.'); } catch { toast.error('Failed.'); } finally { setNotifSaving(false); } }}>Sync Notification Mesh</AmazonButton></div>
                             </div>
-                        </SectionCard>
+                        </div>
                     )}
-
-                    {/* ALERTS / NOTIFICATIONS */}
-                    {activeTab === 'notifications' && (
-                        <SectionCard>
-                            <SectionHeader title="Alert Protocols" icon={Bell} subtitle="System event notification mesh" />
-                            <div className="p-6">
-                                <div className="bg-slate-50 dark:bg-white/5 px-4 py-2 border border-blue-100 dark:border-blue-900/20 rounded-lg mb-6">
-                                    <p className="text-[10px] font-black text-[#EEAF1C] uppercase tracking-widest">Network Alert Configuration</p>
-                                </div>
-                                <div className="space-y-4">
-                                    <Toggle enabled={notif.notif_new_order} onChange={v => setNotif(n => ({ ...n, notif_new_order: v }))} label="Inbound Fulfillment Alerts" description="Notify on new order packet arrival" />
-                                    <Toggle enabled={notif.notif_low_stock} onChange={v => setNotif(n => ({ ...n, notif_low_stock: v }))} label="Inventory Threshold Alerts" description="Trigger warning on critical low stock units" />
-                                    <Toggle enabled={notif.notif_new_user} onChange={v => setNotif(n => ({ ...n, notif_new_user: v }))} label="Identity Registration Packets" description="Log entry for new platform identities" />
-                                    <Toggle enabled={notif.notif_weekly_report} onChange={v => setNotif(n => ({ ...n, notif_weekly_report: v }))} label="Performance Analytical Mesh" description="Aggregate weekly system health and sales report" />
-                                    <Toggle enabled={notif.notif_sms} onChange={v => setNotif(n => ({ ...n, notif_sms: v }))} label="Off-Mesh SMS Trigger" description="Emergency cellular alerts for critical runtime events" />
-                                </div>
-                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                                    <button onClick={handleSaveNotifications} disabled={notifSaving} className={PRIMARY_BTN}>
-                                        Sync Protocols
-                                    </button>
-                                </div>
-                            </div>
-                        </SectionCard>
-                    )}
-
-                    {/* SHIELD / SECURITY */}
                     {activeTab === 'security' && (
-                        <div className="space-y-6">
-                            <SectionCard>
-                                <SectionHeader title="Access Credentials" icon={Lock} subtitle="Secure transmission gateway" />
-                                <div className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="md:col-span-2">
-                                            <Field label="Current Verification Code (Old Password)">
-                                                <div className="relative group">
-                                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
-                                                    <input type={showOld ? 'text' : 'password'} className={`${INPUT_CLS} pl-10 pr-10`} value={passwords.old} onChange={e => setPasswords(p => ({ ...p, old: e.target.value }))} />
-                                                    <button onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                                        {showOld ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                    </button>
-                                                </div>
-                                            </Field>
-                                        </div>
-                                        <Field label="New Security Sequence">
-                                            <div className="relative">
-                                                <input type={showNew ? 'text' : 'password'} className={`${INPUT_CLS} pr-10`} value={passwords.new} onChange={e => setPasswords(p => ({ ...p, new: e.target.value }))} />
-                                                <button onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                                    {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                </button>
-                                            </div>
-                                        </Field>
-                                        <Field label="Confirm Security Sequence">
-                                            <div className="relative">
-                                                <input type={showConfirm ? 'text' : 'password'} className={`${INPUT_CLS} pr-10`} value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} />
-                                                <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                </button>
-                                            </div>
-                                        </Field>
-                                    </div>
-                                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                                        <button onClick={handleSavePassword} disabled={pwSaving} className={PRIMARY_BTN}>
-                                            Rotate Credentials
-                                        </button>
-                                    </div>
+                        <div className="bg-white border border-[#DDD] rounded-lg overflow-hidden shadow-sm">
+                            <div className="bg-[#F6F6F6] px-5 py-3 border-b border-[#DDD] flex items-center justify-between"><h2 className="text-[18px] font-bold">Login & Security</h2><Shield className="h-4 w-4 text-slate-300" /></div>
+                            <div className="p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div><SimpleLabel>Current Password</SimpleLabel><AmazonInput type="password" value={passwords.old} onChange={e => setPasswords(p => ({ ...p, old: e.target.value }))} /></div>
+                                    <div className="hidden md:block"></div>
+                                    <div><SimpleLabel>New Password</SimpleLabel><AmazonInput type="password" value={passwords.new} onChange={e => setPasswords(p => ({ ...p, new: e.target.value }))} /></div>
+                                    <div><SimpleLabel>Re-enter New Password</SimpleLabel><AmazonInput type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} /></div>
+                                    <div className="md:col-span-2 flex justify-end pt-4"><AmazonButton loading={pwSaving} onClick={async () => { if (!passwords.old || !passwords.new) { toast.error('Incomplete data.'); return; } setPwSaving(true); try { await settingsService.changePassword(Number(currentUser.id), passwords.old, passwords.new, passwords.confirm); setPasswords({ old: '', new: '', confirm: '' }); toast.success('Credentials rotated.'); } catch { toast.error('Verification failed.'); } finally { setPwSaving(false); } }}>Rotate Credentials</AmazonButton></div>
                                 </div>
-                            </SectionCard>
-
-                            {/* Danger Zone */}
-                            <SectionCard className="border-red-200 dark:border-red-900/30">
-                                <SectionHeader title="Critical Protocols" icon={AlertTriangle} subtitle="Destructive system operations" />
-                                <div className="p-6 bg-red-50/20 dark:bg-red-900/5">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-xl flex items-center justify-center shrink-0">
-                                            <Trash2 className="h-5 w-5 text-red-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-[11px] font-black text-red-800 dark:text-red-400 uppercase tracking-tight mb-1">Identity Termination</p>
-                                            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg mb-4 uppercase tracking-tighter">Initiating this protocol will permanently purge your administrative profile and all associated mesh links from the platform. This action is irreversible.</p>
-                                            <button className="px-4 py-2 border-2 border-red-200 dark:border-red-900/30 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95">Purge Identity</button>
-                                        </div>
-                                    </div>
+                                <div className="pt-10 border-t border-[#DDD]">
+                                    <h3 className="text-red-700 font-bold mb-2">Danger Zone</h3>
+                                    <p className="text-[13px] text-[#565959] mb-4">Permanently purge your account from Alqavi Mesh. Action is irreversible.</p>
+                                    <AmazonButton variant="secondary" className="border-red-200 text-red-600 hover:bg-red-50">Purge Account</AmazonButton>
                                 </div>
-                            </SectionCard>
+                            </div>
                         </div>
                     )}
-
-                    {/* DISPLAY / APPEARANCE */}
-                    {activeTab === 'appearance' && (
-                        <div className="space-y-6">
-                            <SectionCard>
-                                <SectionHeader title="Interface Configuration" icon={Palette} subtitle="Workspace visual parameters" />
-                                <div className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 pb-8 border-b border-slate-100 dark:border-white/5">
-                                        <div>
-                                            <p className={LABEL_CLS}>Master Theme Mode</p>
-                                            <div className="flex gap-4">
-                                                {(['light', 'dark'] as const).map(t => (
-                                                    <button key={t} 
-                                                        onClick={() => { setTheme(t); handleSaveAppearance({ theme: t }); }} 
-                                                        className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${theme === t ? 'bg-[#EEAF1C] text-white border-[#EEAF1C] shadow-lg shadow-blue-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#EEAF1C]/30'}`}>
-                                                        {t === 'light' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                                                        <span className="text-[11px] font-black uppercase tracking-widest">{t}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className={LABEL_CLS}>Interface Density</p>
-                                            <div className="flex gap-4">
-                                                {[false, true].map(v => (
-                                                    <button key={String(v)} 
-                                                        onClick={() => { setCompactMode(v); handleSaveAppearance({ compactMode: v }); }} 
-                                                        className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${compactMode === v ? 'bg-[#EEAF1C] text-white border-[#EEAF1C] shadow-lg shadow-blue-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#EEAF1C]/30'}`}>
-                                                        <Monitor className="h-5 w-5" />
-                                                        <span className="text-[11px] font-black uppercase tracking-widest">{v ? 'Compact' : 'Standard'}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Toggle 
-                                            enabled={animations} 
-                                            onChange={(v) => { setAnimations(v); handleSaveAppearance({ animations: v }); }} 
-                                            label="Mesh Motion Transitions" 
-                                            description="Interactive micro-animations and smooth state changes" 
-                                        />
-                                        <Toggle 
-                                            enabled={sidebarCollapsed} 
-                                            onChange={(v) => { setSidebarCollapsed(v); handleSaveAppearance({ sidebarCollapsed: v }); }} 
-                                            label="Minimal Workspace Layout" 
-                                            description="Initialize administrative view with persistent sidebar collapse" 
-                                        />
-                                    </div>
-
-                                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                                        <button onClick={handleSaveAppearance} disabled={appearanceSaving} className={PRIMARY_BTN}>
-                                            Sync Style Parameters
-                                        </button>
-                                    </div>
+                    {activeTab === 'display' && (
+                        <div className="bg-white border border-[#DDD] rounded-lg overflow-hidden shadow-sm">
+                            <div className="bg-[#F6F6F6] px-5 py-3 border-b border-[#DDD] flex items-center justify-between"><h2 className="text-[18px] font-bold">Display Settings</h2><Palette className="h-4 w-4 text-slate-300" /></div>
+                            <div className="p-8 space-y-10">
+                                <div><SimpleLabel>Appearance Protocol</SimpleLabel><div className="flex gap-4 mt-2">{['light', 'dark'].map(t => (
+                                    <button key={t} onClick={() => { setTheme(t as any); handleSaveAppearance({ theme: t }); }} className={`px-6 py-4 border rounded-md flex flex-col items-center gap-2 transition-all ${theme === t ? "border-[#e77600] bg-[#FFF8F2]" : "border-[#DDD] hover:bg-[#F9F9F9]"}`}>
+                                        {t === 'light' ? <Sun className="h-6 w-6 text-yellow-600" /> : <Moon className="h-6 w-6 text-slate-600" />}
+                                        <span className="text-[13px] font-bold capitalize">{t} Mode</span>
+                                    </button>
+                                ))}</div></div>
+                                <div className="space-y-4 pt-4 border-t border-[#F3F3F3]">
+                                    <div className="flex items-center justify-between"><div><p className="font-bold text-[14px]">Mesh Animations</p><p className="text-[12px] text-[#565959]">Enable interactive animations</p></div><input type="checkbox" checked={animations} onChange={e => { setAnimations(e.target.checked); handleSaveAppearance({ animations: e.target.checked }); }} className="w-5 h-5 accent-[#e77600]" /></div>
+                                    <div className="flex items-center justify-between"><div><p className="font-bold text-[14px]">Minimal Layout</p><p className="text-[12px] text-[#565959]">Start with persistent sidebar collapse</p></div><input type="checkbox" checked={sidebarCollapsed} onChange={e => { setSidebarCollapsed(e.target.checked); handleSaveAppearance({ sidebarCollapsed: e.target.checked }); }} className="w-5 h-5 accent-[#e77600]" /></div>
                                 </div>
-                            </SectionCard>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'explorer' && !isSupplier && (
+                        <div className="bg-white border border-[#DDD] rounded-lg overflow-hidden shadow-sm">
+                            <div className="bg-[#F6F6F6] px-5 py-3 border-b border-[#DDD] flex items-center justify-between"><h2 className="text-[18px] font-bold">Registry Explorer (Full Mesh)</h2><Globe className="h-4 w-4 text-[#e77600]" /></div>
+                            <div className="p-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+                                    {[
+                                        { label: 'Operations', items: [{ name: 'Dashboard', href: '/admin/dashboard' }, { name: 'Sale Point (POS)', href: '/admin/sale' }, { name: 'Recent Orders', href: '/admin/sales/recent' }, { name: 'System Alerts', href: '/admin/alerts' }] },
+                                        { label: 'Catalog', items: [{ name: 'All Products', href: '/admin/products' }, { name: 'Categories', href: '/admin/products/main-categories' }, { name: 'Sub Categories', href: '/admin/products/categories' }] },
+                                        { label: 'Inventory', items: [{ name: 'Stock List', href: '/admin/inventory/list' }, { name: 'Warehouses', href: '/admin/inventory/warehouses' }, { name: 'Stock Movements', href: '/admin/inventory/movements' }, { name: 'Adjustments', href: '/admin/inventory/adjustments' }] },
+                                        { label: 'Purchasing', items: [{ name: 'Suppliers', href: '/admin/company/suppliers' }, { name: 'Purchase Orders', href: '/admin/purchases' }, { name: 'Purchase Returns', href: '/admin/purchases/returns' }, { name: 'Company', href: '/admin/company' }] },
+                                        { label: 'Sales Flow', items: [{ name: 'Sales Ledger', href: '/admin/sales' }, { name: 'Payments', href: '/admin/payments' }, { name: 'Customer Balance', href: '/admin/payments/customer' }, { name: 'Return Registry', href: '/admin/sale-returns' }] },
+                                        { label: 'Security & Core', items: [{ name: 'Reports', href: '/admin/reports' }, { name: 'Profit & Loss', href: '/admin/reports?type=accounting' }, { name: 'System Users', href: '/admin/users' }, { name: 'Roles', href: '/admin/users/roles' }, { name: 'Permissions', href: '/admin/users/permissions' }] }
+                                    ].map(group => (
+                                        <div key={group.label} className="flex flex-col">
+                                            <h3 className="font-bold text-[14px] text-[#111] border-b border-[#EEE] pb-1.5 mb-4 uppercase tracking-tight">{group.label}</h3>
+                                            <div className="space-y-4">
+                                                {group.items.map(item => {
+                                                    const isVisible = sidebarVisibility[item.href] !== false;
+                                                    return (
+                                                        <div key={item.href} className="flex items-center justify-between group">
+                                                            <Link href={item.href} className={`text-[13.5px] font-medium transition-all hover:text-[#e77600] hover:underline ${!isVisible ? 'text-slate-300 line-through' : 'text-[#007185]'}`}>{item.name}</Link>
+                                                            <div className="flex items-center gap-3">
+                                                                <button onClick={() => toggleSidebarItem(item.href)} className={`text-[11px] font-black uppercase tracking-tighter ${isVisible ? 'text-[#e77600]' : 'text-slate-400 opacity-50'}`}>{isVisible ? 'Hide' : 'Show'}</button>
+                                                                <div className={`w-1.5 h-1.5 rounded-full ${isVisible ? 'bg-green-500' : 'bg-slate-200'}`} />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="bg-[#F6F6F6] p-4 text-center border-t border-[#DDD]"><p className="text-[12px] text-[#565959]">Registry changes are synced instantly with the primary sidebar.</p></div>
                         </div>
                     )}
                 </div>
@@ -691,4 +310,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-

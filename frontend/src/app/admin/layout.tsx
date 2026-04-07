@@ -7,71 +7,37 @@ import NotificationPanel, { type ActivityItem } from '@/components/admin/Notific
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
-    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard
+    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, RefreshCw, Shield
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
-import { productService, orderService, userService, settingsService, inventoryService, paymentService } from '@/lib/api';
+import { productService, orderService, userService, settingsService } from '@/lib/api';
 import { getImageUrl, cn } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 
 /* ═══════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════ */
-function timeAgo(ts: number | string): string {
-    const diff = Date.now() - new Date(ts).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'Just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
-}
-
-/* ═══════════════════════════════════════════════
-   SEARCH RESULT ITEM
-═══════════════════════════════════════════════ */
-function SearchItem({ href, icon: Icon, iconBg, iconColor, title, subtitle, onClick }: {
-    href: string; icon: any; iconBg: string; iconColor: string;
-    title: string; subtitle: string; onClick: () => void;
-}) {
-    return (
-        <Link href={href} onClick={onClick} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg group transition-colors">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg} dark:bg-opacity-20`}>
-                <Icon className={`w-4 h-4 ${iconColor}`} />
-            </div>
-            <div className="min-w-0">
-                <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#EEAF1C] dark:group-hover:text-[#FFA41C] truncate">{title}</p>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{subtitle}</p>
-            </div>
-        </Link>
-    );
-}
-
-/* ═══════════════════════════════════════════════
-   MOBILE TOP BAR
-═══════════════════════════════════════════════ */
+   MOBILE TOP BAR (CLEAN LIGHT THEME)
+   ═══════════════════════════════════════════════ */
 function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile }: {
     onMenuToggle: () => void; adminName: string; adminAvatar: string | null; unreadCount: number;
     onToggleNotifications: () => void; onToggleProfile: () => void;
 }) {
     return (
-        <div className="glass-effect text-slate-800 dark:text-white px-4 py-3 flex items-center justify-between gap-4 border-b border-white/40 dark:border-slate-800/40 md:hidden shadow-[0_4px_12px_rgba(0,0,0,0.02)] z-20 print:hidden sticky top-0">
-            <button onClick={onMenuToggle} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition">
-                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+        <div className="bg-[#F8F9FA] dark:bg-[#2d3a4b] text-[#111] dark:text-white px-4 py-2.5 flex items-center justify-between gap-4 border-b border-[#DDDDDD] dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm">
+            <button onClick={onMenuToggle} className="p-1.5 hover:bg-[#F3F3F3] dark:hover:bg-white/5 rounded-lg transition text-[#565959] dark:text-zinc-400">
+                <Menu className="h-5 w-5" />
             </button>
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center">
-                <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight">AL-QAVI</span>
-                <span className="text-[8px] font-black tracking-[0.2em] text-[#EEAF1C] dark:text-[#EEAF1C] -mt-0.5 uppercase">Cosmetics Hub</span>
+                <span className="font-black text-sm text-[#111] tracking-tight uppercase">AL-QAVI <span className="text-[#EEAF1C]">TRADES</span></span>
             </Link>
             <div className="flex items-center gap-2">
-                <button onClick={onToggleNotifications} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition relative">
-                    <Bell className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                    {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-800" />}
+                <button onClick={onToggleNotifications} className="p-1.5 hover:bg-[#F3F3F3] dark:hover:bg-white/5 rounded-lg transition relative text-[#565959] dark:text-zinc-400">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
                 </button>
                 <button onClick={onToggleProfile}
-                    className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center text-[#131921] font-black text-xs hover:bg-[#1E40AF] transition-all shadow-lg shadow-blue-100 dark:shadow-none overflow-hidden">
+                    className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center text-white font-black text-xs hover:scale-105 transition-all shadow-md overflow-hidden">
                     {adminAvatar ? (
                         <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -85,461 +51,229 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
 
 /* ═══════════════════════════════════════════════
    MAIN ADMIN LAYOUT
-═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isNavigating, setIsNavigating] = useState(false);
 
-    // Trigger loader on navigation
-    useEffect(() => {
-        setIsNavigating(true);
-        const t = setTimeout(() => setIsNavigating(false), 500);
-        return () => clearTimeout(t);
-    }, [pathname]);
-
-    // User state
-    const [adminName, setAdminName] = useState('Admin');
-    const [adminEmail, setAdminEmail] = useState('');
-    const [adminRole, setAdminRole] = useState('admin');
-    const [adminId, setAdminId] = useState<string | undefined>(undefined);
-    const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
-
-    // Dropdowns
+    // Sidebar & Profile States
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<any>({ products: [], orders: [], users: [] });
+    const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
-    // Activity
+    // Session Data
+    const [adminName, setAdminName] = useState('');
+    const [adminEmail, setAdminEmail] = useState('');
+    const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
+    const [adminRole, setAdminRole] = useState('');
+    const [adminId, setAdminId] = useState<string | number>('');
+
+    // Settings & Display
+    const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const [animationsEnabled, setAnimationsEnabled] = useState(true);
+    const [compactMode, setCompactMode] = useState(false);
+
+    // Notifications
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
 
-    // Workspace Visual Parameters (Real-time Mesh)
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
-    const [compactMode, setCompactMode] = useState(false);
-    const [animationsEnabled, setAnimationsEnabled] = useState(true);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-    // Load theme
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-        if (savedTheme) {
-            setTheme(savedTheme);
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark');
-            }
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            setTheme('dark');
-            document.documentElement.classList.add('dark');
-        }
-    }, []);
-
-    const toggleTheme = () => {
-        document.documentElement.classList.add('transition-theme');
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        if (newTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        setTimeout(() => {
-            document.documentElement.classList.remove('transition-theme');
-        }, 500); // Wait for transition to finish
-    };
-
-    // Search
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<{ products: any[]; orders: any[]; users: any[] }>({
-        products: [], orders: [], users: []
-    });
-    const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    // Refs
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
-    // Settings state
-    const [notifSettings, setNotifSettings] = useState<any>(null);
 
-    /* ── Load user ── */
     useEffect(() => {
-        const refreshAdminState = () => {
-            const u = authService.getUser();
-            if (u) {
-                setAdminId(u.id);
-                setAdminName(u.name || 'Administrator');
-                setAdminEmail(u.email || '');
-                setAdminRole((u as any).role || 'admin');
-                setAdminAvatar((u as any).avatar || null);
-            }
-        };
+        const user = authService.getUser();
+        if (user) {
+            setAdminName(user.name || 'Administrator');
+            setAdminEmail(user.email || 'admin@alqavi.com');
+            setAdminAvatar(user.avatar || null);
+            setAdminRole(user.role || 'Admin');
+            setAdminId(user.id || '');
+        }
 
-        const refreshSettings = () => {
-            settingsService.getSettings().then(s => {
-                setNotifSettings(s);
+        const loadSettings = async () => {
+            try {
+                const s = await settingsService.getSettings();
                 setTheme((s.theme as 'light' | 'dark') || 'light');
-                setCompactMode(s.compact_mode ?? false);
                 setAnimationsEnabled(s.animations ?? true);
                 setSidebarCollapsed(s.sidebar_collapsed ?? false);
-            }).catch(() => { });
+            } catch { }
         };
 
-        refreshAdminState();
-        refreshSettings();
+        const loadProfile = async () => {
+            try {
+                const p = await settingsService.getProfile();
+                if (p) {
+                    setAdminName(p.name || `${p.first_name} ${p.last_name}`.trim() || 'User');
+                    setAdminEmail(p.email);
+                    setAdminAvatar(p.image || p.avatar || null);
+                    setAdminRole(p.role_name || (p.role && typeof p.role === 'object' ? p.role.name : p.role) || 'Admin');
+                    setAdminId(p.id);
+                }
+            } catch { }
+        };
 
-        // Load full profile from DB
-        settingsService.getProfile().then(p => {
-            setAdminId(String(p.id));
-            setAdminName(p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : adminName);
-            setAdminEmail(p.email || adminEmail);
-            if (p.avatar) setAdminAvatar(p.avatar);
-        }).catch(() => { });
+        loadSettings();
+        loadProfile();
+        fetchActivity();
 
-        const onStorage = () => refreshAdminState();
-        const onProfileUpdate = () => refreshAdminState();
-        const onSettingsUpdate = () => refreshSettings();
-
-        window.addEventListener('storage', onStorage);
-        window.addEventListener('profileUpdated', onProfileUpdate);
-        window.addEventListener('settingsUpdated', onSettingsUpdate);
-
+        const handleUpdate = () => {
+            loadProfile();
+        };
+        window.addEventListener('profileUpdated', handleUpdate);
+        window.addEventListener('settingsUpdated', loadSettings);
         return () => {
-            window.removeEventListener('storage', onStorage);
-            window.removeEventListener('profileUpdated', onProfileUpdate);
-            window.removeEventListener('settingsUpdated', onSettingsUpdate);
+            window.removeEventListener('profileUpdated', handleUpdate);
+            window.removeEventListener('settingsUpdated', loadSettings);
         };
     }, []);
 
-    /* ── Fetch Real Activity ── */
     const fetchActivity = async () => {
-        if (actLoading) return;
         setActLoading(true);
         try {
-            // Respect settings: if settings not loaded yet, assume True
-            const showOrders = notifSettings?.notif_new_order ?? true;
-            const showAlerts = notifSettings?.notif_low_stock ?? true;
-            const showUsers = notifSettings?.notif_new_user ?? true;
+            const res = await userService.getAllActivityLogs(10);
+            setActivities(res.map((log: any) => {
+                const isOrder = log.action_type?.includes('ORDER') || log.description?.toLowerCase().includes('order');
+                const isUser = log.action_type?.includes('USER') || log.description?.toLowerCase().includes('user');
+                const isSecurity = log.action_type?.includes('LOGIN') || log.action_type?.includes('PASSWORD');
 
-            const [oRes, aRes, lRes] = await Promise.allSettled([
-                showOrders ? orderService.getAll({ limit: 5 }) : Promise.resolve([]),
-                showAlerts ? inventoryService.getAlerts({ limit: 5 }) : Promise.resolve([]),
-                showUsers ? userService.getAllActivityLogs(10) : Promise.resolve([]),
-            ]);
-
-            const liveItems: ActivityItem[] = [];
-
-            // 1) Process Real Orders
-            if (oRes.status === 'fulfilled' && Array.isArray(oRes.value)) {
-                oRes.value.forEach((o: any) => {
-                    liveItems.push({
-                        id: `order-${o.id}`, type: 'order',
-                        title: `Order #${o.order_number || o.id}`,
-                        desc: `${o.customer_name || 'Guest'} — PKR ${o.total_amount || o.total}`,
-                        time: timeAgo(o.created_at || Date.now()),
-                        timeRaw: new Date(o.created_at || Date.now()).getTime(),
-                        href: `/admin/sales`, read: false,
-                        icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50'
-                    });
-                });
-            }
-
-            // 2) Process Real Inventory Alerts
-            if (aRes.status === 'fulfilled' && Array.isArray(aRes.value)) {
-                aRes.value.forEach((a: any) => {
-                    liveItems.push({
-                        id: `alert-${a.id}`, type: 'alert',
-                        title: 'Low Stock Alert',
-                        desc: `${a.inventory_name || a.product_name} — ${a.stock_quantity || a.quantity} left`,
-                        time: timeAgo(a.created_at || Date.now()),
-                        timeRaw: new Date(a.created_at || Date.now()).getTime(),
-                        href: '/admin/inventory', read: false,
-                        icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50'
-                    });
-                });
-            }
-
-            // 3) Process Real Security Logs
-            if (lRes.status === 'fulfilled' && Array.isArray(lRes.value)) {
-                lRes.value.filter(l => l.action === 'create' || l.action === 'login').forEach((l: any) => {
-                    liveItems.push({
-                        id: `log-${l.id}`, type: 'user',
-                        title: l.action === 'login' ? 'User Identity Login' : 'New Mesh Genesis',
-                        desc: l.description || `${l.user_name} initialized`,
-                        time: timeAgo(l.timestamp || Date.now()),
-                        timeRaw: new Date(l.timestamp || Date.now()).getTime(),
-                        href: '/admin/users', read: false,
-                        icon: Users, color: 'text-violet-600', bg: 'bg-violet-50'
-                    });
-                });
-            }
-
-            // Sort by time descending
-            setActivities(liveItems.sort((a, b) => b.timeRaw - a.timeRaw).slice(0, 15));
-        } catch (err) {
-            console.error('Activity fetch failure:', err);
-        } finally {
-            setActLoading(false);
-        }
+                return {
+                    id: String(log.id),
+                    type: isOrder ? 'order' : isUser ? 'user' : isSecurity ? 'alert' : 'alert', // Changed to 'alert' to match type definition
+                    title: log.action_type || 'System Event',
+                    desc: log.description || 'No details provided.',
+                    time: log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Recently',
+                    timeRaw: log.created_at ? new Date(log.created_at).getTime() : Date.now(),
+                    href: isOrder ? '/admin/sales' : isUser ? '/admin/users' : '/admin/dashboard',
+                    read: false,
+                    icon: isOrder ? ShoppingBag : isUser ? Users : isSecurity ? Shield : Bell,
+                    color: isOrder ? 'text-blue-600' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
+                    bg: isOrder ? 'bg-blue-50' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
+                };
+            }));
+        } catch { } finally { setActLoading(false); }
     };
 
-    useEffect(() => {
-        fetchActivity();
-        const interval = setInterval(fetchActivity, 60000); // Auto-refresh every minute
-        return () => clearInterval(interval);
-    }, []);
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        settingsService.updateSettings({ theme: newTheme });
+    };
 
-    /* ── Search ── */
-    useEffect(() => {
-        if (!searchQuery.trim()) { setShowSearchDropdown(false); return; }
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) return;
         setIsSearching(true);
         setShowSearchDropdown(true);
-        const delay = setTimeout(async () => {
-            const q = searchQuery.toLowerCase();
-            try {
-                const [pRes, oRes, uRes] = await Promise.all([
-                    productService.getAll(), orderService.getAll(), userService.getAll(),
-                ]);
-                setSearchResults({
-                    products: (Array.isArray(pRes) ? pRes : []).filter((p: any) => p.name?.toLowerCase().includes(q)).slice(0, 3),
-                    orders: (Array.isArray(oRes) ? oRes : []).filter((o: any) => String(o.id).includes(q) || o.order_number?.includes(q)).slice(0, 3),
-                    users: (Array.isArray(uRes) ? uRes : []).filter((u: any) => (`${u.first_name} ${u.last_name} ${u.email}`).toLowerCase().includes(q)).slice(0, 3),
-                });
-            } catch { setSearchResults({ products: [], orders: [], users: [] }); }
-            finally { setIsSearching(false); }
-        }, 300);
-        return () => clearTimeout(delay);
-    }, [searchQuery]);
-
-    const unreadCount = activities.filter(a => !a.read).length;
-
-    const handleMarkRead = (id: string) => setActivities(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
-    const handleMarkAllRead = () => setActivities(prev => prev.map(a => ({ ...a, read: true })));
+        try {
+            const [pRes, oRes, uRes] = await Promise.all([
+                productService.getAll(), orderService.getAll(), userService.getAll()
+            ]);
+            setSearchResults({
+                products: (Array.isArray(pRes) ? pRes : []).filter((p: any) => p.name?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3),
+                orders: (Array.isArray(oRes) ? oRes : []).filter((o: any) => String(o.id).includes(searchQuery) || o.order_number?.includes(searchQuery)).slice(0, 3),
+                users: (Array.isArray(uRes) ? uRes : []).filter((u: any) => (`${u.first_name} ${u.last_name} ${u.email}`).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3),
+            });
+        } catch { } finally { setIsSearching(false); }
+    };
 
     const handleLogout = () => { authService.logout(); router.push('/login'); };
     const handleProfileUpdated = (name: string, email: string, avatar?: string) => {
-        setAdminName(name);
-        setAdminEmail(email);
-        if (avatar) setAdminAvatar(avatar);
+        setAdminName(name); setAdminEmail(email); if (avatar) setAdminAvatar(avatar);
         setProfileOpen(false);
     };
 
-    const closeDropdowns = () => { setNotifOpen(false); setProfileOpen(false); };
-    const closeSearch = () => setTimeout(() => setShowSearchDropdown(false), 200);
-
-    const { products: sp, orders: so, users: su } = searchResults;
-    const noResults = sp.length === 0 && so.length === 0 && su.length === 0;
+    const unreadCount = activities.filter(a => !a.read).length;
 
     return (
         <AuthGuard allowedRoles={['admin', 'staff', 'supplier']}>
-            <div className={cn(
-                "h-screen bg-[#f8fafc] dark:bg-[#070F14] flex flex-col font-sans overflow-hidden print:h-auto print:overflow-visible print:bg-white text-slate-900 dark:text-[#f8fafc]",
-                animationsEnabled ? "transition-colors duration-500" : "transition-none",
-                theme,
-                compactMode ? "text-[12px]" : "text-sm",
-                !animationsEnabled && "[&_*]:transition-none"
-            )}>
-
-                {/* Mobile top bar */}
+            <div className={cn("h-screen bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-col font-sans overflow-hidden text-slate-900 dark:text-slate-100", theme)}>
                 <MobileTopBar
-                    onMenuToggle={() => setMobileOpen(!mobileOpen)}
-                    adminName={adminName}
-                    adminAvatar={adminAvatar}
-                    unreadCount={unreadCount}
-                    onToggleNotifications={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
-                    onToggleProfile={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
+                    onMenuToggle={() => setMobileOpen(!mobileOpen)} adminName={adminName} adminAvatar={adminAvatar}
+                    unreadCount={unreadCount} onToggleNotifications={() => setNotifOpen(!notifOpen)} onToggleProfile={() => setProfileOpen(!profileOpen)}
                 />
 
-                <div className="flex flex-1 min-h-0 print:block print:overflow-visible">
-                    {/* Desktop Sidebar */}
-                    <div className="hidden md:flex flex-col flex-shrink-0 z-30 print:hidden relative">
-                        <AdminSidebar
-                            isCollapsed={sidebarCollapsed}
-                            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        />
+                <div className="flex flex-1 min-h-0 print:block">
+                    <div className="hidden md:flex flex-col flex-shrink-0 z-[60]">
+                        <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
                     </div>
 
-                    {/* Mobile Drawer */}
-                    {mobileOpen && (
-                        <div className="fixed inset-0 z-[100] md:hidden flex print:hidden">
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-                            <div className="relative w-64 bg-white dark:bg-[#1e293b] shadow-2xl h-full border-r border-gray-100 dark:border-slate-800 z-[110]">
-                                <AdminSidebar
-                                    isCollapsed={false}
-                                    onToggle={() => setMobileOpen(false)}
-                                />
-                                <button onClick={() => setMobileOpen(false)}
-                                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition z-50">
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                        {/* ═══ PREMIUM COMMAND NAVBAR (Clean Light Theme) ═══ */}
+                        <div className="hidden md:flex bg-[#F8F9FA] dark:bg-[#232F3E] border-b border-[#DDDDDD] dark:border-white/5 px-8 py-3 items-center justify-between gap-6 flex-shrink-0 z-[50] shadow-sm sticky top-0 transition-all duration-300">
 
-                    {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:overflow-visible print:min-h-auto">
-
-                        {/* ═══ PREMIUM COMMAND NAVBAR ═══ */}
-                        <div className="hidden md:flex bg-[#F9FAFB]/90 dark:bg-[#0D1921]/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5 px-8 py-3.5 items-center justify-between gap-6 flex-shrink-0 z-40 shadow-xl print:hidden sticky top-0 transition-all duration-300">
-
-                            {/* Refined Search Area */}
+                            {/* Search */}
                             <div className="relative flex-1 max-w-lg group">
-                                <div className="flex items-center gap-3.5 bg-white dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 px-5 py-2.5 w-full focus-within:border-[#EEAF1C] focus-within:ring-4 focus-within:ring-[#EEAF1C]/10 transition-all duration-500 shadow-sm group-hover:shadow-md">
-                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors duration-300" />
-                                    <input type="text" placeholder="Command Search: products, orders, customers..."
-                                        className="bg-transparent text-[11px] outline-none w-full text-slate-700 dark:text-slate-100 placeholder:text-slate-400/70 font-black uppercase tracking-wider"
+                                <div className="flex items-center gap-3.5 bg-[#F3F3F3] dark:bg-white/5 rounded-2xl border border-transparent px-5 py-2 w-full focus-within:bg-white dark:focus-within:bg-[#232F3E] focus-within:border-[#EEAF1C] focus-within:ring-4 focus-within:ring-[#EEAF1C]/10 transition-all duration-500 shadow-inner group-hover:shadow-md">
+                                    <Search className="h-4 w-4 text-[#565959] dark:text-zinc-500 group-focus-within:text-[#EEAF1C]" />
+                                    <input type="text" placeholder="Search components, products, orders..."
+                                        className="bg-transparent text-[11px] outline-none w-full text-[#111] dark:text-white font-bold uppercase tracking-wider placeholder:text-zinc-500"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
-                                        onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
-                                        onBlur={closeSearch} />
-                                    {isSearching && <div className="w-4 h-4 rounded-full border-2 border-[#EEAF1C] border-t-transparent animate-spin flex-shrink-0" />}
-                                    <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200/50 dark:border-white/5 text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                                        <span>CMD</span>
-                                        <span className="opacity-40">/</span>
-                                        <span>K</span>
-                                    </div>
+                                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                                    />
+                                    {isSearching && <RefreshCw className="h-4 w-4 animate-spin text-[#EEAF1C]" />}
                                 </div>
-
-                                {/* Intelligent Search Dropdown */}
-                                {showSearchDropdown && (
-                                    <div className="absolute top-full mt-3 left-0 right-0 bg-white/95 dark:bg-[#070F14]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-                                        <div className="max-h-[32rem] overflow-y-auto p-3 space-y-3 custom-scrollbar">
-                                            {noResults && !isSearching && (
-                                                <div className="p-8 text-center space-y-2">
-                                                    <div className="w-12 h-12 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                        <Search className="w-5 h-5 text-slate-300" />
-                                                    </div>
-                                                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest">No results found for &quot;{searchQuery}&quot;</p>
-                                                </div>
-                                            )}
-                                            {sp.length > 0 && (
-                                                <div className="space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#EEAF1C]/30 decoration-2 underline-offset-4">Logistics: Products</p>
-                                                    {sp.map((p, i) => (
-                                                        <SearchItem key={i} href="/admin/products" icon={Package}
-                                                            iconBg="bg-blue-50" iconColor="text-blue-500"
-                                                            title={p.name} subtitle={`PKR ${p.price}`}
-                                                            onClick={closeDropdowns} />
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {so.length > 0 && (
-                                                <div className="space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#EEAF1C]/30 decoration-2 underline-offset-4">Operations: Orders</p>
-                                                    {so.map((o, i) => (
-                                                        <SearchItem key={i} href="/admin/sales" icon={ShoppingCart}
-                                                            iconBg="bg-blue-50" iconColor="text-blue-500"
-                                                            title={`Order #${o.order_number || o.id}`}
-                                                            subtitle={`PKR ${o.total_amount || o.total}`}
-                                                            onClick={closeDropdowns} />
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {su.length > 0 && (
-                                                <div className="space-y-1">
-                                                    <p className="text-[9px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.25em] px-3 mb-2 underline decoration-[#EEAF1C]/30 decoration-2 underline-offset-4">Security: Personnel</p>
-                                                    {su.map((u, i) => (
-                                                        <SearchItem key={i} href="/admin/users" icon={User}
-                                                            iconBg="bg-purple-50" iconColor="text-purple-500"
-                                                            title={u.first_name || u.full_name || u.username}
-                                                            subtitle={u.email}
-                                                            onClick={closeDropdowns} />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
-                            {/* Right Tactical Actions */}
-                            <div className="flex items-center gap-3 relative">
-                                <Link href="/"
-                                    className="hidden lg:flex items-center gap-2.5 text-[10px] font-black text-white bg-[#EEAF1C] px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-[0.1em] border border-white/10 active:scale-95">
-                                    Live Store Front <ExternalLink className="h-3.5 w-3.5" />
+                            {/* Actions */}
+                            <div className="flex items-center gap-3">
+                                <Link href="/" className="hidden lg:flex items-center gap-2 text-[10px] font-black text-white bg-[#EEAF1C] px-5 py-2.5 rounded-xl shadow-md hover:scale-105 transition-all uppercase tracking-widest">
+                                    Storefront <ExternalLink className="h-3.5 w-3.5" />
                                 </Link>
 
-                                <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1 hidden lg:block" />
+                                <div className="h-8 w-[1px] bg-[#F3F3F3] mx-2" />
 
-                                {/* Interactive Notification Center */}
+                                {/* Notifications */}
                                 <div className="relative" ref={notifRef}>
-                                    <button onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
-                                        className={`relative p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md
-                                            ${notifOpen
-                                                ? 'bg-[#EEAF1C] text-white border-[#EEAF1C] shadow-[0_0_20px_rgba(29,78,216,0.4)]'
-                                                : 'bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-[#EEAF1C]/30 hover:-translate-y-1'}`}>
-                                        <Bell className="h-5 w-5" strokeWidth={2.5} />
-                                        {unreadCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-black rounded-lg flex items-center justify-center border-2 border-white dark:border-[#070F14] shadow-xl animate-bounce">
-                                                {unreadCount}
-                                            </span>
-                                        )}
+                                    <button onClick={() => setNotifOpen(!notifOpen)}
+                                        className={`p-2.5 rounded-2xl transition-all border ${notifOpen ? 'bg-[#EEAF1C] text-white shadow-[0_0_15px_rgba(23EE,175,28,0.3)]' : 'bg-white dark:bg-white/5 hover:bg-[#F3F3F3] dark:hover:bg-white/10 text-[#565959] dark:text-zinc-400 border-[#DDDDDD] dark:border-white/5 shadow-sm'}`}>
+                                        <Bell className="h-5 w-5" />
+                                        {unreadCount > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
                                     </button>
-                                    {notifOpen && (
-                                        <NotificationPanel
-                                            activities={activities} loading={actLoading}
-                                            onClose={() => setNotifOpen(false)}
-                                            onMarkAllRead={handleMarkAllRead}
-                                            onMarkRead={handleMarkRead}
-                                            onRefresh={fetchActivity} />
-                                    )}
+                                    {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={() => { }} onMarkRead={() => { }} onRefresh={fetchActivity} />}
                                 </div>
-
                                 {/* Dynamic Theme Integration */}
                                 <button onClick={toggleTheme}
-                                    className="relative p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-[#EEAF1C] transition-all duration-500 hover:-translate-y-1 w-11 h-11 flex items-center justify-center group overflow-hidden">
+                                    className="relative p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-[#DDDDDD] dark:border-white/5 text-[#565959] dark:text-zinc-400 hover:text-[#EEAF1C] transition-all duration-500 hover:-translate-y-1 w-10 h-10 flex items-center justify-center group overflow-hidden shadow-sm">
                                     <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100'}`}>
-                                        <Moon className="h-5 w-5" />
+                                        <Moon className="h-5 w-5" strokeWidth={2.5} />
                                     </div>
                                     <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 -translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100 rotate-0'}`}>
-                                        <Sun className="h-5 w-5 text-[#EEAF1C]" />
+                                        <Sun className="h-5 w-5 text-[#EEAF1C]" strokeWidth={2.5} />
                                     </div>
-                                    <div className="absolute inset-0 bg-[#EEAF1C]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
 
-                                {/* Command Personnel Identity */}
-                                <div className="relative pl-1" ref={profileRef}>
-                                    <button onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
-                                        className={`flex items-center gap-3.5 px-3.5 py-2 rounded-2xl transition-all duration-500 border border-transparent group
-                                            ${profileOpen ? 'bg-[#EEAF1C]/5 border-[#EEAF1C]/20 ring-4 ring-[#EEAF1C]/5' : 'hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-white/10'}`}>
+                                <div className="h-8 w-[1px] bg-[#F3F3F3] mx-1" />
+
+                                {/* Profile */}
+                                <div className="relative" ref={profileRef}>
+                                    <button onClick={() => setProfileOpen(!profileOpen)}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-2xl transition-all border ${profileOpen ? 'bg-[#FFF8E7] dark:bg-[#EEAF1C]/10 border-[#EEAF1C]/30' : 'bg-[#F8F9FA] dark:bg-transparent border-transparent hover:bg-[#F3F3F3] dark:hover:bg-white/5'}`}>
                                         <div className="relative">
-                                            <div className="w-10 h-10 bg-[#EEAF1C] rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-white/10 overflow-hidden shadow-lg group-hover:rotate-6 transition-transform">
-                                                {adminAvatar ? (
-                                                    <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="text-[12px] font-black text-white">
-                                                        {adminName ? adminName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'A'}
-                                                    </span>
-                                                )}
+                                            <div className="w-9 h-9 bg-[#EEAF1C] rounded-2xl flex items-center justify-center overflow-hidden border-2 border-white dark:border-[#232F3E] shadow-sm">
+                                                {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-black text-white">{adminName[0]}</span>}
                                             </div>
-                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#070F14] rounded-full" />
+                                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#232F3E] rounded-full" />
                                         </div>
-                                        <div className="hidden xl:block text-left min-w-0">
-                                            <p className="text-slate-900 dark:text-white font-black text-[12px] leading-tight truncate max-w-[140px] uppercase tracking-wider">{adminName}</p>
+                                        <div className="hidden xl:block text-left">
+                                            <p className="text-[#111] dark:text-white font-black text-[12px] leading-tight uppercase truncate max-w-[120px]">{adminName}</p>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className="w-1 h-1 rounded-full bg-[#EEAF1C]" />
-                                                <p className="text-[9px] text-[#EEAF1C] font-black uppercase tracking-[0.2em] truncate max-w-[140px] opacity-80">{adminEmail || 'Admin Node'}</p>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#EEAF1C]" />
+                                                <p className="text-[9px] text-[#565959] dark:text-zinc-400 font-bold uppercase tracking-widest">{adminRole}</p>
                                             </div>
                                         </div>
                                     </button>
-
-                                    {profileOpen && (
-                                        <ProfileDropdown
-                                            user={{ name: adminName, email: adminEmail, role: adminRole, id: adminId, avatar: adminAvatar || undefined }}
-                                            onClose={() => setProfileOpen(false)}
-                                            onLogout={handleLogout}
-                                            onUpdated={handleProfileUpdated} />
-                                    )}
+                                    {profileOpen && <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Page Content */}
-                        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0 print:h-auto transition-colors duration-500 relative" onClick={closeDropdowns}>
+                        <main className="flex-1 overflow-y-auto p-4 lg:p-10 relative bg-[#F8F9FA] dark:bg-[#232F3E]">
                             {isNavigating && <PageLoader />}
                             {children}
                         </main>
@@ -549,4 +283,3 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </AuthGuard>
     );
 }
-

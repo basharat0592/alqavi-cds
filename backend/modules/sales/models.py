@@ -153,6 +153,10 @@ class PurchaseOrder(BaseModel, TimestampMixin):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('ordered', 'Ordered'),
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
         ('received', 'Received'),
         ('partially_received', 'Partially Received'),
         ('cancelled', 'Cancelled'),
@@ -164,6 +168,15 @@ class PurchaseOrder(BaseModel, TimestampMixin):
     ]
 
     purchase_number = models.CharField(max_length=100, unique=True, db_index=True)
+    tracking_id = models.CharField(max_length=100, unique=True, null=True, blank=True, db_index=True)
+    supplier = models.ForeignKey(
+        'company.Supplier', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='purchase_orders',
+        verbose_name='Assigned Supplier Profile'
+    )
     supplier_name = models.CharField(max_length=255, blank=True)
     supplier_phone = models.CharField(max_length=50, blank=True)
     order_date = models.DateField()
@@ -171,7 +184,7 @@ class PurchaseOrder(BaseModel, TimestampMixin):
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     shipping_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='draft', db_index=True)
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='ordered', db_index=True)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
@@ -181,18 +194,35 @@ class PurchaseOrder(BaseModel, TimestampMixin):
     class Meta:
         ordering = ['-created_at']
 
+    def save(self, *args, **kwargs):
+        if not self.tracking_id and self.status != 'draft':
+            import uuid
+            # Generate a unique tracking ID: TRK + 8 random chars
+            self.tracking_id = f"TRK-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.purchase_number
 
 
 class PurchaseOrderItem(BaseModel):
     """Line item inside a purchase order."""
+    PACKAGING_CHOICES = [
+        ('piece', 'Piece'),
+        ('pack', 'Pack'),
+        ('carton', 'Carton'),
+    ]
+
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
     received_quantity = models.PositiveIntegerField(default=0)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # New distributive logistics fields
+    packaging_type = models.CharField(max_length=20, choices=PACKAGING_CHOICES, default='piece')
+    pieces_per_unit = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return f"{self.purchase_order.purchase_number} - {self.product.name}"

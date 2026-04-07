@@ -121,7 +121,7 @@ class PurchaseOrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PurchaseOrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'received_quantity', 'unit_price', 'subtotal']
+        fields = ['id', 'product', 'product_name', 'quantity', 'received_quantity', 'unit_price', 'subtotal', 'packaging_type', 'pieces_per_unit']
 
 
 class PurchaseOrderListSerializer(serializers.ModelSerializer):
@@ -130,7 +130,7 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseOrder
         fields = [
-            'id', 'purchase_number', 'supplier_name', 'order_date', 
+            'id', 'purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'order_date', 
             'total_amount', 'status', 'payment_status', 'created_at',
             'purchased_items'
         ]
@@ -149,7 +149,7 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseOrder
         fields = [
-            'id', 'purchase_number', 'supplier_name', 'supplier_phone', 'order_date',
+            'id', 'purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'supplier_phone', 'order_date',
             'expected_delivery_date', 'total_amount', 'tax_amount', 'shipping_cost',
             'status', 'payment_status', 'notes', 'items', 'created_at'
         ]

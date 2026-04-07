@@ -78,6 +78,9 @@ export const userService = {
     changePassword: async (id: number, payload: any): Promise<void> => {
         await api.post(`/v1/users/${id}/change-password/`, payload);
     },
+    adminResetPassword: async (id: number, newPassword: string): Promise<void> => {
+        await api.post(`/v1/users/${id}/admin-reset-password/`, { new_password: newPassword });
+    },
     getActivityLogs: async (id: number, limit = 50): Promise<ActivityLog[]> => {
         const { data } = await api.get(`/v1/users/${id}/activity-logs/`, { params: { limit } });
         return data.results ?? data;

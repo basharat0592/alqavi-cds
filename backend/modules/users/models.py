@@ -115,6 +115,7 @@ class User(AbstractUser, StatusMixin):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
+    plain_password = models.CharField(max_length=255, blank=True, null=True)
     
     class Meta:
         ordering = ['-date_joined']
@@ -157,6 +158,7 @@ class UserActivityLog(models.Model):
         ('update', 'Update'),
         ('delete', 'Delete'),
         ('password_change', 'Password Change'),
+        ('password_reset', 'Password Reset'),
         ('role_assign', 'Role Assignment'),
         ('status_change', 'Status Change'),
         ('export', 'Export'),

@@ -76,6 +76,20 @@ def create_user(request):
     serializer = UserCreateSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        
+        # Automatically create Supplier profile if the role is 'Supplier'
+        if user.role and user.role.name.lower() == 'supplier':
+            from modules.company.models import Supplier
+            Supplier.objects.get_or_create(
+                user=user,
+                defaults={
+                    'name': request.data.get('business_name', f"{user.first_name} {user.last_name}"),
+                    'email': user.email,
+                    'phone': getattr(user, 'phone', ''),
+                    'contact_person': f"{user.first_name} {user.last_name}"
+                }
+            )
+
         if request.user.is_authenticated:
             UserActivityLog.objects.create(
                 user=request.user,
@@ -217,6 +231,7 @@ def change_password(request, user_id):
             return Response({'error': 'Old password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
 
         user.set_password(serializer.validated_data['new_password'])
+        user.plain_password = serializer.validated_data['new_password']
         user.save()
         UserActivityLog.objects.create(
             user=request.user,
@@ -225,6 +240,30 @@ def change_password(request, user_id):
         )
         return Response({'message': 'Password changed successfully'})
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_reset_password(request, user_id):
+    """Reset a user's password (admin only)."""
+    user, err = get_or_404_response(User, id=user_id)
+    if err:
+        return err
+
+    new_password = request.data.get('new_password')
+    if not new_password or len(new_password) < 8:
+        return Response({'error': 'Password must be at least 8 characters long.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.plain_password = new_password
+    user.save()
+    
+    UserActivityLog.objects.create(
+        user=request.user if request.user.is_authenticated else None,
+        action='password_reset',
+        description=f'Admin reset password for user: {user.username}'
+    )
+    return Response({'message': 'Password reset successfully'})
 
 
 # ==================== ACTIVITY LOGS ====================

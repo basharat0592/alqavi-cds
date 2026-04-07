@@ -24,10 +24,10 @@ export default function ProfileDropdown({
     ];
 
     return (
-        <div className="absolute top-full right-0 mt-2.5 w-[280px] bg-white/95 dark:bg-[#0D1921]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-full right-0 mt-2.5 w-[280px] bg-white/95 dark:bg-[#232F3E]/95 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 duration-300">
 
             {/* Compact Branded Header */}
-            <div className="bg-gradient-to-br from-[#0D1921] via-[#232F3E] to-[#EEAF1C] px-4 pt-6 pb-5 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#1a252f] via-[#232F3E] to-[#EEAF1C] px-4 pt-6 pb-5 relative overflow-hidden">
                 {/* Decorative element */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl" />
                 

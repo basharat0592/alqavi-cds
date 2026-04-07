@@ -8,3 +8,4 @@ django-cors-headers
 drf-spectacular
 djangorestframework-simplejwt
 Pillow
+django-filter<24

@@ -11,7 +11,7 @@ import { orderService, productService, userService } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm ${className}`}>
         {children}
     </div>
 );
@@ -19,7 +19,7 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
 const ExportOption = ({ title, desc, icon: Icon, onClick, loading }: { 
     title: string; desc: string; icon: any; onClick: () => void; loading?: boolean 
 }) => (
-    <div className="p-8 flex flex-col justify-between h-full bg-white dark:bg-[#0D1921] rounded-xl border border-slate-100 dark:border-white/5 hover:border-[#EEAF1C] transition-all hover:shadow-lg">
+    <div className="p-8 flex flex-col justify-between h-full bg-white dark:bg-[#1a252f] rounded-xl border border-slate-100 dark:border-white/5 hover:border-[#EEAF1C] transition-all hover:shadow-lg">
         <div>
             <div className={`w-12 h-12 rounded-xl bg-blue-50 dark:bg-[#EEAF1C]/10 flex items-center justify-center mb-6`}>
                 <Icon className={`h-6 w-6 text-[#EEAF1C]`} />

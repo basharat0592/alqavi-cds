@@ -35,6 +35,7 @@ urlpatterns = [
     
     # Password Management
     path('<int:user_id>/change-password/', views.change_password, name='user-change-password'),
+    path('<int:user_id>/admin-reset-password/', views.admin_reset_password, name='user-admin-password-reset'),
     
     # Activity Logs
     path('<int:user_id>/activity-logs/', views.user_activity_log, name='user-activity-logs'),

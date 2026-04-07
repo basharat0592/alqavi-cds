@@ -69,22 +69,22 @@ export default function CustomerReportsPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Total Customer Base</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">{customers.length}</p>
                     <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-emerald-500"><TrendingUp className="h-3 w-3" /> +12% this month</div>
                 </div>
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Average LTV</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(orders.length ? (orders.reduce((s, o) => s + Number(o.total_amount), 0) / customers.length) : 0)}</p>
                     <p className="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lifetime Value Per Client</p>
                 </div>
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Acquisition Speed</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">4.2</p>
                     <p className="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Clients per day average</p>
                 </div>
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Retention Rate</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">92.4%</p>
                     <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-blue-500"><CheckCircle className="h-3 w-3" /> System Health Optimal</div>
@@ -92,7 +92,7 @@ export default function CustomerReportsPage() {
             </div>
 
             {/* Top Buyers Matrix */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden mb-12">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden mb-12">
                 <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 flex items-center justify-between">
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">VIP High-Net-Worth Individuals</h3>

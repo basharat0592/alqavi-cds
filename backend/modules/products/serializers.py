@@ -72,8 +72,8 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'description', 'category', 'category_name',
-            'company', 'company_name',
-            'company_category', 'company_category_name', 'supplier', 'supplier_name',
+            'company', 'company_name', 'supplier', 'supplier_name',
+            'company_category', 'company_category_name',
             'sku', 'barcode', 'price', 'cost', 'retail_price', 'quantity_in_stock', 
             'image', 'image_url', 'gallery',
             'status', 'is_in_stock', 'batches', 'main_category_names', 'main_category_slugs', 'main_categories',
@@ -81,8 +81,7 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-    def get_supplier_name(self, obj):
-        return obj.supplier.name if obj.supplier else None
+
     
     def get_main_category_names(self, obj):
         return [c.name for c in obj.main_categories.all()]
@@ -101,6 +100,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_is_in_stock(self, obj):
         return obj.is_in_stock()
+
+    def get_supplier_name(self, obj):
+        return obj.supplier.name if obj.supplier else None
 
     def get_batches(self, obj):
         from modules.inventory.serializers import BatchSerializer
@@ -156,8 +158,8 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'name', 'description', 'category', 'company', 'company_category', 'supplier', 'sku',
-            'price', 'cost', 'retail_price', 'image', 'status', 'barcode',
+            'name', 'description', 'category', 'company', 'supplier', 'company_category', 'sku',
+            'price', 'cost', 'retail_price', 'quantity_in_stock', 'image', 'status', 'barcode',
             'batch_number', 'upload_images', 'main_categories'
         ]
 
@@ -186,9 +188,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'FILES'):
             upload_images = request.FILES.getlist('upload_images')
         
-        if request and hasattr(request, 'user') and hasattr(request.user, 'supplier_profile'):
-            if request.user.supplier_profile:
-                validated_data['supplier'] = request.user.supplier_profile
+
         
         product = super().create(validated_data)
         
@@ -283,12 +283,18 @@ class MainCategorySerializer(serializers.ModelSerializer):
                 getattr(request.user, 'role', None) and request.user.role.name in ['Admin', 'admin']
             )
             if not is_privileged:
-                if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
-                    products = products.filter(supplier=request.user.supplier_profile)
-                else:
-                    products = products.filter(status='active')
+                products = products.filter(status='active')
         
-        return ProductSerializer(products, many=True, context=self.context).data
+        try:
+            return ProductSerializer(products, many=True, context=self.context).data
+        except Exception as e:
+            import traceback
+            print(f"ERROR: MainCategorySerializer failure for {obj.name}: {str(e)}")
+            print(traceback.format_exc())
+            return [{
+                "serialization_error": str(e),
+                "traceback": traceback.format_exc()
+            }]
 
     def validate(self, data):
         if not data.get('slug') and data.get('name'):

@@ -12,14 +12,14 @@ import toast from 'react-hot-toast';
 
 // -- Shared Utilities --------------------------------
 const INPUT = (err?: boolean) =>
-    `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-lg text-sm outline-none transition-all
+    `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-lg text-sm outline-none transition-all
     focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 placeholder:text-gray-400
     ${err ? 'border-red-500' : 'border-slate-200 dark:border-white/10'}`;
 
 const LABEL = 'block text-[10px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest';
 
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );

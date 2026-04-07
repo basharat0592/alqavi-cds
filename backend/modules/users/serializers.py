@@ -54,7 +54,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 'phone', 
             'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
             'status', 'status_display', 'is_active', 'permissions', 
-            'date_joined', 'last_login', 'last_login_ip', 'last_login_at'
+            'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at']
     
@@ -74,7 +74,7 @@ class UserListSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'full_name', 'phone', 'avatar', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'date_joined', 'last_login'
+            'status', 'status_display', 'is_active', 'date_joined', 'last_login', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login']
 
@@ -98,9 +98,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        """Create user with hashed password."""
+        """Create user with hashed password and store plain version."""
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
+        user.plain_password = password
+        user.save()
         return user
 
 

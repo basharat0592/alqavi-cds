@@ -20,16 +20,16 @@ const StatusPill = ({ expiryDate }: { expiryDate: string }) => {
     const now = new Date();
     const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    let bg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    let bg = 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
     let text = 'Active';
     let Icon = CheckCircle2;
 
     if (diffDays < 0) {
-        bg = 'bg-red-50 text-red-600 border-red-200';
+        bg = 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20';
         text = 'Expired';
         Icon = AlertTriangle;
     } else if (diffDays <= 30) {
-        bg = 'bg-amber-50 text-amber-700 border-amber-200';
+        bg = 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
         text = 'Expiring Soon';
         Icon = Clock;
     }
@@ -115,13 +115,13 @@ export default function BatchTrackingPage() {
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         placeholder="Search batch ID or product..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="all">Every Validity Status</option>
                     <option value="active">Active Batches</option>
@@ -136,7 +136,7 @@ export default function BatchTrackingPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>

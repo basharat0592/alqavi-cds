@@ -143,6 +143,7 @@ export interface AppUser {
     date_joined?: string;
     last_login?: string;
     permissions?: string[];
+    plain_password?: string;
 }
 
 export interface ActivityLog {
@@ -244,6 +245,9 @@ export interface AuthUser {
 export interface RevenueDataPoint {
     date: string;
     revenue: number;
+    sales: number;
+    purchases: number;
+    net: number;
     orders: number;
 }
 

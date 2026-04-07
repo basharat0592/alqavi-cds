@@ -10,8 +10,8 @@ import {
 import { inventoryService, productService } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 export default function AddBatchPage() {
@@ -97,7 +97,7 @@ export default function AddBatchPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                     <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
                         <Layers className="h-4 w-4 text-[#EEAF1C]" />
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">Lot Manifest</h2>
@@ -160,7 +160,7 @@ export default function AddBatchPage() {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                     <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
                         <Calendar className="h-4 w-4 text-[#EEAF1C]" />
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">Lifecycle Parameters</h2>

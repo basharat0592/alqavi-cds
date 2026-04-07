@@ -11,9 +11,9 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 const statusStyle: Record<string, string> = {
-    pending:   'bg-amber-50 text-amber-700 border-amber-200',
-    completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    cancelled: 'bg-red-50 text-red-600 border-red-200',
+    pending: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+    completed: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    cancelled: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
 };
 const StatusPill = ({ status }: { status: string }) => {
     const s = (status || '').toLowerCase();
@@ -183,7 +183,7 @@ export default function PurchaseReturnsPage() {
 
             {/* ── Inline Form ── */}
             {showForm && (
-                <div className="mb-6 bg-white dark:bg-[#0D1921] border border-[#EEAF1C]/30 rounded-xl shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                <div className="mb-6 bg-white dark:bg-[#1a252f] border border-[#EEAF1C]/30 rounded-xl shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">
                             {editing ? 'Edit Return' : 'New Purchase Return'}
@@ -201,7 +201,7 @@ export default function PurchaseReturnsPage() {
                                     value={form.return_number}
                                     onChange={(e) => setForm(f => ({ ...f, return_number: e.target.value }))}
                                     disabled={!!editing}
-                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 disabled:opacity-60 disabled:cursor-not-allowed ${errors.return_number ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
+                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 disabled:opacity-60 disabled:cursor-not-allowed ${errors.return_number ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
                                 />
                                 {errors.return_number && <p className="text-red-500 text-xs mt-1">{errors.return_number}</p>}
                             </div>
@@ -211,7 +211,7 @@ export default function PurchaseReturnsPage() {
                                     value={form.supplier_name}
                                     onChange={(e) => setForm(f => ({ ...f, supplier_name: e.target.value }))}
                                     placeholder="Enter supplier name"
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                                 />
                             </div>
                             <div>
@@ -220,7 +220,7 @@ export default function PurchaseReturnsPage() {
                                     type="date"
                                     value={form.return_date}
                                     onChange={(e) => setForm(f => ({ ...f, return_date: e.target.value }))}
-                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all ${errors.return_date ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
+                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all ${errors.return_date ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
                                 />
                             </div>
                             <div>
@@ -228,7 +228,7 @@ export default function PurchaseReturnsPage() {
                                 <select
                                     value={form.purchase_order}
                                     onChange={e => setForm(f => ({ ...f, purchase_order: e.target.value }))}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="">None (standalone return)</option>
                                     {purchases.map(p => <option key={p.id} value={p.id}>{p.purchase_number}</option>)}
@@ -239,7 +239,7 @@ export default function PurchaseReturnsPage() {
                                 <select
                                     value={form.status}
                                     onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="pending">Pending</option>
                                     <option value="completed">Completed</option>
@@ -255,7 +255,7 @@ export default function PurchaseReturnsPage() {
                                 onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                                 placeholder="Describe the reason for this return..."
                                 rows={2}
-                                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 resize-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
+                                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 resize-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                             />
                         </div>
 
@@ -279,7 +279,7 @@ export default function PurchaseReturnsPage() {
                                                 <select
                                                     value={item.product}
                                                     onChange={e => updateItem(i, 'product', e.target.value)}
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
+                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
                                                 >
                                                     <option value="">Select product</option>
                                                     {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -291,7 +291,7 @@ export default function PurchaseReturnsPage() {
                                                     value={item.quantity}
                                                     onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
                                                     placeholder="Qty"
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200"
+                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200"
                                                 />
                                             </div>
                                             <div className="col-span-3">
@@ -300,7 +300,7 @@ export default function PurchaseReturnsPage() {
                                                     value={item.refund_price}
                                                     onChange={(e) => updateItem(i, 'refund_price', parseFloat(e.target.value) || 0)}
                                                     placeholder="Refund price"
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200"
+                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200"
                                                 />
                                             </div>
                                             <div className="col-span-1 flex justify-center">
@@ -341,7 +341,7 @@ export default function PurchaseReturnsPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by return number or supplier..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -352,7 +352,7 @@ export default function PurchaseReturnsPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -442,7 +442,7 @@ export default function PurchaseReturnsPage() {
             {/* ── View Modal ── */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Return #{viewRow.return_number}</h3>
@@ -494,7 +494,7 @@ export default function PurchaseReturnsPage() {
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/10">
                             <div className="w-9 h-9 bg-red-100 dark:bg-red-500/10 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
                                 <AlertTriangle className="h-4 w-4 text-red-600" />

@@ -37,7 +37,7 @@ const METHOD_ICONS: Record<string, any> = {
    COMPONENTS
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -154,7 +154,7 @@ export default function PaymentsPage() {
                     </div>
 
                     {/* Filter Bar */}
-                    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row items-center gap-4">
+                    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row items-center gap-4">
                         <div className="relative flex-1 group w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                             <input

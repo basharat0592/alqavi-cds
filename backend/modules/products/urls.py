@@ -16,6 +16,7 @@ urlpatterns = [
     
     # Main Categories
     path('main-categories/', views.list_main_categories, name='main-category-list'),
+    path('main-categories/<str:m_category_id>/', views.main_category_detail, name='main-category-detail'),
     # Wishlist Management
     path('wishlist/', views.list_wishlist, name='wishlist-list'),
     path('wishlist/add/', views.add_to_wishlist, name='wishlist-add'),

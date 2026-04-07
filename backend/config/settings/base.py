@@ -142,4 +142,4 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-# Authors: Antigravity
+# Authors: Antigravity  

@@ -85,22 +85,22 @@ export default function PurchaseReportsPage() {
 
             {/* Strategic Sensors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Cumulative Capital Outlay</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(stats.totalExpenditure)}</p>
                     <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-emerald-500"><TrendingUp className="h-3 w-3" /> Procurement Velocity Nominal</div>
                 </div>
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Supplier Reliability Index</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">96.8%</p>
                     <p className="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Calculated by fulfillment time</p>
                 </div>
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Pending Acquisitions</p>
                     <p className="text-3xl font-black text-slate-900 dark:text-white">{purchases.filter(p => (p.status || '').toLowerCase() === 'ordered').length}</p>
                     <p className="mt-3 text-[10px] font-bold text-[#EEAF1C] uppercase tracking-widest">Active Procurement Chains</p>
                 </div>
-                <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm border-l-4 border-l-amber-500">
+                <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm border-l-4 border-l-amber-500">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Unsettled Balances</p>
                     <p className="text-3xl font-black text-amber-600">{formatCurrency(purchases.filter(p => (p.payment_status || '').toLowerCase() !== 'paid').reduce((s, p) => s + Number(p.total_amount), 0))}</p>
                     <p className="mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Accounts Payable</p>
@@ -109,7 +109,7 @@ export default function PurchaseReportsPage() {
 
             {/* Expenditure Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-                <div className="lg:col-span-8 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm overflow-hidden">
+                <div className="lg:col-span-8 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 flex items-center justify-between">
                          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Financial Outflow Matrix</h3>
                          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">Capital tracking</span>
@@ -128,7 +128,7 @@ export default function PurchaseReportsPage() {
                 </div>
 
                 <div className="lg:col-span-4 space-y-8">
-                     <div className="p-6 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm">
+                     <div className="p-6 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm">
                          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-50 dark:border-white/5">
                              <Building2 className="h-5 w-5 text-[#EEAF1C]" />
                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Alpha Suppliers</h4>
@@ -152,7 +152,7 @@ export default function PurchaseReportsPage() {
             </div>
 
             {/* Procurement Ledger */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm overflow-hidden">
                  <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Consignment Audit History</h3>
                     <button className="text-[10px] font-black text-[#EEAF1C] uppercase tracking-widest hover:underline flex items-center gap-1">Global Procurement Log <ChevronRight className="h-3 w-3" /></button>

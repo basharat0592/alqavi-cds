@@ -1,148 +1,143 @@
 'use client';
 
-import { useState } from 'react';
-import {
-    Boxes,
-    Search,
-    ChevronRight,
-    PackageCheck,
-    AlertTriangle,
-    History,
-    Download,
-    Eye,
-    ExternalLink
-} from 'lucide-react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
+import { Boxes, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function SupplierInventory() {
     const [filter, setFilter] = useState('all');
+    const [inventory, setInventory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const MOCK_INVENTORY = [
-        { id: 101, product: "Glow Radiance Serum", batch: "BATCH-A12", stock: 1240, status: "In Stock", location: "Sector 4-B", last_update: "2024-03-28" },
-        { id: 102, product: "Matte Finish Foundation", batch: "BATCH-B09", stock: 856, status: "In Stock", location: "Sector 1-A", last_update: "2024-03-27" },
-        { id: 103, product: "Midnight Recovery Oil", batch: "BATCH-C44", stock: 42, status: "Low Stock", location: "Sector 2-C", last_update: "2024-03-28" },
-        { id: 104, product: "Velvet Lip Tint", batch: "BATCH-D21", stock: 0, status: "Stock Out", location: "Sector 5-G", last_update: "2024-03-25" }
-    ];
+    const fetchInventory = useCallback(async () => {
+        try {
+            const { data } = await api.get('/v1/inventory/', { params: { all_items: 'true' } });
+            setInventory(Array.isArray(data) ? data : data.results || []);
+        } catch {
+            setInventory([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { fetchInventory(); }, [fetchInventory]);
+
+    const filtered = inventory.filter(item => {
+        const qty = parseFloat(item.quantity_available || 0);
+        const reorder = parseFloat(item.reorder_level || 0);
+        if (filter === 'all') return true;
+        if (filter === 'in stock') return qty > reorder;
+        if (filter === 'low stock') return qty > 0 && qty <= reorder;
+        if (filter === 'stock out') return qty <= 0;
+        return true;
+    });
+
+    const TABS = ['all', 'in stock', 'low stock', 'stock out'];
+
+    const getStatus = (item: any) => {
+        const qty = parseFloat(item.quantity_available || 0);
+        const reorder = parseFloat(item.reorder_level || 0);
+        if (qty <= 0) return { label: 'STOCK OUT', color: 'text-red-600' };
+        if (qty <= reorder) return { label: 'LOW STOCK', color: 'text-amber-600' };
+        return { label: 'IN STOCK', color: 'text-emerald-600' };
+    };
 
     return (
         <div className="max-w-[900px] mx-auto animate-in fade-in duration-500 pb-20">
 
-            {/* Title Area - Same to same */}
+            {/* Header */}
             <div className="mb-6">
-                <h1 className="text-3xl font-medium text-slate-900 mb-6">Warehouse Status</h1>
+                <h1 className="text-3xl font-medium text-slate-900 mb-5">Warehouse Status</h1>
 
-                {/* Filter Tabs - Same to same */}
+                {/* Filter Tabs */}
                 <div className="flex gap-8 border-b border-gray-200">
-                    {['all', 'in stock', 'low stock', 'stock out'].map(t => (
-                        <button
-                            key={t}
-                            onClick={() => setFilter(t)}
-                            className={`
-                                pb-3 text-sm font-bold capitalize transition-all border-b-2
-                                ${filter === t
-                                    ? 'border-[#F7CA00] text-slate-900'
-                                    : 'border-transparent text-slate-500 hover:text-slate-900'
-                                }
-                            `}
-                        >
+                    {TABS.map(t => (
+                        <button key={t} onClick={() => setFilter(t)}
+                            className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 ${filter === t ? 'border-[#F7CA00] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
                             {t === 'all' ? 'Inventory Registry' : t}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Statistics Row - Same to same */}
-            <p className="text-sm text-slate-600 mb-6 font-medium">
-                <span className="font-bold">{MOCK_INVENTORY.length} items</span> currently tracked in
-                <span className="text-[#007185] hover:underline cursor-pointer ml-1 font-bold">Sector 4-B Distribution</span>
-            </p>
+            {/* Count */}
+            {!loading && (
+                <p className="text-sm text-slate-600 mb-5 font-medium">
+                    <span className="font-bold">{filtered.length} items</span> in your warehouse
+                </p>
+            )}
 
-            {/* Inventory Cards - SAME TO SAME as Orders */}
-            <div className="space-y-6">
-                {MOCK_INVENTORY.map(item => (
-                    <div key={item.id} className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            {/* Content */}
+            {loading ? (
+                <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="text-sm font-medium">Loading inventory...</span>
+                </div>
+            ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 border border-gray-200 bg-white rounded-lg">
+                    <Boxes className="h-12 w-12 text-gray-200" />
+                    <p className="text-sm font-bold text-slate-500">No inventory records found</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {filtered.map((item: any) => {
+                        const s = getStatus(item);
+                        const qty = parseFloat(item.quantity_available || 0);
+                        return (
+                            <div key={item.id} className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
 
-                        {/* Card Header (metadata) - Identical to Orders */}
-                        <div className="bg-[#f0f2f2] border-b border-gray-300 px-6 py-4 flex flex-wrap items-center justify-between gap-6 text-[11px] font-medium text-slate-600 uppercase tracking-wider">
-                            <div className="flex gap-10">
-                                <div className="flex flex-col gap-1">
-                                    <span>Division Batch</span>
-                                    <div className="hidden lg:block w-px h-12 bg-slate-200 dark:bg-white/10 mx-2" />
-                                    <span className="text-sm font-bold text-slate-800 tracking-tight">
-                                        {item.batch}
-                                    </span>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <span>Quantity</span>
-                                    <span className={`text-sm font-bold tracking-tight ${item.stock > 100 ? 'text-slate-800' : 'text-rose-600'}`}>
-                                        {item.stock.toLocaleString()} Units
-                                    </span>
-                                </div>
-                                <div className="hidden sm:flex flex-col gap-1">
-                                    <span>Shelf Location</span>
-                                    <span className="text-sm font-bold text-[#007185] hover:text-red-700 hover:underline cursor-pointer tracking-tight uppercase">{item.location}</span>
-                                </div>
-                            </div>
-                            <div className="text-right flex flex-col gap-1">
-                                <span>Entry ID # {item.id}</span>
-                                <div className="flex items-center gap-3 justify-end text-[#007185]">
-                                    <Link href="#" className="hover:text-red-700 hover:underline">View Batch History</Link>
-                                    <div className="w-[1px] h-3 bg-gray-300" />
-                                    <Link href="#" className="hover:text-red-700 hover:underline">Download Report</Link>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card Content - Identical to Orders */}
-                        <div className="p-6 flex flex-col md:flex-row md:items-start justify-between gap-8">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <h3 className={`text-lg font-black tracking-tight ${item.status === 'In Stock' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {item.status.toUpperCase()}
-                                    </h3>
-                                    <p className="text-sm text-slate-500 font-medium">
-                                        Last count on {new Date(item.last_update).toLocaleDateString()}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-start gap-4 p-1">
-                                    <div className="w-20 h-20 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                                        <Boxes className="h-8 w-8 text-gray-300" />
+                                {/* Card Header */}
+                                <div className="bg-[#f0f2f2] border-b border-gray-300 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 text-[11px] font-medium text-slate-600 uppercase tracking-wider">
+                                    <div className="flex gap-8">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span>Batch</span>
+                                            <span className="text-sm font-bold text-slate-800">{item.batch_number || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex flex-col gap-0.5">
+                                            <span>Quantity</span>
+                                            <span className={`text-sm font-bold ${qty > 10 ? 'text-slate-800' : 'text-red-600'}`}>
+                                                {qty.toLocaleString()} units
+                                            </span>
+                                        </div>
+                                        <div className="hidden sm:flex flex-col gap-0.5">
+                                            <span>Warehouse</span>
+                                            <span className="text-sm font-bold text-[#007185]">{item.warehouse_name || item.warehouse || '—'}</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-[#007185] hover:text-[#F7CA00] hover:underline cursor-pointer leading-snug">
-                                            {item.product} - Global Distribution Stock Module
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-2 font-medium">Standard Warehouse Storage Protocol active.</p>
-                                        <button className="mt-4 px-4 py-1.5 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#F0C14B] rounded-lg text-xs font-bold shadow-sm shadow-[#F7CA00]/10 flex items-center gap-2 transition-all">
-                                            <PackageCheck className="h-4 w-4" />
-                                            Manual Audit
-                                        </button>
+                                    <div className="text-right">
+                                        <span>Entry # {item.id}</span>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Right Side Actions - Identical to Orders */}
-                            <div className="flex flex-col gap-2 w-full md:w-56">
-                                <button className="w-full text-center py-1.5 bg-[#F7CA00] text-slate-900 hover:bg-[#e6be00] rounded-lg text-xs font-bold shadow-sm transition-all border border-[#F0C14B]">
-                                    Log stock movement
-                                </button>
-                                <button className="w-full text-center py-1.5 border border-gray-300 hover:bg-gray-50 rounded-lg text-xs font-bold shadow-sm transition-all">
-                                    Generate QR Labels
-                                </button>
-                                <button className="w-full text-center py-1.5 border border-gray-300 hover:bg-gray-50 rounded-lg text-xs font-bold shadow-sm transition-all">
-                                    Archive batch
-                                </button>
-                                <button className="w-full text-center py-1.5 border border-gray-300 hover:bg-gray-50 rounded-lg text-xs font-bold shadow-sm transition-all">
-                                    Request re-stock
-                                </button>
+                                {/* Card Body */}
+                                <div className="p-5 flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded flex items-center justify-center shrink-0">
+                                        <Boxes className="h-6 w-6 text-gray-300" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className={`text-[11px] font-black uppercase tracking-widest mb-0.5 ${s.color}`}>{s.label}</p>
+                                        <p className="text-sm font-bold text-[#007185]">{item.product_name || item.product}</p>
+                                        {item.expiry_date && (
+                                            <p className="text-xs text-slate-400 mt-0.5">Expires: {new Date(item.expiry_date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                        )}
+                                    </div>
+                                    {qty <= (parseFloat(item.reorder_level || 0)) && qty > 0 && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded text-amber-700 text-xs font-bold">
+                                            <AlertTriangle className="h-3.5 w-3.5" /> Low Stock Alert
+                                        </div>
+                                    )}
+                                    {qty <= 0 && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded text-red-600 text-xs font-bold">
+                                            <AlertTriangle className="h-3.5 w-3.5" /> Out of Stock
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
-            {/* Bottom Footer - Same to same */}
             <div className="mt-12 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">End of Registry</p>
             </div>

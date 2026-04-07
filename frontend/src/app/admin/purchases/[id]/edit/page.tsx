@@ -265,7 +265,11 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                             <select value={item.product} onChange={e => updateItem(i, 'product', e.target.value)} className={SELECT}>
                                                 <option value="">Locate Asset Base...</option>
                                                 {products
-                                                    .filter(p => !form.supplier_name || p.company_name === form.supplier_name)
+                                                    .filter(p => {
+                                                        if (!form.supplier_name) return true;
+                                                        const pSupplierName = p.supplier_name || p.company_name || '';
+                                                        return String(pSupplierName).toLowerCase() === String(form.supplier_name).toLowerCase();
+                                                    })
                                                     .map(p => <option key={p.id} value={p.id}>{p.name}</option>)
                                                 }
                                             </select>

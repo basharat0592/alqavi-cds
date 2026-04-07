@@ -6,9 +6,17 @@ import Link from 'next/link';
 import { userService, roleService, AppRole, AppUser } from '@/lib/api';
 import {
     ArrowLeft, User, Mail, Phone, KeyRound,
-    Shield, Building2, CheckCircle, XCircle, Save, Loader2, Zap, Calendar, History
+    Shield, Building2, CheckCircle, XCircle, Save, Loader2, Zap, Calendar, History,
+    Eye, EyeOff, Lock
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
+
+const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
+    <div className="flex items-center gap-2 mb-4">
+        <Icon className="h-4 w-4 text-[#1D4ED8]" />
+        <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
+    </div>
+);
 
 export default function EditUserPage() {
     const router = useRouter();
@@ -29,6 +37,14 @@ export default function EditUserPage() {
         business_name: '',
         is_active: true,
     });
+    
+    const [passwordData, setPasswordData] = useState({
+        new_password: '',
+        confirm_password: '',
+    });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [updatingPassword, setUpdatingPassword] = useState(false);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -93,6 +109,28 @@ export default function EditUserPage() {
             showToast(msg, 'error');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handlePasswordReset = async () => {
+        if (!passwordData.new_password || passwordData.new_password.length < 8) {
+            showToast('Password must be at least 8 characters.', 'error');
+            return;
+        }
+        if (passwordData.new_password !== passwordData.confirm_password) {
+            showToast('Passwords do not match.', 'error');
+            return;
+        }
+
+        setUpdatingPassword(true);
+        try {
+            await userService.adminResetPassword(Number(userId), passwordData.new_password);
+            showToast('Password updated successfully!', 'success');
+            setPasswordData({ new_password: '', confirm_password: '' });
+        } catch (err: any) {
+            showToast(err?.response?.data?.detail || 'Failed to update password.', 'error');
+        } finally {
+            setUpdatingPassword(false);
         }
     };
 
@@ -200,12 +238,70 @@ export default function EditUserPage() {
                         </div>
                     )}
 
+                    {/* Security & Access Group */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+                        <SectionHeader title="Account Security" icon={Shield} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-slate-200 dark:border-white/10">
+                            <div>
+                                <label className={labelCls}>Update Master Password</label>
+                                <div className="relative">
+                                    <input 
+                                        type={showPassword ? "text" : "password"}
+                                        value={passwordData.new_password}
+                                        onChange={e => setPasswordData(p => ({ ...p, new_password: e.target.value }))}
+                                        className={inputCls('new_password')}
+                                        placeholder="Enter new password"
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1D4ED8]"
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelCls}>Confirm New Password</label>
+                                <div className="relative">
+                                    <input 
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={passwordData.confirm_password}
+                                        onChange={e => setPasswordData(p => ({ ...p, confirm_password: e.target.value }))}
+                                        className={inputCls('confirm_password')}
+                                        placeholder="Confirm new password"
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1D4ED8]"
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="sm:col-span-2 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={handlePasswordReset}
+                                    disabled={updatingPassword || !passwordData.new_password}
+                                    className="px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {updatingPassword ? <Loader2 className="h-3 w-3 animate-spin" /> : <Shield className="h-3 w-3" />}
+                                    {updatingPassword ? 'Updating...' : 'Set New Password'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Profile Information Note */}
                     <hr className="border-gray-100 dark:border-slate-800" />
                     <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded border border-gray-100 dark:border-slate-800">
                         <div className="flex items-center gap-3 text-gray-400 dark:text-slate-500">
-                            <KeyRound className="h-4 w-4" />
-                            <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed">Identity credentials and password updates are managed via standard security protocols.</p>
+                            <Lock className="h-4 w-4" />
+                            <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed font-mono">
+                                SECURITY_PROTOCOL_ALPHA: Identity credentials and master access tokens must be handled over secure encrypted channels only.
+                            </p>
                         </div>
                     </div>
                 </div>

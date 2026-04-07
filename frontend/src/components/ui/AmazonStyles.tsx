@@ -17,7 +17,7 @@ export const PageWrapper = ({ children, className = "" }: { children: React.Reac
 );
 
 export const SectionCard = ({ children, className = "", overflowVisible = false }: { children: React.ReactNode; className?: string; overflowVisible?: boolean }) => (
-    <div className={`bg-white dark:bg-[#111D29] border border-slate-100 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] ${overflowVisible ? '' : 'overflow-hidden'} ${className}`}>
+    <div className={`bg-white dark:bg-[#2d3a4b] border border-slate-100 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] ${overflowVisible ? '' : 'overflow-hidden'} ${className}`}>
         {children}
     </div>
 );
@@ -308,7 +308,7 @@ export const ActionButton = ({ children, onClick, disabled, className = "", type
 export const Toast = ({ message, color = "#EEAF1C" }: { message: string, color?: string }) => {
     if (!message) return null;
     return (
-        <div className="fixed bottom-6 right-6 bg-white dark:bg-[#111D29] border border-slate-100 dark:border-white/10 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: color }}>
+        <div className="fixed bottom-6 right-6 bg-white dark:bg-[#2d3a4b] border border-slate-100 dark:border-white/10 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: color }}>
             <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color }} />
             <span className="text-[11px] font-black uppercase tracking-[0.15em]">{message}</span>
         </div>
@@ -318,7 +318,7 @@ export const Toast = ({ message, color = "#EEAF1C" }: { message: string, color?:
 export const ErrorToast = ({ message }: { message: string }) => {
     if (!message) return null;
     return (
-        <div className="fixed bottom-6 right-6 bg-white dark:bg-[#111D29] border border-red-100 dark:border-red-500/20 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: '#ef4444' }}>
+        <div className="fixed bottom-6 right-6 bg-white dark:bg-[#2d3a4b] border border-red-100 dark:border-red-500/20 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: '#ef4444' }}>
             <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
             <span className="text-[11px] font-black uppercase tracking-[0.15em]">{message}</span>
         </div>
@@ -333,7 +333,7 @@ export const DeleteConfirmModal = ({
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#111D29] rounded-2xl border border-slate-100 dark:border-white/10 max-w-sm w-full shadow-2xl dark:shadow-[0_24px_64px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#2d3a4b] rounded-2xl border border-slate-100 dark:border-white/10 max-w-sm w-full shadow-2xl dark:shadow-[0_24px_64px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between px-6 py-4 bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
                     <div className="flex items-center gap-2.5">
                         <AlertTriangle className="h-4 w-4 text-red-500" />

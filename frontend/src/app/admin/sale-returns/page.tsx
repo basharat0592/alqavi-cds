@@ -9,10 +9,10 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 const statusStyle: Record<string, string> = {
-    pending:    'bg-amber-50 text-amber-700 border-amber-200',
-    authorized: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    resolved:   'bg-blue-50 text-blue-700 border-blue-200',
-    rejected:   'bg-red-50 text-red-600 border-red-200',
+    pending:    'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+    authorized: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    resolved:   'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+    rejected:   'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
 };
 const StatusPill = ({ status }: { status: string }) => {
     const s = (status || '').toLowerCase();
@@ -48,7 +48,7 @@ const MOCK_RETURNS = [
 function ReturnDetailModal({ returnData, onClose }: { returnData: any; onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
                     <div>
@@ -156,13 +156,13 @@ export default function SaleReturnsPage() {
                         placeholder="Search by return ID, customer, or order..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="All">All Statuses</option>
                     <option value="pending">Pending</option>
@@ -177,7 +177,7 @@ export default function SaleReturnsPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>

@@ -5,33 +5,18 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Package, ShoppingCart, Users,
-    Settings, LogOut, Warehouse, Clock,
+    Settings, Warehouse, Clock,
     Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
     BarChart3, Boxes, FolderTree, Bell, FileText, Database, Truck,
-    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock, UserCheck
+    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock, UserCheck,
+    ChevronDown, ShoppingBag
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService, orderService } from '@/lib/api';
 
 /* ═══════════════════════════════════════════════
    TYPES
-═══════════════════════════════════════════════ */
-interface Counts {
-    products: number;
-    lowStock: number;
-    orders: number;
-    pendingOrders: number;
-}
-
-interface MiniOrder {
-    id: string;
-    order_number: string;
-    total_amount: number;
-    status: string;
-    created_at?: string;
-    guest_name?: string;
-}
-
+   ═══════════════════════════════════════════════ */
 interface NavItem {
     name: string;
     href: string;
@@ -46,231 +31,148 @@ interface NavGroup {
 }
 
 /* ═══════════════════════════════════════════════
-   SIDEBAR COMPONENT
-═══════════════════════════════════════════════ */
-interface AdminSidebarProps {
-    isCollapsed?: boolean;
-    onToggle?: () => void;
-}
-
-// ─── Component ──────────────────────────────────────────────────────────────
-export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSidebarProps) {
+   ADMIN SIDEBAR COMPONENT (CLEAN LIGHT THEME)
+   ═══════════════════════════════════════════════ */
+export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
     const pathname = usePathname();
-    const router = useRouter();
-    const [adminUser, setAdminUser] = useState<any>(null);
-    const [counts, setCounts] = useState({
-        products: 0, lowStock: 0, orders: 0, pendingOrders: 0
-    });
+    const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        const refreshUser = () => {
-            const user = authService.getUser?.();
-            if (user) setAdminUser(user);
+        const checkVisibility = () => {
+            const saved = localStorage.getItem('admin_sidebar_visibility');
+            if (saved) setSidebarVisibility(JSON.parse(saved));
         };
-
-        refreshUser();
-
-        window.addEventListener('profileUpdated', refreshUser);
-
-        Promise.allSettled([
-            productService.getAll(),
-            orderService?.getAll?.() ?? Promise.resolve([]),
-        ]).then(([pRes, oRes]) => {
-            const products = pRes.status === 'fulfilled'
-                ? (Array.isArray(pRes.value) ? pRes.value : (pRes.value as any)?.results || []) : [];
-            const orders = oRes.status === 'fulfilled'
-                ? (Array.isArray(oRes.value) ? oRes.value : (oRes.value as any)?.results || []) : [];
-
-            setCounts({
-                products: products.length,
-                lowStock: products.filter((p: any) => {
-                    const s = parseInt(p.stock ?? p.stock_quantity ?? 0);
-                    return s > 0 && s < 10;
-                }).length,
-                orders: orders.length,
-                pendingOrders: orders.filter((o: any) => o.status === 'Pending' || o.status === 'Processing' || o.status === 'ordered').length,
-            });
-        });
-
-        return () => window.removeEventListener('profileUpdated', refreshUser);
+        checkVisibility();
+        window.addEventListener('sidebarVisibilityChanged', checkVisibility);
+        return () => window.removeEventListener('sidebarVisibilityChanged', checkVisibility);
     }, []);
 
     const menuGroups: NavGroup[] = [
         {
-            label: 'Operations',
+            label: 'Main Dashboard',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Recent Orders', href: '/admin/sales/recent', icon: Clock, badge: counts.pendingOrders, alert: counts.pendingOrders > 0 },
-                { name: 'Alerts', href: '/admin/alerts', icon: Bell, badge: counts.lowStock, alert: counts.lowStock > 0 },
+                { name: 'POS / Sales', href: '/admin/sale', icon: ShoppingCart },
+                { name: 'Recent History', href: '/admin/sales/recent', icon: Clock },
+                { name: 'Notifications', href: '/admin/alerts', icon: Bell },
             ],
         },
         {
-            label: 'Suppliers & Partners',
+            label: 'Products',
             items: [
-                { name: 'Company', href: '/admin/company', icon: Building2 },
-                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
-                { name: 'Company categories', href: '/admin/company/categories', icon: Layers },
+                { name: 'All Products', href: '/admin/products', icon: Package },
+                { name: 'Main Category', href: '/admin/products/main-categories', icon: FolderTree },
+                { name: 'Sub Category', href: '/admin/products/categories', icon: Tag },
             ],
         },
         {
-            label: 'Catalog',
+            label: 'Inventory',
             items: [
-                { name: 'All Products', href: '/admin/products', icon: Package, badge: counts.products },
-                { name: 'Main Category', href: '/admin/products/main-categories', icon: Layers },
-                { name: 'Sub Category', href: '/admin/products/categories', icon: FolderTree },
-            ],
-        },
-        {
-            label: 'Inventory Control',
-            items: [
-                { name: 'Stock Management', href: '/admin/inventory/list', icon: Boxes, badge: counts.lowStock, alert: counts.lowStock > 0 },
+                { name: 'Current Stock', href: '/admin/inventory/list', icon: Boxes },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Warehouse },
-                { name: 'Stock Movements', href: '/admin/inventory/movements', icon: ArrowLeftRight },
-                { name: 'Inventory Adjustments', href: '/admin/inventory/adjustments', icon: RefreshCw },
-                { name: 'Batch Operations', href: '/admin/inventory/batches', icon: Layers },
-            ],
-        },
-        {
-            label: 'Sales & Returns',
-            items: [
-                { name: 'POS Control', href: '/admin/sale', icon: ShoppingCart },
-                { name: 'Sale Registry', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Return Management', href: '/admin/sale-returns', icon: RotateCcw },
+                { name: 'Stock History', href: '/admin/inventory/movements', icon: ArrowLeftRight },
+                { name: 'Adjustments', href: '/admin/inventory/adjustments', icon: RefreshCw },
             ],
         },
         {
             label: 'Purchasing',
             items: [
-                { name: 'Purchase Orders', href: '/admin/purchases', icon: ShoppingCart },
-                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RotateCcw },
+                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'All Purchases', href: '/admin/purchases', icon: ShoppingBag },
+                { name: 'Returns', href: '/admin/purchases/returns', icon: RotateCcw },
+                { name: 'Companies', href: '/admin/company', icon: Building2 },
             ],
         },
         {
-            label: 'Financials',
+            label: 'Accounts',
             items: [
-                { name: 'Transaction Logs', href: '/admin/payments', icon: Banknote },
-                { name: 'Client Balances', href: '/admin/payments/customer', icon: Users },
+                { name: 'Sales List', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Payments', href: '/admin/payments', icon: Banknote },
+                { name: 'Customer Credit', href: '/admin/payments/customer', icon: CreditCard },
+                { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
         },
         {
-            label: 'Analytics & Reports',
+            label: 'Administration',
             items: [
-                { name: 'Reports Hub', href: '/admin/reports', icon: BarChart3 },
-                { name: 'Reports Stock', href: '/admin/reports?type=stock', icon: Package },
-                { name: 'Stock Adjustments', href: '/admin/reports?type=inventory/adjustments', icon: Boxes },
-                { name: 'Procurement Audit', href: '/admin/reports?type=purchase_orders', icon: Truck },
-                { name: 'Sale & Returns', href: '/admin/reports?type=sales_returns', icon: RotateCcw },
-                { name: 'Sale Statements', href: '/admin/reports?type=sales', icon: FileText },
-                { name: 'Accounting', href: '/admin/reports?type=accounting', icon: Banknote },
+                { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
+                { name: 'Audit Logs', href: '/admin/reports?type=accounting', icon: Database },
+                { name: 'Users List', href: '/admin/users', icon: Users },
+                { name: 'User Roles', href: '/admin/users/roles', icon: Shield },
+                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },
             ],
         },
-        {
-            label: 'Security & Admin',
-            items: [
-                { name: 'System Users', href: '/admin/users', icon: Users },
-                { name: 'Role Security', href: '/admin/users/roles', icon: Shield },
-                { name: 'Access Control', href: '/admin/users/permissions', icon: Lock },
-            ],
-        },
-    ];
+    ].map(group => ({
+        ...group,
+        items: group.items.filter(item => sidebarVisibility[item.href] !== false)
+    })).filter(g => g.items.length > 0);
 
-    const userRole = (adminUser?.role_name || adminUser?.role || '').toString().toLowerCase();
-    const isSupplier = userRole === 'supplier';
-
-    const filteredGroups = menuGroups;
-
-    const getAllItems = () => {
-        const items: string[] = [];
-        filteredGroups.forEach(g => g.items.forEach(i => items.push(i.href)));
-        return items;
+    const isActive = (href: string) => {
+        if (typeof window === 'undefined') return pathname === href;
+        const fullPath = window.location.pathname + window.location.search;
+        if (href === '/admin/dashboard') return pathname === href;
+        if (href.includes('?')) return fullPath === href;
+        return pathname === href;
     };
 
-    const activeHref = (() => {
-        const items = getAllItems();
-        // Sort by length descending to find the most specific match first
-        const sortedItems = [...items].sort((a, b) => b.length - a.length);
-        for (const href of sortedItems) {
-            if (pathname === href || pathname.startsWith(href + '/')) return href;
-        }
-        return null;
-    })();
-
-    const isActive = (href: string) => activeHref === href;
     return (
-        <div className={`${isCollapsed ? 'w-20' : 'w-60'} bg-[#F9FAFB]/95 dark:bg-[#111D29]/95 backdrop-blur-2xl h-screen flex flex-col flex-shrink-0 z-30 font-sans border-r border-slate-200/50 dark:border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.1)] dark:shadow-[0_0_50px_rgba(0,0,0,0.4)] relative transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]`}>
+        <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-[#232F3E] h-screen flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-xl border-r border-[#1a2b3c]`}>
 
-            {/* ── Branded Header ── */}
-            <div className={`px-4 pt-8 pb-6 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} transition-all duration-500 relative`}>
+            {/* ── Amazon Header Area ── */}
+            <div className={`px-4 py-6 flex items-center ${isCollapsed ? 'flex-col gap-4' : 'justify-between'} border-b border-[#37475a]`}>
                 {!isCollapsed && (
-                    <Link href="/admin/dashboard" className="flex items-center gap-3 group shrink-0 animate-in fade-in slide-in-from-left-6 duration-700">
-                        <div className="w-9 h-9 bg-[#EEAF1C] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30 group-hover:rotate-12 transition-all duration-500 border border-white/20">
-                            <span className="text-sm font-black text-white">A</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <h1 className="font-black text-slate-900 dark:text-white text-[12px] tracking-tighter leading-none uppercase">AL-QAVI <span className="text-[#EEAF1C]">TRADES</span></h1>
-                            <p className="text-[8px] font-black text-slate-400 dark:text-white/30 tracking-[0.4em] uppercase mt-1">Executive Hub</p>
-                        </div>
+                    <Link href="/admin/dashboard" className="flex flex-col group">
+                        <span className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-widest leading-none mb-1">Administrative</span>
+                        <h1 className="text-white font-black text-sm tracking-tight flex items-center gap-1.5 uppercase leading-none">
+                            AL-QAVI <span className="text-[#FF9900]">CONSOLE</span>
+                        </h1>
                     </Link>
                 )}
-
+                {isCollapsed && (
+                    <div className="w-8 h-8 bg-[#FF9900] rounded flex items-center justify-center font-black text-[#111] text-xs">
+                        A
+                    </div>
+                )}
                 <button
                     onClick={onToggle}
-                    className={`p-1.5 rounded-lg bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-[#EEAF1C]/10 text-slate-400 dark:text-slate-500 hover:text-[#EEAF1C] transition-all duration-500 border border-slate-200/50 dark:border-white/10 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 ${isCollapsed ? 'mx-auto' : ''}`}
+                    className="text-[#A1A1AA] hover:text-white transition-colors p-1"
+                    title={isCollapsed ? 'Expand' : 'Collapse'}
                 >
-                    {isCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+                    {isCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
                 </button>
-
-                {/* Subtle top accent */}
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#EEAF1C]/20 to-transparent" />
             </div>
 
-            {/* ── Premium Navigation ── */}
-            <nav className="flex-1 overflow-y-auto px-3 pt-2 pb-12 custom-scrollbar space-y-6 scroll-smooth">
-                {filteredGroups.map((group) => (
-                    <div key={group.label} className="space-y-1.5">
+            {/* ── Amazon Vertical Navigation ── */}
+            <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
+                {menuGroups.map((group, gIdx) => (
+                    <div key={group.label} className={gIdx !== 0 ? "mt-4" : ""}>
                         {!isCollapsed && (
-                            <div className="px-3 mb-2">
-                                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-white/20 underline decoration-[#EEAF1C]/20 decoration-2 underline-offset-4">
-                                    {group.label}
-                                </p>
-                            </div>
+                            <h3 className="px-6 text-[11px] font-bold text-[#A1A1AA] uppercase tracking-widest mb-2 opacity-60">
+                                {group.label}
+                            </h3>
                         )}
-                        <div className="space-y-[2px]">
-                            {group.items.map(item => {
+                        <div className="space-y-0.5">
+                            {group.items.map((item) => {
                                 const active = isActive(item.href);
                                 return (
-                                    <Link key={item.name} href={item.href}
-                                        className={`group relative flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl transition-all duration-500
+                                    <Link key={item.href} href={item.href}
+                                        className={`group relative flex items-center gap-3 px-6 py-2 transition-all
                                             ${active
-                                                ? 'bg-[#EEAF1C]/10 text-[#EEAF1C] border-l-4 border-[#EEAF1C] scale-[1.01] z-10'
-                                                : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:text-[#EEAF1C] border border-transparent hover:border-slate-100 dark:hover:border-white/5'}`}>
+                                                ? 'bg-[#37475a] text-white font-bold border-l-4 border-[#FF9900]'
+                                                : 'text-[#E8E8E8] hover:bg-[#37475a] hover:text-white'}`}>
 
-                                        <div className="flex items-center gap-3">
-                                            <item.icon className={`h-4.5 w-4.5 shrink-0 transition-all duration-500 ${active ? 'text-[#EEAF1C] drop-shadow-[0_0_8px_rgba(29,78,216,0.3)]' : 'text-slate-400 dark:text-slate-500 group-hover:text-[#EEAF1C] group-hover:scale-110'}`} strokeWidth={active ? 3 : 2} />
-                                            {!isCollapsed && <span className={`text-[10px] font-black uppercase tracking-wide transition-all duration-500 ${active ? 'translate-x-1' : ''}`}>{item.name}</span>}
-                                        </div>
+                                        <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#FF9900]' : 'text-[#A1A1AA] group-hover:text-white'}`} />
 
-                                        {!isCollapsed && item.badge !== undefined && item.badge > 0 && (
-                                            <span className={`text-[10px] px-2.5 py-0.5 font-black rounded-lg text-center min-w-[24px] transition-all duration-500
-                                                ${active
-                                                    ? 'bg-[#EEAF1C] text-white shadow-md'
-                                                    : item.alert ? 'bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/30' : 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-slate-400'}`}>
-                                                {item.badge}
+                                        {!isCollapsed && (
+                                            <span className="text-[13px] tracking-tight whitespace-nowrap overflow-hidden">
+                                                {item.name}
                                             </span>
                                         )}
 
                                         {isCollapsed && (
-                                            <div className="absolute left-full ml-6 px-4 py-2.5 bg-white dark:bg-[#070F14] border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white text-[11px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 translate-x-[-15px] group-hover:translate-x-0 z-50 whitespace-nowrap shadow-[20px_0_40px_rgba(0,0,0,0.1)] dark:shadow-[20px_0_40px_rgba(0,0,0,0.5)]">
+                                            <div className="absolute left-full ml-4 px-3 py-1 bg-[#232F3E] text-white text-[12px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl border border-[#37475a]">
                                                 {item.name}
-                                                {item.badge !== undefined && item.badge > 0 && (
-                                                    <span className="ml-2 text-[#EEAF1C] opacity-100">{item.badge}</span>
-                                                )}
                                             </div>
-                                        )}
-
-                                        {/* Active Indicator Bar */}
-                                        {active && !isCollapsed && (
-                                            <div className="absolute left-0 w-1.5 h-6 bg-white rounded-r-full my-auto" />
                                         )}
                                     </Link>
                                 );
@@ -280,27 +182,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: AdminSid
                 ))}
             </nav>
 
-            {/* ── Tactical Footer Control ── */}
-            <div className="mt-auto border-t border-slate-200/50 dark:border-white/5 p-3.5 bg-slate-50/50 dark:bg-black/10">
+            {/* ── Amazon Footer Controls ── */}
+            <div className="mt-auto border-t border-[#37475a] bg-[#1a2b3c] p-3">
                 <Link href="/admin/settings"
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-500 text-[11px] font-black uppercase tracking-wider border border-transparent group
-                        ${isActive('/admin/settings')
-                            ? 'bg-[#EEAF1C] text-white shadow-xl shadow-blue-500/20'
-                            : 'text-slate-500 dark:text-slate-500 hover:bg-white dark:hover:bg-white/5 hover:text-[#EEAF1C] hover:shadow-lg dark:hover:shadow-none hover:border-slate-100 dark:hover:border-white/5'}`}>
-                    <Settings className={`h-4.5 w-4.5 transition-all duration-500 group-hover:rotate-90 ${isActive('/admin/settings') ? 'text-white' : ''}`} />
-                    {!isCollapsed && <span>Control Center</span>}
+                    className={`flex items-center gap-3 px-4 py-2 text-[12px] transition-all
+                        ${isActive('/admin/settings') ? 'text-white font-bold' : 'text-[#A1A1AA] hover:text-white'}`}>
+                    <Settings size={18} />
+                    {!isCollapsed && <span>Settings</span>}
                 </Link>
             </div>
-
-            <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 20px; }
-                .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.03); }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
-                .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.08); }
-            `}</style>
         </div>
     );
 }
-

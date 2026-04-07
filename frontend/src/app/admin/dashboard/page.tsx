@@ -1,572 +1,414 @@
 'use client';
 
 import PageLoader from '@/components/ui/PageLoader';
-
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-    ShoppingBag, Package, Users, DollarSign,
-    Clock, AlertTriangle, ArrowRight,
-    Activity, ArrowUpRight, ArrowDownRight,
-    Crown, TrendingUp, RefreshCw,
-    Building2, Mail, Phone, MapPin, Globe, Pencil,
-    Truck, FileText, UserCheck, FolderTree
+    ShoppingBag, Package, Users,
+    ShoppingCart, Shield, MapPin,
+    BarChart3, Boxes, LogOut, UserCheck, Clock, Banknote, Settings, AlertCircle, TrendingUp, DollarSign, ArrowUpRight
 } from 'lucide-react';
-import { useAdminDashboard, useAdminAuth } from '@/hooks';
-import { companyService, CompanyInfo } from '@/lib/api';
+import { useAdminDashboard } from '@/hooks';
+import { authService } from '@/lib/auth';
+import { useState, useEffect } from 'react';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    BarChart, Bar, PieChart, Pie, Cell, Legend
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import { formatCurrency } from '@/lib/utils';
+import { dashboardService } from '@/services/dashboard.service';
 
 /* ═══════════════════════════════════════════════════════
-   THEME CONSTANTS
-═══════════════════════════════════════════════════════ */
-const THEME = {
-    primary: '#EEAF1C',   // Orange Accent
-    secondary: '#111D29', // Refined Navy Card
-    dark: '#0B131A',      // Refined Navy BG
-    hover: '#D49510',     // Darker Orange Hover
-    link: '#EEAF1C',
-} as const;
-
-const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-    processing: 'bg-[#EEAF1C]/10 text-[#EEAF1C] border-[#EEAF1C]/20',
-    shipped: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
-    delivered: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    cancelled: 'bg-red-500/10 text-red-600 border-red-500/20',
-};
-
-/* ═══════════════════════════════════════════════════════
-   STAT CARD
-═══════════════════════════════════════════════════════ */
-interface StatCardProps {
-    icon: React.ComponentType<any>;
-    label: string;
-    value: string | number;
-    change?: number;
-    href: string;
-}
-
-function StatCard({ icon: Icon, label, value, change, href }: StatCardProps) {
-    const up = change === undefined || change >= 0;
-
-    return (
-        <Link href={href}
-            className="group block bg-white dark:bg-[#111D29] border border-slate-200 dark:border-white/10 rounded-xl p-5 hover:border-[#EEAF1C]/30 transition-all shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-[#EEAF1C]" />
-                </div>
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</p>
-            </div>
-
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{value}</p>
-                </div>
-                {change !== undefined && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                        {up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                        {Math.abs(change)}%
-                    </div>
-                )}
-            </div>
-        </Link>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   ORDER ROW
-═══════════════════════════════════════════════════════ */
-function OrderRow({ order }: { order: any }) {
-    const num = order.orderNumber || `#${order.id}`;
-    const name = order.customerName || 'Customer';
-    const amount = Number(order.total_amount || order.total || 0);
-    const status = order.status || 'Pending';
-    const date = new Date(order.created_at || order.date || Date.now())
-        .toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const statusCls = STATUS_COLORS[status.toLowerCase()] || STATUS_COLORS.pending;
-
-    return (
-        <div className="flex items-center justify-between py-3 px-4 border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-            <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center">
-                    <ShoppingBag className="h-4 w-4 text-slate-400 group-hover:text-[#EEAF1C] transition-colors" />
-                </div>
-                <div>
-                    <Link href="/admin/sales" className="text-sm font-bold text-slate-900 dark:text-white hover:text-[#EEAF1C] transition-colors">
-                        {num}
-                    </Link>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">{name}</p>
-                </div>
-            </div>
-            <div className="flex items-center gap-4">
-                <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">Rs. {amount.toLocaleString()}</p>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{date}</p>
-                </div>
-                <div className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${statusCls}`}>
-                    {status}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   USER ROW (New Signups)
-═══════════════════════════════════════════════════════ */
-function UserRow({ user }: { user: any }) {
-    const name = user.name || user.first_name || 'User';
-    const email = user.email || '';
-    const date = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    return (
-        <div className="flex items-center justify-between py-3 px-4 border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-            <div className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded flex items-center justify-center font-bold text-gray-500 dark:text-slate-400 text-xs">
-                    {name[0]?.toUpperCase() || 'U'}
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{name}</p>
-                    <p className="text-[11px] text-gray-500 dark:text-slate-500">{email}</p>
-                </div>
-            </div>
-            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-600">{date}</span>
-        </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   ACTIVITY TIMELINE ITEM
-═══════════════════════════════════════════════════════ */
-function ActivityItem({ order }: { order: any }) {
-    const time = new Date(order.created_at || order.date || Date.now())
-        .toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-    return (
-        <div className="flex gap-4 group">
-            <div className="relative flex flex-col items-center">
-                <div className="w-10 h-10 bg-[#EEAF1C]/10 dark:bg-[#EEAF1C]/20 border border-[#EEAF1C]/20 rounded-xl flex items-center justify-center z-10
-                                group-hover:bg-[#EEAF1C] group-hover:text-white transition-all duration-500 shadow-lg shadow-[#EEAF1C]/20">
-                    <ShoppingBag className="h-4.5 w-4.5" strokeWidth={2.5} />
-                </div>
-                <div className="w-px flex-1 bg-slate-100 dark:bg-slate-800 group-last:hidden" />
-            </div>
-            <div className="flex-1 pb-6 pt-1">
-                <p className="font-bold text-sm text-slate-900 dark:text-white">Order #{order.orderNumber || order.id}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {order.customerName || 'Customer'} — PKR {Number(order.total_amount || order.total || 0).toLocaleString()}
-                </p>
-                <div className="flex items-center gap-1.5 mt-2">
-                    <Clock className="w-3 h-3 text-slate-400 dark:text-slate-600" />
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{time}</p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   CHART TOOLTIP
-═══════════════════════════════════════════════════════ */
-function ChartTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-white dark:bg-[#111D29] p-4 rounded-xl shadow-xl border border-slate-200 dark:border-white/10">
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tighter">Rs. {payload[0].value.toLocaleString()}</p>
-            <p className="text-[10px] font-bold text-[#EEAF1C] mt-1 uppercase">
-                {payload[1]?.value || 0} Products Sold
-            </p>
-        </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   SECTION CARD WRAPPER
-═══════════════════════════════════════════════════════ */
-function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-    return (
-        <div className={`bg-white dark:bg-[#111D29] border border-slate-200 dark:border-white/10 shadow-sm rounded-[16px] overflow-hidden ${className}`}>
-            {children}
-        </div>
-    );
-}
-
-function SectionHeader({ icon: Icon, title, subtitle, action }: {
-    icon: React.ComponentType<any>;
-    title: string;
-    subtitle: string;
-    action?: React.ReactNode;
-}) {
-    return (
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg">
-                    <Icon className="h-4 w-4 text-[#EEAF1C]" />
-                </div>
-                <div>
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">{subtitle}</p>
-                </div>
-            </div>
-            {action}
-        </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   EMPTY STATE
-═══════════════════════════════════════════════════════ */
-function EmptyState({ icon: Icon, title, description }: {
-    icon: React.ComponentType<any>; title: string; description: string;
-}) {
-    return (
-        <div className="py-16 text-center px-6">
-            <div className="w-14 h-14 bg-gray-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100 dark:border-slate-700">
-                <Icon className="h-7 w-7 text-gray-300 dark:text-slate-600" />
-            </div>
-            <h3 className="font-bold text-gray-900 dark:text-white mb-1">{title}</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mx-auto">{description}</p>
-        </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   TOP PRODUCT ROW
-═══════════════════════════════════════════════════════ */
-const RANK_STYLES = [
-    'bg-[#EEAF1C]/10 border-[#EEAF1C]/30 text-[#EEAF1C]',
-    'bg-slate-100 border-slate-200 text-slate-500',
-    'bg-slate-50 border-slate-100 text-slate-400',
-    'bg-transparent border-transparent text-slate-300',
-];
-
-function ProductRow({ product, rank }: { product: any; rank: number }) {
-    return (
-        <div className="px-4 py-3.5 border-b border-slate-100 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors flex items-center justify-between gap-4 group">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center font-bold text-[#EEAF1C] text-xs shrink-0">
-                    {rank + 1}
-                </div>
-                <div className="min-w-0 flex-1">
-                    <Link href={`/admin/products/${product.id}`} className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#EEAF1C] transition-colors truncate block uppercase tracking-tight">
-                        {product.name}
-                    </Link>
-                    <div className="h-1 w-full bg-slate-100 dark:bg-white/10 rounded-full mt-2 overflow-hidden max-w-[120px]">
-                        <div className="h-full bg-[#EEAF1C] rounded-full transition-all duration-1000" style={{ width: `${Math.max(20, 100 - rank * 20)}%` }} />
-                    </div>
-                </div>
-            </div>
-            <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{product.sales || 0}</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Units Sold</p>
-            </div>
-        </div>
-    );
-}
-
-
-/* ═══════════════════════════════════════════════════════
-   MAIN DASHBOARD PAGE
+   ADMIN DASHBOARD PAGE (COMMAND HUB)
+   High-density card grid for core distributive operations
 ═══════════════════════════════════════════════════════ */
 export default function AdminDashboard() {
+    const { 
+        stats, 
+        recentOrders, 
+        recentPurchases, 
+        revenueData, 
+        revenueData30, 
+        loading 
+    } = useAdminDashboard();
+    
     const router = useRouter();
-    const { stats, recentOrders, recentPurchases, recentUsers, topProducts, products, orders, revenueData, revenueData30, activityLogs, loading, refetch } = useAdminDashboard();
-    const { user, isAuthenticated } = useAdminAuth();
-    const [chartRange, setChartRange] = useState<'7' | '30'>('7');
-
-    const isSupplier = (user?.role || '').toLowerCase() === 'supplier';
+    const [timeRange, setTimeRange] = useState<'3d' | '7d' | '30d'>('7d');
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        if (isSupplier) {
-            router.push('/supplier/dashboard');
-        }
-    }, [isSupplier, router]);
-
-    const chartData = chartRange === '7' ? revenueData : revenueData30;
-
-    // ── DATA PREPARATION ──
-    const categoryDist = products.reduce((acc: any, p: any) => {
-        const cat = p.category_name || p.category || 'Uncategorized';
-        acc[cat] = (acc[cat] || 0) + 1;
-        return acc;
-    }, {});
-    const pieData = Object.entries(categoryDist)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => Number(b.value) - Number(a.value))
-        .slice(0, 5);
-
-    const stockDist = [
-        { name: 'Low Stock', value: products.filter(p => p.quantity_in_stock <= 10 && p.quantity_in_stock > 0).length, color: '#EEAF1C' },
-        { name: 'Out of Stock', value: products.filter(p => p.quantity_in_stock === 0).length, color: '#ef4444' },
-    ];
+        setIsMounted(true);
+    }, []);
 
     if (loading) return <PageLoader />;
 
+    // 📈 Real Backend Data Slice based on Time Range
+    const getChartData = () => {
+        const history = timeRange === '30d' ? revenueData30 : revenueData;
+        if (!history || history.length === 0) {
+            return Array(7).fill(0).map((_, i) => ({ date: `P${i+1}`, sales: 0, purchases: 0 }));
+        }
+        
+        if (timeRange === '3d') return history.slice(-3);
+        return history; // useAdminDashboard already slices correctly for 7d/30d
+    };
+
+    const DASHBOARD_ACTIONS = [
+        {
+            title: "Recent Sales",
+            desc: "Track latest transactions",
+            icon: Clock,
+            href: "/admin/sales/recent",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Purchases",
+            desc: "Product procurement",
+            icon: ShoppingBag,
+            href: "/admin/purchases",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Sales",
+            desc: "Internal checkout system",
+            icon: ShoppingCart,
+            href: "/admin/sale",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Inventory",
+            desc: "Manage stock & warehouse",
+            icon: Boxes,
+            href: "/admin/inventory/list",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Users Management",
+            desc: "Roles & security",
+            icon: Users,
+            href: "/admin/users",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Reports",
+            desc: "Business analytics",
+            icon: BarChart3,
+            href: "/admin/reports",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Track Order",
+            desc: "Logistics & tracking portal",
+            icon: MapPin,
+            href: "/admin/tracking",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Transactions",
+            desc: "Financial audit trail",
+            icon: Banknote,
+            href: "/admin/payments",
+            color: "text-[#EEAF1C]"
+        },
+    ];
+
     return (
-        <div className="max-w-[1400px] mx-auto pb-12 font-sans px-4 mt-6">
+        <div className="max-w-[1200px] mx-auto py-4 px-4 animate-in fade-in duration-700 font-sans">
 
+            {/* Header Area: Simple Business */}
+            <div className="mb-6 text-center md:text-left flex items-end justify-between border-b border-slate-200 dark:border-white/10 pb-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Dashboard Overview</h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium italic opacity-80">Track your business operations and performance</p>
+                </div>
+                <div className="hidden md:flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Operational</span>
+                    <span className="opacity-30">|</span>
+                    <span>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </div>
+            </div>
 
-
-            {/* ── COMMAND CENTER : COMPREHENSIVE QUICK ACTIONS ── */}
-            <div className="mb-8 bg-white dark:bg-[#111D29] border border-slate-200 dark:border-white/10 rounded-[20px] p-5 shadow-sm">
-                <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-white/5 pb-4">
-                    <div className="w-8 h-8 rounded-lg bg-[#EEAF1C]/10 flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-[#EEAF1C]" />
+            {/* ── Key Metrics ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[
+                    { label: 'Total Revenue', val: formatCurrency(stats.totalRevenue), icon: DollarSign, trend: '+12.5%', color: 'text-emerald-500' },
+                    { label: 'Sales Volume', val: stats.totalOrders, icon: ShoppingCart, trend: 'Monthly', color: 'text-[#EEAF1C]' },
+                    { label: 'Product Stock', val: stats.totalProducts, icon: Boxes, trend: 'Managed', color: 'text-indigo-500' },
+                    { label: 'Daily Sales', val: formatCurrency(revenueData?.[revenueData.length-1]?.sales || 0), icon: TrendingUp, trend: 'Latest', color: 'text-blue-500' },
+                ].map((st, i) => (
+                    <div key={i} className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 p-4 rounded-xl shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className={`p-1.5 rounded-lg bg-slate-50 dark:bg-white/5 ${st.color}`}>
+                                <st.icon className="h-4 w-4" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{st.trend}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{st.label}</p>
+                        <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{st.val}</p>
                     </div>
-                    <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                        Command Center
-                    </h2>
+                ))}
+            </div>
+
+            {/* ── COMMAND HUB: Dual-Pane Tactical Interface ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* ── LEFT PROTOCOL: Business Intelligence & Data Streams (2/3) ── */}
+                <div className="lg:col-span-2 space-y-8">
+                    
+                    {/* 📊 Analytics Graph: Performance Analysis */}
+                    <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+                        <div className="p-6 border-b border-slate-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 dark:bg-white/5">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-[#EEAF1C]" />
+                                    Performance Trends
+                                </h3>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Revenue vs. Purchases Comparison</p>
+                            </div>
+                            
+                            {/* ── Range Selector ── */}
+                            <div className="flex bg-white dark:bg-black/20 p-1 border border-slate-200 dark:border-white/5 rounded-lg shadow-sm">
+                                {(['3d', '7d', '30d'] as const).map((r) => (
+                                    <button
+                                        key={r}
+                                        onClick={() => setTimeRange(r)}
+                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md transition-all ${
+                                            timeRange === r 
+                                                ? 'bg-[#EEAF1C] text-white shadow-sm' 
+                                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'
+                                        }`}
+                                    >
+                                        {r}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex-1 min-h-[340px]">
+                            {isMounted ? (
+                                <ResponsiveContainer width="100%" height={340}>
+                                    <AreaChart
+                                        data={getChartData()}
+                                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#EEAF1C" stopOpacity={0.25}/>
+                                                <stop offset="95%" stopColor="#EEAF1C" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.25}/>
+                                                <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#88888822" vertical={false} />
+                                        <XAxis 
+                                            dataKey="date" 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{fontSize: 10, fontWeight: 700, fill: '#888'}}
+                                            dy={10}
+                                        />
+                                        <YAxis 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{fontSize: 10, fontWeight: 700, fill: '#888'}}
+                                        />
+                                        <Tooltip 
+                                            contentStyle={{ 
+                                                backgroundColor: '#2d3a4b', 
+                                                borderColor: '#EEAF1C', 
+                                                borderRadius: '12px',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                color: '#fff',
+                                                borderWidth: '2px',
+                                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+                                            }}
+                                            itemStyle={{ padding: '2px 0' }}
+                                            formatter={(val: any) => formatCurrency(val)}
+                                        />
+                                        <Legend 
+                                            verticalAlign="top" 
+                                            align="right" 
+                                            height={36} 
+                                            iconType="circle"
+                                            wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                        />
+                                        <Area 
+                                            name="Sales"
+                                            type="monotone" 
+                                            dataKey="sales" 
+                                            stroke="#EEAF1C" 
+                                            strokeWidth={3}
+                                            fillOpacity={1} 
+                                            fill="url(#colorSales)" 
+                                        />
+                                        <Area 
+                                            name="Purchases"
+                                            type="monotone" 
+                                            dataKey="purchases" 
+                                            stroke="#0EA5E9" 
+                                            strokeWidth={3}
+                                            fillOpacity={1} 
+                                            fill="url(#colorPurchases)" 
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <div className="h-8 w-8 border-4 border-[#EEAF1C] border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 📋 Recent Sales Hub */}
+                    <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="p-5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
+                                    Recent Sales Hub
+                                </h3>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Tracking latest sales and receipts</p>
+                            </div>
+                            <Link href="/admin/sales/recent" className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all uppercase tracking-wider shadow-sm active:scale-95">
+                                View Entries
+                            </Link>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/10">
+                                    <tr>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-6">Order ID</th>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</th>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-6">Status</th>
+                                    </tr>
+                                </thead>
+                                 <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                    {recentOrders.length > 0 ? (
+                                        recentOrders.map((row, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.01] transition-colors group cursor-default">
+                                                <td className="px-5 py-4 text-[12px] font-bold text-[#EEAF1C] pl-6 tracking-tighter">{row.order_number}</td>
+                                                <td className="px-5 py-4 text-[12px] font-bold text-slate-800 dark:text-slate-300">
+                                                    {row.customer_name || 'Customer'}
+                                                </td>
+                                                <td className="px-5 py-4 text-[12px] font-black text-slate-900 dark:text-white">{formatCurrency(row.total_amount)}</td>
+                                                <td className="px-5 py-4 text-right pr-6">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${row.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                                                        {row.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={4} className="px-5 py-10 text-center text-xs text-slate-400 font-bold uppercase tracking-widest opacity-40">No Transaction Data Node Available</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                {/* ── RIGHT PROTOCOL: Operational Command (1/3) ── */}
+                <div className="space-y-6">
+                    
+                    {/* Main Operational Grid */}
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-3 mb-2 opacity-50">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Quick Links</span>
+                            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                        </div>
+                        {DASHBOARD_ACTIONS.map((action, idx) => (
+                            <Link
+                                key={idx}
+                                href={action.href}
+                                className="flex items-center gap-4 p-4 bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 shadow-sm hover:shadow-md transition-all group active:scale-95 border-l-4 hover:border-l-[#EEAF1C]"
+                            >
+                                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 text-[#EEAF1C] group-hover:scale-110 transition-transform duration-500">
+                                    <action.icon className="h-5 w-5" strokeWidth={2.5} />
+                                </div>
+                                <div className="flex-1">
+                                    <h2 className="text-[14px] font-bold text-slate-900 dark:text-white transition-colors group-hover:text-[#EEAF1C]">{action.title}</h2>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">{action.desc}</p>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* 🔔 Alerts Section */}
+                    <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+                        <div className="p-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
+                            <h3 className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">Latest Updates</h3>
+                            <Link href="/admin/alerts" className="text-[10px] font-bold text-[#EEAF1C] hover:underline flex items-center gap-1 uppercase tracking-widest">
+                                Manage <ArrowUpRight className="h-2.5 w-2.5" />
+                            </Link>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            {[
+                                { status: 'CRITICAL', msg: 'Face Serum low stock', time: '14m', color: 'bg-rose-500/10 text-rose-500' },
+                                { status: 'WARNING', msg: 'Large order pending auth', time: '32m', color: 'bg-amber-500/10 text-amber-500' },
+                            ].map((alert, i) => (
+                                <div key={i} className="flex items-center justify-between gap-3 p-2 group cursor-default border-b border-slate-100 dark:border-white/5 last:border-0 pb-3">
+                                    <div className="flex-1">
+                                        <p className="text-[11.5px] text-slate-800 dark:text-slate-300 font-bold leading-tight group-hover:text-[#EEAF1C] transition-colors">{alert.msg}</p>
+                                        <span className="text-[9px] text-slate-400 font-medium uppercase mt-1 inline-block tracking-tighter">{alert.time} ago • Monitoring protocol active</span>
+                                    </div>
+                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${alert.color} uppercase tracking-tighter`}>{alert.status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* ── Extended Navigation ── */}
+            <div className="mt-12 pt-8 border-t border-slate-200 dark:border-white/10">
+                <div className="flex items-center gap-4 mb-6">
+                    <h3 className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.3em] whitespace-nowrap">Explore Modules</h3>
+                    <div className="h-px w-full bg-gradient-to-r from-slate-200 dark:from-white/5 to-transparent" />
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-y-4 gap-x-8">
                     {[
-                        { label: 'Sale Order', icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', href: '/admin/sale' },
-                        { label: 'Purchase', icon: Truck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-500/10', href: '/admin/purchases/add' },
-                        { label: 'Products', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10', href: '/admin/products' },
-                        { label: 'Invoices', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-500/10', href: '/admin/invoices' },
-                        { label: 'Suppliers', icon: UserCheck, color: 'text-teal-600', bg: 'bg-teal-50 dark:bg-teal-500/10', href: '/admin/company/suppliers' },
-                        { label: 'Categories', icon: FolderTree, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-500/10', href: '/admin/company/categories' },
-                        { label: 'Inventory', icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-500/10', href: '/admin/inventory' },
-                        { label: 'Users', icon: Users, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-500/10', href: '/admin/users' },
-                    ].map((action, idx) => (
-                        <Link key={idx} href={action.href}
-                            className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all active:scale-[0.97]">
-                            <div className={`w-12 h-12 ${action.bg} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
-                                <action.icon className={`h-5 w-5 ${action.color}`} strokeWidth={2.5} />
-                            </div>
-                            <span className="text-[9px] font-black text-slate-600 dark:text-slate-400 group-hover:text-[#EEAF1C] uppercase tracking-widest text-center leading-tight transition-colors">
-                                {action.label}
-                            </span>
+                        { name: 'System Alerts', href: '/admin/alerts' },
+                        { name: 'Stock Movements', href: '/admin/inventory/movements' },
+                        { name: 'Warehouse Control', href: '/admin/inventory/warehouses' },
+                        { name: 'Inventory Adjustments', href: '/admin/inventory/adjustments' },
+                        { name: 'Product Categories', href: '/admin/products/main-categories' },
+                        { name: 'Supplier Registry', href: '/admin/company/suppliers' },
+                        { name: 'Return Management', href: '/admin/sale-returns' },
+                        { name: 'Sale Registry', href: '/admin/sales' },
+                        { name: 'Purchase Returns', href: '/admin/purchases/returns' },
+                        { name: 'Client Balances', href: '/admin/payments/customer' },
+                        { name: 'Roles & Security', href: '/admin/users/roles' },
+                        { name: 'Access Control', href: '/admin/users/permissions' },
+                        { name: 'System Accounting', href: '/admin/reports?type=accounting' },
+                        { name: 'Executive Audit', href: '/admin/reports' },
+                    ].map((link) => (
+                        <Link
+                            key={link.name}
+                            href={link.href}
+                            className="text-[10.5px] font-bold uppercase tracking-widest text-slate-500 hover:text-[#EEAF1C] dark:text-slate-400 dark:hover:text-[#EEAF1C] transition-colors flex items-center gap-2 group"
+                        >
+                            <div className="w-1 h-1 bg-slate-300 dark:bg-white/10 rounded-full group-hover:bg-[#EEAF1C] transition-colors" />
+                            {link.name}
                         </Link>
                     ))}
                 </div>
             </div>
 
-            {/* ── MAIN DASHBOARD GRID ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                {/* LARGE LEFT COLUMN (Charts & Deep Data) */}
-                <div className="lg:col-span-8 space-y-6">
-
-                    {/* 1. SALES TREND CHART */}
-                    <div className="bg-white/95 dark:bg-[#111D29]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden">
-                        <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-white/5">
-                            <div>
-                                <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Revenue Trends</h2>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Real-time Sales Performance</p>
-                            </div>
-                            <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10">
-                                {(['7', '30'] as const).map(r => (
-                                    <button key={r} onClick={() => setChartRange(r)}
-                                        className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest
-                                                    ${chartRange === r ? 'bg-white dark:bg-white/10 text-[#EEAF1C] shadow-sm border border-slate-200 dark:border-white/10' : 'text-slate-400 hover:text-[#EEAF1C]'}`}>
-                                        {r} Days
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="p-6 h-[400px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
-                                    <defs>
-                                        <linearGradient id="tacticalGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#EEAF1C" stopOpacity={0.2} /><stop offset="95%" stopColor="#EEAF1C" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }} tickFormatter={(v) => `PKR ${v / 1000}k`} />
-                                    <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#EEAF1C', strokeWidth: 2, strokeDasharray: '5 5' }} />
-                                    <Area type="monotone" dataKey="revenue" stroke="#EEAF1C" strokeWidth={4} fill="url(#tacticalGradient)" animationDuration={2000} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* 2. ORDER VOLUME BAR CHART */}
-                    <div className="bg-white/95 dark:bg-[#111D29]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-white/40 dark:bg-white/5">
-                            <h2 className="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Inventory Flow Velocity</h2>
-                            <Link href="/admin/sales" className="text-[9px] font-black text-[#EEAF1C] hover:underline uppercase tracking-[0.2em] transition-all">Deep Analytics Portal</Link>
-                        </div>
-                        <div className="p-6 h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 700 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 700 }} />
-                                    <Tooltip cursor={{ fill: 'rgba(29,78,216,0.05)' }} content={<ChartTooltip />} />
-                                    <Bar dataKey="orders" fill="#EEAF1C" radius={[4, 4, 0, 0]} barSize={24} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* 3. CATEGORY DISTRIBUTION & SALES LEADERBOARD */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded">
-                            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20">
-                                <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Category Distribution</h2>
-                            </div>
-                            <div className="p-2 h-[260px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={pieData} innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
-                                            {pieData.map((_, index) => <Cell key={index} fill={['#EEAF1C', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'][index % 5]} />)}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: 'bold', paddingTop: '10px' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded">
-                            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20">
-                                <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Top Sellers</h2>
-                            </div>
-                            <div className="p-4 h-[260px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart layout="vertical" data={topProducts}>
-                                        <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                                        <Tooltip cursor={{ fill: '#f7f7f7' }} />
-                                        <Bar dataKey="sales" fill="#232F3E" barSize={14} radius={[0, 2, 2, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
+            {/* Footer Area */}
+            <div className="mt-20 py-10 border-t border-slate-200 dark:border-white/10 text-center">
+                <div className="flex items-center justify-center gap-2 mb-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
+                    <div className="w-6 h-6 bg-slate-900 dark:bg-[#EEAF1C] rounded flex items-center justify-center font-bold text-white dark:text-slate-900 text-[10px]">A</div>
+                    <span className="font-black text-xs tracking-tighter uppercase text-slate-900 dark:text-white">Al-Qavi System Dashboard</span>
                 </div>
-
-                <div className="lg:col-span-4 space-y-6">
-
-                    {/* MANAGE INVENTORY BOX */}
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded">
-                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-orange-500" />
-                            <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase">Inventory Health</h2>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            {stockDist.map((item, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded hover:border-gray-300 dark:hover:border-slate-500 transition-colors">
-                                    <span className="text-xs font-bold text-gray-600 dark:text-slate-400 tracking-tight">{item.name}</span>
-                                    <span className="text-sm font-black" style={{ color: item.color }}>{item.value} ITEMS</span>
-                                </div>
-                            ))}
-                            <Link href="/admin/products" className="block text-center py-2.5 text-[10px] font-black text-[#EEAF1C] bg-[#EEAF1C]/5 border border-[#EEAF1C]/20 rounded-xl hover:bg-[#EEAF1C]/10 tracking-[0.2em] transition-all uppercase">
-                                Full Inventory Audit
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* RECENT ACTIVITY (Ticker Style) */}
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded h-fit">
-                        <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Order Lifecycle</h2>
-                            <Link href="/admin/sales" className="text-[9px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest">View All</Link>
-                        </div>
-                        <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
-                            {recentOrders.map(o => (
-                                <div key={o.id} className="p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-xs font-bold text-[#EEAF1C] uppercase tracking-tight">ORDER {o.orderNumber || o.id}</span>
-                                        <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(o.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium truncate max-w-[150px]">{o.customerName || 'Customer'}</p>
-                                        <span className="text-xs font-black text-gray-900 dark:text-white">PKR {Number(o.total_amount || 0).toFixed(0)}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* RECENT PURCHASE ORDERS (Skip for Suppliers) */}
-                    {!isSupplier && (
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded h-fit">
-                            <div className="px-5 py-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-800/20 flex items-center justify-between">
-                                <h2 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">Procurement Feed</h2>
-                                <Link href="/admin/purchases" className="text-[9px] font-black text-slate-400 hover:text-orange-600 transition-colors uppercase tracking-widest">View All</Link>
-                            </div>
-                            <div className="divide-y divide-gray-100 dark:divide-slate-800 overflow-y-auto max-h-[350px]">
-                                {recentPurchases.length > 0 ? (
-                                    recentPurchases.map(p => (
-                                        <div key={p.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group border-l-4 border-transparent hover:border-orange-400">
-                                            <div className="flex justify-between mb-1">
-                                                <span className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-orange-500 transition-colors uppercase tracking-tighter underline decoration-dotted decoration-gray-300 group-hover:decoration-orange-300">PO: {p.purchase_number}</span>
-                                                <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{new Date(p.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium truncate max-w-[150px]">{p.supplier_name || 'Generic Supplier'}</p>
-                                                <span className="text-xs font-black text-orange-600">- PKR {Number(p.total_amount || 0).toFixed(0)}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-[10px] text-slate-400 text-center py-6 uppercase tracking-widest font-bold">No purchase records</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* REAL-TIME ACTIVITY LOGS */}
-                    <div className="bg-white/40 dark:bg-slate-900/40 glass-effect p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
-                        <div className="flex items-center gap-3 mb-6 text-[#EEAF1C]">
-                            <div className="p-2 bg-orange-50 dark:bg-[#EEAF1C]/10 rounded-lg">
-                                <Activity className="w-5 h-5" />
-                            </div>
-                            <h3 className="text-sm font-bold uppercase tracking-widest">System Activity</h3>
-                        </div>
-                        <div className="space-y-4">
-                            {activityLogs.length > 0 ? (
-                                activityLogs.map((log: any) => (
-                                    <div key={log.id} className="border-l-4 border-[#EEAF1C] pl-4 py-3 bg-white dark:bg-white/10 rounded-r-xl transition-all hover:bg-slate-50 dark:hover:bg-white/15 group">
-                                        <p className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight uppercase tracking-tight group-hover:text-[#EEAF1C] transition-colors">{log.action_display || log.action}</p>
-                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1 uppercase tracking-wider">{log.description}</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <Clock className="w-3 h-3 text-[#EEAF1C]" />
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-[10px] text-slate-500 text-center py-4 uppercase tracking-widest font-bold">No recent activity found.</p>
-                            )}
-                        </div>
-                    </div>
-
-                </div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">© 2026 Admin Portal • Enterprise Edition</p>
             </div>
         </div>
     );
 }
-
-// ── UTILITY COMPONENTS ──
-
-function MetricBox({ label, value, change }: { label: string; value: string | number; change?: number }) {
-    const up = change === undefined || change >= 0;
-    return (
-        <div className="bg-white/95 dark:bg-[#111D29]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-5 rounded-2xl shadow-xl shadow-black/5 hover:border-[#EEAF1C] transition-all duration-500 group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-[#EEAF1C]/5 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-[#EEAF1C]/10 transition-colors" />
-            <p className="text-[9px] font-black text-[#EEAF1C] uppercase tracking-[0.3em] mb-2 group-hover:translate-x-1 transition-transform">{label}</p>
-            <div className="flex items-baseline justify-between relative z-10">
-                <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</span>
-                {change !== undefined && (
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg ${up ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'} flex items-center gap-1`}>
-                        {up ? '▲' : '▼'}{Math.abs(change)}%
-                    </span>
-                )}
-            </div>
-        </div>
-    );
-}
-

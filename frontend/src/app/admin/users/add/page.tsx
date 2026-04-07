@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { userService, roleService, AppRole } from '@/lib/api';
 import {
     ArrowLeft, User, Mail, Phone, KeyRound,
-    Shield, CheckCircle, Save, Loader2, XCircle
+    Shield, CheckCircle, Save, Loader2, XCircle, Eye, EyeOff
 } from 'lucide-react';
 
 // ─── Shared Utilities (Consistency with Company pages) ────────────────────────────────
@@ -50,6 +50,8 @@ export default function AddUserPage() {
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         roleService.getAll().then(setRoles).catch(() => setRoles([]));
@@ -151,11 +153,41 @@ export default function AddUserPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className={LABEL}>Password <span className="text-red-700">*</span></label>
-                                <input type="password" value={form.password} onChange={e => handle('password', e.target.value)} className={INPUT(!!errors.password)} placeholder="••••••••" />
+                                <div className="relative">
+                                    <input 
+                                        type={showPassword ? "text" : "password"} 
+                                        value={form.password} 
+                                        onChange={e => handle('password', e.target.value)} 
+                                        className={INPUT(!!errors.password)} 
+                                        placeholder="••••••••" 
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#EEAF1C]"
+                                    >
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className={LABEL}>Confirm Password <span className="text-red-700">*</span></label>
-                                <input type="password" value={form.password_confirm} onChange={e => handle('password_confirm', e.target.value)} className={INPUT(!!errors.password_confirm)} placeholder="••••••••" />
+                                <div className="relative">
+                                    <input 
+                                        type={showConfirmPassword ? "text" : "password"} 
+                                        value={form.password_confirm} 
+                                        onChange={e => handle('password_confirm', e.target.value)} 
+                                        className={INPUT(!!errors.password_confirm)} 
+                                        placeholder="••••••••" 
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#EEAF1C]"
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

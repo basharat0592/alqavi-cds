@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
     ShoppingBag, Search, X, RefreshCw, Clock, Printer, Plus,
-    Activity, Eye, ChevronDown, Check, ChevronRight, Filter
+    Activity, Eye, ChevronDown, Check, ChevronRight, Filter, Trash2, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -37,11 +37,13 @@ const STATUS_LIST = [
 function StatusDropdown({
     orderId,
     currentStatus,
-    onChange
+    onChange,
+    disabled
 }: {
     orderId: string;
     currentStatus: string;
     onChange: (id: string, s: string) => void;
+    disabled?: boolean;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -61,12 +63,16 @@ function StatusDropdown({
     return (
         <div className="relative" ref={dropdownRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 hover:border-[#EEAF1C]/50 transition-all shadow-sm group"
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                disabled={disabled}
+                className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-sm group
+                    ${disabled 
+                        ? 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-400 cursor-not-allowed opacity-60' 
+                        : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-[#EEAF1C]/50'}`}
             >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EEAF1C] group-hover:animate-pulse"></span>
+                <span className={`w-1.5 h-1.5 rounded-full ${disabled ? 'bg-slate-300' : 'bg-[#EEAF1C] group-hover:animate-pulse'}`}></span>
                 {activeStatus.label}
-                <ChevronDown className={`h-3 w-3 opacity-50 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                {!disabled && <ChevronDown className={`h-3 w-3 opacity-50 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
             </button>
 
             {isOpen && (
@@ -92,16 +98,66 @@ function StatusDropdown({
     );
 }
 
+// ── Delete Confirmation Modal ────────────────────────────────────────────────
+function DeleteConfirmModal({ 
+    orderNumber, 
+    onClose, 
+    onConfirm, 
+    loading 
+}: { 
+    orderNumber: string; 
+    onClose: () => void; 
+    onConfirm: () => void;
+    loading: boolean;
+}) {
+    return (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                    <div className="w-9 h-9 bg-rose-50 dark:bg-rose-900/10 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
+                        <AlertTriangle className="h-4 w-4 text-rose-500" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Delete Order Record</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                            Are you sure you want to permanently delete order <span className="font-semibold text-[#EEAF1C]">#{orderNumber}</span>? This action cannot be reversed.
+                        </p>
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2 px-5 py-3 bg-slate-50 dark:bg-white/[0.02]">
+                    <button 
+                        onClick={onClose} 
+                        disabled={loading}
+                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={onConfirm} 
+                        disabled={loading} 
+                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-all flex items-center gap-2 disabled:opacity-60 shadow-sm"
+                    >
+                        {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+                        Delete Order
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function RecentOrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const loadOrders = async () => {
         setLoading(true);
         try {
-            const params = { ordering: '-created_at', page: 1, pageSize: 50, exclude_status: 'delivered,cancelled' };
+            const params = { ordering: '-created_at', page: 1, pageSize: 100, exclude_status: 'delivered,cancelled' };
             const response = await orderService.getPaginated(params);
             setOrders(response.results);
         } catch (error) {
@@ -111,15 +167,21 @@ export default function RecentOrdersPage() {
         }
     };
 
-    useEffect(() => { loadOrders(); }, []);
+    useEffect(() => {
+        loadOrders();
+        const interval = setInterval(loadOrders, 10000); // poll every 10s
+        return () => clearInterval(interval);
+    }, []);
 
     const handleStatusMove = async (orderId: string, newStatus: string) => {
         setLoading(true);
         try {
             await orderService.update(orderId, { status: newStatus });
             toast.success("Lifecycle synchronization complete.");
-            if (['delivered', 'cancelled'].includes(newStatus)) {
-                setOrders(prev => prev.filter(o => o.id !== orderId));
+            if (['delivered', 'cancelled', 'completed'].includes(newStatus)) {
+                // Keep it in the list if we want to show delivered/cancelled with delete option?
+                // Actually the current filtering excludes them. Let's let the reload handle it.
+                loadOrders();
             } else {
                 loadOrders();
             }
@@ -127,6 +189,21 @@ export default function RecentOrdersPage() {
             toast.error("Initialization failure.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
+        try {
+            await orderService.delete(deleteTarget.id as string);
+            toast.success("Order purged from registry.");
+            setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
+            setDeleteTarget(null);
+        } catch {
+            toast.error("Purge sequence failure.");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -163,7 +240,7 @@ export default function RecentOrdersPage() {
 
             <div className="space-y-4">
                 {/* ── Filters ── */}
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
+                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
                         <input
@@ -247,9 +324,17 @@ export default function RecentOrdersPage() {
                                                         </Link>
                                                         <StatusDropdown
                                                             orderId={o.id as string}
-                                                            currentStatus={o.status}
+                                                            currentStatus={o.status || 'pending'}
                                                             onChange={handleStatusMove}
+                                                            disabled={['delivered', 'cancelled', 'rejected', 'completed'].includes(o.status?.toLowerCase() || '')}
                                                         />
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(o); }}
+                                                            className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors"
+                                                            title="Purge Order"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -261,6 +346,15 @@ export default function RecentOrdersPage() {
                     </div>
                 </SectionCard>
             </div>
+
+            {deleteTarget && (
+                <DeleteConfirmModal 
+                    orderNumber={deleteTarget.order_number || deleteTarget.id.toString().slice(-6).toUpperCase()}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDelete}
+                    loading={isDeleting}
+                />
+            )}
         </div>
     );
 }

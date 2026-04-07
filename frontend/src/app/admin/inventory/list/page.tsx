@@ -10,21 +10,14 @@ import { inventoryService, productService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils'; // if needed
 
 const StatusPill = ({ status }: { status: string }) => {
-    // Inventory statuses based on reorder level
-    let bg = 'bg-slate-100 text-slate-600 border-slate-200';
-    let text = status;
-
-    if (status === 'Pending') {
-        bg = 'bg-amber-50 text-amber-700 border-amber-200';
-    } else if (status === 'Low Stock') {
-        bg = 'bg-red-50 text-red-600 border-red-200';
-    } else if (status === 'In Stock') {
-        bg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    }
+    let colorClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+    if (status === 'Low Stock' || status === 'Critical') colorClass = 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400';
+    else if (status === 'Pending') colorClass = 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400';
+    else if (status === 'In Stock') colorClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400';
 
     return (
-        <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-semibold capitalize ${bg}`}>
-            {text}
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${colorClass}`}>
+            {status}
         </span>
     );
 };
@@ -48,6 +41,10 @@ export default function InventoryListPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string|number|null>(null);
+
+    // ── Pagination State ──
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     const [form, setForm] = useState({
         product: '', warehouse: '', sku: '', barcode: '',
@@ -79,7 +76,7 @@ export default function InventoryListPage() {
                         barcode: prod.barcode, product_image: prod.image || prod.image_url,
                         warehouse: selectedWarehouse,
                         warehouse_name: whData.find((w: any) => String(w.id) === String(selectedWarehouse))?.name,
-                        quantity_available: 0, is_virtual: true
+                        quantity_available: Number(prod.quantity_in_stock || 0), is_virtual: true
                     };
                 });
             } else {
@@ -99,10 +96,16 @@ export default function InventoryListPage() {
                 
                 const missingProducts = prodData.filter((p: any) => !invData.some((inv: any) => String(inv.product) === String(p.id)));
                 const virtualRecords = missingProducts.map((p: any) => ({
-                    id: `virtual-${p.id}`, product: p.id, product_name: p.name,
-                    sku: p.sku, barcode: p.barcode, product_image: p.image || p.image_url,
-                    warehouse: defaultWarehouse?.id, warehouse_name: defaultWarehouse?.name || "Main Hub",
-                    quantity_available: 0, is_virtual: true
+                    id: `virtual-${p.id}`,
+                    product: p.id,
+                    product_name: p.name,
+                    sku: p.sku,
+                    barcode: p.barcode,
+                    product_image: p.image || p.image_url,
+                    warehouse: defaultWarehouse?.id,
+                    warehouse_name: defaultWarehouse?.name || "Main Hub",
+                    quantity_available: Number(p.quantity_in_stock || 0),
+                    is_virtual: true
                 }));
                 finalInventory = [...recordsWithInfo, ...virtualRecords];
             }
@@ -174,6 +177,14 @@ export default function InventoryListPage() {
         return matchesSearch && matchesWarehouse;
     });
 
+    // ── Pagination Logic ──
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    const paginatedData = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, selectedWarehouse]);
+
     if (view === 'form') {
         return (
             <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
@@ -186,7 +197,7 @@ export default function InventoryListPage() {
                     </div>
                 </div>
 
-                <form onSubmit={handleSave} className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm max-w-4xl">
+                <form onSubmit={handleSave} className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm max-w-4xl">
                     <div className="p-5 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -226,8 +237,8 @@ export default function InventoryListPage() {
                         <button type="button" onClick={() => setView('list')} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50">
-                            {isSubmitting ? 'Saving...' : 'Save'}
+                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white rounded-lg text-sm font-semibold hover:bg-[#EEAF1C]/80 transition-colors shadow-sm disabled:opacity-50 uppercase tracking-widest">
+                            {isSubmitting ? 'Saving...' : 'Commit Changes'}
                         </button>
                     </div>
                 </form>
@@ -239,10 +250,10 @@ export default function InventoryListPage() {
         <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
             
             {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
+            <div className="page-header">
                 <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Stock Management</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage inbound procurement records</p>
+                    <h1 className="page-title">Inventory List</h1>
+                    <p className="page-subtitle">Manage and track your current stock levels</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -270,13 +281,13 @@ export default function InventoryListPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by SKU or product..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={selectedWarehouse}
                     onChange={e => setSelectedWarehouse(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="">All Warehouses</option>
                     {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
@@ -289,29 +300,28 @@ export default function InventoryListPage() {
             </p>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#1a252f] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">SKU No</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Product</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Warehouse</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap">Qty</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Status</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap">Actions</th>
+                            <tr className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
+                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Inventory Item</th>
+                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Storage Location</th>
+                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Available Qty</th>
+                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Stock status</th>
+                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Operations</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                            {loading && filtered.length === 0 ? (
+                            {loading && paginatedData.length === 0 ? (
                                 Array(6).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
                                         <td colSpan={6} className="px-4 py-4">
-                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
+                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded-lg w-full" />
                                         </td>
                                     </tr>
                                 ))
-                            ) : filtered.length === 0 ? (
+                            ) : paginatedData.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-16 text-center">
                                         <Package className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
@@ -325,50 +335,44 @@ export default function InventoryListPage() {
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((item) => {
+                                paginatedData.map((item) => {
                                     const qtyStatus = item.is_virtual ? 'Pending' : (Number(item.quantity_available) <= Number(item.reorder_level || 0) ? 'Low Stock' : 'In Stock');
                                     
                                     return (
-                                        <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                            <td className="px-4 py-3">
-                                                <span className="text-[#EEAF1C] font-medium text-sm">#{item.sku || 'N/A'}</span>
+                                        <tr key={item.id} className="border-b border-slate-50 dark:border-white/[0.02] hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-all group">
+                                            <td className="px-5 py-4">
+                                                <p className="text-xs font-black text-[#EEAF1C] uppercase tracking-tighter">#{item.sku || 'N/A'}</p>
+                                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-0.5">{item.product_name || '—'}</p>
                                             </td>
-                                            <td className="px-4 py-3 max-w-[180px]">
-                                                <span className="text-slate-800 dark:text-slate-200 font-medium text-sm truncate block" title={item.product_name}>
-                                                    {item.product_name || '—'}
-                                                </span>
+                                            <td className="px-5 py-4">
+                                                <p className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">{item.warehouse_name || 'Main Hub'}</p>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-slate-500 dark:text-slate-400 text-sm">{item.warehouse_name || '—'}</span>
+                                            <td className="px-5 py-4 text-right">
+                                                <p className="text-sm font-black text-slate-900 dark:text-white">{Number(item.quantity_available).toLocaleString()}</p>
                                             </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <span className="text-slate-800 dark:text-slate-200 font-semibold text-sm">
-                                                    {Number(item.quantity_available).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-5 py-4 text-center">
                                                 <StatusPill status={qtyStatus} />
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex justify-end items-center gap-1">
+                                            <td className="px-5 py-4">
+                                                <div className="flex justify-end items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
                                                     <button
                                                         onClick={() => setViewRow(item)}
-                                                        className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
+                                                        className="p-2 rounded-xl text-slate-500 hover:text-[#EEAF1C] hover:bg-slate-100 dark:hover:bg-[#EEAF1C]/10 transition-all active:scale-90"
                                                         title="View details"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleEditClick(item)}
-                                                        className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                                                        title="Edit"
+                                                        className="p-2 rounded-xl text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-amber-500/10 transition-all active:scale-90"
+                                                        title="Edit record"
                                                     >
                                                         <Edit2 className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => setDeleteRow(item)}
-                                                        className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                                                        title="Delete"
+                                                        className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-red-500/10 transition-all active:scale-90"
+                                                        title="Remove inventory"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
@@ -381,48 +385,98 @@ export default function InventoryListPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* ── Pagination Footer ── */}
+                {!loading && filtered.length > ITEMS_PER_PAGE && (
+                    <div className="px-4 py-3 bg-slate-50/50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Showing <span className="font-bold text-slate-700 dark:text-slate-200">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-slate-700 dark:text-slate-200">{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)}</span> of <span className="font-bold">{filtered.length}</span> entries
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-50 transition-colors active:scale-95"
+                            >
+                                Previous
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {[...Array(totalPages)].map((_, i) => {
+                                    const p = i + 1;
+                                    // Logic to show limited page numbers if too many
+                                    if (totalPages > 5 && Math.abs(p - currentPage) > 1 && p !== 1 && p !== totalPages) {
+                                        if (p === 2 || p === totalPages - 1) return <span key={p} className="text-slate-400 px-1">...</span>;
+                                        return null;
+                                    }
+                                    return (
+                                        <button
+                                            key={p}
+                                            onClick={() => setCurrentPage(p)}
+                                            className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${currentPage === p ? 'bg-[#EEAF1C] text-white shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10'}`}
+                                        >
+                                            {p}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-50 transition-colors active:scale-95"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* ── View Modal ── */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+                        
+                        {/* Amazon Style Header Bar */}
+                        <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
                             <div>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Stock #{viewRow.sku || 'N/A'}</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Stock details</p>
+                                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Stock Manifest</h3>
+                                <p className="text-[10px] text-[#EEAF1C] font-bold uppercase tracking-widest mt-0.5">SKU: {viewRow.sku || 'N/A'}</p>
                             </div>
                             <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
-                        <div className="p-5 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+
+                        <div className="p-6 space-y-6 text-left">
+                            <div className="grid grid-cols-2 gap-y-6 gap-x-8">
                                 <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Product</p>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.product_name || '—'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product Name</p>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewRow.product_name || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Warehouse</p>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.warehouse_name || '—'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Storage Site</p>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewRow.warehouse_name || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Stock Status</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Inventory Health</p>
                                     <StatusPill status={viewRow.is_virtual ? 'Pending' : (Number(viewRow.quantity_available) <= Number(viewRow.reorder_level || 0) ? 'Low Stock' : 'In Stock')} />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Batch Number</p>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.batch_number || 'Default'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Batch / Lot #</p>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewRow.batch_number || 'DEFAULT-00'}</p>
                                 </div>
                             </div>
-                            <div className="pt-3 border-t border-slate-100 dark:border-white/10">
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Quantity</p>
-                                <p className="text-2xl font-bold text-[#EEAF1C]">{Number(viewRow.quantity_available).toLocaleString()}</p>
+
+                            <div className="bg-slate-50 dark:bg-black/20 p-5 rounded-xl border border-slate-100 dark:border-white/5 text-center">
+                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Available Quantity</p>
+                                <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{Number(viewRow.quantity_available).toLocaleString()}</p>
+                                <p className="text-[10px] text-[#EEAF1C] font-bold mt-2 uppercase">Ready for distribution</p>
                             </div>
                         </div>
-                        <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
-                            <button onClick={() => setViewRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
-                                Close
+
+                        <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex justify-end">
+                            <button onClick={() => setViewRow(null)} className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95">
+                                Close Details
                             </button>
                         </div>
                     </div>
@@ -432,7 +486,7 @@ export default function InventoryListPage() {
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0D1921] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-5 text-center">
                             <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />

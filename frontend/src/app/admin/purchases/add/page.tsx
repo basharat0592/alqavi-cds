@@ -4,21 +4,30 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     ShoppingCart, Plus, Trash2, X, CheckCircle, AlertTriangle,
-    Package, Loader2, ArrowLeft, Save, DollarSign, Clipboard, ShieldCheck
+    Package, Loader2, ArrowLeft, Save, DollarSign, Clipboard, ShieldCheck,
+    Hash
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
+import { userService } from '@/services/user.service';
 import { formatCurrency } from '@/lib/utils';
 
 const EMPTY_FORM = {
-    purchase_number: '', supplier_name: '', supplier_phone: '',
+    purchase_number: '', supplier: '', supplier_name: '', supplier_phone: '',
     order_date: new Date().toISOString().slice(0, 10),
     expected_delivery_date: '', tax_amount: '0', shipping_cost: '0',
     status: 'ordered', payment_status: 'pending', notes: '',
 };
 
-type LineItem = { product: string; product_name: string; quantity: number; unit_price: number };
+type LineItem = {
+    product: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    packaging_type: 'piece' | 'pack' | 'carton';
+    pieces_per_unit: number;
+};
 
 // ── Reusable form field wrappers ──────────────────────────────────────────────
 const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
@@ -28,13 +37,13 @@ const FieldLabel = ({ children, required }: { children: React.ReactNode; require
 );
 
 const fieldCls = (err?: boolean) =>
-    `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
+    `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
 
-const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
+const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
 
 // ── Section panel wrapper ─────────────────────────────────────────────────────
 const Panel = ({ title, icon: Icon, action, children }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
             <div className="flex items-center gap-2">
                 {Icon && <Icon className="h-4 w-4 text-[#EEAF1C]" />}
@@ -52,11 +61,18 @@ export default function AddPurchasePage() {
     const hasPrefilled = useRef(false);
 
     const [products, setProducts] = useState<any[]>([]);
-    const [companies, setCompanies] = useState<any[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM });
-    const [items, setItems] = useState<LineItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+    const [items, setItems] = useState<LineItem[]>([{
+        product: '',
+        product_name: '',
+        quantity: 1,
+        unit_price: 0,
+        packaging_type: 'piece',
+        pieces_per_unit: 1
+    }]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'alert' } | null>(null);
 
@@ -68,9 +84,9 @@ export default function AddPurchasePage() {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [prodsRes, compsRes, suppRes] = await Promise.allSettled([
-                productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
-                companyService.getAll(),
+            const [prodsRes, usersRes, suppRes] = await Promise.allSettled([
+                productService.getAll?.({ all_items: 'true', include_pending: 'true' } as any) ?? Promise.resolve([]),
+                userService.getAll(),
                 (companyService as any).getSuppliers?.() ?? Promise.resolve([])
             ]);
 
@@ -78,11 +94,26 @@ export default function AddPurchasePage() {
                 const prods = prodsRes.value;
                 setProducts(Array.isArray(prods) ? prods : (prods as any)?.results || []);
             }
-            const cList = compsRes.status === 'fulfilled' ? (Array.isArray(compsRes.value) ? compsRes.value : []) : [];
-            const sList = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
-            const merged = [...cList, ...sList];
+
+            // Registered Suppliers from Supplier Page (Users with Supplier role)
+            const users = usersRes.status === 'fulfilled' ? (Array.isArray(usersRes.value) ? usersRes.value : []) : [];
+            const registeredSuppliers = users.filter((u: any) => 
+                (u.role_name || '').toLowerCase().includes('supplier')
+            ).map((u: any) => ({
+                id: u.id,
+                name: u.business_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+                phone: u.phone_number || u.phone || '',
+                city: u.address || ''
+            }));
+
+            // Also include official Supplier model records
+            const suppliersList = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
+            
+            // Merge both for complete registry
+            const merged = [...registeredSuppliers, ...suppliersList];
             const unique = Array.from(new Map(merged.map(item => [item.name, item])).values());
-            setCompanies(unique);
+            
+            setSuppliers(unique);
 
             const num = `PO-${Date.now().toString().slice(-6)}`;
             setForm(prev => ({ ...prev, purchase_number: num }));
@@ -105,29 +136,54 @@ export default function AddPurchasePage() {
                 const foundProduct = products.find(prod => String(prod.id) === pid);
                 if (foundProduct) {
                     hasPrefilled.current = true;
-                    setItems([{ product: foundProduct.id.toString(), product_name: foundProduct.name, quantity: qty, unit_price: parseFloat(foundProduct.price || 0) }]);
+                    setItems([{
+                        product: foundProduct.id.toString(),
+                        product_name: foundProduct.name,
+                        quantity: qty,
+                        unit_price: parseFloat(foundProduct.price || 0),
+                        packaging_type: foundProduct.unit_type || 'piece',
+                        pieces_per_unit: foundProduct.pieces_per_unit || 1
+                    }]);
                     const vendor = foundProduct.supplier_name || foundProduct.company_name || sn || '';
                     if (vendor) {
-                        const matchedCompany = companies.find(c => c.name.toLowerCase().trim() === vendor.toLowerCase().trim());
-                        setForm(f => ({ ...f, supplier_name: matchedCompany ? matchedCompany.name : vendor, supplier_phone: matchedCompany ? (matchedCompany.phone || matchedCompany.whatsapp || '') : f.supplier_phone }));
+                        const matchedSupplier = suppliers.find(c => c.name.toLowerCase().trim() === vendor.toLowerCase().trim());
+                        setForm(f => ({ 
+                            ...f, 
+                            supplier: matchedSupplier ? matchedSupplier.id : f.supplier,
+                            supplier_name: matchedSupplier ? matchedSupplier.name : vendor, 
+                            supplier_phone: matchedSupplier ? (matchedSupplier.phone || matchedSupplier.whatsapp || '') : f.supplier_phone 
+                        }));
                     }
                 }
             } else if (sn && products.length > 0) {
                 hasPrefilled.current = true;
-                const matched = companies.find(c => c.name.toLowerCase().trim() === sn.toLowerCase().trim());
+                const matched = suppliers.find(c => c.name.toLowerCase().trim() === sn.toLowerCase().trim());
                 const currentSn = matched ? matched.name : sn;
-                setForm(f => ({ ...f, supplier_name: currentSn, supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone }));
+                setForm(f => ({ 
+                    ...f, 
+                    supplier: matched ? matched.id : f.supplier,
+                    supplier_name: currentSn, 
+                    supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone 
+                }));
                 const supplierProds = products.filter(p => p.company_name === currentSn || p.supplier_name === currentSn);
                 if (supplierProds.length > 0) {
-                    setItems(supplierProds.map(p => ({ product: p.id.toString(), product_name: p.name, quantity: 1, unit_price: parseFloat(p.price || 0) })));
+                    setItems(supplierProds.map(p => ({
+                        product: p.id.toString(),
+                        product_name: p.name,
+                        quantity: 1,
+                        unit_price: parseFloat(p.price || 0),
+                        packaging_type: p.unit_type || 'piece',
+                        pieces_per_unit: p.pieces_per_unit || 1
+                    })));
                 }
             }
         }
-    }, [loading, companies, products, searchParams]);
+    }, [loading, suppliers, products, searchParams]);
 
     const validate = () => {
         const e: Record<string, string> = {};
         if (!form.purchase_number) e.purchase_number = 'Required';
+        if (!form.supplier) e.supplier_name = 'Supplier not found in registry';
         if (!form.supplier_name) e.supplier_name = 'Required';
         if (!form.order_date) e.order_date = 'Required';
         if (items.some(i => !i.product || i.quantity < 1 || i.unit_price <= 0))
@@ -136,13 +192,15 @@ export default function AddPurchasePage() {
         return Object.keys(e).length === 0;
     };
 
+    const [successOrder, setSuccessOrder] = useState<any | null>(null);
+
     const handleSave = async () => {
         if (!validate()) return;
         setSaving(true);
         try {
-            await purchaseService.create({ ...form, items });
+            const res = await purchaseService.create({ ...form, items });
+            setSuccessOrder(res);
             showToast('Purchase order created successfully!');
-            setTimeout(() => router.push('/admin/purchases'), 1500);
         } catch (e: any) {
             showToast(e?.response?.data?.error || 'Failed to create purchase order', 'alert');
         } finally {
@@ -150,14 +208,28 @@ export default function AddPurchasePage() {
         }
     };
 
-    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+    const addItem = () => setItems(prev => [...prev, {
+        product: '',
+        product_name: '',
+        quantity: 1,
+        unit_price: 0,
+        packaging_type: 'piece',
+        pieces_per_unit: 1
+    }]);
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
                 const p = products.find(p => p.id === val || p.id === Number(val));
-                return { ...item, product: val, product_name: p?.name || '', unit_price: p?.price ? parseFloat(p.price) : item.unit_price };
+                return {
+                    ...item,
+                    product: val,
+                    product_name: p?.name || '',
+                    unit_price: p?.price ? parseFloat(p.price) : item.unit_price,
+                    packaging_type: p?.unit_type || 'piece',
+                    pieces_per_unit: p?.pieces_per_unit || 1
+                };
             }
             return { ...item, [field]: val };
         }));
@@ -211,25 +283,52 @@ export default function AddPurchasePage() {
                                 {errors.purchase_number && <p className="text-red-500 text-xs mt-1">{errors.purchase_number}</p>}
                             </div>
                             <div>
-                                <FieldLabel required>Supplier</FieldLabel>
+                                <FieldLabel required>Supplier Entity</FieldLabel>
                                 <select
-                                    value={form.supplier_name}
+                                    value={form.supplier}
                                     onChange={e => {
                                         const val = e.target.value;
-                                        const matched = companies.find(c => c.name === val);
-                                        const supplierProds = products.filter(p => p.supplier_name === val);
+                                        const matched = suppliers.find(c => String(c.id) === val);
+                                        const currentName = matched ? matched.name : '';
+                                        
+                                        // Filter products specifically for this supplier ID
+                                        const supplierProds = products.filter(p => 
+                                            p.supplier === Number(val) || 
+                                            (currentName && String(p.supplier_name || '').toLowerCase() === currentName.toLowerCase())
+                                        );
+
                                         if (supplierProds.length > 0) {
-                                            setItems(supplierProds.map(p => ({ product: p.id.toString(), product_name: p.name, quantity: 1, unit_price: parseFloat(p.price || 0) })));
+                                            setItems(supplierProds.slice(0, 1).map(p => ({
+                                                product: p.id.toString(),
+                                                product_name: p.name,
+                                                quantity: 1,
+                                                unit_price: parseFloat(p.price || 0),
+                                                packaging_type: p.unit_type || 'piece',
+                                                pieces_per_unit: p.pieces_per_unit || 1
+                                            })));
                                         } else {
-                                            setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+                                            setItems([{
+                                                product: '',
+                                                product_name: '',
+                                                quantity: 1,
+                                                unit_price: 0,
+                                                packaging_type: 'piece',
+                                                pieces_per_unit: 1
+                                            }]);
                                         }
-                                        setForm(f => ({ ...f, supplier_name: val, supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone }));
+                                        
+                                        setForm(f => ({ 
+                                            ...f, 
+                                            supplier: val,
+                                            supplier_name: currentName, 
+                                            supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone 
+                                        }));
                                     }}
                                     className={`${selectCls} ${errors.supplier_name ? 'border-red-400' : ''}`}
                                 >
-                                    <option value="">Select supplier...</option>
-                                    {companies.map(c => (
-                                        <option key={`${c.id}-${c.name}`} value={c.name}>{c.name}{c.city ? ` — ${c.city}` : ''}</option>
+                                    <option value="">Locate registered supplier...</option>
+                                    {suppliers.map(c => (
+                                        <option key={`${c.id}-${c.name}`} value={String(c.id)}>{c.name}{c.city ? ` — ${c.city}` : ''}</option>
                                     ))}
                                 </select>
                                 {errors.supplier_name && <p className="text-red-500 text-xs mt-1">{errors.supplier_name}</p>}
@@ -256,84 +355,128 @@ export default function AddPurchasePage() {
                         </div>
                     </Panel>
 
-                    {/* Items Table */}
+                    {/* Order Items - Simplified Card Design */}
                     <Panel
                         title="Order Items"
                         icon={Package}
                         action={
                             <button
                                 onClick={addItem}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#EEAF1C] bg-blue-50 dark:bg-[#EEAF1C]/10 rounded-lg hover:bg-blue-100 dark:hover:bg-[#EEAF1C]/20 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 text-[12px] font-bold text-white bg-[#EEAF1C] rounded-xl hover:bg-amber-600 transition-all shadow-sm"
                             >
-                                <Plus className="h-3.5 w-3.5" /> Add Item
+                                <Plus className="h-4 w-4" strokeWidth={2.5} /> Add Item
                             </button>
                         }
                     >
                         {errors.items && (
-                            <div className="mb-4 px-3 py-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg">
-                                <p className="text-red-600 text-xs">{errors.items}</p>
+                            <div className="mb-6 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-center gap-3">
+                                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                                <p className="text-red-600 text-xs font-medium">{errors.items}</p>
                             </div>
                         )}
 
-                        {/* Column headers */}
-                        <div className="grid grid-cols-12 gap-3 mb-2 px-1">
-                            <div className="col-span-6 text-xs font-semibold text-slate-500">Product</div>
-                            <div className="col-span-2 text-xs font-semibold text-slate-500">Qty</div>
-                            <div className="col-span-3 text-xs font-semibold text-slate-500">Unit Price</div>
-                            <div className="col-span-1"></div>
-                        </div>
-
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             {items.map((item, i) => (
-                                <div key={i} className="grid grid-cols-12 gap-3 items-center p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] rounded-lg">
-                                    <div className="col-span-6">
-                                        <select
-                                            value={String(item.product)}
-                                            onChange={e => updateItem(i, 'product', e.target.value)}
-                                            className={selectCls}
-                                        >
-                                            <option value="">Select product...</option>
-                                            {products
-                                                .filter(p => {
-                                                    if (!form.supplier_name) return true;
-                                                    return String(p.supplier_name || p.company_name || '').toLowerCase().trim() === String(form.supplier_name).toLowerCase().trim();
-                                                })
-                                                .map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)
-                                            }
-                                        </select>
+                                <div key={i} className="relative group bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-xl p-5 hover:border-[#EEAF1C]/40 transition-all">
+
+                                    {/* Item Header */}
+                                    <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                                        <div className="flex-1 min-w-[280px]">
+                                            <FieldLabel required>Product</FieldLabel>
+                                            <select
+                                                value={String(item.product)}
+                                                onChange={e => updateItem(i, 'product', e.target.value)}
+                                                className={selectCls + " font-medium text-slate-800 dark:text-white"}
+                                            >
+                                                <option value="">Select a product...</option>
+                                                {products
+                                                    .filter(p => {
+                                                        if (!form.supplier) return true;
+                                                        const pSupplierId = p.supplier && typeof p.supplier === 'object' ? p.supplier.id : p.supplier;
+                                                        return String(pSupplierId) === String(form.supplier) || 
+                                                               String(p.supplier_name || '').toLowerCase() === String(form.supplier_name).toLowerCase();
+                                                    })
+                                                    .map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Subtotal</p>
+                                            <p className="text-lg font-bold text-[#EEAF1C]">{formatCurrency((item.quantity || 0) * (item.unit_price || 0))}</p>
+                                        </div>
                                     </div>
-                                    <div className="col-span-2">
-                                        <input
-                                            type="number" min="1"
-                                            value={item.quantity}
-                                            onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                                            className={fieldCls()}
-                                        />
+
+                                    {/* Item Details */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                                        <div>
+                                            <FieldLabel>Pack or Carton?</FieldLabel>
+                                            <select
+                                                value={item.packaging_type}
+                                                onChange={e => updateItem(i, 'packaging_type', e.target.value)}
+                                                className="w-full px-3 py-2 text-xs font-bold text-[#EEAF1C] bg-[#EEAF1C]/5 border border-[#EEAF1C]/20 rounded-lg outline-none"
+                                            >
+                                                <option value="piece">Piece (Single)</option>
+                                                <option value="pack">Pack</option>
+                                                <option value="carton">Carton</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel>Pieces in 1 Pack</FieldLabel>
+                                            <div className="relative">
+                                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                <input
+                                                    type="number" min="1"
+                                                    value={item.pieces_per_unit}
+                                                    onChange={(e) => updateItem(i, 'pieces_per_unit', parseInt(e.target.value) || 1)}
+                                                    className={fieldCls() + " pl-9 border-dashed text-slate-600 dark:text-slate-300 font-bold"}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel required>Quantity</FieldLabel>
+                                            <div className="relative">
+                                                <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                <input
+                                                    type="number" min="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
+                                                    className={fieldCls() + " pl-9 font-bold text-slate-900 dark:text-white"}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel required>Price (Each)</FieldLabel>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                                <input
+                                                    type="number" min="0" step="0.01"
+                                                    value={item.unit_price}
+                                                    onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                    className={fieldCls() + " pl-9 text-right font-bold text-slate-900 dark:text-white"}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="col-span-3">
-                                        <input
-                                            type="number" min="0" step="0.01"
-                                            value={item.unit_price}
-                                            onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                                            className={fieldCls()}
-                                        />
-                                    </div>
-                                    <div className="col-span-1 flex justify-center">
+
+                                    {/* Item Summary */}
+                                    <div className="mt-4 pt-3 flex items-center justify-between border-t border-slate-50 dark:border-white/5 border-dashed">
+                                        <p className="text-[11px] font-medium text-slate-500">
+                                            Total: <span className="font-bold text-slate-700 dark:text-slate-300">{(item.quantity || 0) * (item.pieces_per_unit || 1)} pieces</span> will be added to stock.
+                                        </p>
+
                                         <button
                                             onClick={() => removeItem(i)}
-                                            className="p-1.5 rounded text-slate-300 hover:text-red-500 transition-colors"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-100"
                                         >
-                                            <X className="h-4 w-4" />
+                                            <Trash2 className="h-3.5 w-3.5" /> REMOVE
                                         </button>
                                     </div>
                                 </div>
                             ))}
-                        </div>
-
-                        {/* Line total */}
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex justify-between items-center text-sm">
-                            <span className="text-slate-500">Items subtotal</span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(lineTotal)}</span>
                         </div>
                     </Panel>
                 </div>
@@ -438,6 +581,56 @@ export default function AddPurchasePage() {
                 </div>
             </div>
 
+            {/* ── Amazon-Style Success Modal ── */}
+            {successOrder && (
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col border border-gray-200">
+                        <div className="p-8 text-center flex flex-col items-center">
+                            <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border border-emerald-100">
+                                <CheckCircle className="h-6 w-6 text-emerald-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">Purchase Confirmed</h3>
+                            <p className="text-sm text-gray-500 mb-6 font-medium">Order #{successOrder.purchase_number} has been created.</p>
+                            
+                            <div className="w-full space-y-4 mb-2">
+                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 text-left relative group/copy">
+                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest leading-none">Tracking Identifier</p>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-lg font-black text-gray-900 tracking-tight leading-none uppercase">{successOrder.tracking_id || 'N/A'}</p>
+                                        {successOrder.tracking_id && (
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(successOrder.tracking_id);
+                                                    showToast('Tracking ID Copied!');
+                                                }}
+                                                className="p-1 text-gray-400 hover:text-[#EEAF1C] transition-colors"
+                                                title="Copy Tracking ID"
+                                            >
+                                                <Clipboard className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        onClick={() => router.push('/admin/purchases')}
+                                        className="w-full py-2 bg-[#F7CA00] hover:bg-[#f0c14b] border border-[#a88734] rounded text-sm font-bold shadow-sm active:shadow-inner"
+                                    >
+                                        View Orders
+                                    </button>
+                                    <button
+                                        onClick={() => router.push(`/admin/tracking?q=${successOrder.tracking_id}`)}
+                                        className="w-full py-2 text-xs font-bold text-[#007185] hover:text-[#c7511f] hover:underline transition-colors"
+                                    >
+                                        Track this shipment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── Toast ── */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
@@ -452,4 +645,3 @@ export default function AddPurchasePage() {
         </div>
     );
 }
-

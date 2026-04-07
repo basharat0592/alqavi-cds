@@ -353,70 +353,169 @@ def update_order(request, order_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_order(request, order_id):
-    """Delete an order (owner or admin only)."""
+    """Delete an order (owner or admin only). Customers can only delete cancelled/delivered orders."""
     order, err = get_or_404_response(Order, id=order_id)
     if err:
         return err
-    
-    # Ownership Check
+
     is_admin = request.user.is_superuser or request.user.is_staff or (
         request.user.role and request.user.role.name in ['Admin', 'admin']
     )
-    
+
     if not is_admin:
-        # Check if this user owns the order
         if order.customer != request.user:
-            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-            
+            return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Customers can only delete closed orders (cancelled, rejected, delivered)
+        allowed_statuses = ['cancelled', 'rejected', 'delivered', 'completed']
+        if order.status.lower() not in allowed_statuses:
+            return Response({
+                'error': 'You can only delete orders that are cancelled or delivered.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
     order.delete()
-    return Response({'message': 'Order deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    return Response({'message': 'Order deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def cancel_order(request, order_id):
-    """Cancel or request cancellation (owner or admin only)."""
+    """Cancel order — public cancel for UUID holder (pre-shipped only). Authentication optional."""
     order, err = get_or_404_response(Order, id=order_id)
     if err:
         return err
 
-    # Identity Registry: Is privileged admin?
-    is_admin = request.user.is_superuser or request.user.is_staff or (
-        request.user.role and request.user.role.name in ['Admin', 'admin']
-    )
-    
-    if is_admin:
-        # Full Registry Authority — Force Cancel
+    # Identity check
+    is_admin = False
+    if request.user.is_authenticated:
+        is_admin = request.user.is_superuser or request.user.is_staff or (
+            request.user.role and request.user.role.name in ['Admin', 'admin']
+        )
+
+    # Permission check: If order is linked to a customer, restrict to that user or admin
+    if order.customer and not is_admin:
+        if not request.user.is_authenticated or order.customer != request.user:
+            return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+    current_status = order.status.lower()
+
+    # Admins can always cancel
+    if not is_admin:
+        # Customers: block if already shipped or beyond
+        if current_status in ['shipped', 'delivered', 'completed', 'cancelled', 'rejected']:
+            return Response({
+                'error': f'Order cannot be cancelled. It has already been marked as "{order.status}".'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Perform cancellation with stock restoration
+    from django.db import transaction
+    with transaction.atomic():
+        old_status = current_status
         order.status = 'cancelled'
         order.save()
-        UserActivityLog.objects.create(
-            user=request.user,
-            action='cancel',
-            description=f'Admin cancelled order {order.order_number}'
-        )
-        return Response({'message': 'Order registration voided by administrator', 'status': 'cancelled'})
 
-    # Customer Logic: Request Cancellation
-    if order.customer != request.user:
-        return Response({'error': 'Identity mismatch. Unauthorized request.'}, status=status.HTTP_403_FORBIDDEN)
-            
-    # Status Pipeline Check: Only ordered, confirmed, or pending are eligible for request
-    if order.status.lower() not in ['ordered', 'confirmed', 'pending']:
-        return Response({
-            'error': f'Cancellation cannot be requested for registry in "{order.status}" status. Please contact the administrative desk.'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        # Restore stock only if it was previously deducted
+        deducted_states = ['confirmed', 'processing', 'shipped', 'delivered', 'completed']
+        if old_status in deducted_states:
+            warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
+            for item in order.items.all():
+                if item.product:
+                    qty = item.quantity
+                    item.product.quantity_in_stock += qty
+                    item.product.save()
 
-    # Move to Review State
-    order.status = 'cancel_requested'
-    order.save()
-    
+                    if warehouse:
+                        inv = Inventory.objects.filter(
+                            product=item.product,
+                            warehouse=warehouse
+                        ).order_by('-quantity_available').first()
+
+                        if not inv:
+                            inv = Inventory.objects.create(
+                                product=item.product,
+                                warehouse=warehouse,
+                                quantity_available=0
+                            )
+
+                        prev_qty = float(inv.quantity_available)
+                        inv.quantity_available += qty
+                        inv.save()
+
+                        InventoryMovement.objects.create(
+                            product=item.product,
+                            warehouse=warehouse,
+                            movement_type='Return',
+                            quantity=qty,
+                            previous_quantity=prev_qty,
+                            new_quantity=float(inv.quantity_available),
+                            reference_id=str(order.order_number),
+                            notes=f"Stock restored due to order cancellation: {order.order_number}",
+                            created_by=request.user
+                        )
+
+    actor_name = 'Public Guest'
+    log_user = None
+    if request.user.is_authenticated:
+        actor_name = 'Admin' if is_admin else 'Customer'
+        log_user = request.user
+
     UserActivityLog.objects.create(
-        user=request.user,
-        action='cancel_request',
-        description=f'Customer requested cancellation for {order.order_number}'
+        user=log_user,
+        action='update', # changed from 'cancel' to avoid choices error if 'cancel' isn't in ACTION_CHOICES
+        description=f'{actor_name} cancelled order {order.order_number}'
     )
-    
-    return Response({'message': 'Cancellation request submitted for administrative review', 'status': 'cancel_requested'}, status=status.HTTP_200_OK)
+
+    return Response({'message': 'Order successfully cancelled.', 'status': 'cancelled'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def confirm_order_received(request, order_id):
+    """Public confirmation of receipt by order UUID holder."""
+    order, err = get_or_404_response(Order, id=order_id)
+    if err:
+        return err
+
+    # Identity check
+    is_admin = False
+    if request.user.is_authenticated:
+        is_admin = request.user.is_superuser or request.user.is_staff or (
+            request.user.role and request.user.role.name in ['Admin', 'admin']
+        )
+
+    # Permission check: If order belongs to a customer, restrict to owner or admin
+    if order.customer and not is_admin:
+        if not request.user.is_authenticated or order.customer != request.user:
+            return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        from django.db import transaction
+        with transaction.atomic():
+            # Validate status
+            if order.status.lower() != 'shipped':
+                raise Exception(f'Only shipped orders can be marked as received. Current status is {order.status}.')
+
+            order.status = 'delivered'
+            order.save()
+
+            actor_name = 'Public Guest'
+            log_user = None
+            if request.user.is_authenticated:
+                actor_name = 'Admin' if is_admin else 'Customer'
+                log_user = request.user
+
+            UserActivityLog.objects.create(
+                user=log_user,
+                action='update',
+                description=f'{actor_name} confirmed receipt of order {order.order_number}'
+            )
+
+        return Response({
+            'message': 'Order marked as received. Thank you!',
+            'status': 'delivered'
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -515,17 +614,20 @@ def dashboard_stats(request):
         )
         purchase_map = {p['date'].strftime('%Y-%m-%d'): p['expense'] for p in purchase_history}
     
-    # Format history for frontend
+    # Format history for frontend: DUAL LINE SUPPORT (Sales vs Purchases)
     history_map = {h['date'].strftime('%Y-%m-%d'): h for h in history_data}
     formatted_history = []
     for i in range(30):
         d = today - timedelta(days=29-i)
         d_str = d.strftime('%Y-%m-%d')
         h = history_map.get(d_str, {'revenue': 0, 'orders': 0})
-        exp = float(purchase_map.get(d_str, 0) or 0)
+        purch_val = float(purchase_map.get(d_str, 0) or 0)
+        sales_val = float(h['revenue'] or 0)
         formatted_history.append({
             'date': d.strftime('%b %d'),
-            'revenue': float(h['revenue'] or 0) - exp,
+            'sales': sales_val,
+            'purchases': purch_val,
+            'net': sales_val - purch_val,
             'orders': h['orders'] or 0
         })
 
@@ -580,23 +682,119 @@ def recent_orders(request):
     return Response(OrderListSerializer(orders, many=True).data)
 
 
+
 # ===========================================================================
-# PURCHASE ORDERS
+# SUPPLIER DASHBOARD STATS
 # ===========================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def supplier_dashboard_stats(request):
+    """Return real-time dashboard KPIs for the authenticated supplier."""
+    from modules.company.models import Supplier
+    from modules.products.models import Product
+
+    user = request.user
+
+    # Resolve supplier profile from the logged-in user
+    supplier_profile = None
+    if hasattr(user, 'supplier_profile') and user.supplier_profile:
+        supplier_profile = user.supplier_profile
+    else:
+        supplier_profile = Supplier.objects.filter(user=user).first()
+
+    if not supplier_profile:
+        return Response({
+            'total_purchase_orders': 0,
+            'pending_orders': 0,
+            'received_orders': 0,
+            'cancelled_orders': 0,
+            'total_order_value': 0,
+            'total_products': 0,
+            'recent_orders': [],
+            'supplier_name': user.get_full_name() or user.username,
+        })
+
+    # Purchase order aggregates
+    all_pos = PurchaseOrder.objects.filter(supplier=supplier_profile)
+    total_pos = all_pos.count()
+    pending_pos = all_pos.filter(status__in=['draft', 'pending', 'processing', 'shipped']).count()
+    received_pos = all_pos.filter(status='received').count()
+    cancelled_pos = all_pos.filter(status='cancelled').count()
+    total_value = all_pos.aggregate(v=Sum('total_amount'))['v'] or 0
+
+    # Products linked to this supplier
+    total_products = Product.objects.filter(supplier=supplier_profile).count()
+
+    # 5 most recent POs
+    recent = all_pos.order_by('-created_at')[:5]
+    recent_data = []
+    for po in recent:
+        recent_data.append({
+            'id': str(po.id),
+            'purchase_number': po.purchase_number,
+            'status': po.status,
+            'payment_status': po.payment_status,
+            'total_amount': float(po.total_amount),
+            'order_date': str(po.order_date),
+            'created_at': po.created_at.isoformat() if po.created_at else None,
+            'items_count': po.items.count(),
+            'items_preview': ', '.join([item.product.name for item in po.items.all()[:3]]) or '—',
+        })
+
+    return Response({
+        'total_purchase_orders': total_pos,
+        'pending_orders': pending_pos,
+        'received_orders': received_pos,
+        'cancelled_orders': cancelled_pos,
+        'total_order_value': float(total_value),
+        'total_products': total_products,
+        'recent_orders': recent_data,
+        'supplier_name': supplier_profile.name,
+    })
+
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_purchases(request):
-    """List purchase orders with optional search/status filter."""
+    """List purchase orders with role-based filtering."""
     purchases = PurchaseOrder.objects.all()
+
+    # RBAC: Suppliers only see their assigned orders
+    user = request.user
+    if user.is_authenticated and not user.is_staff and hasattr(user, 'role') and user.role and user.role.name.lower() == 'supplier':
+        # Resolve the supplier profile related to this user
+        from modules.company.models import Supplier
+        supplier_profile = Supplier.objects.filter(user=user).first()
+        if supplier_profile:
+            purchases = purchases.filter(supplier=supplier_profile)
+        else:
+            # If they are a supplier but have no profile link, show nothing
+            purchases = purchases.none()
+
     search = request.query_params.get('search')
     if search:
         purchases = purchases.filter(
-            Q(purchase_number__icontains=search) | Q(supplier_name__icontains=search)
+            Q(purchase_number__icontains=search) | 
+            Q(supplier_name__icontains=search) |
+            Q(tracking_id__icontains=search)
         )
     status_filter = request.query_params.get('status')
     if status_filter:
         purchases = purchases.filter(status=status_filter)
+        
+    payment_status_filter = request.query_params.get('payment_status')
+    if payment_status_filter:
+        purchases = purchases.filter(payment_status=payment_status_filter)
+
+    # Date range filters for reporting
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+    if start_date: purchases = purchases.filter(created_at__date__gte=start_date)
+    if end_date: purchases = purchases.filter(created_at__date__lte=end_date)
+
+    purchases = purchases.order_by('-created_at')
     return Response({'results': PurchaseOrderListSerializer(purchases, many=True).data, 'count': purchases.count()})
 
 
@@ -611,6 +809,7 @@ def create_purchase(request):
         with transaction.atomic():
             po = PurchaseOrder.objects.create(
                 purchase_number=data.get('purchase_number'),
+                supplier_id=data.get('supplier'), # Primary FK assignment
                 supplier_name=data.get('supplier_name', ''),
                 supplier_phone=data.get('supplier_phone', ''),
                 order_date=data.get('order_date'),
@@ -644,44 +843,36 @@ def create_purchase(request):
                     quantity=qty,
                     unit_price=price,
                     subtotal=subtotal,
+                    packaging_type=item.get('packaging_type', 'piece'),
+                    pieces_per_unit=int(item.get('pieces_per_unit', 1)),
                 )
                 
-                # Update stock if order is NOT in draft or cancelled status
-                if po.status in ['ordered', 'received', 'partially_received']:
-                    # Update Product Stock
+                # STOCK TRIGGER: Only add units if status is 'received'
+                if po.status == 'received':
                     product = p_item.product
-                    product.quantity_in_stock += qty
+                    total_pieces = qty * p_item.pieces_per_unit
+                    product.quantity_in_stock += total_pieces
                     product.cost = price # Update cost to latest purchase price
                     product.save()
                     
-                    # Update Inventory and Stock Ledger
                     if warehouse:
-                        # Safely handle multiple inventory records (batches)
-                        inv = Inventory.objects.filter(
-                            product=product, 
-                            warehouse=warehouse
-                        ).order_by('-quantity_available').first()
-                        
+                        inv = Inventory.objects.filter(product=product, warehouse=warehouse).order_by('-quantity_available').first()
                         if not inv:
-                            inv = Inventory.objects.create(
-                                product=product,
-                                warehouse=warehouse,
-                                quantity_available=0
-                            )
+                            inv = Inventory.objects.create(product=product, warehouse=warehouse, quantity_available=0)
                         
                         prev_qty = inv.quantity_available
-                        inv.quantity_available += qty
+                        inv.quantity_available += total_pieces
                         inv.save()
                         
                         InventoryMovement.objects.create(
                             product=product,
                             warehouse=warehouse,
                             movement_type='Purchase',
-                            quantity=qty,
+                            quantity=total_pieces,
                             previous_quantity=prev_qty,
                             new_quantity=inv.quantity_available,
                             reference_id=po.purchase_number,
-                            notes=f"Stock added via Purchase Order {po.purchase_number}",
+                            notes=f"Stock added via RECEIVED Purchase Order {po.purchase_number}",
                             created_by=request.user if request.user.is_authenticated else None
                         )
                 
@@ -690,9 +881,9 @@ def create_purchase(request):
             po.total_amount = total + float(data.get('shipping_cost', 0)) + float(data.get('tax_amount', 0))
             po.save()
 
-            # Automatically create an outbound Payment for the Purchase to decrease company cash/balance
+            # PAYMENT TRIGGER: Only create outbound payment if status is 'paid'
             from modules.payments.models import Payment, PaymentCategory
-            if po.total_amount > 0:
+            if po.payment_status == 'paid' and po.total_amount > 0:
                 payment_category, _ = PaymentCategory.objects.get_or_create(
                     name='Purchases', 
                     defaults={'description': 'Outgoing payments for stock purchases'}
@@ -731,10 +922,18 @@ def purchase_detail(request, pk):
             with transaction.atomic():
                 # Handle Status Transition to 'received'
                 old_status = po.status
+                old_payment_status = po.payment_status
                 new_status = request.data.get('status', old_status)
+                new_payment_status = request.data.get('payment_status', old_payment_status)
+
+                # BUSINESS RULE: Block cancellation if already shipped/received
+                if new_status == 'cancelled' and old_status.lower() in ['shipped', 'delivered', 'received']:
+                    return Response({
+                        'error': f'Restricted Action: Cannot cancel an order that is already {old_status.upper()}.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Update basic fields
-                for field in ['purchase_number', 'supplier_name', 'supplier_phone', 'status', 'payment_status', 'notes', 'tax_amount', 'shipping_cost', 'order_date']:
+                for field in ['purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'supplier_phone', 'status', 'payment_status', 'notes', 'tax_amount', 'shipping_cost', 'order_date']:
                     if field in request.data:
                         setattr(po, field, request.data[field])
                 po.save()
@@ -755,49 +954,67 @@ def purchase_detail(request, pk):
                             quantity=qty,
                             unit_price=price,
                             subtotal=subtotal,
+                            packaging_type=item.get('packaging_type', 'piece'),
+                            pieces_per_unit=int(item.get('pieces_per_unit', 1)),
                         )
 
-                was_stocked = old_status in ['ordered', 'received', 'partially_received']
-                is_stocking = new_status in ['ordered', 'received', 'partially_received']
-
-                if not was_stocked and is_stocking:
-                    # Add stock now for all items
+                # TRIGGER CHECK: Status changed to received
+                if old_status != 'received' and new_status == 'received':
                     warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
                     for item in po.items.all():
                         product = item.product
-                        product.quantity_in_stock += item.quantity
+                        total_pieces = item.quantity * item.pieces_per_unit
+                        
+                        # 1. Supplier Stock DECREMENT
+                        product.quantity_in_stock -= total_pieces
+                        
+                        # 2. Product Activation (Ensures it shows in Admin catalog now)
+                        product.status = 'active'
+                        
+                        # Update cost based on latest PO
                         product.cost = item.unit_price
                         product.save()
 
                         if warehouse:
-                            # Safely handle multiple inventory records (batches)
-                            inv = Inventory.objects.filter(
-                                product=product, 
-                                warehouse=warehouse
-                            ).order_by('-quantity_available').first()
-                            
+                            # 3. Admin Inventory INCREMENT
+                            inv = Inventory.objects.filter(product=product, warehouse=warehouse).order_by('-quantity_available').first()
                             if not inv:
-                                inv = Inventory.objects.create(
-                                    product=product,
-                                    warehouse=warehouse,
-                                    quantity_available=0
-                                )
+                                inv = Inventory.objects.create(product=product, warehouse=warehouse, quantity_available=0)
                             
                             prev_qty = inv.quantity_available
-                            inv.quantity_available += item.quantity
+                            inv.quantity_available += total_pieces
                             inv.save()
 
                             InventoryMovement.objects.create(
                                 product=product,
                                 warehouse=warehouse,
                                 movement_type='Purchase',
-                                quantity=item.quantity,
+                                quantity=total_pieces,
                                 previous_quantity=prev_qty,
                                 new_quantity=inv.quantity_available,
                                 reference_id=po.purchase_number,
-                                notes=f"Stock added via transition to RECEIVED on PO {po.purchase_number}",
+                                notes=f"Stock synchronized: Minus from Supplier, Add to Admin Registry (PO {po.purchase_number})",
                                 created_by=request.user if request.user.is_authenticated else None
                             )
+                
+                # TRIGGER CHECK: Payment changed to paid
+                if old_payment_status != 'paid' and new_payment_status == 'paid':
+                    from modules.payments.models import Payment, PaymentCategory
+                    if po.total_amount > 0:
+                        payment_category, _ = PaymentCategory.objects.get_or_create(
+                            name='Purchases', 
+                            defaults={'description': 'Outgoing payments for stock purchases'}
+                        )
+                        Payment.objects.create(
+                            amount=po.total_amount,
+                            payment_type='outbound',
+                            method='cash',
+                            category=payment_category,
+                            reference_number=str(po.purchase_number),
+                            payer_payee=po.supplier_name or 'Supplier',
+                            description=f"Automated payment for PO {po.purchase_number} marked as PAID",
+                            user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+                        )
             return Response(PurchaseOrderDetailSerializer(po).data)
         except Exception as e:
             return Response({'error': str(e)}, status=400)

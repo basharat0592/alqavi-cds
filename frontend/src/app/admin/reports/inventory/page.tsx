@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
    MODERN LOGISTICS UI COMPONENTS
    ═══════════════════════════════════════════════ */
 const TableCard = ({ children, title, subtitle, action }: { children: React.ReactNode; title: string; subtitle?: string; action?: any }) => (
-    <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50">
             <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
@@ -29,7 +29,7 @@ const TableCard = ({ children, title, subtitle, action }: { children: React.Reac
 );
 
 const MetricPill = ({ label, value, icon: Icon, color, bg }: { label: string; value: any; icon: any; color: string; bg: string }) => (
-    <div className={`p-5 rounded-xl bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 flex items-center gap-4 shadow-sm hover:shadow-md transition-all group`}>
+    <div className={`p-5 rounded-xl bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 flex items-center gap-4 shadow-sm hover:shadow-md transition-all group`}>
         <div className={`p-3 rounded-xl ${bg} ${color} bg-opacity-10 border border-current border-opacity-10 transition-transform group-hover:scale-110`}>
             <Icon className="h-5 w-5" />
         </div>
@@ -114,10 +114,10 @@ export default function StockReportsPage() {
                     <input 
                         value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Scan for specific asset identifier or name..." 
-                        className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/5 text-sm font-medium transition-all shadow-sm"
+                        className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/5 text-sm font-medium transition-all shadow-sm"
                     />
                 </div>
-                <div className="flex bg-white dark:bg-[#0D1921] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 gap-2 shadow-sm">
+                <div className="flex bg-white dark:bg-[#1a252f] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 gap-2 shadow-sm">
                     {(['all', 'low', 'out'] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)}
                             className={`px-5 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all

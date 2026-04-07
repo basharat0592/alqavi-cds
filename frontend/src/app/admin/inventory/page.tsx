@@ -14,7 +14,7 @@ import PageLoader from '@/components/ui/PageLoader';
    COMPONENTS & STYLES (Synchronized with Company Hub)
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
         {children}
     </div>
 );
@@ -24,7 +24,7 @@ const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-
 
 function MetricCard({ label, value, icon: Icon, color, link }: { label: string; value: string | number; icon: any; color: string; link: string }) {
     return (
-        <Link href={link} className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 p-5 rounded-xl shadow-sm hover:border-[#EEAF1C]/30 transition-all group flex flex-col justify-between h-full">
+        <Link href={link} className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 p-5 rounded-xl shadow-sm hover:border-[#EEAF1C]/30 transition-all group flex flex-col justify-between h-full">
             <div className="flex items-center justify-between mb-4">
                 <div className={`p-2 rounded-xl bg-slate-50 dark:bg-white/5 group-hover:bg-[#EEAF1C] group-hover:text-white transition-all`}>
                     <Icon className={`h-5 w-5 transition-colors ${color} group-hover:text-white`} />
