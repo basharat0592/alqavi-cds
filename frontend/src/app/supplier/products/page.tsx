@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Package, RefreshCw, Plus, Search, Edit, Barcode, Activity, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Package, RefreshCw, Plus, Search, Edit, Barcode, Activity, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { productService, categoryService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -19,7 +19,7 @@ export default function SupplierProducts() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [categories, setCategories] = useState<any[]>([]);
-    
+
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
@@ -59,7 +59,7 @@ export default function SupplierProducts() {
 
     return (
         <div className="max-w-[1400px] mx-auto pb-20 px-4 animate-in fade-in duration-500 font-sans">
-            
+
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
@@ -140,7 +140,7 @@ export default function SupplierProducts() {
                                     <td colSpan={4} className="px-6 py-24 text-center">
                                         <Package className="h-16 w-16 text-slate-100 dark:text-white/5 mx-auto mb-4" />
                                         <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-widest">Your catalog is currently empty.</p>
-                                        <button 
+                                        <button
                                             onClick={() => router.push('/supplier/products/add')}
                                             className="px-6 py-2 bg-[#F7CA00] text-slate-900 font-bold rounded shadow-sm text-xs uppercase"
                                         >
@@ -166,8 +166,8 @@ export default function SupplierProducts() {
                                                         <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{prod.category_name || 'Standard Item'}</span>
                                                         <span className="text-slate-200 dark:text-slate-600 font-bold text-[8px]">•</span>
                                                         <div className="flex items-center gap-1">
-                                                            <div className={`h-1.5 w-1.5 rounded-full ${ (prod.quantity_in_stock || 0) > 10 ? 'bg-emerald-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                                            <span className={`text-[10px] font-bold ${ (prod.quantity_in_stock || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
+                                                            <div className={`h-1.5 w-1.5 rounded-full ${(prod.quantity_in_stock || 0) > 10 ? 'bg-emerald-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                                            <span className={`text-[10px] font-bold ${(prod.quantity_in_stock || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
                                                                 {prod.quantity_in_stock || 0} Available
                                                             </span>
                                                         </div>
@@ -192,12 +192,31 @@ export default function SupplierProducts() {
                                             </div>
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                             <div className="flex items-center justify-end gap-2">
-                                                <button 
-                                                    onClick={() => router.push(`/supplier/products/${prod.id}/edit`)} 
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => router.push(`/supplier/products/${prod.id}/edit`)}
                                                     className="px-4 py-1.5 bg-white border border-slate-300 rounded text-xs font-black uppercase tracking-wider text-slate-700 hover:border-[#F7CA00] hover:text-[#F7CA00] transition-all shadow-sm"
                                                 >
-                                                    <Edit className="h-3.5 w-3.5 inline mr-1.5" /> Edit listing
+                                                    <Edit className="h-3.5 w-3.5 inline mr-1.5" /> Edit
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (confirm(`Are you sure you want to permanently delete "${prod.name}"?`)) {
+                                                            try {
+                                                                setLoading(true);
+                                                                await productService.delete(prod.id);
+                                                                toast.success('Product deleted successfully.');
+                                                                loadData();
+                                                            } catch (error) {
+                                                                toast.error('Failed to delete product.');
+                                                                setLoading(false);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="p-1.5 bg-white border border-slate-300 rounded text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+                                                    title="Delete Product"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </button>
                                             </div>
                                         </td>
@@ -236,11 +255,11 @@ export default function SupplierProducts() {
                     </div>
                 )}
             </div>
-            
+
             <div className="mt-8 text-center bg-blue-50/50 p-6 rounded-xl border border-blue-100">
                 <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-1.5">Catalog Protocol</p>
                 <p className="text-xs text-blue-600 font-medium leading-relaxed max-w-lg mx-auto">
-                    Note: Your products are subject to administrative review. Newly added items may take a few moments 
+                    Note: Your products are subject to administrative review. Newly added items may take a few moments
                     to sync across the global cosmetic distribution network.
                 </p>
             </div>

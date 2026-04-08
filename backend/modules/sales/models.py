@@ -161,9 +161,14 @@ class PurchaseOrder(BaseModel, TimestampMixin):
         ('partially_received', 'Partially Received'),
         ('cancelled', 'Cancelled'),
     ]
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('online_payment', 'Online Payment'),
+    ]
     PAYMENT_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('partially_paid', 'Partially Paid'),
+        ('unpaid', 'Unpaid'),
+        ('partial', 'Partial'),
         ('paid', 'Paid'),
     ]
 
@@ -185,7 +190,10 @@ class PurchaseOrder(BaseModel, TimestampMixin):
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     shipping_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='ordered', db_index=True)
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
+    payment_date = models.DateField(null=True, blank=True)
+    transaction_reference = models.CharField(max_length=100, null=True, blank=True)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True

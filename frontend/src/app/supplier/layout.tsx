@@ -3,19 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { 
-    Bell, 
-    Search, 
-    User, 
-    Building2, 
-    LayoutDashboard, 
-    Package, 
-    Boxes, 
-    TrendingUp, 
-    ShoppingCart, 
-    HelpCircle, 
-    Settings, 
-    LogOut, 
+import {
+    Bell,
+    Search,
+    User,
+    Building2,
+    LayoutDashboard,
+    Package,
+    Boxes,
+    TrendingUp,
+    ShoppingCart,
+    HelpCircle,
+    Settings,
+    LogOut,
     ChevronDown,
     ChevronRight,
     Home
@@ -66,7 +66,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                             </div>
                         </div>
 
-                        <button 
+                        <button
                             onClick={() => {
                                 authService.logout();
                                 window.location.href = '/login';
@@ -80,7 +80,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
 
                 {/* Main Content Area: Responsive Split with Sidebar */}
                 <div className="flex-1 flex flex-col lg:flex-row max-w-[1250px] mx-auto w-full px-4 lg:px-8 py-6 gap-8 overflow-hidden">
-                    
+
                     {/* Minimalist Amazon Sidebar */}
                     <aside className="w-full lg:w-64 shrink-0 space-y-6 animate-in slide-in-from-left duration-500">
                         <div>
@@ -94,8 +94,8 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                             href={link.href}
                                             className={`
                                                 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
-                                                ${isActive 
-                                                    ? 'bg-blue-50 text-[#F7CA00] font-bold border border-blue-100' 
+                                                ${isActive
+                                                    ? 'bg-blue-50 text-[#F7CA00] font-bold border border-blue-100'
                                                     : 'text-slate-600 hover:bg-gray-50 hover:text-[#F7CA00]'
                                                 }
                                             `}
@@ -110,9 +110,9 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                 })}
                             </nav>
                         </div>
-                        
+
                         <div className="pt-6 border-t font-bold">
-                            <button 
+                            <button
                                 onClick={() => { authService.logout(); window.location.href = '/'; }}
                                 className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:underline"
                             >
@@ -132,7 +132,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                 {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Overview'}
                             </span>
                         </div>
-                        
+
                         {children}
                     </main>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
+import {
     Package, ArrowLeft, Upload, DollarSign, Box, Tag, Info,
     ChevronRight, Save, Loader2, Image as ImageIcon, Plus, X, Layers,
     ChevronLeft, ExternalLink, HelpCircle
@@ -44,7 +44,7 @@ export default function AddSupplierProductAmazon() {
     const [mainImage, setMainImage] = useState<File | null>(null);
     const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
     const [additionalImages, setAdditionalImages] = useState<File[]>([]);
-    
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,7 +105,7 @@ export default function AddSupplierProductAmazon() {
 
             if (mainImage) data.append('image', mainImage);
             additionalImages.forEach(file => data.append('upload_images', file));
-            
+
             if (formData.main_category) {
                 data.append('main_categories', formData.main_category);
             }
@@ -130,10 +130,10 @@ export default function AddSupplierProductAmazon() {
 
     return (
         <div className="min-h-screen bg-[#f3f3f3] pb-24 font-sans">
-            
+
 
             <div className="max-w-[1240px] mx-auto px-6">
-                
+
                 {/* Back Nav */}
                 <div className="mb-6">
                     <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
@@ -142,7 +142,7 @@ export default function AddSupplierProductAmazon() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    
+
                     {/* Left Panel: Steps / Sections */}
                     <div className="lg:col-span-1 hidden lg:block">
                         <div className="bg-white border border-[#ddd] rounded-lg p-5 sticky top-8">
@@ -182,7 +182,7 @@ export default function AddSupplierProductAmazon() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            
+
                             {/* Vital Info Card */}
                             <div className={cardCls}>
                                 <div className="px-6 py-4 bg-[#f8f8f8] border-b border-[#ddd]">
@@ -191,7 +191,7 @@ export default function AddSupplierProductAmazon() {
                                 <div className="p-8 space-y-6 max-w-[600px]">
                                     <div>
                                         <label className={labelCls}>Product Name <span className="font-normal text-gray-500">(required)</span></label>
-                                        <input 
+                                        <input
                                             name="name"
                                             value={formData.name}
                                             onChange={handleChange}
@@ -254,30 +254,30 @@ export default function AddSupplierProductAmazon() {
                                             <label className={labelCls}>Your Price <span className="font-normal text-gray-500">(PKR)</span></label>
                                             <div className="relative">
                                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-gray-500 font-bold">Rs.</div>
-                                                <input 
+                                                <input
                                                     name="price"
                                                     value={formData.price}
                                                     onChange={handleChange}
                                                     required
                                                     type="number"
-                                                    className={inputCls + " pl-10"} 
+                                                    className={inputCls + " pl-10"}
                                                     placeholder="0.00"
                                                 />
                                             </div>
                                         </div>
                                         <div>
                                             <label className={labelCls}>Quantity</label>
-                                            <input 
-                                                name="quantity_in_stock" 
-                                                value={formData.quantity_in_stock} 
-                                                onChange={handleChange} 
+                                            <input
+                                                name="quantity_in_stock"
+                                                value={formData.quantity_in_stock}
+                                                onChange={handleChange}
                                                 type="number"
-                                                className={inputCls} 
-                                                placeholder="0" 
+                                                className={inputCls}
+                                                placeholder="0"
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="max-w-[300px]">
                                         <label className={labelCls}>Seller SKU</label>
                                         <input name="sku" value={formData.sku} onChange={handleChange} className={inputCls} placeholder="e.g. AQ-SERUM-01" />
@@ -285,7 +285,7 @@ export default function AddSupplierProductAmazon() {
 
                                     <div>
                                         <label className={labelCls}>Product Description</label>
-                                        <textarea 
+                                        <textarea
                                             name="description"
                                             value={formData.description}
                                             onChange={handleChange}
@@ -307,7 +307,7 @@ export default function AddSupplierProductAmazon() {
                                         {/* Main Image Slot */}
                                         <div className="md:col-span-1 space-y-2">
                                             <p className="text-[13px] font-bold text-gray-700">Main Image</p>
-                                            <div 
+                                            <div
                                                 onClick={() => fileInputRef.current?.click()}
                                                 className="aspect-square bg-[#f8f8f8] border border-[#ddd] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden relative group"
                                             >
@@ -330,8 +330,8 @@ export default function AddSupplierProductAmazon() {
                                                 {additionalImages.map((file, i) => (
                                                     <div key={i} className="aspect-square bg-white border border-[#ddd] rounded-md overflow-hidden relative group">
                                                         <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
-                                                        <button 
-                                                            type="button" 
+                                                        <button
+                                                            type="button"
                                                             onClick={() => setAdditionalImages(prev => prev.filter((_, idx) => idx !== i))}
                                                             className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all"
                                                         >
@@ -339,7 +339,7 @@ export default function AddSupplierProductAmazon() {
                                                         </button>
                                                     </div>
                                                 ))}
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => galleryInputRef.current?.click()}
                                                     className="aspect-square bg-[#f8f8f8] border border-dashed border-[#ddd] rounded-md flex items-center justify-center text-gray-400 hover:text-[#ff9900] hover:border-[#ff9900] transition-all"
@@ -371,14 +371,14 @@ export default function AddSupplierProductAmazon() {
                                     <HelpCircle size={16} /> Need help with this section?
                                 </div>
                                 <div className="flex gap-3">
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => router.back()}
                                         className="px-6 py-1.5 bg-white border border-[#adb1b8] rounded-[3px] text-[13px] font-medium shadow-sm hover:bg-[#f3f4f4] transition-colors"
                                     >
                                         Cancel
                                     </button>
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={saving}
                                         className="px-8 py-1.5 bg-[#f0c14b] border border-[#a88734] hover:border-[#9c7e31] hover:bg-[#ebbd40] rounded-[3px] text-[13px] font-medium shadow-sm flex items-center gap-2 active:shadow-inner-sm disabled:opacity-50"

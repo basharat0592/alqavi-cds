@@ -782,7 +782,17 @@ def list_purchases(request):
         )
     status_filter = request.query_params.get('status')
     if status_filter:
-        purchases = purchases.filter(status=status_filter)
+        if ',' in status_filter:
+            status_list = status_filter.split(',')
+            purchases = purchases.filter(status__in=status_list)
+        else:
+            purchases = purchases.filter(status=status_filter)
+        
+    # Exclude status filter
+    exclude_status = request.query_params.get('exclude_status')
+    if exclude_status:
+        status_list = exclude_status.split(',')
+        purchases = purchases.exclude(status__in=status_list)
         
     payment_status_filter = request.query_params.get('payment_status')
     if payment_status_filter:
