@@ -204,7 +204,7 @@ export default function AlertsPage() {
                                                     <AlertTriangle className="h-3 w-3" /> {a.type}
                                                 </p>
                                             </div>
-                                            <Link href={`/admin/purchases/add?product_id=${a.productId}&product_name=${encodeURIComponent(a.product)}&supplier_name=${encodeURIComponent(a.supplierName)}&quantity=0`}
+                                            <Link href={`/admin/purchases/add?product_id=${a.productId}&product_name=${encodeURIComponent(a.product)}&quantity=0`}
                                                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white/10 dark:hover:bg-[#EEAF1C] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
                                                 <Plus className="h-3.5 w-3.5" /> Initialize Procurement
                                             </Link>

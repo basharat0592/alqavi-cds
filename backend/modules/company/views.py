@@ -7,7 +7,8 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Company, CompanyCategory, Supplier
-from .serializers import CompanySerializer, CompanyCategorySerializer, SupplierSerializer
+from .models import Company, CompanyCategory, Supplier, SupplierProduct
+from .serializers import CompanySerializer, CompanyCategorySerializer, SupplierSerializer, SupplierProductSerializer
 from core.utils import get_or_404_response
 
 
@@ -136,3 +137,49 @@ def supplier_detail(request, supplier_id):
 
     supplier.delete()
     return Response({'message': 'Supplier deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Supplier Product Views ─────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_supplier_products(request):
+    """List supplier-product mappings (admin)."""
+    qs = SupplierProduct.objects.all().order_by('-created_at')
+    # simple filters
+    supplier = request.query_params.get('supplier')
+    if supplier:
+        qs = qs.filter(supplier_id=supplier)
+    serializer = SupplierProductSerializer(qs, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_supplier_product(request):
+    serializer = SupplierProductSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def supplier_product_detail(request, pk):
+    sp, err = get_or_404_response(SupplierProduct, id=pk)
+    if err:
+        return err
+
+    if request.method == 'GET':
+        return Response(SupplierProductSerializer(sp).data)
+
+    if request.method in ('PUT', 'PATCH'):
+        serializer = SupplierProductSerializer(sp, data=request.data, partial=(request.method == 'PATCH'))
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    sp.delete()
+    return Response({'message': 'Supplier product deleted'}, status=status.HTTP_204_NO_CONTENT)

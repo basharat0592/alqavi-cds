@@ -95,13 +95,15 @@ export function getImageUrl(url: string | null | undefined): string | null {
     const domain = apiBase.replace('/api', '').replace(/\/$/, '');
 
     // Ensure the path starts with a single slash
-    const path = url.startsWith('/') ? url : `/${url}`;
+    let path = url.startsWith('/') ? url : `/${url}`;
+
+    // Django specific: if path doesn't start with /media/, prepend it
+    if (!path.startsWith('/media/') && !path.startsWith('media/')) {
+        path = `/media${path}`;
+    }
 
     // Join domain and path
     const fullUrl = `${domain}${path}`;
-
-    // DEBUG LOG - to help identify why images might fail
-    // console.log(`[getImageUrl] input: ${url} -> output: ${fullUrl}`);
 
     return fullUrl;
 }

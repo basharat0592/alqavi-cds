@@ -87,29 +87,34 @@ def list_products(request):
             # Supplier/Admin Isolation & Pending Procurement Logic: 
             # Suppliers only see their own products. Staff see all confirmed products.
             include_pending = request.query_params.get('include_pending') == 'true'
-            
-            if request.user.is_authenticated:
-                is_admin = request.user.is_staff or request.user.is_superuser or (
-                    request.user.role and request.user.role.name in ['Admin', 'admin']
-                )
-                
-                if not is_admin:
-                    # Check if they are a supplier
-                    if request.user.role and request.user.role.name.lower() == 'supplier':
-                        from modules.company.models import Supplier
-                        supplier = Supplier.objects.filter(user=request.user).first()
-                        if supplier:
-                            products = products.filter(supplier=supplier)
-                        else:
-                            products = products.filter(status='active', supplier__isnull=True)
-                    else:
-                        products = products.filter(status='active')
+            include_supplier_only = request.query_params.get('include_supplier_only') == 'true'
+
+            # Detect Role and apply strict Catalog Isolation
+            is_supplier_user = False
+            if request.user.is_authenticated and request.user.role and request.user.role.name.lower() == 'supplier':
+                from modules.company.models import Supplier
+                supplier = Supplier.objects.filter(user=request.user).first()
+                if supplier:
+                    is_supplier_user = True
+                    # Suppliers strictly manage their own catalog entries.
+                    products = products.filter(supplier=supplier, is_supplier_only=True)
                 else:
-                    # Admin Logic: Strictly hide pending procurement products unless explicitly requested
-                    if not include_pending:
-                        products = products.exclude(status='pending_procurement')
+                    # Unlinked supplier users see nothing for safety
+                    products = products.none()
+            
+            elif request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or (request.user.role and request.user.role.name.lower() == 'admin')):
+                # Admin/Staff Logic:
+                if not include_pending:
+                    products = products.exclude(status='pending_procurement')
+                
+                # Admins see the Admin Catalog by default. 
+                # They MUST opt-in to see Supplier catalogs (e.g. for Purchase Orders).
+                if not include_supplier_only:
+                    products = products.filter(is_supplier_only=False)
+            
             else:
-                products = products.filter(status='active')
+                # Public or unpowered users see only active Admin Catalog items
+                products = products.filter(status='active', is_supplier_only=False)
             
             # Filtering
             search = request.query_params.get('search')
@@ -124,6 +129,10 @@ def list_products(request):
             if category_name:
                 products = products.filter(category__name=category_name)
 
+            supplier_id = request.query_params.get('supplier_id')
+            if supplier_id:
+                products = products.filter(supplier_id=supplier_id)
+
             # Date range filters for business reports
             start_date = request.query_params.get('start_date')
             end_date = request.query_params.get('end_date')
@@ -132,6 +141,10 @@ def list_products(request):
 
             # Option to bypass pagination for merged local-storage pagination in frontend
             if request.query_params.get('all_items') == 'true':
+                # Ensure all_items also respects the supplier-only visibility rules.
+                # Supplier owners should always see their own supplier products; others must opt-in.
+                if not include_supplier_only and not is_supplier_user:
+                    products = products.filter(is_supplier_only=False)
                 serializer = ProductSerializer(products, many=True, context={'request': request})
                 return Response(serializer.data)
 
@@ -152,26 +165,37 @@ def list_products(request):
                 
                 # If explicit supplier provided in data, use that (for admins), otherwise use auto-assigned
                 product = serializer.save(supplier=request.data.get('supplier') or supplier_instance)
-                
+
+                # If the product was created by a supplier user, mark as supplier-only
+                # and DO NOT auto-initialize inventory records for it (supplier-only
+                # products should not appear in stock lists).
+                if supplier_instance:
+                    product.is_supplier_only = True
+                    product.save(update_fields=['is_supplier_only'])
+                    initialize_inventory = False
+                else:
+                    initialize_inventory = True
+
                 # Auto-initialize inventory record to ensure visibility in Stock Management
-                try:
-                    from modules.inventory.models import Warehouse, Inventory
-                    # Find default warehouse or use the first available one
-                    warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-                    if warehouse:
-                        Inventory.objects.get_or_create(
-                            product=product,
-                            warehouse=warehouse,
-                            defaults={
-                                'quantity_available': 0,
-                                'reorder_level': 5, # Reasonable default threshold
-                                'batch_number': 'INITIAL-LOG'
-                            }
-                        )
-                except Exception as inv_err:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to auto-link product {product.name} to warehouse: {inv_err}")
+                if initialize_inventory:
+                    try:
+                        from modules.inventory.models import Warehouse, Inventory
+                        # Find default warehouse or use the first available one
+                        warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
+                        if warehouse:
+                            Inventory.objects.get_or_create(
+                                product=product,
+                                warehouse=warehouse,
+                                defaults={
+                                    'quantity_available': 0,
+                                    'reorder_level': 5, # Reasonable default threshold
+                                    'batch_number': 'INITIAL-LOG'
+                                }
+                            )
+                    except Exception as inv_err:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Failed to auto-link product {product.name} to warehouse: {inv_err}")
 
                 UserActivityLog.objects.create(
                     user=request.user if request.user.is_authenticated else None,

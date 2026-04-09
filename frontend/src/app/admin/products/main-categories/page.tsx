@@ -95,10 +95,10 @@ export default function MainCategoriesPage() {
 
             if (editMode) {
                 await mainCategoryService.update(editMode.id, payload);
-                toast.success('Main category updated!');
+                toast.success('Navbar Page updated!');
             } else {
                 await mainCategoryService.create(payload);
-                toast.success('Main category created!');
+                toast.success('Navbar Page created!');
             }
             loadData();
             setView('list');
@@ -116,10 +116,10 @@ export default function MainCategoriesPage() {
         try {
             await mainCategoryService.delete(deleteItem.id);
             setCategories(prev => prev.filter(c => c.id !== deleteItem.id));
-            toast.success('Category removed.');
+            toast.success('Navbar Page removed.');
         } catch (e) {
             console.error(e);
-            toast.error('Failed to remove category.');
+            toast.error('Failed to remove navbar page.');
         } finally {
             setDeleting(false);
             setDeleteItem(null);
@@ -147,7 +147,7 @@ export default function MainCategoriesPage() {
                         <ChevronLeft className="h-4 w-4" /> Back to List
                     </button>
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                        {editMode ? 'Edit Main Category' : 'New Main Category'}
+                        {editMode ? 'Edit Navbar Page' : 'New Navbar Page'}
                     </h1>
                     <p className="text-sm text-slate-500">Define major inventory groups and link related products</p>
                 </div>
@@ -158,11 +158,11 @@ export default function MainCategoriesPage() {
                             <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                                 <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
                                     <Layers className="h-4 w-4 text-[#EEAF1C]" />
-                                    <h2 className="text-sm font-bold text-slate-800 dark:text-white">Category Details</h2>
+                                    <h2 className="text-sm font-bold text-slate-800 dark:text-white">Page Details</h2>
                                 </div>
                                 <div className="p-6 space-y-5">
                                     <div className="space-y-1">
-                                        <label className={labelCls}>Category Name <span className="text-red-500">*</span></label>
+                                        <label className={labelCls}>Page Name <span className="text-red-500">*</span></label>
                                         <input
                                             required
                                             value={form.name}
@@ -257,7 +257,7 @@ export default function MainCategoriesPage() {
                             className="flex items-center gap-2 px-8 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Save Category
+                            Save Navbar Page
                         </button>
                     </div>
                 </form>
@@ -271,7 +271,7 @@ export default function MainCategoriesPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Main Categories</h1>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Navbar Pages</h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Organize your products into major groups</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -287,7 +287,7 @@ export default function MainCategoriesPage() {
                         className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
-                        Add Main Category
+                        Add Navbar Page
                     </button>
                 </div>
             </div>
@@ -306,7 +306,7 @@ export default function MainCategoriesPage() {
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
                     <Activity className="h-3.5 w-3.5 text-[#EEAF1C]" />
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
-                        {categories.length} Total Categories
+                        {categories.length} Total Navbar Pages
                     </span>
                 </div>
             </div>
@@ -336,7 +336,7 @@ export default function MainCategoriesPage() {
                                 <tr>
                                     <td colSpan={4} className="px-4 py-20 text-center">
                                         <Layers className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">No main categories found.</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">No Navbar Pages found.</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -389,7 +389,7 @@ export default function MainCategoriesPage() {
                          <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Delete Category</h3>
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Delete Navbar Page</h3>
                             </div>
                             <button onClick={() => setDeleteItem(null)} className="p-1 text-slate-400">
                                 <X className="h-5 w-5" />

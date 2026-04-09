@@ -3,6 +3,7 @@ Company module serializers.
 """
 from rest_framework import serializers
 from .models import Company, CompanyCategory, Supplier
+from .models import SupplierProduct
 
 
 class CompanyCategorySerializer(serializers.ModelSerializer):
@@ -44,3 +45,17 @@ class SupplierSerializer(serializers.ModelSerializer):
 
     def get_product_list(self, obj):
         return [p.name for p in obj.products.all()[:5]] # Show first 5 names
+
+
+class SupplierProductSerializer(serializers.ModelSerializer):
+    supplier_name = serializers.ReadOnlyField(source='supplier.name')
+    product_name = serializers.ReadOnlyField(source='product.name')
+
+    class Meta:
+        model = SupplierProduct
+        fields = [
+            'id', 'supplier', 'supplier_name', 'product', 'product_name', 'supplier_sku',
+            'price', 'currency', 'lead_time_days', 'min_order_qty', 'notes', 'is_active',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']

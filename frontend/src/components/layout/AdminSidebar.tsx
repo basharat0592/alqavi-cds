@@ -61,8 +61,8 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
             label: 'Products',
             items: [
                 { name: 'All Products', href: '/admin/products', icon: Package },
-                { name: 'Main Category', href: '/admin/products/main-categories', icon: FolderTree },
-                { name: 'Sub Category', href: '/admin/products/categories', icon: Tag },
+                { name: 'Navbar Pages', href: '/admin/products/main-categories', icon: FolderTree },
+                { name: 'Products Category', href: '/admin/products/categories', icon: Tag },
             ],
         },
         {

@@ -124,7 +124,7 @@ export default function ProductCategoriesPage() {
                         <ChevronLeft className="h-4 w-4" /> Back to List
                     </button>
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                        {editCat ? 'Edit Sub Category' : 'New Product Category'}
+                        {editCat ? 'Edit Products Category' : 'New Products Category'}
                     </h1>
                     <p className="text-sm text-slate-500">Organize your inventory with precise classifications</p>
                 </div>
@@ -149,7 +149,7 @@ export default function ProductCategoriesPage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className={labelCls}>Parent Classification <span className="text-red-500">*</span></label>
+                                    <label className={labelCls}>Navbar Page <span className="text-red-500">*</span></label>
                                     <select
                                         required
                                         name="main_category"
@@ -157,7 +157,7 @@ export default function ProductCategoriesPage() {
                                         onChange={handleChange}
                                         className={selectCls}
                                     >
-                                        <option value="">Select Main Category</option>
+                                        <option value="">Select Navbar Page</option>
                                         {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
@@ -216,7 +216,7 @@ export default function ProductCategoriesPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Sub Categories</h1>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Products Categories</h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage detailed product classifications</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -263,7 +263,7 @@ export default function ProductCategoriesPage() {
                         <thead>
                             <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Name</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Main Category</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Navbar Page</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Linked Items</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Status</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>

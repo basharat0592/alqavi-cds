@@ -11,16 +11,16 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 // ── Tracking Milestones (Amazon Logistics Flow) ──
 const STEPS = [
     { key: 'draft', label: 'Draft', icon: Clock },
-    { key: 'pending', label: 'Acknowledged', icon: CheckCircle2 },
-    { key: 'processing', label: 'Preparing', icon: RefreshCw },
-    { key: 'shipped', label: 'In Transit', icon: Truck },
-    { key: 'delivered', label: 'Arrived', icon: MapPin },
-    { key: 'received', label: 'Inventory Sync', icon: Package },
+    { key: 'pending', label: 'Confirmed', icon: CheckCircle2 },
+    { key: 'processing', label: 'Processing', icon: RefreshCw },
+    { key: 'shipped', label: 'Shipped', icon: Truck },
+    { key: 'delivered', label: 'Delivered', icon: MapPin },
+    { key: 'received', label: 'Received', icon: Package },
 ];
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
     draft:              { label: 'Draft',              color: 'bg-slate-100 text-slate-600',          icon: Clock },
-    pending:            { label: 'Pending',            color: 'bg-amber-50 text-amber-700',          icon: Clock },
+    pending:            { label: 'Confirmed',          color: 'bg-amber-50 text-amber-700',          icon: Clock },
     processing:         { label: 'Processing',         color: 'bg-blue-50 text-blue-700',              icon: RefreshCw },
     shipped:            { label: 'Shipped',            color: 'bg-indigo-50 text-indigo-700',       icon: Truck },
     delivered:          { label: 'Delivered',          color: 'bg-emerald-50 text-emerald-700',    icon: MapPin },
@@ -34,7 +34,24 @@ export default function OrderTrackingPage() {
     const [query, setQuery] = useState('');
     const [order, setOrder] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
+    const [updating, setUpdating] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [error, setError] = useState('');
+
+    const handleUpdateStatus = async (newStatus: string) => {
+        if (!order) return;
+        setUpdating(true);
+        try {
+            await api.patch(`/v1/sales/purchases/${order.id}/`, { status: newStatus });
+            // Re-fetch orders to update the UI with new status and tracking progress
+            handleSearch(order.purchase_number);
+        } catch (err) {
+            console.error('Failed to update status', err);
+            alert('Failed to update order status. Please try again.');
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     const handleSearch = useCallback(async (searchQuery: string) => {
         if (!searchQuery.trim()) return;
@@ -197,23 +214,49 @@ export default function OrderTrackingPage() {
 
                             <hr className="border-[#e7e9ec] mb-8" />
 
-                            {/* Manifest */}
-                            <div className="space-y-6">
+
+                            {/* Simple Manifest */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold border-b pb-2">Packages in this shipment</h3>
                                 {order.items?.map((item: any) => (
-                                    <div key={item.id} className="flex gap-4">
-                                        <div className="w-16 h-16 bg-[#f7f7f7] border border-[#e7e9ec] flex items-center justify-center rounded shrink-0">
-                                            <Package size={32} className="text-[#ccc]" />
+                                    <div key={item.id} className="flex justify-between items-center py-2 border-b border-dashed border-slate-200 last:border-0">
+                                        <div>
+                                            <p className="text-sm font-bold text-[#111]">{item.product_name}</p>
+                                            <p className="text-[11px] text-slate-500">Supplier: {order.supplier_name}</p>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-[#007185] text-sm font-bold hover:text-[#c7511f] cursor-pointer hover:underline">{item.product_name}</p>
-                                            <p className="text-xs text-[#565959] mt-1">Sold by: {order.supplier_name}</p>
-                                            <div className="mt-3 flex gap-4">
-                                                <button className="px-3 py-1 bg-[#F7CA00] hover:bg-[#f0c14b] border border-[#a88734] rounded text-[11px] font-medium shadow-sm">Buy it again</button>
-                                                <button className="px-3 py-1 bg-white hover:bg-[#f7fafa] border border-[#d5d9d9] rounded text-[11px] font-medium shadow-sm">View details</button>
-                                            </div>
+                                        <div className="text-right">
+                                            <p className="text-xs font-bold text-[#c45500]">Qty: {item.quantity}</p>
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                            <div className="mt-10 pt-8 border-t border-[#e7e9ec] flex items-center justify-between">
+                                <div className="space-x-3">
+                                    {['draft', 'ordered', 'pending', 'processing'].includes(order.status?.toLowerCase()) && (
+                                        <button 
+                                            onClick={() => setShowCancelConfirm(true)}
+                                            disabled={updating}
+                                            className="px-6 py-2 bg-white hover:bg-[#f7fafa] border border-[#d5d9d9] rounded text-sm font-semibold shadow-sm text-slate-700"
+                                        >
+                                            {updating ? 'Processing...' : 'Cancel Order'}
+                                        </button>
+                                    )}
+
+                                    {['shipped', 'delivered'].includes(order.status?.toLowerCase()) && (
+                                        <button 
+                                            onClick={() => handleUpdateStatus('received')}
+                                            disabled={updating}
+                                            className="px-8 py-2 bg-[#F7CA00] hover:bg-[#F3A847] border border-[#a88734] rounded text-sm font-bold shadow-sm text-[#111]"
+                                        >
+                                            {updating ? 'Updating...' : 'Confirm Received'}
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="text-[11px] text-[#565959] flex items-center gap-2">
+                                    <AlertCircle size={14} className="text-[#EEAF1C]" />
+                                    <span>Business procurement protocols active</span>
+                                </div>
                             </div>
                         </div>
 
@@ -240,6 +283,45 @@ export default function OrderTrackingPage() {
                     </div>
                 )}
             </div>
+
+            {/* ── Confirmation Modal ── */}
+            {showCancelConfirm && (
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-200">
+                        <div className="p-6">
+                            <div className="flex items-start gap-4 mb-4">
+                                <div className="p-2 bg-red-50 rounded-full">
+                                    <AlertCircle className="h-6 w-6 text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-[#111]">Cancel this order?</h3>
+                                    <p className="text-sm text-[#565959] mt-1 leading-relaxed">
+                                        This action cannot be undone. The supplier will be notified that this procurement is voided.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-2 mt-6">
+                                <button 
+                                    onClick={() => {
+                                        setShowCancelConfirm(false);
+                                        handleUpdateStatus('cancelled');
+                                    }}
+                                    className="w-full py-2.5 bg-[#F7CA00] hover:bg-[#f0c14b] border border-[#a88734] rounded text-sm font-bold shadow-sm"
+                                >
+                                    Confirm Cancellation
+                                </button>
+                                <button 
+                                    onClick={() => setShowCancelConfirm(false)}
+                                    className="w-full py-2.5 bg-white hover:bg-[#f7fafa] border border-[#d5d9d9] rounded text-sm font-medium shadow-sm"
+                                >
+                                    Go Back
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

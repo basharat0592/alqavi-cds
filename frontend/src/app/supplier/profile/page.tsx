@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    User, Shield, MapPin, Building2, CreditCard, Bell, ChevronRight, Camera, Loader2, LogOut
+    User, ShieldCheck, MapPin, Building, CreditCard, Bell, 
+    ChevronRight, Camera, Loader2, LogOut, Package, BarChart3, HelpCircle, Key, Headphones
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import api from '@/lib/axios';
@@ -16,13 +17,19 @@ export default function SupplierProfile() {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [activeSection, setActiveSection] = useState<string | null>(null);
+    const [updating, setUpdating] = useState(false);
+    const [formData, setFormData] = useState<any>({});
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchProfile = async () => {
         try {
-            const { data } = await api.get('/v1/users/profile/');
+            const { data } = await api.get('v1/users/profile/');
             setProfile(data);
-        } catch {
+            setFormData(data);
+        } catch (err) {
+            console.error("Profile load failed:", err);
             setProfile(null);
         } finally {
             setLoading(false);
@@ -34,16 +41,31 @@ export default function SupplierProfile() {
         fetchProfile();
     }, []);
 
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setUpdating(true);
+        try {
+            await api.patch(`v1/users/${profile.id}/update/`, formData);
+            toast.success("Profile updated successfully.");
+            fetchProfile();
+            setActiveSection(null);
+        } catch {
+            toast.error("Update failed.");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append('profile_picture', file);
+        const uploadData = new FormData();
+        uploadData.append('avatar', file);
 
         setUploading(true);
         try {
-            await api.patch(`/v1/users/${profile.id}/update/`, formData, {
+            await api.patch(`v1/users/${profile.id}/update/`, uploadData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             fetchProfile();
@@ -61,130 +83,305 @@ export default function SupplierProfile() {
 
     const SECTIONS = [
         {
-            title: 'Personal Details',
-            desc: 'Edit name, phone number, and regional location metadata',
-            icon: User,
-            href: '/supplier/profile/personal'
-        },
-        {
+            id: 'security',
             title: 'Login & Security',
-            desc: 'Edit login, password, and mobile number credentials',
-            icon: Shield,
-            href: '/supplier/profile/security'
+            icon: ShieldCheck,
         },
         {
-            title: 'Business Identity',
-            desc: 'Edit distribution warehouse and billing addresses',
-            icon: MapPin,
-            href: '/supplier/profile/address'
+            id: 'personal',
+            title: 'Personal Info',
+            icon: User,
         },
         {
-            title: 'Distribution Metrics',
-            desc: 'View manufacturing certificates and compliance tax data',
-            icon: Building2,
-            href: '/supplier/profile/metrics'
-        },
-        {
-            title: 'Payment Options',
-            desc: 'Edit settlement accounts and payout methods',
-            icon: CreditCard,
-            href: '/supplier/profile/payments'
-        },
-        {
-            title: 'Alert Preferences',
-            desc: 'Configure order and inventory notification protocols',
-            icon: Bell,
-            href: '/supplier/profile/notifications'
+            id: 'password',
+            title: 'Change Password',
+            icon: Key,
         }
     ];
 
+    const [passwordData, setPasswordData] = useState({
+        old_password: '',
+        new_password: '',
+        new_password_confirm: ''
+    });
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (passwordData.new_password !== passwordData.new_password_confirm) {
+            toast.error("New passwords do not match.");
+            return;
+        }
+
+        setUpdating(true);
+        try {
+            await api.post(`v1/users/${profile.id}/change-password/`, passwordData);
+            toast.success("Password changed successfully.");
+            setPasswordData({ old_password: '', new_password: '', new_password_confirm: '' });
+            setActiveSection(null);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || "Failed to change password.");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     if (loading) {
         return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+            <div className="flex h-[80vh] items-center justify-center bg-white">
+                <Loader2 className="h-10 w-10 animate-spin text-[#232f3e] opacity-20" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-[1000px] mx-auto py-10 px-4 animate-in fade-in duration-500 pb-20">
-            
-            {/* Nav Path */}
-            <div className="flex items-center gap-1 text-xs text-slate-500 mb-6 font-medium">
-                <span className="hover:underline cursor-pointer hover:text-[#c45500]" onClick={() => router.push('/supplier/dashboard')}>Your Account</span>
-                <ChevronRight size={10} className="mt-0.5" />
-                <span className="text-[#c45500]">Your Profiles</span>
-            </div>
+        <div className="min-h-screen bg-white">
+            <div className="max-w-[1020px] mx-auto pt-6 pb-24 px-5">
+                
+                {/* ── Breadcrumbs ── */}
+                <nav className="flex items-center text-[13px] text-gray-500 mb-6 font-normal">
+                    <span className="cursor-pointer hover:underline hover:text-[#c45500]" onClick={() => router.push('/supplier/dashboard')}>Your Account</span>
+                    <ChevronRight size={14} className="mx-1 text-gray-400" />
+                    <span className="text-[#c45500]">Your Profile</span>
+                </nav>
 
-            <h1 className="text-[28px] font-medium text-slate-900 mb-8 leading-tight">Your Account</h1>
+                <h1 className="text-[28px] font-normal text-gray-900 mb-6 tracking-tight">Your Account</h1>
 
-            {/* Simple Amazon Persona Header */}
-            <div className="mb-10 p-6 border border-slate-200 rounded-lg flex items-center justify-between group bg-white shadow-sm">
-                <div className="flex items-center gap-5">
-                    <div className="relative">
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
-                        <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-sm overflow-hidden border border-slate-100">
-                            {uploading ? (
-                                <Loader2 className="h-5 w-5 animate-spin data-[loading=true]:text-[#F7CA00]" />
-                            ) : profile?.profile_picture ? (
-                                <img src={getImageUrl(profile.profile_picture)} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                                displayName.charAt(0).toUpperCase()
-                            )}
+                {/* ── Header Card ── */}
+                <div className="mb-8 p-6 border border-gray-200 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white shadow-sm ring-1 ring-black/5">
+                    <div className="flex items-center gap-6">
+                        <div className="relative group shrink-0">
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
+                            <div className="w-20 h-20 bg-[#f3f3f3] rounded-full flex items-center justify-center text-gray-400 text-3xl font-bold overflow-hidden border border-gray-100 flex-shrink-0">
+                                {uploading ? (
+                                    <Loader2 className="h-6 w-6 animate-spin text-[#232f3e] opacity-40" />
+                                ) : profile?.avatar ? (
+                                    <img src={getImageUrl(profile.avatar) || undefined} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-gray-300 font-medium">{displayName.charAt(0).toUpperCase()}</span>
+                                )}
+                            </div>
+                            <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-300 rounded-full shadow-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                            >
+                                <Camera size={14} />
+                            </button>
                         </div>
+                        <div className="flex-1">
+                            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                {displayName}
+                                <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-100">Verified Vendor</span>
+                            </h2>
+                            <p className="text-[15px] text-gray-600 mt-1 font-normal">{profile?.email}</p>
+                            <p className="text-[13px] text-gray-500 mt-1 font-medium">Supplier ID: #{String(profile?.id || '').padStart(6, '0')}</p>
+
+                            {/* ── Quick Action Buttons Row (Integrated) ── */}
+                            <div className="flex items-center gap-2 mt-5 overflow-x-auto no-scrollbar pb-1">
+                                {SECTIONS.map((sec, i) => {
+                                    const isActive = activeSection === sec.id;
+                                    return (
+                                        <button 
+                                            key={i}
+                                            onClick={() => setActiveSection(isActive ? null : sec.id)}
+                                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg transition-all shadow-sm active:scale-[0.96] outline-none shrink-0 group ${
+                                                isActive 
+                                                ? 'border-[#e6be00] bg-[#fff9cc] ring-2 ring-[#febd69]/30' 
+                                                : 'border-gray-200 bg-gray-50 hover:border-[#febd69] hover:bg-white'
+                                            }`}
+                                        >
+                                            <sec.icon size={14} className={`${isActive ? 'text-[#c45500]' : 'text-[#232f3e] group-hover:text-[#c45500]'} transition-colors`} strokeWidth={2} />
+                                            <span className={`text-[12px] font-bold whitespace-nowrap tracking-tight ${isActive ? 'text-[#c45500]' : 'text-gray-700 group-hover:text-gray-900'}`}>{sec.title}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
                         <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="absolute bottom-0 right-0 p-1 bg-white border border-slate-200 rounded-full shadow-md text-slate-400 hover:text-slate-900 transition-colors"
+                            onClick={() => { authService.logout(); window.location.href = '/login'; }}
+                            className="px-6 py-1.5 bg-white border border-gray-300 rounded-[7px] text-[13px] font-medium text-gray-800 hover:bg-gray-50 shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-gray-100 transition-all min-w-[120px]"
                         >
-                            <Camera size={12} />
+                            Sign Out
                         </button>
                     </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-900 leading-none">{displayName}</h2>
-                        <p className="text-sm text-slate-500 mt-2">{profile?.email || 'Global Partner Registry'}</p>
-                        <div className="flex items-center gap-3 mt-3">
-                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-widest border border-emerald-100">Verified Partner</span>
-                             <span className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">ID: #{String(profile?.id || '').slice(0, 8).toUpperCase()}</span>
-                        </div>
-                    </div>
                 </div>
-                <button 
-                    onClick={() => { authService.logout(); window.location.href = '/login'; }}
-                    className="flex items-center gap-2 px-6 py-2 border border-slate-300 rounded text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
-                >
-                    <LogOut size={16} /> Sign Out
-                </button>
-            </div>
 
-            {/* Simple Account Grid (Card Row Layout) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {SECTIONS.map((sec, i) => (
-                    <div 
-                        key={i}
-                        onClick={() => router.push(sec.href)}
-                        className="flex items-start gap-4 p-5 border border-slate-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-all border-b-2 hover:border-b-[#F7CA00] group"
-                    >
-                        <div className="mt-1 shrink-0">
-                            <sec.icon size={34} className="text-[#232f3e] opacity-80" strokeWidth={1} />
+                {/* ── Dynamic Inline Forms ── */}
+                {activeSection && (
+                    <div className="animate-in fade-in slide-in-from-top-4 duration-300 border border-gray-200 rounded-lg bg-white p-8 shadow-sm mb-12">
+                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                            <h3 className="text-xl font-bold text-gray-900">
+                                {SECTIONS.find(s => s.id === activeSection)?.title}
+                            </h3>
+                            <button 
+                                onClick={() => setActiveSection(null)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <ChevronRight size={20} className="rotate-90 md:rotate-0" />
+                            </button>
                         </div>
-                        <div>
-                            <h3 className="text-[17px] font-bold text-slate-900 leading-snug group-hover:text-[#c45500] transition-colors">{sec.title}</h3>
-                            <p className="text-sm text-slate-500 mt-1 leading-normal font-normal">{sec.desc}</p>
-                        </div>
+
+                        {activeSection === 'password' ? (
+                            <form onSubmit={handlePasswordChange} className="max-w-[500px] space-y-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-gray-900">Current Password</label>
+                                    <input 
+                                        type="password"
+                                        required
+                                        value={passwordData.old_password}
+                                        onChange={e => setPasswordData({...passwordData, old_password: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-gray-900">New Password</label>
+                                    <input 
+                                        type="password"
+                                        required
+                                        minLength={8}
+                                        value={passwordData.new_password}
+                                        onChange={e => setPasswordData({...passwordData, new_password: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-gray-900">Confirm New Password</label>
+                                    <input 
+                                        type="password"
+                                        required
+                                        value={passwordData.new_password_confirm}
+                                        onChange={e => setPasswordData({...passwordData, new_password_confirm: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                    />
+                                </div>
+                                <div className="pt-4 flex items-center gap-4">
+                                    <button 
+                                        type="submit"
+                                        disabled={updating}
+                                        className="px-8 py-2 bg-[#FFD814] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F7CA00] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#F0C14B] transition-all disabled:opacity-50"
+                                    >
+                                        {updating ? 'Updating...' : 'Change Password'}
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 max-w-[800px]">
+                                {activeSection === 'security' ? (
+                                    <>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-gray-900">First Name</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.first_name || ''}
+                                                onChange={e => setFormData({...formData, first_name: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-gray-900">Last Name</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.last_name || ''}
+                                                onChange={e => setFormData({...formData, last_name: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[13px] font-bold text-gray-900">Email Address</label>
+                                            <input 
+                                                type="email"
+                                                value={formData.email || ''}
+                                                onChange={e => setFormData({...formData, email: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[13px] font-bold text-gray-900">Phone Number</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.phone || ''}
+                                                onChange={e => setFormData({...formData, phone: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[13px] font-bold text-gray-900">Address Line</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.address || ''}
+                                                onChange={e => setFormData({...formData, address: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-gray-900">City</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.city || ''}
+                                                onChange={e => setFormData({...formData, city: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-gray-900">Country</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.country || ''}
+                                                onChange={e => setFormData({...formData, country: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[13px] font-bold text-gray-900">Postal Code</label>
+                                            <input 
+                                                type="text"
+                                                value={formData.postal_code || ''}
+                                                onChange={e => setFormData({...formData, postal_code: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="pt-4 flex items-center gap-4 md:col-span-2">
+                                    <button 
+                                        type="submit"
+                                        disabled={updating}
+                                        className="px-8 py-2 bg-[#FFD814] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F7CA00] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#F0C14B] transition-all disabled:opacity-50"
+                                    >
+                                        {updating ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveSection(null)}
+                                        className="px-6 py-2 bg-white border border-gray-300 rounded-[7px] text-[13px] font-medium text-gray-800 hover:bg-gray-50 shadow-sm transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
-                ))}
-            </div>
+                )}
 
-            <div className="mt-20 pt-10 border-t border-slate-100 text-center">
-                 <p className="text-xs text-slate-400 font-medium italic">
-                    Administrative governance protocols managed by Al-Qavi CDS Distribution Services.
-                 </p>
-                 <div className="mt-5 flex justify-center gap-10 text-[10px] font-bold text-[#007185] uppercase tracking-widest">
-                     <span className="hover:underline cursor-pointer">Conditions of Use</span>
-                     <span className="hover:underline cursor-pointer">Privacy Notice</span>
-                     <span className="hover:underline cursor-pointer">Security Center</span>
-                 </div>
+                {/* ── Amazon Footer Detail ── */}
+                <div className="mt-20 pt-12 border-t border-gray-100 flex flex-col items-center">
+                    <div className="flex items-center gap-8 text-[11px] font-bold text-[#007185] uppercase tracking-[0.1em] mb-6">
+                        <span className="hover:underline cursor-pointer hover:text-[#c45500]">Conditions of Use</span>
+                        <span className="hover:underline cursor-pointer hover:text-[#c45500]">Privacy Notice</span>
+                        <span className="hover:underline cursor-pointer hover:text-[#c45500]">Help Center</span>
+                        <span className="hover:underline cursor-pointer hover:text-[#c45500]">Interest-Based Ads</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 font-normal italic">
+                        © 2026 Al-Qavi Cosmetics Distribution System. All Rights Reserved.
+                    </p>
+                </div>
             </div>
         </div>
     );
 }
+

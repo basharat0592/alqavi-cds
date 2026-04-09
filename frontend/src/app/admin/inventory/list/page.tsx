@@ -63,51 +63,26 @@ export default function InventoryListPage() {
             const defaultWarehouse = whData.find((w: any) => w.is_default) || whData[0];
             let finalInventory: any[] = [];
 
+            // Map and enrich inventory records that actually exist in the DB
+            const recordsWithInfo = invData.map((inv: any) => {
+                const prod = prodData.find((p: any) => String(p.id) === String(inv.product));
+                const wh = whData.find((w: any) => String(w.id) === String(inv.warehouse));
+                return {
+                    ...inv,
+                    product_name: prod?.name || inv.product_name || 'Unknown Product',
+                    sku: prod?.sku || inv.sku || 'N/A',
+                    barcode: prod?.barcode || inv.barcode || 'N/A',
+                    product_image: prod?.image || prod?.image_url || inv.product_image,
+                    warehouse_name: wh?.name || inv.warehouse_name || 'Default Warehouse',
+                    warehouse_type: wh?.warehouse_type || inv.warehouse_type
+                };
+            });
+
+            // If a warehouse is selected, filter to only show records for that warehouse
             if (selectedWarehouse) {
-                finalInventory = prodData.map((prod: any) => {
-                    const record = invData.find((inv: any) => 
-                        String(inv.product) === String(prod.id) && 
-                        String(inv.warehouse) === String(selectedWarehouse)
-                    );
-                    if (record) return { ...record, product_name: prod.name, sku: prod.sku, barcode: prod.barcode, product_image: prod.image || prod.image_url };
-                    return {
-                        id: `virtual-${prod.id}-${selectedWarehouse}`,
-                        product: prod.id, product_name: prod.name, sku: prod.sku,
-                        barcode: prod.barcode, product_image: prod.image || prod.image_url,
-                        warehouse: selectedWarehouse,
-                        warehouse_name: whData.find((w: any) => String(w.id) === String(selectedWarehouse))?.name,
-                        quantity_available: Number(prod.quantity_in_stock || 0), is_virtual: true
-                    };
-                });
+                finalInventory = recordsWithInfo.filter((inv: any) => String(inv.warehouse) === String(selectedWarehouse));
             } else {
-                const recordsWithInfo = invData.map((inv: any) => {
-                    const prod = prodData.find((p: any) => String(p.id) === String(inv.product));
-                    const wh = whData.find((w: any) => String(w.id) === String(inv.warehouse));
-                    return {
-                        ...inv,
-                        product_name: prod?.name || inv.product_name,
-                        sku: prod?.sku || inv.sku,
-                        barcode: prod?.barcode || inv.barcode,
-                        product_image: prod?.image || prod?.image_url || inv.product_image,
-                        warehouse_name: wh?.name || inv.warehouse_name,
-                        warehouse_type: wh?.warehouse_type || inv.warehouse_type
-                    };
-                });
-                
-                const missingProducts = prodData.filter((p: any) => !invData.some((inv: any) => String(inv.product) === String(p.id)));
-                const virtualRecords = missingProducts.map((p: any) => ({
-                    id: `virtual-${p.id}`,
-                    product: p.id,
-                    product_name: p.name,
-                    sku: p.sku,
-                    barcode: p.barcode,
-                    product_image: p.image || p.image_url,
-                    warehouse: defaultWarehouse?.id,
-                    warehouse_name: defaultWarehouse?.name || "Main Hub",
-                    quantity_available: Number(p.quantity_in_stock || 0),
-                    is_virtual: true
-                }));
-                finalInventory = [...recordsWithInfo, ...virtualRecords];
+                finalInventory = recordsWithInfo;
             }
 
             setInventory(finalInventory.filter(item => item.product_name && !isNaN(Number(item.quantity_available))));

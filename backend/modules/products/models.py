@@ -62,8 +62,8 @@ class Product(BaseModel, StatusMixin):
         null=True,
         related_name='products'
     )
-    sku = models.CharField(max_length=100, unique=True, blank=True, null=True)
-    barcode = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    sku = models.CharField(max_length=100, blank=True, null=True)
+    barcode = models.CharField(max_length=100, blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     retail_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -98,12 +98,18 @@ class Product(BaseModel, StatusMixin):
         related_name='products',
         verbose_name='Strategic Supplier'
     )
+    # Marks products that were added by suppliers from their dashboard.
+    # Supplier-only products should not appear in admin product lists or stock views
+    # unless explicitly requested (e.g. when creating a Purchase Order).
+    is_supplier_only = models.BooleanField(default=False)
 
     
     class Meta:
         ordering = ['-created_at']
+        unique_together = (('sku', 'is_supplier_only'), ('barcode', 'is_supplier_only'))
         indexes = [
             models.Index(fields=['sku']),
+            models.Index(fields=['is_supplier_only']),
             models.Index(fields=['category']),
             models.Index(fields=['status']),
             models.Index(fields=['created_at']),

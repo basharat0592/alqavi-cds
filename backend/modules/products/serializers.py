@@ -77,7 +77,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'sku', 'barcode', 'price', 'cost', 'retail_price', 'quantity_in_stock', 
             'image', 'image_url', 'gallery',
             'status', 'is_in_stock', 'batches', 'main_category_names', 'main_category_slugs', 'main_categories',
-            'created_at', 'updated_at'
+            'is_supplier_only', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -274,7 +274,7 @@ class MainCategorySerializer(serializers.ModelSerializer):
     def get_product_details(self, obj):
         products = obj.products.all()
         request = self.context.get('request')
-        
+        include_supplier_only = request and request.query_params.get('include_supplier_only') == 'true'
         # Consistent filtering with list_products view
         if not request or not request.user.is_authenticated:
             products = products.filter(status='active')
@@ -284,6 +284,9 @@ class MainCategorySerializer(serializers.ModelSerializer):
             )
             if not is_privileged:
                 products = products.filter(status='active')
+        # Exclude supplier-only products by default
+        if not include_supplier_only:
+            products = products.filter(is_supplier_only=False)
         
         try:
             return ProductSerializer(products, many=True, context=self.context).data

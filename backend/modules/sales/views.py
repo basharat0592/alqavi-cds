@@ -723,8 +723,8 @@ def supplier_dashboard_stats(request):
     cancelled_pos = all_pos.filter(status='cancelled').count()
     total_value = all_pos.aggregate(v=Sum('total_amount'))['v'] or 0
 
-    # Products linked to this supplier
-    total_products = Product.objects.filter(supplier=supplier_profile).count()
+    # Products linked to this supplier's own catalog
+    total_products = Product.objects.filter(supplier=supplier_profile, is_supplier_only=True).count()
 
     # 5 most recent POs
     recent = all_pos.order_by('-created_at')[:5]
@@ -828,6 +828,7 @@ def create_purchase(request):
                 shipping_cost=data.get('shipping_cost', 0),
                 status=data.get('status', 'draft'),
                 payment_status=data.get('payment_status', 'pending'),
+                payment_method=data.get('payment_method') or None,
                 notes=data.get('notes', ''),
                 created_by=request.user if request.user.is_authenticated else None,
             )
@@ -847,9 +848,62 @@ def create_purchase(request):
                 price = float(item.get('unit_price', 0))
                 subtotal = qty * price
                 
+                source_product_id = item.get('product')
+                source_product = Product.objects.filter(id=source_product_id).first()
+                if not source_product:
+                    continue
+
+                # ENTITY SEPARATION LOGIC: 
+                # We maintain two separate worlds:
+                # 1. Supplier Catalog (is_supplier_only = True)
+                # 2. Admin Inventory (is_supplier_only = False)
+                # This ensures edits/deletes in one don't affect the other.
+
+                target_product = None
+                if source_product.is_supplier_only:
+                    # Look for an existing internal version of this product in admin inventory
+                    # We match mainly by SKU and name (to avoid duplicates)
+                    target_product = Product.objects.filter(
+                        sku=source_product.sku, 
+                        is_supplier_only=False
+                    ).first()
+
+                    if not target_product:
+                        # Create a NEW separate record specifically for Admin's inventory
+                        target_product = Product.objects.create(
+                            name=source_product.name,
+                            description=source_product.description,
+                            sku=source_product.sku,
+                            price=source_product.price,
+                            cost=price,
+                            category=source_product.category,
+                            image=source_product.image,
+                            is_supplier_only=False, # This is our internal copy
+                            status='active',
+                            quantity_in_stock=0, # Start fresh, handled by Inventory system
+                            supplier=source_product.supplier # Maintain link for history
+                        )
+                    
+                    # Deduct from the ORIGINAL Supplier Catalog record
+                    total_pieces = qty * int(item.get('pieces_per_unit', 1))
+                    try:
+                        if po.supplier and source_product.supplier and source_product.supplier.id == po.supplier.id:
+                            source_product.quantity_in_stock = max(0, int(source_product.quantity_in_stock) - int(total_pieces))
+                            source_product.save(update_fields=['quantity_in_stock'])
+                    except Exception:
+                        pass
+                else:
+                    # Admin is purchasing more of a product that's already in their internal catalog
+                    target_product = source_product
+                    # If this product was already an admin product, we still deduct from its 
+                    # "supplier side" if applicable, but usually admin products are standalone.
+                    # However, to meet the requirement: "The quantity should be deducted from the supplier’s stock."
+                    total_pieces = qty * int(item.get('pieces_per_unit', 1))
+
+                # Create the PO item record linked to the TARGET product (Admin's version)
                 p_item = PurchaseOrderItem.objects.create(
                     purchase_order=po,
-                    product_id=item.get('product'),
+                    product=target_product,
                     quantity=qty,
                     unit_price=price,
                     subtotal=subtotal,
@@ -857,34 +911,33 @@ def create_purchase(request):
                     pieces_per_unit=int(item.get('pieces_per_unit', 1)),
                 )
                 
-                # STOCK TRIGGER: Only add units if status is 'received'
-                if po.status == 'received':
-                    product = p_item.product
+                # Update Admin Inventory mesh
+                if target_product and warehouse:
                     total_pieces = qty * p_item.pieces_per_unit
-                    product.quantity_in_stock += total_pieces
-                    product.cost = price # Update cost to latest purchase price
-                    product.save()
                     
-                    if warehouse:
-                        inv = Inventory.objects.filter(product=product, warehouse=warehouse).order_by('-quantity_available').first()
-                        if not inv:
-                            inv = Inventory.objects.create(product=product, warehouse=warehouse, quantity_available=0)
-                        
-                        prev_qty = inv.quantity_available
-                        inv.quantity_available += total_pieces
-                        inv.save()
-                        
-                        InventoryMovement.objects.create(
-                            product=product,
-                            warehouse=warehouse,
-                            movement_type='Purchase',
-                            quantity=total_pieces,
-                            previous_quantity=prev_qty,
-                            new_quantity=inv.quantity_available,
-                            reference_id=po.purchase_number,
-                            notes=f"Stock added via RECEIVED Purchase Order {po.purchase_number}",
-                            created_by=request.user if request.user.is_authenticated else None
-                        )
+                    # Update target product's own stock counter (for simplified admin views)
+                    target_product.quantity_in_stock = int(target_product.quantity_in_stock) + int(total_pieces)
+                    target_product.save(update_fields=['quantity_in_stock'])
+
+                    inv = Inventory.objects.filter(product=target_product, warehouse=warehouse).order_by('-quantity_available').first()
+                    if not inv:
+                        inv = Inventory.objects.create(product=target_product, warehouse=warehouse, quantity_available=0)
+                    
+                    prev_qty = inv.quantity_available
+                    inv.quantity_available = float(prev_qty) + float(total_pieces)
+                    inv.save()
+
+                    InventoryMovement.objects.create(
+                        product=target_product,
+                        warehouse=warehouse,
+                        movement_type='Purchase',
+                        quantity=total_pieces,
+                        previous_quantity=prev_qty,
+                        new_quantity=inv.quantity_available,
+                        reference_id=po.purchase_number,
+                        notes=f"Stock synchronized via Purchase Order {po.purchase_number} creation",
+                        created_by=request.user if request.user.is_authenticated else None
+                    )
                 
                 total += subtotal
                 
@@ -901,7 +954,7 @@ def create_purchase(request):
                 Payment.objects.create(
                     amount=po.total_amount,
                     payment_type='outbound',
-                    method='cash',
+                    method=(po.payment_method or 'cash'),
                     category=payment_category,
                     reference_number=str(po.purchase_number),
                     payer_payee=po.supplier_name or 'Supplier',
@@ -943,9 +996,14 @@ def purchase_detail(request, pk):
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Update basic fields
-                for field in ['purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'supplier_phone', 'status', 'payment_status', 'notes', 'tax_amount', 'shipping_cost', 'order_date']:
+                for field in ['purchase_number', 'tracking_id', 'supplier_name', 'supplier_phone', 'status', 'payment_status', 'payment_method', 'notes', 'tax_amount', 'shipping_cost', 'order_date']:
                     if field in request.data:
                         setattr(po, field, request.data[field])
+                
+                # Special handling for supplier FK to avoid assignment errors with IDs
+                if 'supplier' in request.data:
+                    po.supplier_id = request.data['supplier']
+
                 po.save()
 
                 if items_data is not None:
@@ -970,42 +1028,78 @@ def purchase_detail(request, pk):
 
                 # TRIGGER CHECK: Status changed to received
                 if old_status != 'received' and new_status == 'received':
+                    # Get default warehouse for stock updates
+                    from modules.inventory.models import Warehouse, InventoryMovement
                     warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-                    for item in po.items.all():
-                        product = item.product
-                        total_pieces = item.quantity * item.pieces_per_unit
-                        
-                        # 1. Supplier Stock DECREMENT
-                        product.quantity_in_stock -= total_pieces
-                        
-                        # 2. Product Activation (Ensures it shows in Admin catalog now)
-                        product.status = 'active'
-                        
-                        # Update cost based on latest PO
-                        product.cost = item.unit_price
-                        product.save()
-
-                        if warehouse:
-                            # 3. Admin Inventory INCREMENT
-                            inv = Inventory.objects.filter(product=product, warehouse=warehouse).order_by('-quantity_available').first()
-                            if not inv:
-                                inv = Inventory.objects.create(product=product, warehouse=warehouse, quantity_available=0)
+                    
+                    # Ensure we apply separation logic even if the order was created as 'draft'
+                    if not InventoryMovement.objects.filter(reference_id=po.purchase_number, movement_type='Purchase').exists():
+                        for item in po.items.all():
+                            source_product = item.product
+                            if not source_product:
+                                continue
                             
-                            prev_qty = inv.quantity_available
-                            inv.quantity_available += total_pieces
-                            inv.save()
+                            total_pieces = item.quantity * item.pieces_per_unit
 
-                            InventoryMovement.objects.create(
-                                product=product,
-                                warehouse=warehouse,
-                                movement_type='Purchase',
-                                quantity=total_pieces,
-                                previous_quantity=prev_qty,
-                                new_quantity=inv.quantity_available,
-                                reference_id=po.purchase_number,
-                                notes=f"Stock synchronized: Minus from Supplier, Add to Admin Registry (PO {po.purchase_number})",
-                                created_by=request.user if request.user.is_authenticated else None
-                            )
+                            # Determine target (Internal) vs source (Catalog)
+                            target_product = source_product
+                            if source_product.is_supplier_only:
+                                # Find or create Admin's internal version
+                                target_product = Product.objects.filter(sku=source_product.sku, is_supplier_only=False).first()
+                                if not target_product:
+                                    target_product = Product.objects.create(
+                                        name=source_product.name,
+                                        description=source_product.description,
+                                        sku=source_product.sku,
+                                        price=source_product.price,
+                                        cost=item.unit_price,
+                                        category=source_product.category,
+                                        image=source_product.image,
+                                        is_supplier_only=False,
+                                        status='active',
+                                        quantity_in_stock=0,
+                                        supplier=source_product.supplier
+                                    )
+                                
+                                # Deduct from Supplier's stock
+                                try:
+                                    if po.supplier and source_product.supplier and source_product.supplier.id == po.supplier.id:
+                                        source_product.quantity_in_stock = max(0, int(source_product.quantity_in_stock) - int(total_pieces))
+                                        source_product.save(update_fields=['quantity_in_stock'])
+                                except Exception:
+                                    pass
+
+                            # Update Admin Inventory
+                            target_product.quantity_in_stock = int(target_product.quantity_in_stock) + int(total_pieces)
+                            target_product.save(update_fields=['quantity_in_stock'])
+
+                            if warehouse:
+                                inv = Inventory.objects.filter(product=target_product, warehouse=warehouse).order_by('-quantity_available').first()
+                                if not inv:
+                                    inv = Inventory.objects.create(product=target_product, warehouse=warehouse, quantity_available=0)
+                                prev_qty = inv.quantity_available
+                                inv.quantity_available = float(prev_qty) + float(total_pieces)
+                                inv.save()
+
+                                InventoryMovement.objects.create(
+                                    product=target_product,
+                                    warehouse=warehouse,
+                                    movement_type='Purchase',
+                                    quantity=total_pieces,
+                                    previous_quantity=prev_qty,
+                                    new_quantity=inv.quantity_available,
+                                    reference_id=po.purchase_number,
+                                    notes=f"Stock synchronized via Purchase Order {po.purchase_number} receipt",
+                                    created_by=request.user if request.user.is_authenticated else None
+                                )
+                                
+                            # Re-link the PO item to the internal product for consistency if it was catalog-based
+                            if item.product != target_product:
+                                item.product = target_product
+                                item.save(update_fields=['product'])
+                    else:
+                        # Logic already handled; no-op or just safety checks
+                        pass
                 
                 # TRIGGER CHECK: Payment changed to paid
                 if old_payment_status != 'paid' and new_payment_status == 'paid':
@@ -1015,10 +1109,11 @@ def purchase_detail(request, pk):
                             name='Purchases', 
                             defaults={'description': 'Outgoing payments for stock purchases'}
                         )
+                        method_to_use = po.payment_method or request.data.get('payment_method') or 'cash'
                         Payment.objects.create(
                             amount=po.total_amount,
                             payment_type='outbound',
-                            method='cash',
+                            method=method_to_use,
                             category=payment_category,
                             reference_number=str(po.purchase_number),
                             payer_payee=po.supplier_name or 'Supplier',
@@ -1027,6 +1122,8 @@ def purchase_detail(request, pk):
                         )
             return Response(PurchaseOrderDetailSerializer(po).data)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': str(e)}, status=400)
     elif request.method == 'DELETE':
         try:

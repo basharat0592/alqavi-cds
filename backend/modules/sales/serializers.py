@@ -131,7 +131,7 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
         model = PurchaseOrder
         fields = [
             'id', 'purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'order_date', 
-            'total_amount', 'status', 'payment_status', 'created_at',
+            'total_amount', 'status', 'payment_status', 'payment_method', 'created_at',
             'purchased_items'
         ]
 
@@ -151,7 +151,7 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'supplier_phone', 'order_date',
             'expected_delivery_date', 'total_amount', 'tax_amount', 'shipping_cost',
-            'status', 'payment_status', 'notes', 'items', 'created_at'
+            'status', 'payment_status', 'payment_method', 'notes', 'items', 'created_at'
         ]
 
 

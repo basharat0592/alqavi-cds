@@ -14,25 +14,6 @@ import { authService, User as AuthUser } from '@/lib/auth';
 import { productService, mainCategoryService } from '@/lib/api';
 import Logo from "@/components/ui/Logo";
 
-const CATEGORIES = [
-    { name: 'All Departments', href: '/shop' },
-    { name: 'New Arrivals', href: '/shop?cat=New Arrivals' },
-    { name: 'Best Sellers', href: '/shop?cat=Best Sellers' },
-    { name: 'Skincare', href: '/shop?cat=Skincare' },
-    { name: 'Makeup', href: '/shop?cat=Makeup' },
-    { name: 'Fragrance', href: '/shop?cat=Fragrance' },
-    { name: 'Haircare', href: '/shop?cat=Haircare' },
-    { name: 'Gift Sets', href: '/shop?cat=Gift Sets' },
-];
-
-const NAV_LINKS = [
-    { href: '/shop', label: "All Products" },
-    { href: '/shop?cat=New Arrivals', label: 'New Arrivals' },
-    { href: '/shop?cat=Best Sellers', label: 'Best Sellers' },
-    { href: '/shop?cat=Skincare', label: 'Skincare' },
-    { href: '/shop?cat=Makeup', label: 'Makeup' },
-];
-
 export default function Navbar() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCat, setSelectedCat] = useState('All');
@@ -61,7 +42,7 @@ export default function Navbar() {
         }).catch(() => { });
 
         mainCategoryService.getAll().then(data => {
-            setMainCategories(data.filter(c => c.status === 'active').slice(0, 8));
+            setMainCategories(data.filter(c => c.status === 'active').slice(0, 12));
         }).catch(() => { });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -157,7 +138,7 @@ export default function Navbar() {
                         <div className="flex items-center gap-2">
                             <nav className="hidden xl:flex items-center gap-1 mr-2 font-bold text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                                 <Link href="/shop" className="px-4 py-2 rounded-lg text-[#EEAF1C] hover:bg-[#EEAF1C]/5">Catalog</Link>
-                                {mainCategories.slice(0, 3).map(l => (
+                                {mainCategories.map(l => (
                                     <Link key={l.id} href={`/shop?mcat=${l.slug || l.name}`} className="px-4 py-2 rounded-lg hover:text-[#1d252c] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all">{l.name}</Link>
                                 ))}
                             </nav>

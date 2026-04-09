@@ -11,14 +11,14 @@ export const categoryService = {
         return Array.isArray(data) ? data : data.results || [];
     },
     create: async (payload: Partial<ProductCategory>): Promise<ProductCategory> => {
-        const { data } = await api.post('/v1/products/categories/', payload);
+        const { data } = await api.post('v1/products/categories/', payload);
         return data;
     },
     update: async (id: string | number, payload: Partial<ProductCategory>): Promise<ProductCategory> => {
-        const { data } = await api.patch(`/v1/products/categories/${id}/`, payload);
+        const { data } = await api.patch(`v1/products/categories/${id}/`, payload);
         return data;
     },
     delete: async (id: string | number): Promise<void> => {
-        await api.delete(`/v1/products/categories/${id}/`);
+        await api.delete(`v1/products/categories/${id}/`);
     }
 };

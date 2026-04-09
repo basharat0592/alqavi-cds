@@ -26,6 +26,12 @@ class InventoryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Inventory.objects.all()
+        include_supplier_only = self.request.query_params.get('include_supplier_only') == 'true'
+
+        # By default exclude inventory records for supplier-only products.
+        if not include_supplier_only:
+            qs = qs.filter(product__is_supplier_only=False)
+
         if self.request.user.is_authenticated and not self.request.user.is_superuser:
             if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
                 return qs.filter(product__supplier=self.request.user.supplier_profile)
@@ -76,14 +82,20 @@ class InventoryViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def summary(self, request):
         # Implementation for stock summary analytics
-        total_items = Inventory.objects.count()
-        low_stock_count = LowStockAlert.objects.filter(alert_status='Pending').count()
-        expired_batches = Batch.objects.filter(status='Expired').count()
+        # Use filtered queryset to exclude supplier-only products by default
+        qs = self.get_queryset()
+        total_items = qs.count()
         
+        # Filter low stock alerts to only show for admin inventory (non-supplier-only)
+        low_stock_qs = LowStockAlert.objects.filter(alert_status='Pending')
+        include_supplier_only = request.query_params.get('include_supplier_only') == 'true'
+        if not include_supplier_only:
+            low_stock_qs = low_stock_qs.filter(product__is_supplier_only=False)
+            
         return Response({
             'total_items': total_items,
-            'low_stock_count': low_stock_count,
-            'expired_batches': expired_batches,
+            'low_stock_count': low_stock_qs.count(),
+            'expired_batches': Batch.objects.filter(status='Expired').count(),
         })
 
     @action(detail=True, methods=['post'], url_path='add_stock')

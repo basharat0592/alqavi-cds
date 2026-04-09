@@ -54,7 +54,14 @@ export default function AdminDashboard() {
 
     const DASHBOARD_ACTIONS = [
         {
-            title: "Recent Sales",
+            title: "Track Order",
+            desc: "Logistics & tracking portal",
+            icon: MapPin,
+            href: "/admin/tracking",
+            color: "text-[#EEAF1C]"
+        },
+        {
+            title: "Recent Orders",
             desc: "Track latest transactions",
             icon: Clock,
             href: "/admin/sales/recent",
@@ -75,13 +82,6 @@ export default function AdminDashboard() {
             color: "text-[#EEAF1C]"
         },
         {
-            title: "Inventory",
-            desc: "Manage stock & warehouse",
-            icon: Boxes,
-            href: "/admin/inventory/list",
-            color: "text-[#EEAF1C]"
-        },
-        {
             title: "Users Management",
             desc: "Roles & security",
             icon: Users,
@@ -93,13 +93,6 @@ export default function AdminDashboard() {
             desc: "Business analytics",
             icon: BarChart3,
             href: "/admin/reports",
-            color: "text-[#EEAF1C]"
-        },
-        {
-            title: "Track Order",
-            desc: "Logistics & tracking portal",
-            icon: MapPin,
-            href: "/admin/tracking",
             color: "text-[#EEAF1C]"
         },
         {
@@ -154,6 +147,56 @@ export default function AdminDashboard() {
                 {/* ── LEFT PROTOCOL: Business Intelligence & Data Streams (2/3) ── */}
                 <div className="lg:col-span-2 space-y-8">
                     
+                    {/* 📋 Recent Sales Hub */}
+                    <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="p-5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
+                                    Recent Sales Hub
+                                </h3>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Tracking latest sales and receipts</p>
+                            </div>
+                            <Link href="/admin/sales/recent" className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all uppercase tracking-wider shadow-sm active:scale-95">
+                                View Entries
+                            </Link>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/10">
+                                    <tr>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-6">Order ID</th>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</th>
+                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-6">Status</th>
+                                    </tr>
+                                </thead>
+                                 <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                    {recentOrders.length > 0 ? (
+                                        recentOrders.map((row, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.01] transition-colors group cursor-default">
+                                                <td className="px-5 py-4 text-[12px] font-bold text-[#EEAF1C] pl-6 tracking-tighter">{row.order_number}</td>
+                                                <td className="px-5 py-4 text-[12px] font-bold text-slate-800 dark:text-slate-300">
+                                                    {row.customer_name || 'Customer'}
+                                                </td>
+                                                <td className="px-5 py-4 text-[12px] font-black text-slate-900 dark:text-white">{formatCurrency(row.total_amount)}</td>
+                                                <td className="px-5 py-4 text-right pr-6">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${row.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                                                        {row.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={4} className="px-5 py-10 text-center text-xs text-slate-400 font-bold uppercase tracking-widest opacity-40">No Transaction Data Node Available</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     {/* 📊 Analytics Graph: Performance Analysis */}
                     <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm flex flex-col">
                         <div className="p-6 border-b border-slate-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 dark:bg-white/5">
@@ -258,56 +301,6 @@ export default function AdminDashboard() {
                                     <div className="h-8 w-8 border-4 border-[#EEAF1C] border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                             )}
-                        </div>
-                    </div>
-
-                    {/* 📋 Recent Sales Hub */}
-                    <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
-                        <div className="p-5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
-                                    Recent Sales Hub
-                                </h3>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Tracking latest sales and receipts</p>
-                            </div>
-                            <Link href="/admin/sales/recent" className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all uppercase tracking-wider shadow-sm active:scale-95">
-                                View Entries
-                            </Link>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/10">
-                                    <tr>
-                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-6">Order ID</th>
-                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
-                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</th>
-                                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-6">Status</th>
-                                    </tr>
-                                </thead>
-                                 <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                                    {recentOrders.length > 0 ? (
-                                        recentOrders.map((row, i) => (
-                                            <tr key={i} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.01] transition-colors group cursor-default">
-                                                <td className="px-5 py-4 text-[12px] font-bold text-[#EEAF1C] pl-6 tracking-tighter">{row.order_number}</td>
-                                                <td className="px-5 py-4 text-[12px] font-bold text-slate-800 dark:text-slate-300">
-                                                    {row.customer_name || 'Customer'}
-                                                </td>
-                                                <td className="px-5 py-4 text-[12px] font-black text-slate-900 dark:text-white">{formatCurrency(row.total_amount)}</td>
-                                                <td className="px-5 py-4 text-right pr-6">
-                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${row.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
-                                                        {row.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={4} className="px-5 py-10 text-center text-xs text-slate-400 font-bold uppercase tracking-widest opacity-40">No Transaction Data Node Available</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>

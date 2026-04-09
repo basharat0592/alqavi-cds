@@ -21,4 +21,8 @@ urlpatterns = [
     path('suppliers/', views.list_suppliers, name='supplier-list'),
     path('suppliers/create/', views.create_supplier, name='supplier-create'),
     path('suppliers/<int:supplier_id>/', views.supplier_detail, name='supplier-detail'),
+    # Supplier products (mappings)
+    path('supplier-products/', views.list_supplier_products, name='supplier-product-list'),
+    path('supplier-products/create/', views.create_supplier_product, name='supplier-product-create'),
+    path('supplier-products/<int:pk>/', views.supplier_product_detail, name='supplier-product-detail'),
 ]

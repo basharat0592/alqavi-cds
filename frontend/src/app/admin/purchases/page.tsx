@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Search, RefreshCw, Trash2, Eye, Edit2,
@@ -38,10 +38,11 @@ export default function PurchasesPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    const [paymentFilter, setPaymentFilter] = useState('All');
 
     const [viewRow, setViewRow] = useState<any | null>(null);
+    const [copied, setCopied] = useState(false);
+    const copyTimeoutRef = useRef<number | null>(null);
     const [editRow, setEditRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -50,39 +51,56 @@ export default function PurchasesPage() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await purchaseService.getAll({
-                start_date: dateFrom || undefined,
-                end_date: dateTo || undefined,
-                status: statusFilter !== 'All' ? statusFilter : undefined,
-                search: searchTerm || undefined
-            });
-            setPurchases(Array.isArray(data) ? data : data.results || []);
-        } catch {
-            console.error('Failed to load purchases');
+            const params: any = {};
+            if (statusFilter && statusFilter !== 'All') params.status = statusFilter;
+            if (paymentFilter && paymentFilter !== 'All') params.payment_status = paymentFilter;
+            if (searchTerm) params.search = searchTerm;
+
+            const data = await purchaseService.getAll(params);
+            setPurchases(data || []);
+        } catch (err) {
+            console.error('Failed to load purchases', err);
         } finally {
             setLoading(false);
         }
-    }, [dateFrom, dateTo, statusFilter, searchTerm]);
+    }, [statusFilter, paymentFilter, searchTerm]);
 
-    useEffect(() => { 
-        const handler = setTimeout(() => { load(); }, 400); // Debounce search
-        return () => clearTimeout(handler);
+    useEffect(() => {
+        load();
     }, [load]);
 
-    // Local filter only for very fast UI feedback on what's already loaded
-    const filtered = purchases; 
+    useEffect(() => {
+        // reset copied state when view modal changes
+        setCopied(false);
+        if (copyTimeoutRef.current) {
+            window.clearTimeout(copyTimeoutRef.current);
+            copyTimeoutRef.current = null;
+        }
+    }, [viewRow]);
 
-    const handleDelete = async () => {
-        if (!deleteRow) return;
-        setDeleting(true);
+    const purchasesList = Array.isArray(purchases) ? purchases : (purchases && purchases.results) ? purchases.results : [];
+
+    const filtered = purchasesList.filter((p: any) => {
+        let ok = true;
+        if (statusFilter && statusFilter !== 'All' && p.status !== statusFilter) ok = false;
+        if (paymentFilter && paymentFilter !== 'All' && p.payment_status !== paymentFilter) ok = false;
+        if (searchTerm) {
+            const s = searchTerm.toLowerCase();
+            const num = String(p.purchase_number || '').toLowerCase();
+            const sup = (p.supplier_name || '').toLowerCase();
+            if (!num.includes(s) && !sup.includes(s)) ok = false;
+        }
+        return ok;
+    });
+
+    // ── Handlers ─────────────────────────────────────────────────────────
+    const handleViewDetails = async (id: string) => {
         try {
-            await purchaseService.delete(deleteRow.id);
-            setPurchases(prev => prev.filter(p => p.id !== deleteRow.id));
-            setDeleteRow(null);
-        } catch {
-            alert('Delete failed');
-        } finally {
-            setDeleting(false);
+            const data = await purchaseService.getById(id);
+            setViewRow(data);
+        } catch (err) {
+            console.error('Failed to fetch purchase', err);
+            alert('Failed to load purchase details');
         }
     };
 
@@ -90,50 +108,58 @@ export default function PurchasesPage() {
         if (!editRow) return;
         setIsUpdating(true);
         try {
-            await purchaseService.update(editRow.id, {
-                status: editRow.status,
-                payment_status: editRow.payment_status
-            });
+            const payload: any = { status: editRow.status };
+            if (editRow.status !== 'cancelled') {
+                if (editRow.payment_status) payload.payment_status = editRow.payment_status;
+                if (editRow.payment_method) payload.payment_method = editRow.payment_method;
+            }
+            await purchaseService.update(editRow.id, payload);
             setEditRow(null);
-            load();
-        } catch (e: any) {
-            alert(e?.response?.data?.error || 'Update failed');
+            await load();
+        } catch (err) {
+            console.error('Failed to update purchase', err);
+            alert('Failed to update purchase');
         } finally {
             setIsUpdating(false);
         }
     };
 
-    const handleViewDetails = async (id: string) => {
+    const handleDelete = async () => {
+        if (!deleteRow) return;
+        setDeleting(true);
         try {
-            const detailed = await purchaseService.getById(id);
-            setViewRow(detailed);
-        } catch {
-            alert('Could not fetch details');
+            await purchaseService.delete(deleteRow.id);
+            setDeleteRow(null);
+            await load();
+        } catch (err) {
+            console.error('Failed to delete purchase', err);
+            alert('Failed to delete purchase');
+        } finally {
+            setDeleting(false);
         }
     };
 
-    if (loading) return <PageLoader />;
-
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
-
-            {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
+        <>
+            <div className="flex items-center justify-between mb-4">
                 <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Purchase Orders</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">View and manage all procurement records</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                        <ShoppingCart className="h-5 w-5 text-[#EEAF1C]" /> Purchase Orders
+                    </h1>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage stock purchases from suppliers</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={load} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all" title="Refresh">
-                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button onClick={() => router.push('/admin/purchases/add')} className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                        <Plus className="h-4 w-4" /> New Purchase
+                <div>
+                    <button
+                        onClick={() => router.push('/admin/purchases/add')}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-md shadow-sm text-sm font-bold"
+                        title="New Purchase"
+                    >
+                        <Plus className="h-4 w-4 text-[#131921]" />
+                        <span className="text-[#131921]">New Purchase</span>
                     </button>
                 </div>
             </div>
 
-            {/* ── Filters ── */}
             <div className="flex flex-col xl:flex-row gap-3 mb-4 items-end">
                 <div className="relative flex-1 min-w-[280px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -145,26 +171,19 @@ export default function PurchasesPage() {
                         className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all"
                     />
                 </div>
-                
-                <div className="flex items-center gap-2">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
-                        <input 
-                            type="date" 
-                            value={dateFrom} 
-                            onChange={e => setDateFrom(e.target.value)}
-                            className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300"
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">To</label>
-                        <input 
-                            type="date" 
-                            value={dateTo} 
-                            onChange={e => setDateTo(e.target.value)}
-                            className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300"
-                        />
-                    </div>
+
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Payment</label>
+                    <select
+                        value={paymentFilter}
+                        onChange={e => setPaymentFilter(e.target.value)}
+                        className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg min-w-[140px] outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    >
+                        <option value="All">All Payments</option>
+                        <option value="unpaid">Unpaid</option>
+                        <option value="partial">Partial</option>
+                        <option value="paid">Paid</option>
+                    </select>
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -176,37 +195,27 @@ export default function PurchasesPage() {
                     >
                         <option value="All">All Statuses</option>
                         <option value="ordered">Ordered</option>
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
                         <option value="received">Received</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
-                    <button 
+                    <button
                         onClick={() => exportToCSV(purchases, `PurchaseOrders_Export.csv`)}
                         disabled={purchases.length === 0}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-emerald-600 transition-all shadow-sm disabled:opacity-30" 
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-emerald-600 transition-all shadow-sm disabled:opacity-30"
                         title="Export to CSV (Excel)"
                     >
                         <FileSpreadsheet className="h-4 w-4" />
                     </button>
-                    <button 
+                    <button
                         onClick={() => window.print()}
                         disabled={purchases.length === 0}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all shadow-sm disabled:opacity-30" 
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all shadow-sm disabled:opacity-30"
                         title="Print / Save PDF"
                     >
                         <Printer className="h-4 w-4" />
-                    </button>
-                    <button 
-                        onClick={() => { setDateFrom(''); setDateTo(''); setStatusFilter('All'); setSearchTerm(''); }}
-                        className="px-3 py-2 text-sm text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10"
-                        title="Reset All Filters"
-                    >
-                        <X className="h-4 w-4" />
                     </button>
                 </div>
             </div>
@@ -215,62 +224,100 @@ export default function PurchasesPage() {
                 {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
             </p>
 
-            {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            {/* ── Amazon Professional Table ── */}
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-[13px] border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">PO #</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Supplier</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right uppercase tracking-wider">Amount</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right uppercase tracking-wider">Actions</th>
+                            <tr className="bg-[#F0F2F2] dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 uppercase tracking-tight w-24">Order ID</th>
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 uppercase tracking-tight">Supplier Protocol</th>
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 uppercase tracking-tight">Processing Date</th>
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 uppercase tracking-tight">Status</th>
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 uppercase tracking-tight">Payment Detail</th>
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 text-right uppercase tracking-tight">Grand Total</th>
+                                <th className="px-5 py-2.5 font-bold text-[#232F3E] dark:text-slate-300 text-right uppercase tracking-tight">Operations</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                            {filtered.map(p => (
-                                <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                    <td className="px-4 py-3">
-                                        <span className="text-[#EEAF1C] font-medium text-sm">#{p.purchase_number}</span>
-                                        {p.tracking_id && (
-                                            <p className="text-[9px] text-slate-400 italic">TRK: {p.tracking_id}</p>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{p.supplier_name}</p>
-                                        <p className="text-xs text-slate-400 font-medium">{p.supplier_phone || ''}</p>
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-sm">{formatDate(p.created_at)}</td>
-                                    <td className="px-4 py-3"><StatusPill status={p.status} /></td>
-                                    <td className="px-4 py-3 text-right">
-                                        <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{formatCurrency(p.total_amount)}</span>
-                                        <p className="text-[10px] text-slate-400 font-medium uppercase">{p.payment_status || ''}</p>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex justify-end items-center gap-1">
-                                            <button onClick={() => handleViewDetails(p.id)} className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors" title="View">
-                                                <Eye className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => setEditRow(p)}
-                                                className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                                                title="Update Status"
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => setDeleteRow(p)}
-                                                className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-5 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-2 opacity-40">
+                                            <Package className="h-10 w-10 text-slate-400" />
+                                            <p className="text-sm font-medium">No procurement records matching filters</p>
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filtered.map(p => (
+                                    <tr key={p.id} className="hover:bg-[#F7FAFA] dark:hover:bg-white/[0.01] transition-colors group border-b border-slate-100 last:border-0">
+                                        <td className="px-5 py-3 align-top whitespace-nowrap">
+                                            <span className="text-[#007185] hover:underline font-bold cursor-pointer">#{p.purchase_number}</span>
+                                        </td>
+                                        <td className="px-5 py-3 align-top">
+                                            <p className="font-bold text-[#232F3E] dark:text-slate-200">{p.supplier_name}</p>
+                                            <p className="text-[11px] text-slate-500 mt-0.5">{p.supplier_phone || 'Direct Source'}</p>
+                                        </td>
+                                        <td className="px-5 py-3 align-top text-slate-600 dark:text-slate-400 font-medium">
+                                            {formatDate(p.created_at)}
+                                        </td>
+                                        <td className="px-5 py-3 align-top">
+                                            <StatusPill status={p.status} />
+                                        </td>
+                                        <td className="px-5 py-3 align-top">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="capitalize font-medium text-slate-700 dark:text-slate-300">{p.payment_method ? p.payment_method.replace('_', ' ') : '—'}</span>
+                                                <span className={`text-[10px] font-bold uppercase ${p.payment_status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                    {p.payment_status || 'Unpaid'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-3 align-top text-right">
+                                            <span className="font-bold text-[#232F3E] dark:text-slate-200 text-sm">
+                                                {formatCurrency(p.total_amount)}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3 align-top">
+                                            <div className="flex justify-end items-center gap-1.5 mt-0.5">
+                                                {p.tracking_id && (
+                                                    <button
+                                                        onClick={() => router.push(`/admin/tracking?q=${p.tracking_id}`)}
+                                                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+                                                        title="Track Shipment"
+                                                    >
+                                                        <Package className="h-4 w-4" />
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    onClick={() => handleViewDetails(p.id)}
+                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] hover:bg-amber-50 rounded transition-all"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setEditRow(p)}
+                                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                                                    title="Update Phase"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setDeleteRow(p)}
+                                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+                                                    title="Purge Record"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -278,118 +325,188 @@ export default function PurchasesPage() {
 
             {/* --- Modals --- */}
             {viewRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-2xl w-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                        <div className="flex items-start justify-between p-4 bg-gradient-to-r from-white to-gray-50 border-b">
                             <div>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white">PO #{viewRow.purchase_number}</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">Procurement details</p>
+                                <h1 className="text-2xl font-extrabold text-slate-900">Purchase Order #{viewRow.purchase_number}</h1>
+                                <p className="text-sm text-slate-500 mt-1">{formatDate(viewRow.created_at)} · {viewRow.supplier_name || ''}</p>
                             </div>
-                            <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:bg-white/10 transition-colors">
-                                <X className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="text-xs text-slate-400">Status</p>
+                                    <div className="mt-1"><StatusPill status={viewRow.status} /></div>
+                                </div>
+                                <button onClick={() => setViewRow(null)} className="text-slate-400 hover:text-slate-700 p-2 rounded-md">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
                         </div>
-                        <div className="p-5 overflow-y-auto space-y-5">
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/10">
-                                    <div className="flex items-center gap-1.5 mb-1.5">
-                                        <Users className="h-3.5 w-3.5 text-[#EEAF1C]" />
-                                        <p className="text-xs text-slate-500 font-medium">Supplier</p>
-                                    </div>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{viewRow.supplier_name}</p>
-                                    <p className="text-xs text-slate-400 mt-0.5">{viewRow.supplier_phone || ''}</p>
-                                </div>
-                                <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/10">
-                                    <div className="flex items-center gap-1.5 mb-1.5">
-                                        <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                                        <p className="text-xs text-slate-500 font-medium">Date</p>
-                                    </div>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{formatDate(viewRow.created_at)}</p>
-                                </div>
-                                <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/10">
-                                    <div className="flex items-center gap-1.5 mb-1.5">
-                                        <CreditCard className="h-3.5 w-3.5 text-emerald-500" />
-                                        <p className="text-xs text-slate-500 font-medium">Logistics</p>
-                                    </div>
-                                    <StatusPill status={viewRow.status} />
-                                </div>
-                            </div>
-                            <div className="border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-left text-xs font-semibold text-slate-500">
-                                            <th className="px-4 py-2">Product</th>
-                                            <th className="px-4 py-2 text-center">Qty</th>
-                                            <th className="px-4 py-2 text-right">Price</th>
-                                            <th className="px-4 py-2 text-right">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50 dark:divide-white/5 text-sm">
+
+                        <div className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <div className="lg:col-span-2 space-y-4">
+                                <div className="rounded-lg border border-gray-100 p-4 shadow-sm">
+                                    <h3 className="text-sm font-semibold text-slate-700 mb-3">Items</h3>
+                                    <ul className="divide-y">
                                         {viewRow.items?.map((item: any) => (
-                                            <tr key={item.id}>
-                                                <td className="px-4 py-2 text-slate-800 dark:text-slate-200">{item.product_name}</td>
-                                                <td className="px-4 py-2 text-center text-slate-600">{item.quantity}</td>
-                                                <td className="px-4 py-2 text-right text-slate-600">{formatCurrency(item.unit_price)}</td>
-                                                <td className="px-4 py-2 text-right font-semibold text-slate-800 dark:text-white">{formatCurrency(item.subtotal)}</td>
-                                            </tr>
+                                            <li key={item.id} className="py-3 flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-sm font-medium text-slate-900">{item.product_name}</p>
+                                                    <p className="text-xs text-slate-500">{item.quantity} × {formatCurrency(item.unit_price)}</p>
+                                                </div>
+                                                <div className="font-semibold text-slate-900">{formatCurrency(item.subtotal)}</div>
+                                            </li>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </ul>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="flex-1 rounded-lg border border-gray-100 p-4 shadow-sm">
+                                        <p className="text-xs text-slate-400">Supplier</p>
+                                        <p className="text-sm font-semibold text-slate-900">{viewRow.supplier_name || '—'}</p>
+                                        {viewRow.supplier_phone && <p className="text-xs text-slate-400 mt-1">{viewRow.supplier_phone}</p>}
+                                    </div>
+                                    <div className="w-56 rounded-lg border border-gray-100 p-4 shadow-sm">
+                                        <p className="text-xs text-slate-400">Payment</p>
+                                        <p className="text-sm font-semibold text-slate-900">{viewRow.payment_status || '—'}</p>
+                                        <p className="text-xs text-slate-400 mt-1">Method: {viewRow.payment_method || '—'}</p>
+                                    </div>
+                                </div>
                             </div>
+
+                            <aside className="space-y-4">
+                                <div className="rounded-lg border border-gray-100 p-4 shadow-sm bg-white">
+                                    <p className="text-xs text-slate-400">Summary</p>
+                                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                        <div className="flex justify-between"><span>Subtotal</span><span>{formatCurrency((viewRow.total_amount || 0) - (viewRow.tax_amount || 0) - (viewRow.shipping_cost || 0))}</span></div>
+                                        <div className="flex justify-between"><span>Shipping</span><span>{formatCurrency(viewRow.shipping_cost || 0)}</span></div>
+                                        <div className="flex justify-between"><span>Tax</span><span>{formatCurrency(viewRow.tax_amount || 0)}</span></div>
+                                        <div className="flex justify-between font-semibold text-slate-900 pt-2 border-t mt-2"><span>Total</span><span>{formatCurrency(viewRow.total_amount || 0)}</span></div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-lg border border-gray-100 p-4 shadow-sm text-center">
+                                    <p className="text-xs text-slate-400">Tracking</p>
+                                    <p className="text-sm font-medium text-slate-900">{viewRow.tracking_id || 'N/A'}</p>
+                                    <div className="mt-3 grid grid-cols-1 gap-2">
+                                        {viewRow.tracking_id && (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await navigator.clipboard.writeText(viewRow.tracking_id || '');
+                                                        setCopied(true);
+                                                        if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
+                                                        copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000);
+                                                    } catch (err) {
+                                                        console.error('Failed to copy tracking id', err);
+                                                    }
+                                                }}
+                                                className="w-full inline-flex justify-center px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded"
+                                            >
+                                                {copied ? 'Copied' : 'Copy'}
+                                            </button>
+                                        )}
+                                        <button onClick={() => window.print()} className="w-full inline-flex justify-center px-3 py-2 bg-white border border-gray-200 text-sm font-medium rounded">Print</button>
+                                    </div>
+                                </div>
+                            </aside>
                         </div>
-                        <div className="px-5 py-4 bg-slate-50 dark:bg-white/5 border-t flex justify-end">
-                            <button onClick={() => setViewRow(null)} className="px-6 py-2 rounded-lg text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all">
-                                Close
-                            </button>
+
+                        <div className="p-4 border-t bg-white flex justify-end gap-2">
+                            <button onClick={() => setViewRow(null)} className="px-3 py-1.5 rounded-md bg-white border text-sm font-medium">Close</button>
+                            <button onClick={() => window.print()} className="px-3 py-1.5 rounded-md bg-gradient-to-r from-amber-500 to-amber-400 text-white font-semibold">Print / Save</button>
                         </div>
                     </div>
                 </div>
             )}
 
             {editRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Update Status</h3>
-                            <button onClick={() => setEditRow(null)} className="p-1.5 rounded-lg text-slate-400 dark:hover:text-white transition-colors">
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-                        <div className="p-5 space-y-4">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-lg bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-gray-50 border-b">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Logistics Phase</label>
-                                <select 
-                                    value={editRow.status} 
-                                    onChange={e => setEditRow({ ...editRow, status: e.target.value })}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] cursor-pointer"
-                                >
-                                    {/* Only show 'Received' and 'Cancelled' as per business request */}
-                                    {/* Always show current status if it's not these two */}
-                                    {editRow.status !== 'received' && editRow.status !== 'cancelled' && (
-                                        <option value={editRow.status} disabled className="italic">{editRow.status.charAt(0).toUpperCase() + editRow.status.slice(1)} (Current)</option>
-                                    )}
-                                    
-                                    <option value="received">Received / Arrived</option>
-                                    
-                                    {/* Block Cancellation if Shipped or Delivered/Received */}
-                                    {!(editRow.status === 'shipped' || editRow.status === 'delivered' || editRow.status === 'received') && (
-                                        <option value="cancelled">Cancelled</option>
-                                    )}
-                                </select>
+                                <h3 className="text-2xl font-extrabold text-slate-900">Update Purchase</h3>
+                                <p className="text-sm text-slate-500 mt-1">Order #{editRow.purchase_number} · {formatDate(editRow.created_at)}</p>
                             </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setEditRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg">
-                                    Cancel
-                                </button>
-                                <button 
-                                    onClick={handleUpdateStatus} 
-                                    disabled={isUpdating} 
-                                    className="px-4 py-2 text-sm font-medium text-white bg-[#EEAF1C] rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-                                >
-                                    {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    Save Changes
+                            <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                    <p className="text-xs text-slate-400">Status</p>
+                                    <div className="mt-1"><StatusPill status={editRow.status} /></div>
+                                </div>
+                                <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-700 p-2 rounded-md">
+                                    <X className="h-5 w-5" />
                                 </button>
                             </div>
+                        </div>
+
+                        <div className="p-4">
+                            <form className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-2">Logistics Phase</label>
+                                    <select
+                                        value={editRow.status}
+                                        onChange={e => setEditRow({ ...editRow, status: e.target.value })}
+                                        className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white shadow-sm"
+                                    >
+                                        {editRow.status !== 'received' && editRow.status !== 'cancelled' && (
+                                            <option value={editRow.status} disabled className="italic">{editRow.status}</option>
+                                        )}
+                                        <option value="received">Received / Arrived</option>
+                                        {!(editRow.status === 'shipped' || editRow.status === 'delivered' || editRow.status === 'received') && (
+                                            <option value="cancelled">Cancelled</option>
+                                        )}
+                                    </select>
+                                </div>
+
+                                {editRow.status !== 'cancelled' && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-500 mb-2">Payment Status</label>
+                                            <select
+                                                value={editRow.payment_status || 'unpaid'}
+                                                onChange={e => setEditRow({ ...editRow, payment_status: e.target.value })}
+                                                className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white shadow-sm"
+                                            >
+                                                <option value="unpaid">Unpaid</option>
+                                                <option value="partial">Partial</option>
+                                                <option value="paid">Paid</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-500 mb-2">Payment Method</label>
+                                            <select
+                                                value={editRow.payment_method || ''}
+                                                onChange={e => setEditRow({ ...editRow, payment_method: e.target.value })}
+                                                className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white shadow-sm"
+                                            >
+                                                <option value="">Select method</option>
+                                                <option value="cash">Cash</option>
+                                                <option value="bank_transfer">Bank Transfer</option>
+                                                <option value="online_payment">Online Payment</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-2">Notes (optional)</label>
+                                    <textarea
+                                        value={editRow.notes || ''}
+                                        onChange={e => setEditRow({ ...editRow, notes: e.target.value })}
+                                        className="w-full min-h-[80px] px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white shadow-sm"
+                                        placeholder="Add a short note about this update (internal)"
+                                    />
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="p-4 border-t bg-white flex items-center justify-end gap-2">
+                            <button onClick={() => setEditRow(null)} className="px-3 py-1.5 rounded-md bg-white border text-sm font-medium">Cancel</button>
+                            <button onClick={handleUpdateStatus} disabled={isUpdating} className="px-3 py-1.5 rounded-md bg-gradient-to-r from-amber-500 to-amber-400 text-white font-semibold shadow-md flex items-center gap-2">
+                                {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Save changes
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -397,8 +514,8 @@ export default function PurchasesPage() {
 
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-                        <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-lg border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-lg animate-in zoom-in-95 duration-200 overflow-hidden">
+                        <div className="flex items-start gap-3 px-4 py-3 border-b border-slate-100">
                             <div className="w-9 h-9 bg-rose-50 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
                                 <AlertTriangle className="h-4 w-4 text-rose-500" />
                             </div>
@@ -409,9 +526,9 @@ export default function PurchasesPage() {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2 px-5 py-3 bg-slate-50">
-                            <button onClick={() => setDeleteRow(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-600 bg-white border border-slate-200 rounded-lg">Cancel</button>
-                            <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-white bg-rose-500 rounded-lg flex items-center gap-2">
+                        <div className="flex justify-end gap-2 px-4 py-2 bg-slate-50">
+                            <button onClick={() => setDeleteRow(null)} className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-slate-600 bg-white border border-slate-200 rounded-md">Cancel</button>
+                            <button onClick={handleDelete} disabled={deleting} className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-white bg-rose-500 rounded-md flex items-center gap-2">
                                 {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
                                 Delete
                             </button>
@@ -419,7 +536,7 @@ export default function PurchasesPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
 

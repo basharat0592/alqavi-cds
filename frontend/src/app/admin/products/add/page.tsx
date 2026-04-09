@@ -208,16 +208,16 @@ export default function AddEditProductPage() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className={labelCls}>Main Category</label>
+                                        <label className={labelCls}>Navbar Pages</label>
                                         <select name="main_category" value={formData.main_category} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Main Tier</option>
+                                            <option value="">Select Navbar Page</option>
                                             {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={labelCls}>Sub Category</label>
+                                        <label className={labelCls}>Products Category</label>
                                         <select name="category" value={formData.category} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Sub Tier</option>
+                                            <option value="">Select Products Category</option>
                                             {productCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>

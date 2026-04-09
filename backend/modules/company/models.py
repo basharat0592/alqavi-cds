@@ -110,3 +110,53 @@ class Supplier(models.Model):
     def product_count(self):
         """Returns the number of products added by this supplier."""
         return self.products.count()
+
+
+class SupplierProduct(models.Model):
+    """Mapping of supplier-specific product information.
+
+    Fields:
+        supplier: FK to Supplier
+        product: FK to Product (optional)
+        supplier_sku: vendor SKU
+        price: price offered by the supplier
+        currency: currency code
+        lead_time_days: estimated lead time
+        min_order_qty: minimum order quantity
+        notes: free text notes
+        is_active: visibility
+    """
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.CASCADE,
+        related_name='supplier_products'
+    )
+    product = models.ForeignKey(
+        'products.Product',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='supplier_options'
+    )
+    supplier_sku = models.CharField(max_length=128, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=10, default='PKR')
+    lead_time_days = models.IntegerField(null=True, blank=True)
+    min_order_qty = models.IntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Supplier Product'
+        verbose_name_plural = 'Supplier Products'
+        indexes = [
+            models.Index(fields=['supplier']),
+            models.Index(fields=['product']),
+        ]
+
+    def __str__(self):
+        if self.product:
+            return f"{self.supplier.name} - {self.product.name}"
+        return f"{self.supplier.name} - {self.supplier_sku or 'SKU'}"

@@ -29,6 +29,7 @@ export interface ProductParams {
     category?: string;
     min_price?: number;
     max_price?: number;
+    supplier_id?: string | number;
     ordering?: string;
     limit?: number;
 }
@@ -57,6 +58,8 @@ export interface Product {
     company_name?: string;
     company_category?: number | string | { id: number; name: string };
     company_category_name?: string;
+    supplier?: number | string | { id: number; name: string };
+    supplier_name?: string;
     created_at: string;
     updated_at?: string;
 }

@@ -19,8 +19,10 @@ export default function ProductsPage() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('');
     const [selectedCompany, setSelectedCompany] = useState('');
+    const [selectedSupplier, setSelectedSupplier] = useState('');
     const [categories, setCategories] = useState<any[]>([]);
     const [companies, setCompanies] = useState<CompanyInfo[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
     const [deleteProd, setDeleteProd] = useState<Product | null>(null);
     const [deleting, setDeleting] = useState(false);
 
@@ -30,21 +32,23 @@ export default function ProductsPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, category, selectedCompany]);
+    }, [search, category, selectedCompany, selectedSupplier]);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [prodData, catData, compData] = await Promise.all([
+            const [prodData, catData, compData, suppData] = await Promise.all([
                 productService.getAll({ all_items: 'true' } as any),
                 productService.getCategories(),
-                companyService.getAll()
+                companyService.getAll(),
+                companyService.getSuppliers()
             ]);
 
             const items = Array.isArray(prodData) ? prodData : (prodData as any).results || [];
             setProducts(items);
             setCategories((catData || []).filter((c: any) => c.status === 'active'));
             setCompanies((compData || []).filter((c: any) => c.is_active !== false));
+            setSuppliers(suppData || []);
         } catch (error) {
             console.error('Failed to load products:', error);
         } finally {
@@ -79,7 +83,8 @@ export default function ProductsPage() {
             (p.sku || '').toLowerCase().includes(search.toLowerCase());
         const matchesCat = category ? p.category?.toString() === category : true;
         const matchesComp = selectedCompany ? (typeof p.company === 'object' ? p.company.id?.toString() === selectedCompany : p.company?.toString() === selectedCompany) : true;
-        return matchesSearch && matchesCat && matchesComp;
+        const matchesSupp = selectedSupplier ? (typeof p.supplier === 'object' ? p.supplier.id?.toString() === selectedSupplier : p.supplier?.toString() === selectedSupplier) : true;
+        return matchesSearch && matchesCat && matchesComp && matchesSupp;
     });
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -140,6 +145,15 @@ export default function ProductsPage() {
                     >
                         <option value="">All Manufacturers</option>
                         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+
+                    <select
+                        value={selectedSupplier}
+                        onChange={(e) => setSelectedSupplier(e.target.value)}
+                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
+                    >
+                        <option value="">All Suppliers</option>
+                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name || s.company_name}</option>)}
                     </select>
 
                     <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">

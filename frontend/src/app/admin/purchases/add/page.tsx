@@ -17,7 +17,7 @@ const EMPTY_FORM = {
     purchase_number: '', supplier: '', supplier_name: '', supplier_phone: '',
     order_date: new Date().toISOString().slice(0, 10),
     expected_delivery_date: '', tax_amount: '0', shipping_cost: '0',
-    status: 'ordered', payment_status: 'pending', notes: '',
+    status: 'ordered', payment_status: 'unpaid', payment_method: 'cash', notes: '',
 };
 
 type LineItem = {
@@ -85,7 +85,7 @@ export default function AddPurchasePage() {
         setLoading(true);
         try {
             const [prodsRes, usersRes, suppRes] = await Promise.allSettled([
-                productService.getAll?.({ all_items: 'true', include_pending: 'true' } as any) ?? Promise.resolve([]),
+                productService.getAll?.({ all_items: 'true', include_pending: 'true', include_supplier_only: 'true' } as any) ?? Promise.resolve([]),
                 userService.getAll(),
                 (companyService as any).getSuppliers?.() ?? Promise.resolve([])
             ]);
@@ -97,7 +97,7 @@ export default function AddPurchasePage() {
 
             // Registered Suppliers from Supplier Page (Users with Supplier role)
             const users = usersRes.status === 'fulfilled' ? (Array.isArray(usersRes.value) ? usersRes.value : []) : [];
-            const registeredSuppliers = users.filter((u: any) => 
+            const registeredSuppliers = users.filter((u: any) =>
                 (u.role_name || '').toLowerCase().includes('supplier')
             ).map((u: any) => ({
                 id: u.id,
@@ -108,11 +108,11 @@ export default function AddPurchasePage() {
 
             // Also include official Supplier model records
             const suppliersList = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
-            
+
             // Merge both for complete registry
             const merged = [...registeredSuppliers, ...suppliersList];
             const unique = Array.from(new Map(merged.map(item => [item.name, item])).values());
-            
+
             setSuppliers(unique);
 
             const num = `PO-${Date.now().toString().slice(-6)}`;
@@ -147,11 +147,11 @@ export default function AddPurchasePage() {
                     const vendor = foundProduct.supplier_name || foundProduct.company_name || sn || '';
                     if (vendor) {
                         const matchedSupplier = suppliers.find(c => c.name.toLowerCase().trim() === vendor.toLowerCase().trim());
-                        setForm(f => ({ 
-                            ...f, 
+                        setForm(f => ({
+                            ...f,
                             supplier: matchedSupplier ? matchedSupplier.id : f.supplier,
-                            supplier_name: matchedSupplier ? matchedSupplier.name : vendor, 
-                            supplier_phone: matchedSupplier ? (matchedSupplier.phone || matchedSupplier.whatsapp || '') : f.supplier_phone 
+                            supplier_name: matchedSupplier ? matchedSupplier.name : vendor,
+                            supplier_phone: matchedSupplier ? (matchedSupplier.phone || matchedSupplier.whatsapp || '') : f.supplier_phone
                         }));
                     }
                 }
@@ -159,11 +159,11 @@ export default function AddPurchasePage() {
                 hasPrefilled.current = true;
                 const matched = suppliers.find(c => c.name.toLowerCase().trim() === sn.toLowerCase().trim());
                 const currentSn = matched ? matched.name : sn;
-                setForm(f => ({ 
-                    ...f, 
+                setForm(f => ({
+                    ...f,
                     supplier: matched ? matched.id : f.supplier,
-                    supplier_name: currentSn, 
-                    supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone 
+                    supplier_name: currentSn,
+                    supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone
                 }));
                 const supplierProds = products.filter(p => p.company_name === currentSn || p.supplier_name === currentSn);
                 if (supplierProds.length > 0) {
@@ -290,10 +290,10 @@ export default function AddPurchasePage() {
                                         const val = e.target.value;
                                         const matched = suppliers.find(c => String(c.id) === val);
                                         const currentName = matched ? matched.name : '';
-                                        
+
                                         // Filter products specifically for this supplier ID
-                                        const supplierProds = products.filter(p => 
-                                            p.supplier === Number(val) || 
+                                        const supplierProds = products.filter(p =>
+                                            p.supplier === Number(val) ||
                                             (currentName && String(p.supplier_name || '').toLowerCase() === currentName.toLowerCase())
                                         );
 
@@ -316,12 +316,12 @@ export default function AddPurchasePage() {
                                                 pieces_per_unit: 1
                                             }]);
                                         }
-                                        
-                                        setForm(f => ({ 
-                                            ...f, 
+
+                                        setForm(f => ({
+                                            ...f,
                                             supplier: val,
-                                            supplier_name: currentName, 
-                                            supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone 
+                                            supplier_name: currentName,
+                                            supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone
                                         }));
                                     }}
                                     className={`${selectCls} ${errors.supplier_name ? 'border-red-400' : ''}`}
@@ -393,8 +393,8 @@ export default function AddPurchasePage() {
                                                     .filter(p => {
                                                         if (!form.supplier) return true;
                                                         const pSupplierId = p.supplier && typeof p.supplier === 'object' ? p.supplier.id : p.supplier;
-                                                        return String(pSupplierId) === String(form.supplier) || 
-                                                               String(p.supplier_name || '').toLowerCase() === String(form.supplier_name).toLowerCase();
+                                                        return String(pSupplierId) === String(form.supplier) ||
+                                                            String(p.supplier_name || '').toLowerCase() === String(form.supplier_name).toLowerCase();
                                                     })
                                                     .map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)
                                                 }
@@ -542,9 +542,21 @@ export default function AddPurchasePage() {
                                     onChange={e => setForm(f => ({ ...f, payment_status: e.target.value }))}
                                     className={selectCls}
                                 >
-                                    <option value="pending">Pending</option>
-                                    <option value="partially_paid">Partially Paid</option>
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="partial">Partial</option>
                                     <option value="paid">Paid</option>
+                                </select>
+                            </div>
+                            <div>
+                                <FieldLabel>Payment Method</FieldLabel>
+                                <select
+                                    value={form.payment_method}
+                                    onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
+                                    className={selectCls}
+                                >
+                                    <option value="cash">Cash</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="online_payment">Online Payment</option>
                                 </select>
                             </div>
 
@@ -591,14 +603,14 @@ export default function AddPurchasePage() {
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 mb-1">Purchase Confirmed</h3>
                             <p className="text-sm text-gray-500 mb-6 font-medium">Order #{successOrder.purchase_number} has been created.</p>
-                            
+
                             <div className="w-full space-y-4 mb-2">
                                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 text-left relative group/copy">
                                     <p className="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest leading-none">Tracking Identifier</p>
                                     <div className="flex items-center justify-between">
                                         <p className="text-lg font-black text-gray-900 tracking-tight leading-none uppercase">{successOrder.tracking_id || 'N/A'}</p>
                                         {successOrder.tracking_id && (
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(successOrder.tracking_id);
                                                     showToast('Tracking ID Copied!');

@@ -3,12 +3,12 @@ import { Order, PaginatedResponse } from '@/types';
 
 export const orderService = {
     getAll: async (params?: any) => {
-        const response = await api.get('/v1/sales/orders/', { params });
+        const response = await api.get('v1/sales/orders/', { params });
         return response.data.results || response.data || [];
     },
     getPaginated: async (params?: any): Promise<PaginatedResponse<Order>> => {
         try {
-            const response = await api.get('/v1/sales/orders/', { params });
+            const response = await api.get('v1/sales/orders/', { params });
             const data = response.data;
             return {
                 results: data.results || [],
@@ -22,22 +22,22 @@ export const orderService = {
         }
     },
     getById: async (id: string) => {
-        const response = await api.get(`/v1/sales/orders/${id}/`);
+        const response = await api.get(`v1/sales/orders/${id}/`);
         return response.data;
     },
     create: async (data: any) => {
-        const response = await api.post('/v1/sales/orders/create/', data);
+        const response = await api.post('v1/sales/orders/create/', data);
         return response.data;
     },
     update: async (id: string, data: any) => {
-        const response = await api.patch(`/v1/sales/orders/${id}/update/`, data);
+        const response = await api.patch(`v1/sales/orders/${id}/update/`, data);
         return response.data;
     },
     delete: async (id: string) => {
-        await api.delete(`/v1/sales/orders/${id}/delete/`);
+        await api.delete(`v1/sales/orders/${id}/delete/`);
     },
     getStats: async () => {
-        const response = await api.get('/v1/sales/dashboard/stats/');
+        const response = await api.get('v1/sales/dashboard/stats/');
         return response.data;
     }
 };

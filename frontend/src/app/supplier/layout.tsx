@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import AuthGuard from '@/components/auth/AuthGuard';
+import api from '@/lib/axios';
+import { getImageUrl } from '@/lib/utils';
 
 const SIDEBAR_LINKS = [
     { href: '/supplier/dashboard', label: 'Dashboard', icon: Home },
@@ -35,12 +37,45 @@ const SIDEBAR_LINKS = [
 
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
     const router = useRouter();
     const pathname = usePathname();
 
+    const fetchLatestProfile = async () => {
+        try {
+            const { data } = await api.get('v1/users/profile/');
+            setProfile(data);
+        } catch (err) {
+            console.error("Failed to sync profile:", err);
+        }
+    };
+
     useEffect(() => {
         setUser(authService.getUser());
+        fetchLatestProfile();
     }, []);
+
+    // Helper for profile image (Avatar)
+    const renderAvatar = () => {
+        const name = profile?.first_name || user?.name || 'P';
+        const initial = name.charAt(0).toUpperCase();
+
+        if (profile?.avatar) {
+            return (
+                <img 
+                    src={getImageUrl(profile.avatar)} 
+                    alt="" 
+                    className="w-8 h-8 rounded-full border border-white/20 object-cover shadow-sm group-hover:border-[#F7CA00] transition-colors"
+                />
+            );
+        }
+
+        return (
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-xs border border-white/10 group-hover:border-[#F7CA00] transition-colors">
+                {initial}
+            </div>
+        );
+    };
 
     return (
         <AuthGuard allowedRoles={['supplier']}>
@@ -58,13 +93,16 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-6">
-                        <div className="flex flex-col text-right cursor-pointer group">
-                            <span className="text-[10px] text-gray-300 font-medium leading-none">Hello, {user?.name || 'Partner'}</span>
-                            <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-xs font-black text-white group-hover:text-[#F7CA00] transition-colors uppercase tracking-tight">Partner Portal</span>
-                                <ChevronDown size={12} className="text-gray-400" />
+                        <Link href="/supplier/profile" className="flex items-center gap-3 cursor-pointer group pr-2 border-r border-white/10">
+                            <div className="flex flex-col text-right">
+                                <span className="text-[10px] text-gray-300 font-medium leading-none">Hello, {profile?.first_name || user?.name || 'Partner'}</span>
+                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                    <span className="text-xs font-black text-white group-hover:text-[#F7CA00] transition-colors uppercase tracking-tight">Account</span>
+                                    <ChevronDown size={12} className="text-gray-400" />
+                                </div>
                             </div>
-                        </div>
+                            {renderAvatar()}
+                        </Link>
 
                         <button
                             onClick={() => {
