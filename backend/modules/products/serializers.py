@@ -6,7 +6,7 @@ from .models import Product, Category, ProductGallery, MainCategory, Wishlist
 
 # Moved WishlistSerializer below ProductSerializer to avoid NameError
 
-from modules.company.models import Company, CompanyCategory
+from modules.company.models import Company, CompanyCategory, Supplier
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -14,12 +14,15 @@ class ProductImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
     def get_image_url(self, obj):
-        if not obj.image:
+        try:
+            if not obj.image:
+                return None
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        except Exception:
             return None
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
 
     class Meta:
         model = ProductGallery
@@ -58,15 +61,19 @@ class ProductSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     main_category_names = serializers.SerializerMethodField()
     main_category_slugs = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
     
     def get_image_url(self, obj):
-        if not obj.image:
+        try:
+            if not obj.image:
+                return None
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            # Fallback if request is missing
+            return obj.image.url
+        except Exception:
             return None
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        # Fallback if request is missing
-        return obj.image.url
 
     class Meta:
         model = Product
@@ -77,7 +84,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'sku', 'barcode', 'price', 'cost', 'retail_price', 'quantity_in_stock', 
             'image', 'image_url', 'gallery',
             'status', 'is_in_stock', 'batches', 'main_category_names', 'main_category_slugs', 'main_categories',
-            'is_supplier_only', 'created_at', 'updated_at'
+            'is_supplier_only', 'created_at', 'updated_at', 'created_by_name'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -104,10 +111,28 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_supplier_name(self, obj):
         return obj.supplier.name if obj.supplier else None
 
+    def get_created_by_name(self, obj):
+        if obj.supplier:
+            return f"Supplier: {obj.supplier.name}"
+        return "Admin Portal"
+
     def get_batches(self, obj):
-        from modules.inventory.serializers import BatchSerializer
-        batches = obj.batch_set.all() if hasattr(obj, 'batch_set') else obj.batches.all()
-        return BatchSerializer(batches, many=True).data
+        try:
+            from modules.inventory.serializers import BatchSerializer
+            # Use getattr for safety and check both batch_set and batches
+            batches = getattr(obj, 'batch_set', None)
+            if batches is None:
+                batches = getattr(obj, 'batches', None)
+            
+            if batches is None:
+                return []
+                
+            return BatchSerializer(batches.all(), many=True, context=self.context).data
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error serializing batches for product {obj.id}: {e}")
+            return []
 
 
 class WishlistSerializer(serializers.ModelSerializer):
@@ -122,46 +147,40 @@ class WishlistSerializer(serializers.ModelSerializer):
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating products."""
-    category = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        required=False,
-        allow_null=True
-    )
-    company_category = serializers.PrimaryKeyRelatedField(
-        queryset=CompanyCategory.objects.all(),
-        required=False,
-        allow_null=True
-    )
-    company = serializers.PrimaryKeyRelatedField(
-        queryset=Company.objects.all(),
-        required=False,
-        allow_null=True
-    )
-    image = serializers.FileField(required=False, allow_null=True)
+    name = serializers.CharField(required=True)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     sku = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     barcode = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=0)
+    cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=0)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False, allow_null=True)
+    company = serializers.PrimaryKeyRelatedField(queryset=Company.objects.all(), required=False, allow_null=True)
+    supplier = serializers.PrimaryKeyRelatedField(queryset=Supplier.objects.all(), required=False, allow_null=True)
+    main_categories = serializers.PrimaryKeyRelatedField(queryset=MainCategory.objects.all(), many=True, required=False)
+
     batch_number = serializers.CharField(write_only=True, required=False, allow_null=True)
-    # Using ListField to accommodate multiple images (allow files more broadly)
     upload_images = serializers.ListField(
         child=serializers.FileField(max_length=10000, allow_empty_file=False),
         write_only=True,
         required=False
     )
-    
-    main_categories = serializers.PrimaryKeyRelatedField(
-        queryset=MainCategory.objects.all(),
-        many=True,
-        required=False
-    )
-    
+
     class Meta:
         model = Product
         fields = [
             'name', 'description', 'category', 'company', 'supplier', 'company_category', 'sku',
             'price', 'cost', 'retail_price', 'quantity_in_stock', 'image', 'status', 'barcode',
-            'batch_number', 'upload_images', 'main_categories'
+            'batch_number', 'upload_images', 'main_categories', 'is_supplier_only'
         ]
+        validators = [] # Disable default unique together validators
+        extra_kwargs = {
+            'price': {'required': False, 'allow_null': True},
+            'cost': {'required': False, 'allow_null': True},
+            'retail_price': {'required': False, 'allow_null': True},
+            'quantity_in_stock': {'required': False, 'allow_null': True},
+            'sku': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'barcode': {'required': False, 'allow_blank': True, 'allow_null': True},
+        }
 
     def validate(self, data):
         sku = data.get('sku')

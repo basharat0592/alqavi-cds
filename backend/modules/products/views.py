@@ -157,20 +157,47 @@ def list_products(request):
             # POST — restricted to Admin or Suppliers
             serializer = ProductCreateUpdateSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
-                # Auto-assign supplier if user is a supplier
+                # Role Detection
+                is_admin = request.user.is_staff or request.user.is_superuser or (
+                    request.user.is_authenticated and request.user.role and request.user.role.name.lower() == 'admin'
+                )
+
+                # Auto-assign supplier ONLY if user is NOT admin and IS a supplier
                 supplier_instance = None
-                if request.user.is_authenticated and request.user.role and request.user.role.name.lower() == 'supplier':
-                    from modules.company.models import Supplier
-                    supplier_instance = Supplier.objects.filter(user=request.user).first()
+                if not is_admin:
+                    supplier_instance = getattr(request.user, 'supplier_profile', None) if request.user.is_authenticated else None
+                    if not supplier_instance and request.user.is_authenticated and request.user.role:
+                        if request.user.role.name.lower() == 'supplier':
+                            from modules.company.models import Supplier
+                            supplier_instance = Supplier.objects.filter(user=request.user).first()
                 
-                # If explicit supplier provided in data, use that (for admins), otherwise use auto-assigned
-                product = serializer.save(supplier=request.data.get('supplier') or supplier_instance)
+                # Logic: If user is a supplier, ALWAYS force their own supplier profile.
+                # If admin, use the supplied 'supplier' ID from request.data.
+                assigned_supplier = None
+                if supplier_instance:
+                    assigned_supplier = supplier_instance
+                elif request.data.get('supplier'):
+                    assigned_supplier = request.data.get('supplier')
+
+                product = serializer.save(supplier=assigned_supplier, created_by=request.user if request.user.is_authenticated else None)
 
                 # If the product was created by a supplier user, mark as supplier-only
                 # and DO NOT auto-initialize inventory records for it (supplier-only
                 # products should not appear in stock lists).
+                # Logic: If user is a supplier, check if they explicitly want to show to admin.
+                # By default, supplier-added products are supplier-only.
                 if supplier_instance:
-                    product.is_supplier_only = True
+                    # If 'is_supplier_only' was in request.data, it's already handled by the serializer.save() 
+                    # if it was passed to serializer. However, we forced it to True here.
+                    # Let's check if it was explicitly provided as false.
+                    req_is_supplier_only = request.data.get('is_supplier_only')
+                    if req_is_supplier_only is not None:
+                        # Convert string 'true'/'false' from FormData if necessary
+                        is_sop = str(req_is_supplier_only).lower() == 'true'
+                        product.is_supplier_only = is_sop
+                    else:
+                        product.is_supplier_only = True
+                        
                     product.save(update_fields=['is_supplier_only'])
                     initialize_inventory = False
                 else:
@@ -206,16 +233,26 @@ def list_products(request):
                     ProductSerializer(product, context={'request': request}).data, 
                     status=status.HTTP_201_CREATED
                 )
+            # PERSISTENT DEBUG LOGGING - DO NOT REMOVE UNTIL 400 IS FIXED
+            print(f"DEBUG: Serializer Validation Errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
         import traceback
-        print(f"DEBUG: Product API error: {str(e)}")
-        print(traceback.format_exc())
+        import logging
+        from django.conf import settings
+        
+        logger = logging.getLogger(__name__)
+        error_traceback = traceback.format_exc()
+        
+        # Log to server console/logs for developer visibility
+        logger.error(f"Product API Error: {str(e)}")
+        logger.error(error_traceback)
+        
         return Response({
             'error': str(e),
-            'message': 'Internal Server Error occurred during product operation.',
-            'traceback': traceback.format_exc() if 'DEBUG' else None
+            'message': 'An internal server error occurred while processing product data.',
+            'traceback': error_traceback if settings.DEBUG else None
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

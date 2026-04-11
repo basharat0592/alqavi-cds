@@ -48,6 +48,7 @@ export default function AddEditProductPage() {
         status: 'active',
         batch_number: '',
         main_category: '',
+        is_supplier_only: 'false', // Admins create public products by default
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -76,7 +77,7 @@ export default function AddEditProductPage() {
                 if (mCats.status === 'fulfilled') setMainCategories(mCats.value || []);
 
                 const sList = supsRes.status === 'fulfilled' ? (Array.isArray(supsRes.value) ? supsRes.value : []) : [];
-                
+
                 // Exclusively use validated Supplier profiles for the product-supplier mapping
                 // This ensures IDs match the backend Product model foreign key expectation
                 setSuppliers(sList);
@@ -100,7 +101,8 @@ export default function AddEditProductPage() {
                         retail_price: product.retail_price || '',
                         status: (product.status?.toLowerCase()) || 'active',
                         batch_number: '',
-                        main_category: (product.main_categories && product.main_categories.length > 0) ? product.main_categories[0] : '',
+                        main_category: (product.main_categories && product.main_categories.length > 0) ? (product.main_categories[0].id || product.main_categories[0]) : '',
+                        is_supplier_only: String(product.is_supplier_only || false),
                     });
                     if (product.image_url || product.image) {
                         setMainImagePreview(getImageUrl(product.image_url || product.image));
@@ -229,11 +231,28 @@ export default function AddEditProductPage() {
                                         </select>
                                     </div>
                                     <div className={user?.role_name?.toLowerCase().includes('supplier') ? 'hidden' : 'block'}>
-                                        <label className={labelCls}>Supplier <span className="text-red-500">*</span></label>
+                                        <label className={labelCls}>Supplier</label>
                                         <select name="supplier" value={formData.supplier} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Supplier</option>
+                                            <option value="">Select Supplier (Optional)</option>
                                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
+                                    </div>
+                                    <div className="md:col-span-2 pt-2">
+                                        <div className="flex items-start gap-3 p-3 bg-[#EEAF1C]/5 border border-[#EEAF1C]/10 rounded-xl">
+                                            <input 
+                                                type="checkbox" 
+                                                id="is_supplier_only"
+                                                checked={formData.is_supplier_only === 'true'}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, is_supplier_only: e.target.checked ? 'true' : 'false' }))}
+                                                className="mt-1 h-4 w-4 text-[#EEAF1C] border-slate-300 rounded focus:ring-[#EEAF1C]"
+                                            />
+                                            <label htmlFor="is_supplier_only" className="cursor-pointer">
+                                                <span className="text-[12px] font-bold text-slate-800 dark:text-white block uppercase tracking-tight">Mark as Supplier-Only Product</span>
+                                                <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
+                                                    If checked, this product will be hidden from the main catalog and only visible to suppliers and purchase order modules.
+                                                </span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>

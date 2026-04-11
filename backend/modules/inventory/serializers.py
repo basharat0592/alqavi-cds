@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Warehouse, Inventory, InventoryMovement, Batch, StockAdjustment, LowStockAlert
-from modules.products.serializers import ProductSerializer
+
+# Removed ProductSerializer import to prevent circular dependency since it's not used here
 
 class WarehouseSerializer(serializers.ModelSerializer):
     class Meta:

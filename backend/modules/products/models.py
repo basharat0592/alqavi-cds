@@ -102,6 +102,13 @@ class Product(BaseModel, StatusMixin):
     # Supplier-only products should not appear in admin product lists or stock views
     # unless explicitly requested (e.g. when creating a Purchase Order).
     is_supplier_only = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products_created'
+    )
 
     
     class Meta:
