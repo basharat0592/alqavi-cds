@@ -60,6 +60,7 @@ export interface Product {
     company_category_name?: string;
     supplier?: number | string | { id: number; name: string };
     supplier_name?: string;
+    created_by_name?: string;
     created_at: string;
     updated_at?: string;
 }

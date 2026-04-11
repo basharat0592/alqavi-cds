@@ -39,6 +39,7 @@ export default function AddSupplierProductAmazon() {
         status: 'active',
         batch_number: 'INITIAL-LOG',
         quantity_in_stock: '0',
+        is_supplier_only: 'true', // Default to true (hidden from admin catalog by default)
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -238,6 +239,24 @@ export default function AddSupplierProductAmazon() {
                                                 <option>EAN</option>
                                                 <option>UPC</option>
                                             </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-[#eee]">
+                                        <div className="flex items-start gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-md">
+                                            <input 
+                                                type="checkbox" 
+                                                id="show_to_admin"
+                                                checked={formData.is_supplier_only === 'false'}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, is_supplier_only: e.target.checked ? 'false' : 'true' }))}
+                                                className="mt-1 h-4 w-4 text-[#ff9900] border-gray-300 rounded focus:ring-[#ff9900]"
+                                            />
+                                            <label htmlFor="show_to_admin" className="cursor-pointer">
+                                                <span className="text-[13px] font-bold text-[#111] block">Show to Admin Registry</span>
+                                                <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">
+                                                    If checked, this product will appear in the main Admin Dashboard catalog for procurement and inventory tracking.
+                                                </span>
+                                            </label>
                                         </div>
                                     </div>
                                 </div>

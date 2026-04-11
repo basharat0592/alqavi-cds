@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     Plus, Search, Edit, Trash2, Package,
     RefreshCw, Filter, Barcode, Hash,
-    X, AlertTriangle, CheckCircle, Building2, Activity, ShieldCheck, Loader2, ChevronLeft, ChevronRight
+    X, AlertTriangle, CheckCircle, Building2, Activity, ShieldCheck, Loader2, ChevronLeft, ChevronRight, User
 } from 'lucide-react';
 import { productService, companyService, Product, CompanyInfo } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
@@ -38,7 +38,7 @@ export default function ProductsPage() {
         setLoading(true);
         try {
             const [prodData, catData, compData, suppData] = await Promise.all([
-                productService.getAll({ all_items: 'true' } as any),
+                productService.getAll({ all_items: 'true', include_supplier_only: 'true', include_pending: 'true' } as any),
                 productService.getCategories(),
                 companyService.getAll(),
                 companyService.getSuppliers()
@@ -172,6 +172,7 @@ export default function ProductsPage() {
                         <thead>
                             <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Product Details</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap uppercase tracking-wider">Uploaded By</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap uppercase tracking-wider">Pricing</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap uppercase tracking-wider">Identifiers</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>
@@ -181,14 +182,14 @@ export default function ProductsPage() {
                             {loading && filtered.length === 0 ? (
                                 Array(6).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={4} className="px-4 py-4">
+                                        <td colSpan={5} className="px-4 py-4">
                                             <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-20 text-center">
+                                    <td colSpan={5} className="px-6 py-20 text-center">
                                         <Package className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
                                         <p className="text-sm text-slate-500 dark:text-slate-400">No assets identified in the global registry.</p>
                                     </td>
@@ -212,7 +213,7 @@ export default function ProductsPage() {
                                                         <span className="text-slate-300 dark:text-slate-600 font-bold text-[8px]">•</span>
                                                         <span className="text-[10px] text-slate-400 font-bold uppercase">{prod.category_name || 'Standard'}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-2 mt-1 font-bold">
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1 font-bold">
                                                         <div className="flex items-center gap-1">
                                                             <div className={`h-1.5 w-1.5 rounded-full ${ (prod.quantity_in_stock || 0) > 10 ? 'bg-emerald-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
                                                             <span className={`text-[10px] ${ (prod.quantity_in_stock || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
@@ -224,6 +225,18 @@ export default function ProductsPage() {
                                                         </span>
                                                     </div>
                                                 </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="inline-flex flex-col items-center gap-1">
+                                                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight shadow-sm border ${
+                                                    prod.created_by_name?.toLowerCase().includes('supplier') 
+                                                    ? 'bg-[#EEAF1C]/10 text-[#EEAF1C] border-[#EEAF1C]/20' 
+                                                    : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
+                                                }`}>
+                                                    <User size={12} />
+                                                    {prod.created_by_name || 'System'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
