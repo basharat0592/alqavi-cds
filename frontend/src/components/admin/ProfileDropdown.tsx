@@ -34,7 +34,7 @@ export default function ProfileDropdown({
                 <div className="flex items-center gap-3 relative z-10">
                     <div className="w-11 h-11 bg-[#EEAF1C] rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-2xl border-2 border-white/20 group hover:rotate-6 transition-transform duration-500">
                         {user.avatar ? (
-                            <img src={getImageUrl(user.avatar) || ''} alt="Avatar" className="w-full h-full object-cover" />
+                            <img src={getImageUrl(user.avatar) || undefined} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
                             <span className="text-base font-black text-white">{initials}</span>
                         )}

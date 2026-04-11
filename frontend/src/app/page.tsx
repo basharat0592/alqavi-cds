@@ -51,18 +51,19 @@ const CATEGORY_FALLBACK_IMAGES = [
 function ProductRow({ title, subtitle, products, loading, onAdd }: { title: string, subtitle: string, products: any[], loading: boolean, onAdd: (p: any, e?: React.MouseEvent, qty?: number) => void }) {
     if (!loading && products.length === 0) return null;
     return (
-        <section className="mt-20">
-            <div className="container mx-auto px-6 mb-8 flex justify-between items-end">
-                <div className="space-y-1">
-                    <h2 className="text-2xl font-black tracking-tighter dark:text-white uppercase leading-none">{title}</h2>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">{subtitle}</p>
+        <section className="mt-8 container mx-auto px-4 lg:px-8">
+            <div className="bg-white p-6 shadow-md">
+                <div className="mb-6 flex justify-between items-end">
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-black tracking-tighter text-[#1d252c] uppercase leading-none">{title}</h2>
+                        <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.1em]">{subtitle}</p>
+                    </div>
+                    <Link href={`/shop?cat=${title}`} className="text-[13px] font-bold text-[#007185] hover:text-[#C7511F] transition-colors underline-offset-4 hover:underline">
+                        Shop All
+                    </Link>
                 </div>
-                <Link href={`/shop?cat=${title}`} className="text-[10px] font-black text-[#007185] hover:text-[#F7CA00] flex items-center gap-1.5 group uppercase tracking-widest border-b border-transparent hover:border-[#007185] transition-all pb-0.5">
-                    VIEW RANGE <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-6 lg:px-12 pb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                         <div key={i} className="h-[360px] bg-slate-50 dark:bg-[#1B1C1E] animate-pulse rounded-2xl" />
@@ -87,6 +88,7 @@ function ProductRow({ title, subtitle, products, loading, onAdd }: { title: stri
                         );
                     })
                 )}
+                </div>
             </div>
         </section>
     );
@@ -129,36 +131,30 @@ export default function Home() {
     if (loading) return <PageLoader />;
 
     return (
-        <div className="min-h-screen bg-background transition-colors duration-500">
+        <div className="min-h-screen bg-[#EAEDED] transition-colors duration-500">
             <Navbar />
 
             <main className="pb-20">
                 {/* ── HERO SECTION ── */}
-                <section className="relative h-[80vh] overflow-hidden group">
+                <section className="relative h-[480px] lg:h-[600px] overflow-hidden">
                     <div className="absolute inset-0 flex transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
                         {HERO_SLIDES.map((slide, i) => (
                             <div key={i} className="min-w-full relative h-full">
                                 <img src={slide.img} className="w-full h-full object-cover" alt="" />
-                                <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-900/20 to-transparent flex items-center">
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#EAEDED] via-transparent to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent flex items-center">
                                     <div className="container mx-auto px-6 lg:px-12">
-                                        <div className="max-w-2xl text-white space-y-6">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F7CA00]/20 backdrop-blur-md rounded-full border border-[#F7CA00]/20">
-                                                <Sparkles className="h-4 w-4 text-[#F7CA00]" />
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#F7CA00]">Exclusive Wholesale Access</span>
-                                            </div>
-                                            <h1 className="text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] drop-shadow-2xl">
+                                        <div className="max-w-2xl text-white space-y-6 -mt-32 lg:-mt-48">
+                                            <h1 className="text-5xl lg:text-6xl font-black tracking-tight leading-none drop-shadow-2xl uppercase">
                                                 {slide.title}
                                             </h1>
-                                            <p className="text-lg text-slate-200/90 font-medium leading-relaxed max-w-lg text-balance">
+                                            <p className="text-lg text-white/90 font-bold leading-relaxed max-w-lg drop-shadow-md">
                                                 {slide.sub}
                                             </p>
                                             <div className="flex items-center gap-4 pt-4">
-                                                <Link href={slide.href} className="px-8 py-4 bg-[#F7CA00] hover:bg-[#F7CA00] text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-[#F7CA00]/20 flex items-center gap-2 group/btn">
+                                                <Link href={slide.href} className="px-10 py-4 bg-[#F7CA00] hover:bg-[#F3A847] text-black font-black rounded-lg transition-all active:scale-95 shadow-lg flex items-center gap-2 group/btn border border-[#F5C000]">
                                                     {slide.cta}
                                                     <ArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
-                                                </Link>
-                                                <Link href="/shop" className="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold rounded-xl transition-all border border-white/10">
-                                                    View Collection
                                                 </Link>
                                             </div>
                                         </div>
@@ -168,60 +164,49 @@ export default function Home() {
                         ))}
                     </div>
 
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+                    <div className="absolute bottom-32 right-12 flex gap-3 z-30">
                         {HERO_SLIDES.map((_, i) => (
-                            <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1.5 transition-all duration-500 rounded-full ${currentSlide === i ? 'w-12 bg-[#F7CA00]' : 'w-3 bg-white/40 hover:bg-white/60'}`} />
+                            <button key={i} onClick={() => setCurrentSlide(i)} className={`h-2 transition-all duration-500 rounded-full ${currentSlide === i ? 'w-12 bg-[#F7CA00]' : 'w-4 bg-white/40'}`} />
                         ))}
                     </div>
                 </section>
 
-                {/* ── METRICS BAR ── */}
-                <div className="container mx-auto px-6 -mt-10 relative z-40">
-                    <div className="bg-white dark:bg-slate-900 border border-border p-8 rounded-2xl shadow-xl shadow-black/5 grid grid-cols-2 lg:grid-cols-4 gap-8">
-                        {[
-                            { icon: <Globe className="h-5 w-5" />, label: "Direct Import", sub: "Global Brands" },
-                            { icon: <CheckCircle className="h-5 w-5" />, label: "100% Authentic", sub: "Verified Source" },
-                            { icon: <Truck className="h-5 w-5" />, label: "Fast Dispatch", sub: "Nationwide" },
-                            { icon: <Clock className="h-5 w-5" />, label: "Top Support", sub: "Expert Assistance" },
-                        ].map((m, i) => (
-                            <div key={i} className="flex items-center gap-4 group">
-                                <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-[#F7CA00]/10 border border-orange-100 dark:border-[#F7CA00]/20 flex items-center justify-center text-[#F7CA00] transition-transform group-hover:scale-110">
-                                    {m.icon}
-                                </div>
-                                <div>
-                                    <div className="text-sm font-bold dark:text-white">{m.label}</div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{m.sub}</div>
-                                </div>
+                {/* ── CATEGORY GRID (OVERLAYING HERO) ── */}
+                <div className="container mx-auto px-4 lg:px-8 -mt-40 lg:-mt-52 relative z-40">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {categories.map((cat, i) => (
+                            <div key={cat.id || i} className="bg-white p-6 shadow-md hover:shadow-xl transition-shadow flex flex-col h-[420px]">
+                                <h3 className="text-xl font-black text-[#1d252c] mb-4 uppercase tracking-tighter">{cat.name}</h3>
+                                <Link href={`/shop?cat=${cat.name}`} className="flex-1 relative overflow-hidden group">
+                                    <img src={getImageUrl(cat.image) || CATEGORY_FALLBACK_IMAGES[i % CATEGORY_FALLBACK_IMAGES.length]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
+                                </Link>
+                                <Link href={`/shop?cat=${cat.name}`} className="mt-4 text-[13px] font-bold text-[#007185] hover:text-[#C7511F] transition-colors underline-offset-4 hover:underline">
+                                    Shop Now
+                                </Link>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* ── CATEGORY SHOWCASE ── */}
-                <section className="container mx-auto px-6 mt-24">
-                    <div className="flex items-end justify-between mb-12">
-                        <div className="space-y-4">
-                            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight dark:text-white">Shop by Category</h2>
-                            <p className="text-slate-500 text-sm font-medium">Find the perfect products for your beauty routine.</p>
-                        </div>
-                        <Link href="/shop" className="text-sm font-bold text-[#F7CA00] hover:text-[#F7CA00] flex items-center gap-2 group">
-                            Browse All
-                            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                        </Link>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {categories.map((cat, i) => (
-                            <Link key={cat.id || cat.name} href={`/shop?cat=${cat.name}`} className="group relative aspect-[1/1] rounded-2xl border border-border/40 overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-500">
-                                <img src={getImageUrl(cat.image) || CATEGORY_FALLBACK_IMAGES[i % CATEGORY_FALLBACK_IMAGES.length] || undefined} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex flex-col justify-end p-4 lg:p-6 text-center">
-                                    <h3 className="text-sm lg:text-lg font-black text-white tracking-tighter uppercase leading-tight drop-shadow-md">{cat.name}</h3>
-                                    <span className="text-[7px] lg:text-[9px] font-bold uppercase tracking-[0.2em] text-[#F7CA00] mt-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">EXPLORE COLLECTION</span>
+                {/* ── METRICS STRIP ── */}
+                <div className="container mx-auto px-4 lg:px-8 mt-12">
+                    <div className="bg-white border-y border-slate-200 py-6 px-8 grid grid-cols-2 lg:grid-cols-4 gap-8">
+                        {[
+                            { icon: <Globe className="h-5 w-5" />, label: "Express Shipping", sub: "Global Network" },
+                            { icon: <ShieldCheck className="h-5 w-5" />, label: "Certified Original", sub: "100% Authentic" },
+                            { icon: <Truck className="h-5 w-5" />, label: "Bulk Delivery", sub: "Nationwide Hubs" },
+                            { icon: <Zap className="h-5 w-5" />, label: "Quick Connect", sub: "24/7 Priority Support" },
+                        ].map((m, i) => (
+                            <div key={i} className="flex items-center gap-4 group cursor-default">
+                                <div className="text-[#F7CA00]"><m.icon.type className="h-6 w-6 stroke-[2.5]" /></div>
+                                <div>
+                                    <div className="text-[14px] font-black text-[#1d252c] uppercase tracking-tighter">{m.label}</div>
+                                    <div className="text-[11px] text-slate-400 font-bold">{m.sub}</div>
                                 </div>
-                            </Link>
+                            </div>
                         ))}
                     </div>
-                </section>
+                </div>
 
                 {/* ── SECTIONS ── */}
                 {loading ? (

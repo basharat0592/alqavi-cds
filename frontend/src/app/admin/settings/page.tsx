@@ -188,7 +188,7 @@ export default function SettingsPage() {
                             <div className="p-8 flex flex-col md:flex-row gap-10">
                                 <div className="w-32 flex flex-col items-center gap-3">
                                     <div className="w-24 h-24 rounded-full overflow-hidden border border-[#DDD] bg-[#F3F3F3] flex items-center justify-center">
-                                        {avatarPreview || profile.avatar ? <img src={avatarPreview || getImageUrl(profile.avatar) || ''} alt="Avatar" className="w-full h-full object-cover" /> : <User className="h-10 w-10 text-slate-200" />}
+                                        {avatarPreview || profile.avatar ? <img src={avatarPreview || getImageUrl(profile.avatar) || undefined} alt="Avatar" className="w-full h-full object-cover" /> : <User className="h-10 w-10 text-slate-200" />}
                                     </div>
                                     <AmazonButton variant="secondary" onClick={() => avatarInputRef.current?.click()} className="w-full text-[12px]">Change Photo</AmazonButton>
                                     <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />

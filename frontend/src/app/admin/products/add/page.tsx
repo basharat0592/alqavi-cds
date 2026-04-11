@@ -335,7 +335,7 @@ export default function AddEditProductPage() {
                             <div className="p-4 grid grid-cols-3 gap-3">
                                 {existingGallery.map((img, i) => (
                                     <div key={i} className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden">
-                                        <img src={getImageUrl(img.image_url || img.image) || ""} className="w-full h-full object-cover" alt="" />
+                                        <img src={getImageUrl(img.image_url || img.image) || undefined} className="w-full h-full object-cover" alt="" />
                                     </div>
                                 ))}
                                 {additionalImages.map((file, i) => (

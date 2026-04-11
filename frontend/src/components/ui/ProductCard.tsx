@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Star, ShoppingCart, Eye, Heart, Check, Package } from 'lucide-react';
+import { useWishlist } from '@/context/WishlistContext';
 
 interface ProductCardProps {
-    id?: string;
+    id: string;
     title: string;
     image?: string;
     rating?: number;
@@ -16,11 +17,10 @@ interface ProductCardProps {
     badge?: string;
     stock?: number;
     onAddToCart?: (qty: number) => void;
-    onWishlist?: () => void;
 }
 
 export default function ProductCard({
-    id = '#',
+    id,
     title,
     image,
     rating = 4.5,
@@ -31,10 +31,10 @@ export default function ProductCard({
     badge,
     stock,
     onAddToCart,
-    onWishlist,
 }: ProductCardProps) {
     const [added, setAdded] = useState(false);
-    const [wishlisted, setWishlisted] = useState(false);
+    const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+    const wishlisted = isInWishlist(parseInt(id));
 
     const discount = originalPrice && originalPrice > price
         ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -50,8 +50,18 @@ export default function ProductCard({
 
     const handleWishlist = (e: React.MouseEvent) => {
         e.preventDefault();
-        setWishlisted(w => !w);
-        onWishlist?.();
+        if (wishlisted) {
+            removeFromWishlist(parseInt(id));
+        } else {
+            addToWishlist({
+                id: parseInt(id),
+                name: title,
+                price: price,
+                image: image || '',
+                category: category,
+                addedAt: new Date().toISOString()
+            });
+        }
     };
 
     const renderStars = (r: number) =>

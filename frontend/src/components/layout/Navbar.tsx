@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from "@/context/CartContext";
 import { getImageUrl } from "@/lib/utils";
 import { authService, User as AuthUser } from '@/lib/auth';
+import { useWishlist } from '@/context/WishlistContext';
 import { productService, mainCategoryService } from '@/lib/api';
 import Logo from "@/components/ui/Logo";
 
@@ -29,6 +30,7 @@ export default function Navbar() {
 
     const router = useRouter();
     const { cartCount } = useCart();
+    const { wishlistCount } = useWishlist();
     const searchRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
 
@@ -121,7 +123,7 @@ export default function Navbar() {
                                     {searchResults.map((p) => (
                                         <Link key={p.id} href={`/product/${p.id}`} onClick={() => setSearchOpen(false)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group/res">
                                             <div className="w-11 h-11 rounded-lg bg-white dark:bg-white/5 p-1 border border-slate-100 dark:border-white/5 shrink-0">
-                                                <img src={getImageUrl(p.image_url || p.image) || ''} className="w-full h-full object-contain" alt="" />
+                                                <img src={getImageUrl(p.image_url || p.image) || undefined} className="w-full h-full object-contain" alt="" />
                                             </div>
                                             <div className="flex-1">
                                                 <div className="text-sm font-bold text-[#1d252c] dark:text-white group-hover/res:text-[#EEAF1C] transition-colors">{p.name}</div>
@@ -194,6 +196,15 @@ export default function Navbar() {
                                     </div>
                                 )}
                             </div>
+
+                             <Link href="/dashboard/wishlist" className="relative w-11 h-11 flex items-center justify-center bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all group/wish">
+                                <Heart className="h-5 w-5 text-[#1d252c] dark:text-white group-hover/wish:text-red-500 transition-colors" />
+                                {wishlistCount > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-6 h-6 rounded-lg flex items-center justify-center ring-4 ring-white dark:ring-[#232F3E] shadow-md">
+                                        {wishlistCount}
+                                    </span>
+                                )}
+                            </Link>
 
                             <Link href="/cart" className="relative w-11 h-11 flex items-center justify-center bg-slate-100 dark:bg-white/5 hover:bg-[#EEAF1C]/10 rounded-xl transition-all group/cart">
                                 <ShoppingCart className="h-5 w-5 text-[#1d252c] dark:text-white group-hover/cart:text-[#EEAF1C] transition-colors" />

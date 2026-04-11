@@ -39,7 +39,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
                 <button onClick={onToggleProfile}
                     className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center text-white font-black text-xs hover:scale-105 transition-all shadow-md overflow-hidden">
                     {adminAvatar ? (
-                        <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(adminAvatar) || undefined} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                         adminName ? adminName[0].toUpperCase() : 'A'
                     )}
@@ -256,7 +256,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         className={`flex items-center gap-3 px-3 py-2 rounded-2xl transition-all border ${profileOpen ? 'bg-[#FFF8E7] dark:bg-[#EEAF1C]/10 border-[#EEAF1C]/30' : 'bg-[#F8F9FA] dark:bg-transparent border-transparent hover:bg-[#F3F3F3] dark:hover:bg-white/5'}`}>
                                         <div className="relative">
                                             <div className="w-9 h-9 bg-[#EEAF1C] rounded-2xl flex items-center justify-center overflow-hidden border-2 border-white dark:border-[#232F3E] shadow-sm">
-                                                {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-black text-white">{adminName[0]}</span>}
+                                                {adminAvatar ? <img src={getImageUrl(adminAvatar) || undefined} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-black text-white">{adminName[0]}</span>}
                                             </div>
                                             <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#232F3E] rounded-full" />
                                         </div>

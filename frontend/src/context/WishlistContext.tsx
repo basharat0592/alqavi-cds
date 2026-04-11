@@ -44,7 +44,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
         setLoading(true);
         try {
-            const response = await api.get('/v1/products/wishlist/');
+            const response = await api.get('v1/products/wishlist/');
             const backendItems = response.data.map((item: any) => ({
                 id: item.product_details.id,
                 name: item.product_details.name,
@@ -76,7 +76,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
         if (authService.isAuthenticated()) {
             try {
-                await api.post('/v1/products/wishlist/add/', { product_id: item.id });
+                await api.post('v1/products/wishlist/add/', { product_id: item.id });
                 refreshWishlist();
             } catch (err) {
                 console.error("Failed to add to database wishlist", err);
@@ -89,7 +89,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     const removeFromWishlist = async (id: number) => {
         if (authService.isAuthenticated()) {
             try {
-                await api.delete(`/v1/products/wishlist/${id}/remove/`);
+                await api.delete(`v1/products/wishlist/${id}/remove/`);
                 refreshWishlist();
             } catch (err) {
                 console.error("Failed to remove from database wishlist", err);
