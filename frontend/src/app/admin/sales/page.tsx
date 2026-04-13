@@ -208,9 +208,9 @@ function UpdateStatusModal({ order, onClose, onSuccess }: { order: Order; onClos
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-[#F59E0B] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm">
+                        <button type="submit" disabled={loading || (order.status || '').toUpperCase() === 'DELIVERED'} className="px-4 py-2 text-sm font-medium text-white bg-[#F59E0B] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm">
                             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                            Save Changes
+                            {(order.status || '').toUpperCase() === 'DELIVERED' ? 'Order Locked' : 'Save Changes'}
                         </button>
                     </div>
                 </form>
@@ -424,12 +424,9 @@ export default function SalesPage() {
                                                     <select
                                                         value={(o.status || '').toLowerCase()}
                                                         onChange={(e) => handleQuickStatusUpdate(o.id.toString(), e.target.value)}
-                                                        disabled={updatingRow === o.id.toString() || ['delivered', 'cancelled', 'completed', 'rejected'].includes((o.status || '').toLowerCase())}
+                                                        disabled={updatingRow === o.id.toString() || (o.status || '').toUpperCase() === 'DELIVERED'}
                                                         className={`px-2 py-1 text-[11px] font-semibold capitalize rounded border outline-none 
-                                                            ${updatingRow === o.id.toString() ? 'opacity-50' : ''} 
-                                                            ${['delivered', 'cancelled', 'completed', 'rejected'].includes((o.status || '').toLowerCase()) 
-                                                                ? 'bg-slate-50 text-slate-500 border-slate-200 cursor-not-allowed' 
-                                                                : 'bg-white dark:bg-[#1a252f] text-slate-700 dark:text-slate-300 border-slate-200 cursor-pointer hover:border-[#F59E0B]'}`}
+                                                            ${updatingRow === o.id.toString() || (o.status || '').toUpperCase() === 'DELIVERED' ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-500 border-slate-200' : 'bg-white dark:bg-[#1a252f] text-slate-700 dark:text-slate-300 border-slate-200 cursor-pointer hover:border-[#F59E0B]'}`}
                                                     >
                                                         {STATUS_FILTERS.filter(f => f !== 'All').map(f => (
                                                             <option key={f} value={f.toLowerCase()}>{f}</option>

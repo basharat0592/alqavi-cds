@@ -6,10 +6,11 @@ import api from '@/lib/axios';
  */
 export const productService = {
     // ── Product Registry ─────────────────────────────────────────────────────
-    getAll: async (params?: any): Promise<any[]> => {
+    getAll: async (params?: any): Promise<any> => {
         try {
             const { data } = await api.get('v1/products/items/', { params });
-            return data.results || data || [];
+            // Return the full response object so the caller can handle pagination
+            return data;
         } catch (error) {
             console.error("Failed to fetch product registry", error);
             return [];

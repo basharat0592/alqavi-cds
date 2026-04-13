@@ -15,7 +15,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         return OrderSerializer
 
     def get_permissions(self):
-        if self.action in ['create', 'track']:
+        if self.action in ['create', 'track', 'stats']:
             return [permissions.AllowAny()]
         if self.action in ['update', 'partial_update', 'destroy']:
             return [permissions.IsAdminUser()]
@@ -54,13 +54,50 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Order.DoesNotExist:
             return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+        if order.status == 'DELIVERED':
+            return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        order = self.get_object()
+        if order.status == 'DELIVERED':
+            return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().partial_update(request, *args, **kwargs)
+
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
     def update_status(self, request, pk=None):
         order = self.get_object()
-        new_status = request.data.get('status')
+        
+        # 1. Check if already delivered (Lock)
+        if order.status == 'DELIVERED':
+            return Response({"error": "Order is already delivered and locked."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        new_status = request.data.get('status', '').upper()
         if not new_status:
             return Response({"error": "Status is required"}, status=status.HTTP_400_BAD_REQUEST)
         
+        # 2. Inventory Deduction Logic
+        if new_status == 'DELIVERED':
+            try:
+                from django.db import transaction
+                with transaction.atomic():
+                    for item in order.items.all():
+                        if item.product and item.product.stock:
+                            stock = item.product.stock
+                            # Deduct from Stock entry
+                            stock.total_quantity = F('total_quantity') - item.quantity
+                            stock.save()
+                            
+                            # Deduct from Product snapshot field (if it exists and is used)
+                            product = item.product
+                            product.total_quantity = F('total_quantity') - item.quantity
+                            product.save()
+            except Exception as e:
+                return Response({"error": f"Inventory deduction failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 3. Save new status
         order.status = new_status
         order.save()
         return Response(OrderSerializer(order).data)

@@ -385,10 +385,13 @@ export default function RecentOrdersPage() {
                                             <button
                                                 key={s.value}
                                                 onClick={() => handleStatusMove(selectedOrder.id, s.value)}
+                                                disabled={selectedOrder.status === 'DELIVERED' || loading}
                                                 className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border
                                                     ${selectedOrder.status === s.value
                                                         ? 'bg-[#F59E0B] border-[#F59E0B] text-white shadow-lg shadow-amber-500/20'
-                                                        : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#F59E0B]/50'}`}
+                                                        : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:border-[#F59E0B]/50'}
+                                                    ${(selectedOrder.status === 'DELIVERED' && s.value !== 'DELIVERED') ? 'opacity-50 cursor-not-allowed' : ''}
+                                                `}
                                             >
                                                 {s.label}
                                             </button>
