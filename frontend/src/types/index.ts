@@ -285,6 +285,7 @@ export interface DashboardStats {
     pendingOrders: number;
     deliveredOrders?: number;
     totalCustomers?: number;
+    totalProfit?: number;
     revenueChange?: number;
     ordersChange?: number;
     productsChange?: number;

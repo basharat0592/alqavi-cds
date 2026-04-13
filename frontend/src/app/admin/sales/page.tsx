@@ -278,6 +278,20 @@ export default function SalesPage() {
     const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [updatingRow, setUpdatingRow] = useState<string | null>(null);
+
+    const handleQuickStatusUpdate = async (orderId: string, newStatus: string) => {
+        setUpdatingRow(orderId);
+        try {
+            await orderService.update(orderId, { status: newStatus.toUpperCase() });
+            setOrders(prev => prev.map(o => o.id.toString() === orderId ? { ...o, status: newStatus.toUpperCase() } : o));
+        } catch (error) {
+            console.error('Update failed', error);
+            alert('Failed to update status');
+        } finally {
+            setUpdatingRow(null);
+        }
+    };
 
     const loadOrders = async () => {
         setLoading(true);
@@ -405,7 +419,27 @@ export default function SalesPage() {
                                                 <p className="text-xs text-slate-400 font-medium">{c?.email || ''}</p>
                                             </td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-sm">{formatDate(o.created_at)}</td>
-                                            <td className="px-4 py-3"><StatusPill status={o.status} /></td>
+                                            <td className="px-4 py-3">
+                                                <div className="relative">
+                                                    <select
+                                                        value={(o.status || '').toLowerCase()}
+                                                        onChange={(e) => handleQuickStatusUpdate(o.id.toString(), e.target.value)}
+                                                        disabled={updatingRow === o.id.toString() || ['delivered', 'cancelled', 'completed', 'rejected'].includes((o.status || '').toLowerCase())}
+                                                        className={`px-2 py-1 text-[11px] font-semibold capitalize rounded border outline-none 
+                                                            ${updatingRow === o.id.toString() ? 'opacity-50' : ''} 
+                                                            ${['delivered', 'cancelled', 'completed', 'rejected'].includes((o.status || '').toLowerCase()) 
+                                                                ? 'bg-slate-50 text-slate-500 border-slate-200 cursor-not-allowed' 
+                                                                : 'bg-white dark:bg-[#1a252f] text-slate-700 dark:text-slate-300 border-slate-200 cursor-pointer hover:border-[#F59E0B]'}`}
+                                                    >
+                                                        {STATUS_FILTERS.filter(f => f !== 'All').map(f => (
+                                                            <option key={f} value={f.toLowerCase()}>{f}</option>
+                                                        ))}
+                                                    </select>
+                                                    {updatingRow === o.id.toString() && (
+                                                        <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-[#F59E0B] pointer-events-none" />
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="px-4 py-3 text-right">
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{formatCurrency(o.total_amount)}</span>
                                                 <p className="text-[10px] text-slate-400 font-medium uppercase">{o.payment_method || ''}</p>

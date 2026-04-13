@@ -67,6 +67,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def stats(self, request):
         date_filter = request.query_params.get('date')
+        payment_method = request.query_params.get('payment_method')
+        
         if date_filter:
             try:
                 from datetime import datetime
@@ -76,36 +78,57 @@ class OrderViewSet(viewsets.ModelViewSet):
         else:
             today = timezone.now().date()
             
-        month_start = today.replace(day=1)
-        
-        # Order Counts
-        today_orders = Order.objects.filter(created_at__date=today)
-        month_orders = Order.objects.filter(created_at__year=today.year, created_at__month=today.month)
-        
-        pending_count = Order.objects.filter(status='PENDING').count()
-        delivered_count = Order.objects.filter(status='DELIVERED').count()
-        
+        # Base queryset with filters
+        stat_qs = Order.objects.all()
         if date_filter:
-            pending_count = today_orders.filter(status='PENDING').count()
-            delivered_count = today_orders.filter(status='DELIVERED').count()
+            stat_qs = stat_qs.filter(created_at__date=today)
+        if payment_method and payment_method != 'ALL':
+            stat_qs = stat_qs.filter(payment_method=payment_method.upper())
+
+        total_orders = stat_qs.count()
+        pending_orders = stat_qs.filter(status='PENDING').count()
+        delivered_orders_qs = stat_qs.filter(status='DELIVERED')
+        delivered_count = delivered_orders_qs.count()
         
-        # Profit Logic: (Item Price - Item Cost) * Quantity
-        def calculate_profit(queryset):
-            # We filter for items belonging to these delivered orders
-            queryset = queryset.filter(status='DELIVERED')
-            items = OrderItem.objects.filter(order__in=queryset)
-            profit_data = items.annotate(
-                item_profit=ExpressionWrapper(
-                    (F('price') - F('cost_price')) * F('quantity'),
-                    output_field=DecimalField()
-                )
-            ).aggregate(total_profit=Sum('item_profit'))
-            return profit_data['total_profit'] or 0
+        # Revenue Logic: Only Delivered orders count as revenue
+        total_revenue = delivered_orders_qs.aggregate(tot=Sum('total_amount'))['tot'] or 0
+
+        # Profit Logic: (Item Price - Item Cost) * Quantity for delivered orders
+        items = OrderItem.objects.filter(order__in=delivered_orders_qs)
+        total_profit = items.annotate(
+            item_profit=ExpressionWrapper(
+                (F('price') - F('cost_price')) * F('quantity'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        ).aggregate(tot=Sum('item_profit'))['tot'] or 0
+
+        # Recent Orders (Top 10)
+        recent_orders_qs = stat_qs.order_by('-created_at')[:10]
+        recent_orders = OrderSerializer(recent_orders_qs, many=True).data
+
+        # Revenue history for graph (last 7 days)
+        history = []
+        for i in range(6, -1, -1):
+            d = today - timezone.timedelta(days=i)
+            day_qs = Order.objects.filter(created_at__date=d, status='DELIVERED')
+            if payment_method and payment_method != 'ALL':
+                day_qs = day_qs.filter(payment_method=payment_method.upper())
+            sales = day_qs.aggregate(t=Sum('total_amount'))['t'] or 0
+            history.append({
+                "date": d.strftime("%b %d"),
+                "sales": float(sales),
+                "purchases": 0
+            })
 
         return Response({
-            "today_count": today_orders.count(),
-            "pending_count": pending_count,
-            "delivered_count": delivered_count,
-            "today_profit": calculate_profit(today_orders),
-            "month_profit": calculate_profit(month_orders),
+            "total_orders": total_orders,
+            "total_revenue": float(total_revenue),
+            "total_profit": float(total_profit),
+            "orders_today": Order.objects.filter(created_at__date=timezone.now().date()).count(),
+            "pending_orders": pending_orders,
+            "delivered_orders": delivered_count,
+            "recent_orders": recent_orders,
+            "revenue_history": history,
+            "top_products": [],
+            "recent_purchases": []
         })

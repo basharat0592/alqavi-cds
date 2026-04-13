@@ -14,6 +14,11 @@ class Order(models.Model):
         ('DELIVERED', 'Delivered'),
         ('CANCELLED', 'Cancelled'),
     ]
+    PAYMENT_CHOICES = [
+        ('COD', 'COD'),
+        ('ONLINE', 'Online'),
+        ('SHOP', 'Shop'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
@@ -25,6 +30,7 @@ class Order(models.Model):
     )
     tracking_id = models.CharField(max_length=20, unique=True, db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Shipping info

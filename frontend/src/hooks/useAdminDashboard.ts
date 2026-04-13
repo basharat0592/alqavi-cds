@@ -24,7 +24,7 @@ export interface DashboardData {
     error: string | null;
 }
 
-export const useAdminDashboard = () => {
+export const useAdminDashboard = (filters: { date?: string; payment_method?: string } = {}) => {
     const [data, setData] = useState<DashboardData>({
         stats: {
             totalOrders: 0,
@@ -34,6 +34,7 @@ export const useAdminDashboard = () => {
             ordersToday: 0,
             pendingOrders: 0,
             totalCustomers: 0,
+            totalProfit: 0,
             revenueChange: 0,
             ordersChange: 0,
             productsChange: 0,
@@ -58,7 +59,7 @@ export const useAdminDashboard = () => {
 
             // Fetch comprehensive stats and other data in parallel
             const [statsData, usersRes, productsRes, activityRes] = await Promise.all([
-                orderService.getStats(),
+                orderService.getStats(filters),
                 userService.getAll?.() ?? Promise.resolve([]),
                 productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
                 userService.getAllActivityLogs?.(10) ?? Promise.resolve([]),
@@ -74,6 +75,7 @@ export const useAdminDashboard = () => {
                 stats: {
                     totalOrders: statsData.total_orders || 0,
                     totalRevenue: statsData.total_revenue || 0,
+                    totalProfit: statsData.total_profit || 0,
                     totalProducts: products.length,
                     activeUsers: users.length,
                     totalCustomers: users.length,
@@ -100,7 +102,7 @@ export const useAdminDashboard = () => {
                 error: err instanceof Error ? err.message : 'Failed to fetch dashboard data',
             }));
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchDashboardData();

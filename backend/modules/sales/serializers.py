@@ -25,7 +25,7 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'id', 'tracking_id', 'status', 'status_display', 'total_amount',
+            'id', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
             'shipping_address', 'phone_number', 'customer_name', 'notes',
             'items', 'created_at', 'updated_at'
         ]
@@ -36,7 +36,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['customer_name', 'shipping_address', 'phone_number', 'notes', 'items']
+        fields = ['customer_name', 'shipping_address', 'phone_number', 'notes', 'items', 'payment_method']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
@@ -53,7 +53,8 @@ class CreateOrderSerializer(serializers.ModelSerializer):
         for item in items_data:
             try:
                 product = Product.objects.get(id=item['id'])
-                price = product.selling_price
+                # Use price from frontend if provided, else use product.selling_price
+                price = item.get('price', product.selling_price)
                 quantity = item.get('quantity', 1)
                 OrderItem.objects.create(
                     order=order,

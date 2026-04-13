@@ -1,18 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard, Package, ShoppingCart, Users,
-    Settings, Warehouse, Clock,
-    Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
-    BarChart3, Boxes, FolderTree, Bell, FileText, Database, Truck,
-    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock, UserCheck,
-    ChevronDown, ShoppingBag
+    LayoutDashboard, Package, TrendingUp, Tag,
+    Boxes, ChevronsLeft, ChevronsRight, Settings, UserCheck, ShoppingBag
 } from 'lucide-react';
-import { authService } from '@/lib/auth';
-import { productService, orderService } from '@/lib/api';
+
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -35,77 +29,25 @@ interface NavGroup {
    ═══════════════════════════════════════════════ */
 export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
     const pathname = usePathname();
-    const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
-
-    useEffect(() => {
-        const checkVisibility = () => {
-            const saved = localStorage.getItem('admin_sidebar_visibility');
-            if (saved) setSidebarVisibility(JSON.parse(saved));
-        };
-        checkVisibility();
-        window.addEventListener('sidebarVisibilityChanged', checkVisibility);
-        return () => window.removeEventListener('sidebarVisibilityChanged', checkVisibility);
-    }, []);
-
     const menuGroups: NavGroup[] = [
         {
-            label: 'Main Dashboard',
+            label: 'Command Center',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'POS / Sales', href: '/admin/sale', icon: ShoppingCart },
-                { name: 'Recent History', href: '/admin/sales/recent', icon: Clock },
-                { name: 'Notifications', href: '/admin/alerts', icon: Bell },
+                { name: 'Recent Orders', href: '/admin/sales/recent', icon: ShoppingBag },
+                { name: 'Sales Overview', href: '/admin/sales', icon: TrendingUp },
             ],
         },
         {
-            label: 'Products',
+            label: 'Management',
             items: [
-                { name: 'All Products', href: '/admin/products', icon: Package },
-                { name: 'Navbar Pages', href: '/admin/products/main-categories', icon: FolderTree },
-                { name: 'Products Category', href: '/admin/products/categories', icon: Tag },
+                { name: 'Add Category', href: '/admin/products/categories', icon: Tag },
+                { name: 'Add Product', href: '/admin/products', icon: Package },
+                { name: 'Add Stocks', href: '/admin/inventory/list', icon: Boxes },
+                { name: 'Add Supplier', href: '/admin/company/suppliers', icon: UserCheck },
             ],
         },
-        {
-            label: 'Inventory',
-            items: [
-                { name: 'Current Stock', href: '/admin/inventory/list', icon: Boxes },
-                { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Warehouse },
-                { name: 'Stock History', href: '/admin/inventory/movements', icon: ArrowLeftRight },
-                { name: 'Adjustments', href: '/admin/inventory/adjustments', icon: RefreshCw },
-            ],
-        },
-        {
-            label: 'Purchasing',
-            items: [
-                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
-                { name: 'All Purchases', href: '/admin/purchases', icon: ShoppingBag },
-                { name: 'Returns', href: '/admin/purchases/returns', icon: RotateCcw },
-                { name: 'Companies', href: '/admin/company', icon: Building2 },
-            ],
-        },
-        {
-            label: 'Accounts',
-            items: [
-                { name: 'Sales List', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Payments', href: '/admin/payments', icon: Banknote },
-                { name: 'Customer Credit', href: '/admin/payments/customer', icon: CreditCard },
-                { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
-            ],
-        },
-        {
-            label: 'Administration',
-            items: [
-                { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-                { name: 'Audit Logs', href: '/admin/reports?type=accounting', icon: Database },
-                { name: 'Users List', href: '/admin/users', icon: Users },
-                { name: 'User Roles', href: '/admin/users/roles', icon: Shield },
-                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },
-            ],
-        },
-    ].map(group => ({
-        ...group,
-        items: group.items.filter(item => sidebarVisibility[item.href] !== false)
-    })).filter(g => g.items.length > 0);
+    ];
 
     const isActive = (href: string) => {
         if (typeof window === 'undefined') return pathname === href;
