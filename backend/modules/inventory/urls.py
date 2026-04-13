@@ -1,17 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    WarehouseViewSet, InventoryViewSet, InventoryMovementViewSet,
-    BatchViewSet, StockAdjustmentViewSet, LowStockAlertViewSet
-)
+from .views import WarehouseViewSet, StockViewSet
 
 router = DefaultRouter()
-router.register(r'warehouses', WarehouseViewSet)
-router.register(r'records', InventoryViewSet)
-router.register(r'movements', InventoryMovementViewSet)
-router.register(r'batches', BatchViewSet)
-router.register(r'adjustments', StockAdjustmentViewSet)
-router.register(r'alerts', LowStockAlertViewSet)
+router.register(r'warehouses', WarehouseViewSet, basename='warehouse')
+router.register(r'stocks', StockViewSet, basename='stock')
+
+# For backward compatibility with some frontend parts that might still call 'records'
+router.register(r'records', StockViewSet, basename='inventory-records')
 
 urlpatterns = [
     path('', include(router.urls)),

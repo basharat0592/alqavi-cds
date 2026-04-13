@@ -1,0 +1,11 @@
+Django>=4.2,<5.0
+djangorestframework
+mysqlclient
+python-dotenv
+celery
+redis
+django-cors-headers
+drf-spectacular
+djangorestframework-simplejwt
+Pillow
+django-filter<24

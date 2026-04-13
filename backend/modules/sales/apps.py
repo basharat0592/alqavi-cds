@@ -5,3 +5,6 @@ class SalesConfig(AppConfig):
     name = 'modules.sales'
     label = 'sales'
     verbose_name = 'Sales'
+
+    def ready(self):
+        import modules.sales.signals

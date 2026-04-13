@@ -1,203 +1,101 @@
-"""
-Products module models.
-"""
 from django.db import models
 from core.models import BaseModel
-from core.mixins import StatusMixin, TimestampMixin
+from modules.inventory.models import Stock, Warehouse
+from modules.supplier.models import Supplier
+from django.conf import settings
+from django.utils.text import slugify
 
 
-class Category(BaseModel, StatusMixin):
-    """
-    Product category model.
-    
-    Attributes:
-        name: Category name
-        description: Category description
-        slug: URL-safe identifier
-        image: Category image
-    """
+class Category(BaseModel):
+    """Product classification"""
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('INACTIVE', 'Inactive'),
+    ]
+
     name = models.CharField(max_length=255, unique=True)
-    description = models.TextField(blank=True)
-    slug = models.SlugField(unique=True, blank=True, null=True)
-    image = models.FileField(upload_to='categories/', blank=True)
-    main_category = models.ForeignKey(
-        'MainCategory',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='sub_categories'
-    )
-    
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+
     class Meta:
-        ordering = ['name']
-        indexes = [
-            models.Index(fields=['slug']),
-            models.Index(fields=['status']),
-        ]
+        db_table = 'categories'
+        verbose_name = 'Category'
         verbose_name_plural = 'Categories'
-    
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
 
-class Product(BaseModel, StatusMixin):
-    """
-    Product model.
-    
-    Attributes:
-        name: Product name
-        description: Product description
-        category: Product category
-        sku: Stock keeping unit
-        price: Product price
-        cost: Cost to produce/acquire
-        quantity_in_stock: Available quantity
-        image: Product image
-    """
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='products'
-    )
-    sku = models.CharField(max_length=100, blank=True, null=True)
-    barcode = models.CharField(max_length=100, blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    retail_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    quantity_in_stock = models.IntegerField(default=0)
-    image = models.FileField(upload_to='products/', blank=True)
-    status = models.CharField(
-        max_length=20,
-        choices=StatusMixin.STATUS_CHOICES,
-        default='pending_procurement'
-    )
-    company_category = models.ForeignKey(
-        'company.CompanyCategory',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='products',
-        verbose_name='Origin / Vendor Category'
-    )
-    company = models.ForeignKey(
-        'company.Company',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='products',
-        verbose_name='Manufacturing Company'
-    )
-    supplier = models.ForeignKey(
-        'company.Supplier',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='products',
-        verbose_name='Strategic Supplier'
-    )
-    # Marks products that were added by suppliers from their dashboard.
-    # Supplier-only products should not appear in admin product lists or stock views
-    # unless explicitly requested (e.g. when creating a Purchase Order).
-    is_supplier_only = models.BooleanField(default=False)
-    created_by = models.ForeignKey(
-        'users.User',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='products_created'
-    )
+class Product(BaseModel):
+    """Catalog entry record"""
+    BADGE_CHOICES = [
+        ('NEW', 'New Arrival'),
+        ('SALE', 'Flash Sale'),
+        ('HOT', 'Hot'),
+        ('BEST SELLER', 'Best Seller'),
+        ('LIMITED', 'Limited Edition'),
+    ]
 
-    
-    class Meta:
-        ordering = ['-created_at']
-        unique_together = (('sku', 'is_supplier_only'), ('barcode', 'is_supplier_only'))
-        indexes = [
-            models.Index(fields=['sku']),
-            models.Index(fields=['is_supplier_only']),
-            models.Index(fields=['category']),
-            models.Index(fields=['status']),
-            models.Index(fields=['created_at']),
-        ]
-    
-    def __str__(self):
-        return self.name
-    
-    def is_in_stock(self):
-        """Check if product is in stock."""
-        return self.quantity_in_stock > 0
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('INACTIVE', 'Inactive'),
+    ]
 
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='products')
+    
+    # Auto-populated fields from Stock
+    product_name = models.CharField(max_length=255, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    cost_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    total_quantity = models.IntegerField(null=True, blank=True)
 
-class ProductGallery(BaseModel, TimestampMixin):
-    """
-    Model for storing additional images for a single product.
-    Using a fresh name to avoid database tablespace conflicts.
-    """
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='gallery'
-    )
-    image = models.FileField(upload_to='products/gallery/')
-    is_feature = models.BooleanField(default=False)
+    # Core product fields
+    image = models.ImageField(upload_to='products/', null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    selling_price = models.DecimalField(max_digits=15, decimal_places=2)
+    batch = models.CharField(max_length=100, null=True, blank=True, help_text="Dynamic tag like 'SPECIALTY' or 'POPULAR'")
+    badge = models.CharField(max_length=20, choices=BADGE_CHOICES, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
 
     class Meta:
+        db_table = 'products'
+        verbose_name = 'Product'
+        verbose_name_plural = 'Products'
         ordering = ['-created_at']
 
-    def __str__(self):
-        return f"Gallery {self.id} for {self.product.name}"
-
-
-class MainCategory(BaseModel, StatusMixin):
-    """
-    Main Category model for grouping products into top-level sections.
-    
-    Attributes:
-        name: Main category name
-        description: Category description
-        slug: URL-safe identifier
-        image: Category image
-        products: Many-to-Many relationship with Product
-    """
-    name = models.CharField(max_length=255, unique=True)
-    description = models.TextField(blank=True)
-    slug = models.SlugField(unique=True, blank=True, null=True)
-    image = models.FileField(upload_to='main_categories/', blank=True)
-    products = models.ManyToManyField(Product, related_name='main_categories', blank=True)
-    
-    class Meta:
-        ordering = ['name']
-        indexes = [
-            models.Index(fields=['slug']),
-            models.Index(fields=['status']),
-        ]
-        verbose_name_plural = 'Main Categories'
+    def save(self, *args, **kwargs):
+        if self.stock:
+            # Auto-populate from linked stock entry
+            if not self.product_name:
+                self.product_name = self.stock.product_name
+            self.category = self.stock.category
+            self.supplier = self.stock.supplier
+            self.warehouse = self.stock.warehouse
+            self.cost_price = self.stock.price_per_item
+            self.total_quantity = self.stock.total_quantity
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name
+        return self.product_name
+
+
 class Wishlist(BaseModel):
-    """
-    Model for storing user's saved/wishlisted products.
-    """
-    user = models.ForeignKey(
-        'users.User',
-        on_delete=models.CASCADE,
-        related_name='wishlist'
-    )
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='wishlisted_by'
-    )
-    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
+
     class Meta:
+        db_table = 'wishlists'
+        verbose_name = 'Wishlist'
+        verbose_name_plural = 'Wishlists'
         unique_together = ('user', 'product')
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['user', 'product']),
-        ]
 
     def __str__(self):
-        return f"{self.user.username} - {self.product.name}"
+        return f"{self.user.username}'s wishlist: {self.product.product_name}"
