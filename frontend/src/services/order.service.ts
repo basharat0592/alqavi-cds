@@ -30,14 +30,14 @@ export const orderService = {
         return response.data;
     },
     update: async (id: string, data: any) => {
-        const response = await api.patch(`v1/sales/orders/${id}/update/`, data);
+        const response = await api.patch(`v1/sales/orders/${id}/`, data);
         return response.data;
     },
     delete: async (id: string) => {
-        await api.delete(`v1/sales/orders/${id}/delete/`);
+        await api.delete(`v1/sales/orders/${id}/`);
     },
-    getStats: async () => {
-        const response = await api.get('v1/sales/dashboard/stats/');
+    getStats: async (params?: any) => {
+        const response = await api.get('v1/sales/orders/stats/', { params });
         return response.data;
     }
 };

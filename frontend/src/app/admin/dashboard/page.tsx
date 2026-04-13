@@ -58,49 +58,49 @@ export default function AdminDashboard() {
             desc: "Logistics & tracking portal",
             icon: MapPin,
             href: "/admin/tracking",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Recent Orders",
             desc: "Track latest transactions",
             icon: Clock,
             href: "/admin/sales/recent",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Purchases",
             desc: "Product procurement",
             icon: ShoppingBag,
             href: "/admin/purchases",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Sales",
             desc: "Internal checkout system",
             icon: ShoppingCart,
             href: "/admin/sale",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Users Management",
             desc: "Roles & security",
             icon: Users,
             href: "/admin/users",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Reports",
             desc: "Business analytics",
             icon: BarChart3,
             href: "/admin/reports",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Transactions",
             desc: "Financial audit trail",
             icon: Banknote,
             href: "/admin/payments",
-            color: "text-[#EEAF1C]"
+            color: "text-[#F59E0B]"
         },
     ];
 
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {[
                     { label: 'Total Revenue', val: formatCurrency(stats.totalRevenue), icon: DollarSign, trend: '+12.5%', color: 'text-emerald-500' },
-                    { label: 'Sales Volume', val: stats.totalOrders, icon: ShoppingCart, trend: 'Monthly', color: 'text-[#EEAF1C]' },
+                    { label: 'Sales Volume', val: stats.totalOrders, icon: ShoppingCart, trend: 'Monthly', color: 'text-[#F59E0B]' },
                     { label: 'Product Stock', val: stats.totalProducts, icon: Boxes, trend: 'Managed', color: 'text-indigo-500' },
                     { label: 'Daily Sales', val: formatCurrency(revenueData?.[revenueData.length-1]?.sales || 0), icon: TrendingUp, trend: 'Latest', color: 'text-blue-500' },
                 ].map((st, i) => (
@@ -152,12 +152,12 @@ export default function AdminDashboard() {
                         <div className="p-5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
                             <div>
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
+                                    <DollarSign className="h-4 w-4 text-[#F59E0B]" />
                                     Recent Sales Hub
                                 </h3>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Tracking latest sales and receipts</p>
                             </div>
-                            <Link href="/admin/sales/recent" className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all uppercase tracking-wider shadow-sm active:scale-95">
+                            <Link href="/admin/sales/recent" className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all uppercase tracking-wider shadow-sm active:scale-95">
                                 View Entries
                             </Link>
                         </div>
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
                                     {recentOrders.length > 0 ? (
                                         recentOrders.map((row, i) => (
                                             <tr key={i} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.01] transition-colors group cursor-default">
-                                                <td className="px-5 py-4 text-[12px] font-bold text-[#EEAF1C] pl-6 tracking-tighter">{row.order_number}</td>
+                                                <td className="px-5 py-4 text-[12px] font-bold text-[#F59E0B] pl-6 tracking-tighter">{row.order_number}</td>
                                                 <td className="px-5 py-4 text-[12px] font-bold text-slate-800 dark:text-slate-300">
                                                     {row.customer_name || 'Customer'}
                                                 </td>
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
                         <div className="p-6 border-b border-slate-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 dark:bg-white/5">
                             <div>
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                    <TrendingUp className="h-4 w-4 text-[#EEAF1C]" />
+                                    <TrendingUp className="h-4 w-4 text-[#F59E0B]" />
                                     Performance Trends
                                 </h3>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Revenue vs. Purchases Comparison</p>
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                                         onClick={() => setTimeRange(r)}
                                         className={`px-3 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md transition-all ${
                                             timeRange === r 
-                                                ? 'bg-[#EEAF1C] text-white shadow-sm' 
+                                                ? 'bg-[#F59E0B] text-white shadow-sm' 
                                                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'
                                         }`}
                                     >
@@ -234,8 +234,8 @@ export default function AdminDashboard() {
                                     >
                                         <defs>
                                             <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#EEAF1C" stopOpacity={0.25}/>
-                                                <stop offset="95%" stopColor="#EEAF1C" stopOpacity={0}/>
+                                                <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.25}/>
+                                                <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
                                             </linearGradient>
                                             <linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.25}/>
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
                                         <Tooltip 
                                             contentStyle={{ 
                                                 backgroundColor: '#2d3a4b', 
-                                                borderColor: '#EEAF1C', 
+                                                borderColor: '#F59E0B', 
                                                 borderRadius: '12px',
                                                 fontSize: '11px',
                                                 fontWeight: '700',
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
                                             name="Sales"
                                             type="monotone" 
                                             dataKey="sales" 
-                                            stroke="#EEAF1C" 
+                                            stroke="#F59E0B" 
                                             strokeWidth={3}
                                             fillOpacity={1} 
                                             fill="url(#colorSales)" 
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
                                 </ResponsiveContainer>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <div className="h-8 w-8 border-4 border-[#EEAF1C] border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="h-8 w-8 border-4 border-[#F59E0B] border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                             )}
                         </div>
@@ -318,13 +318,13 @@ export default function AdminDashboard() {
                             <Link
                                 key={idx}
                                 href={action.href}
-                                className="flex items-center gap-4 p-4 bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 shadow-sm hover:shadow-md transition-all group active:scale-95 border-l-4 hover:border-l-[#EEAF1C]"
+                                className="flex items-center gap-4 p-4 bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 shadow-sm hover:shadow-md transition-all group active:scale-95 border-l-4 hover:border-l-[#F59E0B]"
                             >
-                                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 text-[#EEAF1C] group-hover:scale-110 transition-transform duration-500">
+                                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 text-[#F59E0B] group-hover:scale-110 transition-transform duration-500">
                                     <action.icon className="h-5 w-5" strokeWidth={2.5} />
                                 </div>
                                 <div className="flex-1">
-                                    <h2 className="text-[14px] font-bold text-slate-900 dark:text-white transition-colors group-hover:text-[#EEAF1C]">{action.title}</h2>
+                                    <h2 className="text-[14px] font-bold text-slate-900 dark:text-white transition-colors group-hover:text-[#F59E0B]">{action.title}</h2>
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">{action.desc}</p>
                                 </div>
                             </Link>
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
                     <div className="bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm flex flex-col">
                         <div className="p-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
                             <h3 className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em]">Latest Updates</h3>
-                            <Link href="/admin/alerts" className="text-[10px] font-bold text-[#EEAF1C] hover:underline flex items-center gap-1 uppercase tracking-widest">
+                            <Link href="/admin/alerts" className="text-[10px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1 uppercase tracking-widest">
                                 Manage <ArrowUpRight className="h-2.5 w-2.5" />
                             </Link>
                         </div>
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
                             ].map((alert, i) => (
                                 <div key={i} className="flex items-center justify-between gap-3 p-2 group cursor-default border-b border-slate-100 dark:border-white/5 last:border-0 pb-3">
                                     <div className="flex-1">
-                                        <p className="text-[11.5px] text-slate-800 dark:text-slate-300 font-bold leading-tight group-hover:text-[#EEAF1C] transition-colors">{alert.msg}</p>
+                                        <p className="text-[11.5px] text-slate-800 dark:text-slate-300 font-bold leading-tight group-hover:text-[#F59E0B] transition-colors">{alert.msg}</p>
                                         <span className="text-[9px] text-slate-400 font-medium uppercase mt-1 inline-block tracking-tighter">{alert.time} ago • Monitoring protocol active</span>
                                     </div>
                                     <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${alert.color} uppercase tracking-tighter`}>{alert.status}</span>
@@ -385,9 +385,9 @@ export default function AdminDashboard() {
                         <Link
                             key={link.name}
                             href={link.href}
-                            className="text-[10.5px] font-bold uppercase tracking-widest text-slate-500 hover:text-[#EEAF1C] dark:text-slate-400 dark:hover:text-[#EEAF1C] transition-colors flex items-center gap-2 group"
+                            className="text-[10.5px] font-bold uppercase tracking-widest text-slate-500 hover:text-[#F59E0B] dark:text-slate-400 dark:hover:text-[#F59E0B] transition-colors flex items-center gap-2 group"
                         >
-                            <div className="w-1 h-1 bg-slate-300 dark:bg-white/10 rounded-full group-hover:bg-[#EEAF1C] transition-colors" />
+                            <div className="w-1 h-1 bg-slate-300 dark:bg-white/10 rounded-full group-hover:bg-[#F59E0B] transition-colors" />
                             {link.name}
                         </Link>
                     ))}
@@ -397,7 +397,7 @@ export default function AdminDashboard() {
             {/* Footer Area */}
             <div className="mt-20 py-10 border-t border-slate-200 dark:border-white/10 text-center">
                 <div className="flex items-center justify-center gap-2 mb-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                    <div className="w-6 h-6 bg-slate-900 dark:bg-[#EEAF1C] rounded flex items-center justify-center font-bold text-white dark:text-slate-900 text-[10px]">A</div>
+                    <div className="w-6 h-6 bg-slate-900 dark:bg-[#F59E0B] rounded flex items-center justify-center font-bold text-white dark:text-slate-900 text-[10px]">A</div>
                     <span className="font-black text-xs tracking-tighter uppercase text-slate-900 dark:text-white">Al-Qavi System Dashboard</span>
                 </div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">© 2026 Admin Portal • Enterprise Edition</p>

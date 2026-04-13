@@ -85,7 +85,7 @@ export default function SupplierOrders() {
                     <h1 className="text-3xl font-medium text-slate-900">Purchase Orders</h1>
                     <button
                         onClick={() => { setLoading(true); fetchOrders(); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#007185] border border-gray-300 bg-white rounded hover:bg-gray-50 transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#F59E0B] border border-gray-300 bg-white rounded hover:bg-gray-50 transition-all"
                     >
                         <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -105,7 +105,7 @@ export default function SupplierOrders() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by PO number or supplier..."
-                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:border-[#F7CA00] transition-all"
+                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:border-[#F59E0B] transition-all"
                     />
                 </div>
 
@@ -115,7 +115,7 @@ export default function SupplierOrders() {
                         <button
                             key={t}
                             onClick={() => setStatusFilter(t)}
-                            className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 ${statusFilter === t ? 'border-[#F7CA00] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+                            className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 ${statusFilter === t ? 'border-[#F59E0B] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
                         >
                             {t === 'all' ? 'All Orders' : t}
                         </button>
@@ -172,7 +172,7 @@ export default function SupplierOrders() {
                                         <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => setExpanded(isExpanded ? null : po.id)}
-                                                className="flex items-center gap-1 text-[#007185] hover:text-[#F7CA00] font-bold transition-colors"
+                                                className="flex items-center gap-1 text-[#F59E0B] hover:text-[#F59E0B] font-bold transition-colors"
                                             >
                                                 {isExpanded ? 'Hide details' : 'Order details'}
                                                 {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -211,7 +211,7 @@ export default function SupplierOrders() {
                                             <div className="flex items-center gap-2 mb-1">
                                                 <StatusBadge status={po.status} map={STATUS_META} />
                                                 {po.tracking_id && (
-                                                    <span className="px-2 py-0.5 bg-[#F7CA00]/10 text-[#8a7100] border border-[#F7CA00]/20 rounded text-[10px] font-bold uppercase tracking-tight">
+                                                    <span className="px-2 py-0.5 bg-[#F59E0B]/10 text-[#8a7100] border border-[#F59E0B]/20 rounded text-[10px] font-bold uppercase tracking-tight">
                                                         Tracking: {po.tracking_id}
                                                     </span>
                                                 )}
@@ -239,7 +239,7 @@ export default function SupplierOrders() {
                                                         setLoading(false);
                                                     }
                                                 }}
-                                                className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs font-bold text-slate-700 outline-none focus:border-[#F7CA00] transition-shadow cursor-pointer"
+                                                className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs font-bold text-slate-700 outline-none focus:border-[#F59E0B] transition-shadow cursor-pointer"
                                             >
                                                 <option value="pending">Pending</option>
                                                 <option value="processing">Processing</option>

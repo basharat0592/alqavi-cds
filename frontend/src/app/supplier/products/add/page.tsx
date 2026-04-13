@@ -124,7 +124,7 @@ export default function AddSupplierProductAmazon() {
 
     if (loading) return (
         <div className="flex flex-col h-[60vh] items-center justify-center space-y-4">
-            <Loader2 className="h-10 w-10 text-[#f0c14b] animate-spin" />
+            <Loader2 className="h-10 w-10 text-[#1a1a2e] animate-spin" />
             <p className="text-[13px] text-gray-500 font-medium">Loading Amazon Partner Central...</p>
         </div>
     );
@@ -137,7 +137,7 @@ export default function AddSupplierProductAmazon() {
 
                 {/* Back Nav */}
                 <div className="mb-6">
-                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                    <button onClick={() => router.back()} className="text-[13px] text-[#F59E0B] hover:text-[#c45500] hover:underline flex items-center gap-1">
                         <ChevronLeft size={16} /> Back to listing tool
                     </button>
                 </div>
@@ -170,7 +170,7 @@ export default function AddSupplierProductAmazon() {
                                 <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
                                     Product listings must adhere to Amazon's Selling Policies and Code of Conduct.
                                 </p>
-                                <a href="#" className="text-[11px] text-[#007185] hover:underline block mt-2">Learn more</a>
+                                <a href="#" className="text-[11px] text-[#F59E0B] hover:underline block mt-2">Learn more</a>
                             </div>
                         </div>
                     </div>
@@ -400,7 +400,7 @@ export default function AddSupplierProductAmazon() {
                                     <button
                                         type="submit"
                                         disabled={saving}
-                                        className="px-8 py-1.5 bg-[#f0c14b] border border-[#a88734] hover:border-[#9c7e31] hover:bg-[#ebbd40] rounded-[3px] text-[13px] font-medium shadow-sm flex items-center gap-2 active:shadow-inner-sm disabled:opacity-50"
+                                        className="px-8 py-1.5 bg-[#1a1a2e] border border-[#a88734] hover:border-[#9c7e31] hover:bg-[#ebbd40] rounded-[3px] text-[13px] font-medium shadow-sm flex items-center gap-2 active:shadow-inner-sm disabled:opacity-50"
                                     >
                                         {saving ? <Loader2 size={16} className="animate-spin" /> : null}
                                         {saving ? 'Saving...' : 'Save and finish'}
@@ -414,7 +414,7 @@ export default function AddSupplierProductAmazon() {
 
             {/* Simple Amazon Footer */}
             <div className="mt-24 border-t border-gray-200 py-12 bg-white flex flex-col items-center">
-                <div className="flex gap-8 text-[11px] text-[#007185] font-medium mb-6">
+                <div className="flex gap-8 text-[11px] text-[#F59E0B] font-medium mb-6">
                     <span className="hover:underline cursor-pointer">Conditions of Use</span>
                     <span className="hover:underline cursor-pointer">Privacy Notice</span>
                     <span className="hover:underline cursor-pointer">Help</span>

@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { CheckCircle, AlertTriangle, Loader2, Trash2, Search, RefreshCw, ArrowLeft, Save } from 'lucide-react';
 
 // ── Shared Styling Variables ──────────────────────────────────────────────────
-export const AMZ_INPUT = `w-full px-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none transition-all focus:border-[#EEAF1C]/60 focus:ring-2 focus:ring-[#EEAF1C]/10 placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:opacity-50 font-medium`;
-export const AMZ_SELECT = AMZ_INPUT;
-export const AMZ_LABEL = `block text-[10px] font-black text-slate-500 dark:text-white/40 uppercase tracking-[0.15em] mb-1.5`;
+export const QAVI_INPUT = `w-full px-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none transition-all focus:border-[#F59E0B]/60 focus:ring-2 focus:ring-[#F59E0B]/10 placeholder:text-slate-400 dark:placeholder:text-white/20 text-slate-900 dark:text-white disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:opacity-50 font-medium`;
+export const QAVI_SELECT = QAVI_INPUT;
+export const QAVI_LABEL = `block text-[10px] font-black text-slate-500 dark:text-white/40 uppercase tracking-[0.15em] mb-1.5`;
 
 // ── Structural Components ─────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ export const SectionHeader = ({ title, icon: Icon, rightAction, iconColor = "tex
     </div>
 );
 
-export const PageHeader = ({ title, subtitle, icon: Icon, action, iconColor = "#EEAF1C" }: { title: string; subtitle?: string; icon?: any; action?: React.ReactNode; iconColor?: string }) => (
+export const PageHeader = ({ title, subtitle, icon: Icon, action, iconColor = "#F59E0B" }: { title: string; subtitle?: string; icon?: any; action?: React.ReactNode; iconColor?: string }) => (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase flex items-center gap-3">
@@ -62,7 +62,7 @@ export const FilterHub = ({ children, onSearch, searchValue, searchPlaceholder =
                     <input
                         type="text"
                         placeholder={searchPlaceholder}
-                        className={`${AMZ_INPUT} pl-9`}
+                        className={`${QAVI_INPUT} pl-9`}
                         value={searchValue}
                         onChange={e => onSearch(e.target.value)}
                     />
@@ -71,7 +71,7 @@ export const FilterHub = ({ children, onSearch, searchValue, searchPlaceholder =
             {extraFilters}
             {children}
             {onRefresh && (
-                <button onClick={onRefresh} className="p-2.5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 hover:border-[#EEAF1C]/40 transition-all shrink-0">
+                <button onClick={onRefresh} className="p-2.5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 hover:border-[#F59E0B]/40 transition-all shrink-0">
                     <RefreshCw className={`h-3.5 w-3.5 text-slate-500 dark:text-white/40 ${loading ? 'animate-spin' : ''}`} />
                 </button>
             )}
@@ -150,7 +150,7 @@ export function AdminTable<T>({
                         <button
                             disabled={currentPage === 1 || loading}
                             onClick={() => onPageChange(currentPage - 1)}
-                            className="px-4 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-[#EEAF1C]/40 disabled:opacity-30 transition-all"
+                            className="px-4 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-[#F59E0B]/40 disabled:opacity-30 transition-all"
                         >
                             Prev
                         </button>
@@ -160,7 +160,7 @@ export function AdminTable<T>({
                         <button
                             disabled={currentPage >= totalPages || totalCount === 0 || loading}
                             onClick={() => onPageChange(currentPage + 1)}
-                            className="px-4 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-[#EEAF1C]/40 disabled:opacity-30 transition-all"
+                            className="px-4 py-1.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-white/40 hover:bg-slate-50 dark:hover:bg-white/[0.08] hover:border-[#F59E0B]/40 disabled:opacity-30 transition-all"
                         >
                             Next
                         </button>
@@ -204,11 +204,11 @@ export const AdminForm = ({
             {(onCancel || cancelHref) && (
                 <div className="flex gap-2">
                     {cancelHref ? (
-                        <Link href={cancelHref} className="text-[11px] font-black text-[#EEAF1C] hover:opacity-80 flex items-center gap-2 uppercase tracking-widest border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl hover:border-[#EEAF1C]/40 transition-all">
+                        <Link href={cancelHref} className="text-[11px] font-black text-[#F59E0B] hover:opacity-80 flex items-center gap-2 uppercase tracking-widest border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl hover:border-[#F59E0B]/40 transition-all">
                             <ArrowLeft className="w-3.5 h-3.5" /> Back
                         </Link>
                     ) : (
-                        <button onClick={onCancel} className="text-[11px] font-black text-[#EEAF1C] hover:opacity-80 flex items-center gap-2 uppercase tracking-widest border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl hover:border-[#EEAF1C]/40 transition-all">
+                        <button onClick={onCancel} className="text-[11px] font-black text-[#F59E0B] hover:opacity-80 flex items-center gap-2 uppercase tracking-widest border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl hover:border-[#F59E0B]/40 transition-all">
                             <ArrowLeft className="w-3.5 h-3.5" /> Back
                         </button>
                     )}
@@ -245,7 +245,7 @@ export const AdminForm = ({
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
-export const PrimaryButton = ({ children, onClick, disabled, className = "", type = "button", href, color = "#EEAF1C", hoverColor = "#D49510" }: {
+export const PrimaryButton = ({ children, onClick, disabled, className = "", type = "button", href, color = "#F59E0B", hoverColor = "#D49510" }: {
     children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; type?: "button" | "submit"; href?: string; color?: string; hoverColor?: string;
 }) => {
     const baseClass = `text-[#131921] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${className}`;
@@ -305,7 +305,7 @@ export const ActionButton = ({ children, onClick, disabled, className = "", type
 
 // ── Overlays ──────────────────────────────────────────────────────────────────
 
-export const Toast = ({ message, color = "#EEAF1C" }: { message: string, color?: string }) => {
+export const Toast = ({ message, color = "#F59E0B" }: { message: string, color?: string }) => {
     if (!message) return null;
     return (
         <div className="fixed bottom-6 right-6 bg-white dark:bg-[#2d3a4b] border border-slate-100 dark:border-white/10 text-slate-900 dark:text-white px-5 py-3.5 rounded-2xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 min-w-[260px] z-[300] animate-in slide-in-from-bottom-5" style={{ borderLeftWidth: '3px', borderLeftColor: color }}>

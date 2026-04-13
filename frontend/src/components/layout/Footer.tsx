@@ -25,7 +25,7 @@ export default function Footer() {
                             <Logo size="sm" className="scale-[1.1] grayscale brightness-[5] hover:grayscale-0 hover:brightness-100 transition-all duration-500" />
                         </Link>
                         <p className="text-sm text-slate-400 leading-relaxed font-medium">
-                            Pakistan's premier distributor of authentic clinical grade skincare and luxury beauty formulations. Directly imported, verified for quality.
+                            Experience the authentic taste of Gilgit-Baltistan inspired Chinese cuisine. Freshly prepared, traditional recipes, delivered to your doorstep.
                         </p>
                         <div className="flex gap-4">
                             <Link href="#" className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center hover:bg-accent hover:text-white transition-all"><Facebook className="h-4 w-4" /></Link>

@@ -120,42 +120,42 @@ export default function SupplierDashboard() {
             desc: "Track manufacturing stock & refills",
             icon: Boxes,
             href: "/supplier/inventory",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Purchase Orders",
             desc: "View wholesale procurement requests",
             icon: Truck,
             href: "/supplier/orders",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Sale Registry",
             desc: "Audit your retail & wholesale ledger",
             icon: TrendingUp,
             href: "/supplier/sales",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Product Catalog",
             desc: "Add, edit, or remove your items",
             icon: Package,
             href: "/supplier/products",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Business Profile",
             desc: "Manage factory details & security",
             icon: ShieldCheck,
             href: "/supplier/profile",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Partner Support",
             desc: "Contact distributor help desk",
             icon: HelpCircle,
             href: "/supplier/support",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         }
     ];
 
@@ -205,7 +205,7 @@ export default function SupplierDashboard() {
                             <card.icon className="h-7 w-7" />
                         </div>
                         <div className="flex-1">
-                            <h2 className="text-[17px] font-bold text-slate-900 group-hover:text-[#F7CA00] transition-colors">{card.title}</h2>
+                            <h2 className="text-[17px] font-bold text-slate-900 group-hover:text-[#F59E0B] transition-colors">{card.title}</h2>
                             <p className="text-sm text-slate-500 mt-0.5 leading-snug">{card.desc}</p>
                         </div>
                     </Link>
@@ -236,7 +236,7 @@ export default function SupplierDashboard() {
                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">Recent Transaction Registry</h3>
                         <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">Historical wholesale and retail ledger</p>
                     </div>
-                    <Link href="/supplier/sales" className="text-[11px] text-[#007185] font-black hover:underline uppercase tracking-wide">Enter Full Registry</Link>
+                    <Link href="/supplier/sales" className="text-[11px] text-[#F59E0B] font-black hover:underline uppercase tracking-wide">Enter Full Registry</Link>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -282,7 +282,7 @@ export default function SupplierDashboard() {
                                             <div className="flex items-center justify-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
                                                 <button 
                                                     onClick={() => router.push(entry.is_wholesale ? `/supplier/orders` : `/supplier/sales`)}
-                                                    className="p-1 px-1.5 border border-slate-200 rounded text-slate-400 hover:text-[#007185] hover:bg-white transition-all shadow-sm"
+                                                    className="p-1 px-1.5 border border-slate-200 rounded text-slate-400 hover:text-[#F59E0B] hover:bg-white transition-all shadow-sm"
                                                     title="View"
                                                 >
                                                     <Eye className="h-3.5 w-3.5" />
@@ -308,18 +308,18 @@ export default function SupplierDashboard() {
             <div className="mt-12 pt-8 border-t border-gray-100 grid md:grid-cols-2 gap-8">
                 <div>
                     <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-50 pb-2 uppercase tracking-wide">Procurement Hub</h3>
-                    <ul className="text-xs space-y-3 font-semibold text-[#007185]">
-                        <li><Link href="/supplier/products" className="hover:text-[#F7CA00] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F7CA00] transition-colors" /> Active Product Catalog</Link></li>
-                        <li><Link href="/supplier/inventory" className="hover:text-[#F7CA00] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F7CA00] transition-colors" /> Batch Replenishment Alerts</Link></li>
-                        <li><Link href="/supplier/orders" className="hover:text-[#F7CA00] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F7CA00] transition-colors" /> Incoming Purchase Registry</Link></li>
+                    <ul className="text-xs space-y-3 font-semibold text-[#F59E0B]">
+                        <li><Link href="/supplier/products" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Active Product Catalog</Link></li>
+                        <li><Link href="/supplier/inventory" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Batch Replenishment Alerts</Link></li>
+                        <li><Link href="/supplier/orders" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Incoming Purchase Registry</Link></li>
                     </ul>
                 </div>
                 <div>
                     <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-50 pb-2 uppercase tracking-wide">Account Governance</h3>
-                    <ul className="text-xs space-y-3 font-semibold text-[#007185]">
-                        <li><Link href="/supplier/profile" className="hover:text-[#F7CA00] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F7CA00] transition-colors" /> Settlement & Security Protocols</Link></li>
-                        <li><Link href="/supplier/profile" className="hover:text-[#F7CA00] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F7CA00] transition-colors" /> Registered Warehouse Address</Link></li>
-                        <li><Link href="/supplier/support" className="hover:text-[#F7CA00] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F7CA00] transition-colors" /> Global Partner Logistics Policy</Link></li>
+                    <ul className="text-xs space-y-3 font-semibold text-[#F59E0B]">
+                        <li><Link href="/supplier/profile" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Settlement & Security Protocols</Link></li>
+                        <li><Link href="/supplier/profile" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Registered Warehouse Address</Link></li>
+                        <li><Link href="/supplier/support" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Global Partner Logistics Policy</Link></li>
                     </ul>
                 </div>
             </div>

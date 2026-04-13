@@ -65,13 +65,13 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                 <img 
                     src={getImageUrl(profile.avatar)} 
                     alt="" 
-                    className="w-8 h-8 rounded-full border border-white/20 object-cover shadow-sm group-hover:border-[#F7CA00] transition-colors"
+                    className="w-8 h-8 rounded-full border border-white/20 object-cover shadow-sm group-hover:border-[#F59E0B] transition-colors"
                 />
             );
         }
 
         return (
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-xs border border-white/10 group-hover:border-[#F7CA00] transition-colors">
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-xs border border-white/10 group-hover:border-[#F59E0B] transition-colors">
                 {initial}
             </div>
         );
@@ -84,10 +84,10 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                 <header className="bg-[#131921] h-14 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-50 shadow-md shrink-0">
                     {/* Left: Logo */}
                     <Link href="/supplier/dashboard" className="flex items-center gap-3 group">
-                        <div className="w-8 h-8 bg-[#F7CA00] rounded-lg flex items-center justify-center font-black text-slate-900 group-hover:scale-105 transition-transform shadow-[0_0_15px_rgba(247,202,0,0.3)]">A</div>
+                        <div className="w-8 h-8 bg-[#F59E0B] rounded-lg flex items-center justify-center font-black text-slate-900 group-hover:scale-105 transition-transform shadow-[0_0_15px_rgba(247,202,0,0.3)]">A</div>
                         <div className="flex flex-col">
                             <span className="font-extrabold text-[13px] tracking-tight text-white uppercase leading-none">Al-Qavi</span>
-                            <span className="text-[9px] text-[#F7CA00] font-black uppercase tracking-[0.2em] leading-none mt-1">Supplier Hub</span>
+                            <span className="text-[9px] text-[#F59E0B] font-black uppercase tracking-[0.2em] leading-none mt-1">Supplier Hub</span>
                         </div>
                     </Link>
 
@@ -97,7 +97,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                             <div className="flex flex-col text-right">
                                 <span className="text-[10px] text-gray-300 font-medium leading-none">Hello, {profile?.first_name || user?.name || 'Partner'}</span>
                                 <div className="flex items-center justify-end gap-1 mt-0.5">
-                                    <span className="text-xs font-black text-white group-hover:text-[#F7CA00] transition-colors uppercase tracking-tight">Account</span>
+                                    <span className="text-xs font-black text-white group-hover:text-[#F59E0B] transition-colors uppercase tracking-tight">Account</span>
                                     <ChevronDown size={12} className="text-gray-400" />
                                 </div>
                             </div>
@@ -109,7 +109,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                 authService.logout();
                                 window.location.href = '/login';
                             }}
-                            className="bg-[#F7CA00] hover:bg-[#e6be00] text-slate-900 px-4 py-1.5 rounded font-black text-[11px] uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                            className="bg-[#F59E0B] hover:bg-[#e6be00] text-slate-900 px-4 py-1.5 rounded font-black text-[11px] uppercase tracking-wider shadow-sm transition-all active:scale-95"
                         >
                             Sign Out
                         </button>
@@ -133,13 +133,13 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                             className={`
                                                 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
                                                 ${isActive
-                                                    ? 'bg-blue-50 text-[#F7CA00] font-bold border border-blue-100'
-                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F7CA00]'
+                                                    ? 'bg-blue-50 text-[#F59E0B] font-bold border border-blue-100'
+                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F59E0B]'
                                                 }
                                             `}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <link.icon className={`h-4 w-4 ${isActive ? 'text-[#F7CA00]' : 'text-slate-400'}`} />
+                                                <link.icon className={`h-4 w-4 ${isActive ? 'text-[#F59E0B]' : 'text-slate-400'}`} />
                                                 <span>{link.label}</span>
                                             </div>
                                             <ChevronRight className={`h-3 w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
@@ -164,7 +164,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                     <main className="flex-1 lg:border-l lg:pl-8 overflow-y-auto no-scrollbar">
                         {/* Breadcrumb Style Navigation */}
                         <div className="flex items-center gap-2 text-xs mb-8 text-slate-500 font-medium uppercase tracking-wider">
-                            <Link href="/supplier/dashboard" className="hover:text-[#F7CA00] hover:underline">Supplier Portal</Link>
+                            <Link href="/supplier/dashboard" className="hover:text-[#F59E0B] hover:underline">Supplier Portal</Link>
                             <ChevronRight className="h-3 w-3" />
                             <span className="text-slate-900 font-bold">
                                 {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Overview'}

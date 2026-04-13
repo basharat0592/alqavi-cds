@@ -259,7 +259,7 @@ export default function SupplierProfile() {
                                     <button 
                                         type="submit"
                                         disabled={updating}
-                                        className="px-8 py-2 bg-[#FFD814] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F7CA00] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#F0C14B] transition-all disabled:opacity-50"
+                                        className="px-8 py-2 bg-[#F59E0B] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F59E0B] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#1a1a2e] transition-all disabled:opacity-50"
                                     >
                                         {updating ? 'Updating...' : 'Change Password'}
                                     </button>
@@ -351,7 +351,7 @@ export default function SupplierProfile() {
                                     <button 
                                         type="submit"
                                         disabled={updating}
-                                        className="px-8 py-2 bg-[#FFD814] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F7CA00] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#F0C14B] transition-all disabled:opacity-50"
+                                        className="px-8 py-2 bg-[#F59E0B] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F59E0B] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#1a1a2e] transition-all disabled:opacity-50"
                                     >
                                         {updating ? 'Saving...' : 'Save Changes'}
                                     </button>
@@ -370,7 +370,7 @@ export default function SupplierProfile() {
 
                 {/* ── Amazon Footer Detail ── */}
                 <div className="mt-20 pt-12 border-t border-gray-100 flex flex-col items-center">
-                    <div className="flex items-center gap-8 text-[11px] font-bold text-[#007185] uppercase tracking-[0.1em] mb-6">
+                    <div className="flex items-center gap-8 text-[11px] font-bold text-[#F59E0B] uppercase tracking-[0.1em] mb-6">
                         <span className="hover:underline cursor-pointer hover:text-[#c45500]">Conditions of Use</span>
                         <span className="hover:underline cursor-pointer hover:text-[#c45500]">Privacy Notice</span>
                         <span className="hover:underline cursor-pointer hover:text-[#c45500]">Help Center</span>

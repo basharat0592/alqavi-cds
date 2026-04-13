@@ -29,7 +29,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
                 <Menu className="h-5 w-5" />
             </button>
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center">
-                <span className="font-black text-sm text-[#111] tracking-tight uppercase">AL-QAVI <span className="text-[#EEAF1C]">TRADES</span></span>
+                <span className="font-black text-sm text-[#111] tracking-tight uppercase">AL-QAVI <span className="text-[#F59E0B]">TRADES</span></span>
             </Link>
             <div className="flex items-center gap-2">
                 <button onClick={onToggleNotifications} className="p-1.5 hover:bg-[#F3F3F3] dark:hover:bg-white/5 rounded-lg transition relative text-[#565959] dark:text-zinc-400">
@@ -37,7 +37,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
                     {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
                 </button>
                 <button onClick={onToggleProfile}
-                    className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center text-white font-black text-xs hover:scale-105 transition-all shadow-md overflow-hidden">
+                    className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center text-white font-black text-xs hover:scale-105 transition-all shadow-md overflow-hidden">
                     {adminAvatar ? (
                         <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -208,21 +208,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                             {/* Search */}
                             <div className="relative flex-1 max-w-lg group">
-                                <div className="flex items-center gap-3.5 bg-[#F3F3F3] dark:bg-white/5 rounded-2xl border border-transparent px-5 py-2 w-full focus-within:bg-white dark:focus-within:bg-[#232F3E] focus-within:border-[#EEAF1C] focus-within:ring-4 focus-within:ring-[#EEAF1C]/10 transition-all duration-500 shadow-inner group-hover:shadow-md">
-                                    <Search className="h-4 w-4 text-[#565959] dark:text-zinc-500 group-focus-within:text-[#EEAF1C]" />
+                                <div className="flex items-center gap-3.5 bg-[#F3F3F3] dark:bg-white/5 rounded-2xl border border-transparent px-5 py-2 w-full focus-within:bg-white dark:focus-within:bg-[#232F3E] focus-within:border-[#F59E0B] focus-within:ring-4 focus-within:ring-[#F59E0B]/10 transition-all duration-500 shadow-inner group-hover:shadow-md">
+                                    <Search className="h-4 w-4 text-[#565959] dark:text-zinc-500 group-focus-within:text-[#F59E0B]" />
                                     <input type="text" placeholder="Search components, products, orders..."
                                         className="bg-transparent text-[11px] outline-none w-full text-[#111] dark:text-white font-bold uppercase tracking-wider placeholder:text-zinc-500"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                                     />
-                                    {isSearching && <RefreshCw className="h-4 w-4 animate-spin text-[#EEAF1C]" />}
+                                    {isSearching && <RefreshCw className="h-4 w-4 animate-spin text-[#F59E0B]" />}
                                 </div>
                             </div>
 
                             {/* Actions */}
                             <div className="flex items-center gap-3">
-                                <Link href="/" className="hidden lg:flex items-center gap-2 text-[10px] font-black text-white bg-[#EEAF1C] px-5 py-2.5 rounded-xl shadow-md hover:scale-105 transition-all uppercase tracking-widest">
+                                <Link href="/" className="hidden lg:flex items-center gap-2 text-[10px] font-black text-white bg-[#F59E0B] px-5 py-2.5 rounded-xl shadow-md hover:scale-105 transition-all uppercase tracking-widest">
                                     Storefront <ExternalLink className="h-3.5 w-3.5" />
                                 </Link>
 
@@ -231,7 +231,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 {/* Notifications */}
                                 <div className="relative" ref={notifRef}>
                                     <button onClick={() => setNotifOpen(!notifOpen)}
-                                        className={`p-2.5 rounded-2xl transition-all border ${notifOpen ? 'bg-[#EEAF1C] text-white shadow-[0_0_15px_rgba(23EE,175,28,0.3)]' : 'bg-white dark:bg-white/5 hover:bg-[#F3F3F3] dark:hover:bg-white/10 text-[#565959] dark:text-zinc-400 border-[#DDDDDD] dark:border-white/5 shadow-sm'}`}>
+                                        className={`p-2.5 rounded-2xl transition-all border ${notifOpen ? 'bg-[#F59E0B] text-white shadow-[0_0_15px_rgba(23EE,175,28,0.3)]' : 'bg-white dark:bg-white/5 hover:bg-[#F3F3F3] dark:hover:bg-white/10 text-[#565959] dark:text-zinc-400 border-[#DDDDDD] dark:border-white/5 shadow-sm'}`}>
                                         <Bell className="h-5 w-5" />
                                         {unreadCount > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
                                     </button>
@@ -239,12 +239,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </div>
                                 {/* Dynamic Theme Integration */}
                                 <button onClick={toggleTheme}
-                                    className="relative p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-[#DDDDDD] dark:border-white/5 text-[#565959] dark:text-zinc-400 hover:text-[#EEAF1C] transition-all duration-500 hover:-translate-y-1 w-10 h-10 flex items-center justify-center group overflow-hidden shadow-sm">
+                                    className="relative p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-[#DDDDDD] dark:border-white/5 text-[#565959] dark:text-zinc-400 hover:text-[#F59E0B] transition-all duration-500 hover:-translate-y-1 w-10 h-10 flex items-center justify-center group overflow-hidden shadow-sm">
                                     <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100'}`}>
                                         <Moon className="h-5 w-5" strokeWidth={2.5} />
                                     </div>
                                     <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 -translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100 rotate-0'}`}>
-                                        <Sun className="h-5 w-5 text-[#EEAF1C]" strokeWidth={2.5} />
+                                        <Sun className="h-5 w-5 text-[#F59E0B]" strokeWidth={2.5} />
                                     </div>
                                 </button>
 
@@ -253,9 +253,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 {/* Profile */}
                                 <div className="relative" ref={profileRef}>
                                     <button onClick={() => setProfileOpen(!profileOpen)}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-2xl transition-all border ${profileOpen ? 'bg-[#FFF8E7] dark:bg-[#EEAF1C]/10 border-[#EEAF1C]/30' : 'bg-[#F8F9FA] dark:bg-transparent border-transparent hover:bg-[#F3F3F3] dark:hover:bg-white/5'}`}>
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-2xl transition-all border ${profileOpen ? 'bg-[#FFF8E7] dark:bg-[#F59E0B]/10 border-[#F59E0B]/30' : 'bg-[#F8F9FA] dark:bg-transparent border-transparent hover:bg-[#F3F3F3] dark:hover:bg-white/5'}`}>
                                         <div className="relative">
-                                            <div className="w-9 h-9 bg-[#EEAF1C] rounded-2xl flex items-center justify-center overflow-hidden border-2 border-white dark:border-[#232F3E] shadow-sm">
+                                            <div className="w-9 h-9 bg-[#F59E0B] rounded-2xl flex items-center justify-center overflow-hidden border-2 border-white dark:border-[#232F3E] shadow-sm">
                                                 {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-black text-white">{adminName[0]}</span>}
                                             </div>
                                             <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#232F3E] rounded-full" />
@@ -263,7 +263,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <div className="hidden xl:block text-left">
                                             <p className="text-[#111] dark:text-white font-black text-[12px] leading-tight uppercase truncate max-w-[120px]">{adminName}</p>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-[#EEAF1C]" />
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
                                                 <p className="text-[9px] text-[#565959] dark:text-zinc-400 font-bold uppercase tracking-widest">{adminRole}</p>
                                             </div>
                                         </div>

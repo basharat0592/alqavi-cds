@@ -66,17 +66,33 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(order).data)
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def stats(self, request):
-        today = timezone.now().date()
+        date_filter = request.query_params.get('date')
+        if date_filter:
+            try:
+                from datetime import datetime
+                today = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            except ValueError:
+                today = timezone.now().date()
+        else:
+            today = timezone.now().date()
+            
         month_start = today.replace(day=1)
         
         # Order Counts
         today_orders = Order.objects.filter(created_at__date=today)
+        month_orders = Order.objects.filter(created_at__year=today.year, created_at__month=today.month)
+        
         pending_count = Order.objects.filter(status='PENDING').count()
         delivered_count = Order.objects.filter(status='DELIVERED').count()
         
+        if date_filter:
+            pending_count = today_orders.filter(status='PENDING').count()
+            delivered_count = today_orders.filter(status='DELIVERED').count()
+        
         # Profit Logic: (Item Price - Item Cost) * Quantity
         def calculate_profit(queryset):
-            # We filter for items belonging to these orders
+            # We filter for items belonging to these delivered orders
+            queryset = queryset.filter(status='DELIVERED')
             items = OrderItem.objects.filter(order__in=queryset)
             profit_data = items.annotate(
                 item_profit=ExpressionWrapper(
@@ -86,9 +102,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             ).aggregate(total_profit=Sum('item_profit'))
             return profit_data['total_profit'] or 0
 
-        # Current Month Profit
-        month_orders = Order.objects.filter(created_at__date__gte=month_start)
-        
         return Response({
             "today_count": today_orders.count(),
             "pending_count": pending_count,

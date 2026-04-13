@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="w-8 h-8 border-4 border-[#F7CA00]/20 border-t-[#F7CA00] rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-[#F59E0B]/20 border-t-[#F59E0B] rounded-full animate-spin" />
             </div>
         );
     }
@@ -71,8 +71,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                             className={`
                                                 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
                                                 ${isActive 
-                                                    ? 'bg-blue-50 text-[#F7CA00] font-bold border border-blue-100' 
-                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F7CA00]'
+                                                    ? 'bg-blue-50 text-[#F59E0B] font-bold border border-blue-100' 
+                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F59E0B]'
                                                 }
                                             `}
                                         >
@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {/* Breadcrumb Style Navigation */}
                     {!isRoot && (
                         <div className="flex items-center gap-2 text-xs mb-8 text-slate-500 font-medium uppercase tracking-wider">
-                            <Link href="/dashboard" className="hover:text-[#F7CA00] hover:underline">Your Account</Link>
+                            <Link href="/dashboard" className="hover:text-[#F59E0B] hover:underline">Your Account</Link>
                             <ChevronRight className="h-3 w-3" />
                             <span className="text-slate-900 font-bold">{SIDEBAR_LINKS.find(l => l.href === pathname)?.label}</span>
                         </div>

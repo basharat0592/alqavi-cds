@@ -38,8 +38,27 @@ export interface Product {
     id: string;
     name: string;
     description?: string;
+    /** Legacy field - use selling_price primarily */
     price: string | number;
+    /** Legacy field - use cost_price primarily */
     cost?: string | number;
+    
+    // NEW PRICING FIELDS
+    selling_price: string | number;
+    cost_price: string | number;
+    profit_amount?: number;
+    profit_margin?: number;
+
+    // COSMETICS SPECIFIC
+    brand?: string;
+    volume_weight?: string;
+    skin_type?: string;
+    key_ingredients?: string;
+    active_ingredients?: string;
+    expiry_date?: string;
+    country_of_origin?: string;
+    shade_color?: string;
+    
     /** Maps to quantity_in_stock on the backend */
     stock: number;
     quantity_in_stock?: number;
@@ -51,9 +70,11 @@ export interface Product {
     image_url?: string;
     additional_images?: any[];
     status?: string;
+    batch?: string;
     batches?: any[];
     is_active?: boolean;
     is_in_stock?: boolean;
+    is_supplier_only?: boolean;
     company?: number | string | { id: number; name: string };
     company_name?: string;
     company_category?: number | string | { id: number; name: string };
@@ -299,6 +320,7 @@ export interface Inventory {
     warehouse_name: string;
     batch?: number | string | null;
     batch_number?: string | null;
+    entry_date?: string;
     current_stock: number;
     reserved_stock: number;
     available_stock: number;

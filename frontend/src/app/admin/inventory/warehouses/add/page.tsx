@@ -5,31 +5,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
     ChevronLeft, Save, RefreshCw, Building2, 
-    MapPin, Phone, Mail, Package, ShieldCheck, 
-    Activity, Globe, Info
+    MapPin
 } from 'lucide-react';
-import { inventoryService } from '@/lib/api';
+import { inventoryService } from '@/services/inventory.service';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
-const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const labelCls = 'block text-[10px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest';
 
 export default function AddWarehousePage() {
     const router = useRouter();
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
         name: '',
-        code: '',
-        type: 'Main',
-        address: '',
-        city: '',
-        state: '',
-        country: 'Pakistan',
-        postal_code: '',
-        contact_person: '',
-        contact_phone: '',
-        status: 'Active'
+        location: ''
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,8 +31,7 @@ export default function AddWarehousePage() {
     const validate = () => {
         const e: Record<string, string> = {};
         if (!form.name.trim()) e.name = 'Name is required';
-        if (!form.code.trim()) e.code = 'Internal code is required';
-        if (!form.address.trim()) e.address = 'Street address is required';
+        if (!form.location.trim()) e.location = 'Location is required';
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -53,15 +41,7 @@ export default function AddWarehousePage() {
         if (!validate()) return;
         setSaving(true);
         try {
-            const payload = {
-                name: form.name,
-                warehouse_code: form.code.trim() || null,
-                warehouse_type: form.type,
-                location: `${form.address}, ${form.city}, ${form.state}, ${form.country} ${form.postal_code}`,
-                status: form.status.toLowerCase(),
-            };
-
-            await inventoryService.createWarehouse(payload);
+            await inventoryService.createWarehouse(form);
             toast.success('Warehouse registered successfully!');
             setTimeout(() => router.push('/admin/inventory/warehouses'), 1000);
         } catch (err: any) {
@@ -73,138 +53,71 @@ export default function AddWarehousePage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto py-8 px-6 font-sans">
-            <div className="mb-8">
+        <div className="max-w-xl mx-auto py-12 px-6 font-sans text-left text-left">
+            <div className="mb-10 text-left">
                 <Link 
                     href="/admin/inventory/warehouses" 
-                    className="text-sm font-medium text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
+                    className="text-[10px] font-black text-slate-400 hover:text-[#F59E0B] transition-colors mb-4 flex items-center gap-1 uppercase tracking-widest"
                 >
-                    <ChevronLeft className="h-4 w-4" /> Back to Warehouses
+                    <ChevronLeft className="h-3 w-3" /> Back to Registry
                 </Link>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Add Warehouse</h1>
-                <p className="text-sm text-slate-500">Initialize a new fulfillment center in the network</p>
+                <div className="flex items-center gap-3 mt-4">
+                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                        <Building2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Add Warehouse</h1>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Initialize a new storage node</p>
+                    </div>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Identification Section */}
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <Building2 className="h-4 w-4 text-[#EEAF1C]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Hub Identification</h2>
+            <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+                    <div className="space-y-1.5 text-left">
+                        <label className={labelCls}>Warehouse Name <span className="text-red-500">*</span></label>
+                        <input 
+                            className={inputCls(!!errors.name)} 
+                            placeholder="e.g. Karachi Central Hub"
+                            value={form.name} 
+                            onChange={e => handle('name', e.target.value)} 
+                        />
+                        {errors.name && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{errors.name}</p>}
                     </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1">
-                            <label className={labelCls}>Warehouse Name <span className="text-red-500">*</span></label>
+
+                    <div className="space-y-1.5 text-left">
+                        <label className={labelCls}>Physical Location <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                            <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                             <input 
-                                className={inputCls(!!errors.name)} 
-                                placeholder="e.g. Karachi North Hub"
-                                value={form.name} 
-                                onChange={e => handle('name', e.target.value)} 
+                                className={inputCls(!!errors.location)} 
+                                placeholder="e.g. Plot 42, Sector 5, Karachi"
+                                value={form.location} 
+                                onChange={e => handle('location', e.target.value)} 
                             />
-                            {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                         </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Internal Code <span className="text-red-500">*</span></label>
-                            <input 
-                                className={inputCls(!!errors.code)} 
-                                placeholder="WH-001"
-                                value={form.code} 
-                                onChange={e => handle('code', e.target.value)} 
-                            />
-                            {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Node Type</label>
-                            <select className={selectCls} value={form.type} onChange={e => handle('type', e.target.value)}>
-                                <option>Main</option>
-                                <option>Regional</option>
-                                <option>Store</option>
-                            </select>
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Initial Status</label>
-                            <select className={selectCls} value={form.status} onChange={e => handle('status', e.target.value)}>
-                                <option>Active</option>
-                                <option>Inactive</option>
-                            </select>
-                        </div>
+                        {errors.location && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{errors.location}</p>}
                     </div>
                 </div>
 
-                {/* Location Section */}
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <MapPin className="h-4 w-4 text-[#EEAF1C]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Location & Contact</h2>
-                    </div>
-                    <div className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                                <label className={labelCls}>Contact Person</label>
-                                <input 
-                                    className={inputCls()} 
-                                    placeholder="Node Manager Name"
-                                    value={form.contact_person} 
-                                    onChange={e => handle('contact_person', e.target.value)} 
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>Phone Number</label>
-                                <input 
-                                    className={inputCls()} 
-                                    placeholder="+92 XXX XXXXXXX"
-                                    value={form.contact_phone} 
-                                    onChange={e => handle('contact_phone', e.target.value)} 
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Street Address <span className="text-red-500">*</span></label>
-                            <textarea 
-                                className={`${inputCls(!!errors.address)} h-24 resize-none`} 
-                                placeholder="Physical node address..."
-                                value={form.address} 
-                                onChange={e => handle('address', e.target.value)} 
-                            />
-                            {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-1">
-                                <label className={labelCls}>City</label>
-                                <input className={inputCls()} value={form.city} onChange={e => handle('city', e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>State</label>
-                                <input className={inputCls()} value={form.state} onChange={e => handle('state', e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>Postal Code</label>
-                                <input className={inputCls()} value={form.postal_code} onChange={e => handle('postal_code', e.target.value)} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4">
+                <div className="flex justify-end gap-4">
                     <button
                         type="button"
                         onClick={() => router.push('/admin/inventory/warehouses')}
-                        className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
+                        className="px-6 py-3 text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-all"
                     >
                         Discard
                     </button>
                     <button
                         type="submit"
                         disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                        className="flex items-center gap-3 px-10 py-3.5 bg-[#F59E0B] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-yellow-600 transition-all shadow-xl shadow-yellow-500/20 disabled:opacity-50 active:scale-95"
                     >
                         {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Complete Registry
+                        Register Node
                     </button>
                 </div>
             </form>
         </div>
     );
 }
-

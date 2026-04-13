@@ -25,7 +25,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: a
     <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <Icon className="h-4 w-4 text-[#EEAF1C]" />
+                <Icon className="h-4 w-4 text-[#F59E0B]" />
             </div>
             <div>
                 <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
@@ -37,7 +37,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: a
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     'delivered': { label: 'Settled', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-    'processing': { label: 'Pending', cls: 'bg-blue-100 text-[#EEAF1C] border-blue-200' },
+    'processing': { label: 'Pending', cls: 'bg-blue-100 text-[#F59E0B] border-blue-200' },
     'pending': { label: 'Due', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
     'cancelled': { label: 'Void', cls: 'bg-red-100 text-red-700 border-red-200' },
 };
@@ -80,7 +80,7 @@ export default function InvoicesPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20">
+                    <div className="w-12 h-12 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20">
                         <FileText className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -89,12 +89,12 @@ export default function InvoicesPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadInvoices} className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a252f] text-slate-500 hover:text-[#EEAF1C] transition-all">
+                    <button onClick={loadInvoices} className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a252f] text-slate-500 hover:text-[#F59E0B] transition-all">
                         <RefreshCw className="h-4 w-4" />
                     </button>
                     <button 
                         onClick={() => router.push('/admin/sale')} 
-                        className="bg-[#EEAF1C] hover:bg-blue-700 text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                        className="bg-[#F59E0B] hover:bg-blue-700 text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95"
                     >
                         <Plus className="h-4 w-4" /> New Invoice
                     </button>
@@ -109,7 +109,7 @@ export default function InvoicesPage() {
                     { label: 'Pending', val: invoices.filter(i => i.status === 'processing').length, icon: Clock, color: 'text-amber-600' },
                     { label: 'Total Value', val: formatCurrency(invoices.reduce((s, i) => s + Number(i.total_amount), 0)), icon: DollarSign, color: 'text-indigo-600' },
                 ].map((stat, i) => (
-                    <SectionCard key={i} className="p-4 flex items-center gap-4 border-l-4 border-l-[#EEAF1C]">
+                    <SectionCard key={i} className="p-4 flex items-center gap-4 border-l-4 border-l-[#F59E0B]">
                         <div className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl">
                             <stat.icon className={`h-5 w-5 ${stat.color}`} />
                         </div>
@@ -124,12 +124,12 @@ export default function InvoicesPage() {
             {/* ── Search & Filter ── */}
             <div className="flex flex-col md:flex-row gap-3 mb-6">
                 <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F59E0B] transition-colors" />
                     <input 
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by invoice # or customer name..."
-                        className="w-full bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm font-medium outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm font-medium outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex bg-slate-50 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10 gap-1">
@@ -138,7 +138,7 @@ export default function InvoicesPage() {
                             key={s} 
                             onClick={() => setFilterStatus(s)}
                             className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all
-                                ${filterStatus === s ? 'bg-white dark:bg-[#1a252f] text-[#EEAF1C] shadow-sm shadow-black/5 ring-1 ring-slate-200 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600'}`}
+                                ${filterStatus === s ? 'bg-white dark:bg-[#1a252f] text-[#F59E0B] shadow-sm shadow-black/5 ring-1 ring-slate-200 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             {s === 'delivered' ? 'Settled' : s}
                         </button>
@@ -173,7 +173,7 @@ export default function InvoicesPage() {
                                 filtered.map(inv => (
                                     <tr key={inv.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-6 py-4">
-                                            <span className="text-xs font-black text-[#EEAF1C] uppercase px-2 py-1 bg-blue-50 dark:bg-blue-900/10 rounded">
+                                            <span className="text-xs font-black text-[#F59E0B] uppercase px-2 py-1 bg-blue-50 dark:bg-blue-900/10 rounded">
                                                 #{inv.order_number || inv.id.slice(0, 8)}
                                             </span>
                                         </td>
@@ -211,7 +211,7 @@ export default function InvoicesPage() {
                                             <div className="flex justify-end gap-1.5 translate-x-2 group-hover:translate-x-0 transition-transform">
                                                 <button 
                                                     onClick={() => router.push(`/admin/sales/${inv.id}/invoice`)}
-                                                    className="p-2 text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-xl transition-all" 
+                                                    className="p-2 text-slate-400 hover:text-[#F59E0B] hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-xl transition-all" 
                                                     title="View Details"
                                                 >
                                                     <Eye className="h-4 w-4" />

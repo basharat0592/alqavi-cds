@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { SectionCard } from '@/components/ui/AmazonStyles';
+import { SectionCard } from '@/components/ui/QaviStyles';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Legend, Cell, PieChart, Pie
@@ -30,7 +30,7 @@ export default function SaleReturnsReportPage() {
             {/* Header */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
+                    <div className="w-16 h-16 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
                         <RotateCcw className="h-8 w-8 text-white" />
                     </div>
                     <div>
@@ -40,7 +40,7 @@ export default function SaleReturnsReportPage() {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#EEAF1C] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                         <Download className="h-4 w-4" /> Export Report Manifest
                     </button>
                 </div>
@@ -72,7 +72,7 @@ export default function SaleReturnsReportPage() {
                 <SectionCard className="lg:col-span-8 p-6">
                     <div className="flex items-center justify-between mb-8">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Return Vs Sale Trajectory</h3>
-                        <div className="flex items-center gap-4"><span className="w-2.5 h-2.5 rounded-full bg-[#EEAF1C]" /> <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Gross Sales</span></div>
+                        <div className="flex items-center gap-4"><span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" /> <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Gross Sales</span></div>
                     </div>
                     <div className="h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -89,7 +89,7 @@ export default function SaleReturnsReportPage() {
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
                                 <YAxis hide />
                                 <Tooltip />
-                                <Area type="monotone" dataKey="s" stroke="#EEAF1C" strokeWidth={3} fill="#EEAF1C" fillOpacity={0.05} />
+                                <Area type="monotone" dataKey="s" stroke="#F59E0B" strokeWidth={3} fill="#F59E0B" fillOpacity={0.05} />
                                 <Area type="monotone" dataKey="r" stroke="#f43f5e" strokeWidth={3} fill="#f43f5e" fillOpacity={0.05} />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -98,7 +98,7 @@ export default function SaleReturnsReportPage() {
 
                 <SectionCard className="lg:col-span-4 p-6 bg-[#131921] text-white">
                     <div className="flex items-center gap-3 mb-6">
-                        <AlertTriangle className="h-5 w-5 text-[#EEAF1C]" />
+                        <AlertTriangle className="h-5 w-5 text-[#F59E0B]" />
                         <h3 className="text-sm font-bold uppercase tracking-widest">Return Reason Analysis</h3>
                     </div>
                     <div className="space-y-4">
@@ -120,7 +120,7 @@ export default function SaleReturnsReportPage() {
             <SectionCard className="p-0 overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Recent Returns Registry</h3>
-                    <button className="text-[10px] font-black text-[#EEAF1C] uppercase hover:underline">View Full Ledger</button>
+                    <button className="text-[10px] font-black text-[#F59E0B] uppercase hover:underline">View Full Ledger</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -141,7 +141,7 @@ export default function SaleReturnsReportPage() {
                                 { id: 'RET-2289', o: 'SO-8022', name: 'Walk-in Retail', s: 'Reconciled', date: '2026-03-31', v: 'Rs. 1,500' },
                             ].map((ret, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors text-[11px] font-bold">
-                                    <td className="px-6 py-4 text-[#EEAF1C] uppercase font-black">{ret.id}</td>
+                                    <td className="px-6 py-4 text-[#F59E0B] uppercase font-black">{ret.id}</td>
                                     <td className="px-6 py-4 text-slate-400 uppercase">{ret.o}</td>
                                     <td className="px-6 py-4 text-slate-900 dark:text-white uppercase tracking-tight">{ret.name}</td>
                                     <td className="px-6 py-4">

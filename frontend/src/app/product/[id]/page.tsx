@@ -64,7 +64,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     if (loading) return <PageLoader />;
     if (!product) return <div className="min-h-screen bg-background"><Navbar /><div className="p-40 text-center text-slate-500">Product not found.</div><Footer /></div>;
 
-    const price = parseFloat(product.price || '0');
+    const price = parseFloat(product.selling_price || product.price || '0');
     const inStock = product.stock === undefined || product.stock > 0;
     const images = [getImageUrl(product.image_url || product.image)].filter(Boolean) as string[];
     if (images.length === 0) images.push('https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?w=800');
@@ -127,13 +127,35 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                 </div>
                             </div>
                             <h1 className="text-2xl lg:text-3xl font-bold tracking-tight dark:text-white leading-tight">{product.name}</h1>
+                            
+                            {/* Cosmetics Badges */}
+                            <div className="flex flex-wrap items-center gap-2 pt-2">
+                                {product.brand && (
+                                    <span className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest border border-slate-200 dark:border-white/10">
+                                        {product.brand}
+                                    </span>
+                                )}
+                                {product.volume_weight && (
+                                    <span className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest border border-slate-200 dark:border-white/10">
+                                        {product.volume_weight}
+                                    </span>
+                                )}
+                                {product.skin_type && (
+                                    <span className="px-2.5 py-1 rounded bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-widest border border-accent/20">
+                                        For: {product.skin_type}
+                                    </span>
+                                )}
+                            </div>
+
                             <PremiumStars count={4} />
                         </div>
 
-                        <div className="space-y-4 pt-4">
+                        <div className="space-y-4 pt-4 border-t border-border">
                             <div className="flex items-baseline gap-4">
                                 <span className="text-2xl font-bold tracking-tight dark:text-white">PKR {price.toLocaleString()}</span>
-                                <span className="text-slate-400 text-sm font-medium line-through">PKR {(price * 1.15).toLocaleString()}</span>
+                                {product.retail_price && parseFloat(product.retail_price) > price && (
+                                    <span className="text-slate-400 text-sm font-medium line-through">PKR {parseFloat(product.retail_price).toLocaleString()}</span>
+                                )}
                             </div>
 
                             <div className="bg-slate-50 dark:bg-slate-900 border-l-4 border-accent p-6 rounded-r-2xl space-y-2">
@@ -161,11 +183,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <button onClick={() => addToCart({ ...product, quantity, image: product.image_url || product.image })} disabled={!inStock}
+                                <button onClick={() => addToCart({ ...product, quantity, image: product.image_url || product.image, selling_price: price })} disabled={!inStock}
                                     className="flex-1 py-3 bg-accent text-white rounded-lg font-bold flex items-center justify-center gap-3 shadow-lg shadow-accent/20 hover:bg-hover transition-all active:scale-[0.98]">
                                     <ShoppingCart className="h-5 w-5" /> Add to Cart
                                 </button>
-                                <button onClick={() => { addToCart({ ...product, quantity, image: product.image_url || product.image }); router.push('/checkout'); }} disabled={!inStock}
+                                <button onClick={() => { addToCart({ ...product, quantity, image: product.image_url || product.image, selling_price: price }); router.push('/checkout'); }} disabled={!inStock}
                                     className="flex-1 py-3 bg-slate-900 dark:bg-slate-800 text-white rounded-lg font-bold flex items-center justify-center gap-3 shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]">
                                     <Zap className="h-5 w-5" /> Buy Now
                                 </button>
@@ -179,15 +201,33 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                     {product.description || "Detailed description for this product is currently being updated by our registry team."}
                                 </p>
                             </div>
-                            <div className="grid grid-cols-2 gap-8 text-sm pt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm pt-4">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Brand</p>
-                                    <p className="font-bold dark:text-white capitalize">{product.brand_name || 'Premium Hub'}</p>
+                                    <p className="font-bold dark:text-white capitalize">{product.brand || product.company_name || 'Premium Hub'}</p>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">SKU Status</p>
                                     <p className="font-bold dark:text-white">{inStock ? 'Available in Stock' : 'Out of Stock'}</p>
                                 </div>
+                                {product.country_of_origin && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Origin</p>
+                                        <p className="font-bold dark:text-white">{product.country_of_origin}</p>
+                                    </div>
+                                )}
+                                {product.shade_color && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Shade / Variant</p>
+                                        <p className="font-bold dark:text-white">{product.shade_color}</p>
+                                    </div>
+                                )}
+                                {product.key_ingredients && (
+                                    <div className="space-y-1 col-span-2">
+                                        <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Key Ingredients</p>
+                                        <p className="font-bold dark:text-white text-xs">{product.key_ingredients}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -208,7 +248,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                     </div>
                                     <div className="p-4">
                                         <h3 className="font-bold text-xs dark:text-white line-clamp-1 mb-1.5 group-hover:text-accent transition-colors">{p.name}</h3>
-                                        <div className="text-sm font-bold dark:text-white">PKR {parseFloat(p.price).toLocaleString()}</div>
+                                        <div className="text-sm font-bold dark:text-white">PKR {parseFloat(p.selling_price || p.price).toLocaleString()}</div>
+
                                     </div>
                                 </Link>
                             ))}

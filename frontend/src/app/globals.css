@@ -8,53 +8,48 @@
 
   /* Light mode base */
   :root {
-    --background: 248, 250, 252;
-    --foreground: 21, 60, 85;
+    --background: 255, 255, 255;
+    --foreground: 26, 26, 46;
     --card: 255, 255, 255;
-    --card-foreground: 21, 60, 85;
+    --card-foreground: 26, 26, 46;
     --popover: 255, 255, 255;
-    --popover-foreground: 21, 60, 85;
-    --primary: 21, 60, 85;
-    --primary-foreground: 238, 175, 28;
-    --secondary: 238, 175, 28;
-    --secondary-foreground: 21, 60, 85;
+    --popover-foreground: 26, 26, 46;
+    --primary: 26, 26, 46; /* #1a1a2e */
+    --primary-foreground: 245, 158, 11; /* #F59E0B */
+    --secondary: 245, 158, 11;
+    --secondary-foreground: 26, 26, 46;
     --muted: 241, 245, 249;
     --muted-foreground: 100, 116, 139;
-    --accent: 238, 175, 28;
-    /* Corporate Orange #EEAF1C */
-    --accent-foreground: 21, 60, 85;
-    --border: 21, 60, 85, 0.1;
-    --input: 21, 60, 85, 0.1;
-    --ring: 238, 175, 28;
+    --accent: 245, 158, 11;
+    --accent-foreground: 26, 26, 46;
+    --border: 226, 232, 240;
+    --input: 226, 232, 240;
+    --ring: 245, 158, 11;
     --radius: 0.75rem;
-    /* Card color token */
     --card-bg: #ffffff;
-    --card-border: rgba(21, 60, 85, 0.08);
+    --card-border: rgba(26, 26, 46, 0.08);
   }
 
-  /* Dark mode — refined executive theme */
   .dark {
-    --background: 35, 47, 62; /* #232F3E */
+    --background: 15, 23, 42;
     --foreground: 248, 250, 252;
-    --card: 26, 37, 47;
+    --card: 30, 41, 59;
     --card-foreground: 248, 250, 252;
-    --popover: 17, 29, 41;
+    --popover: 15, 23, 42;
     --popover-foreground: 248, 250, 252;
-    --primary: 238, 175, 28;
-    --primary-foreground: 17, 29, 41;
-    --secondary: 17, 29, 41;
-    --secondary-foreground: 238, 175, 28;
-    --muted: 17, 29, 41;
+    --primary: 245, 158, 11;
+    --primary-foreground: 15, 23, 42;
+    --secondary: 30, 41, 59;
+    --secondary-foreground: 245, 158, 11;
+    --muted: 30, 41, 59;
     --muted-foreground: 148, 163, 184;
-    --accent: 238, 175, 28;
-    --accent-dark: 212, 149, 16; /* Darker hover for buttons */
-    --accent-foreground: 17, 29, 41;
-    --border: 255, 255, 255, 0.08;
-    --input: 255, 255, 255, 0.08;
-    --ring: 238, 175, 28;
-    /* Card color token */
-    --card-bg: #232F3E;
-    --card-border: rgba(238, 175, 28, 0.1);
+    --accent: 245, 158, 11;
+    --accent-foreground: 15, 23, 42;
+    --border: 51, 65, 85;
+    --input: 51, 65, 85;
+    --ring: 245, 158, 11;
+    --card-bg: #1e293b;
+    --card-border: rgba(245, 158, 11, 0.1);
   }
 
   /* ─── Remap Tailwind slate greys to the design system card color ─── */

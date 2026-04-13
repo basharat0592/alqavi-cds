@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import PageLoader from '@/components/ui/PageLoader';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { SectionCard } from '@/components/ui/AmazonStyles';
+import { SectionCard } from '@/components/ui/QaviStyles';
 
 /* ── Accounting Matrix Component ── */
 export default function AccountingReportPage() {
@@ -31,7 +31,7 @@ export default function AccountingReportPage() {
             {/* ── Header ── */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
+                    <div className="w-16 h-16 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
                         <Banknote className="h-8 w-8 text-white" />
                     </div>
                     <div>
@@ -41,10 +41,10 @@ export default function AccountingReportPage() {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#EEAF1C] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                         <Download className="h-4 w-4" /> Download Balance Sheet
                     </button>
-                    <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#EEAF1C] transition-all shadow-sm">
+                    <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#F59E0B] transition-all shadow-sm">
                         <Printer className="h-4.5 w-4.5" />
                     </button>
                 </div>
@@ -77,7 +77,7 @@ export default function AccountingReportPage() {
                 <SectionCard className="lg:col-span-2 p-0 overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Recent Ledger Entries</h3>
-                        <Filter className="h-4 w-4 text-slate-400 cursor-pointer hover:text-[#EEAF1C]" />
+                        <Filter className="h-4 w-4 text-slate-400 cursor-pointer hover:text-[#F59E0B]" />
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -99,7 +99,7 @@ export default function AccountingReportPage() {
                                     { id: '#TR-8287', type: 'Rent', desc: 'Warehouse Facility Rental - Zone A', d: '-', c: 'Rs. 85,000' },
                                 ].map((tr, i) => (
                                     <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors text-[11px] font-bold">
-                                        <td className="px-6 py-4 text-[#EEAF1C] uppercase">{tr.id}</td>
+                                        <td className="px-6 py-4 text-[#F59E0B] uppercase">{tr.id}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${tr.type === 'Income' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                                                 {tr.type}
@@ -129,7 +129,7 @@ export default function AccountingReportPage() {
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
                                     <YAxis hide />
                                     <Tooltip />
-                                    <Bar dataKey="value" fill="#EEAF1C" radius={[4, 4, 0, 0]} barSize={40} />
+                                    <Bar dataKey="value" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -137,7 +137,7 @@ export default function AccountingReportPage() {
 
                     <SectionCard className="p-6 bg-[#131921] text-white">
                         <div className="flex items-center gap-3 mb-6">
-                            <History className="h-5 w-5 text-[#EEAF1C]" />
+                            <History className="h-5 w-5 text-[#F59E0B]" />
                             <h3 className="text-sm font-bold uppercase tracking-widest">Financial Health</h3>
                         </div>
                         <div className="space-y-4">

@@ -46,7 +46,7 @@ export default function ProfileDashboard() {
             <div className="bg-white dark:bg-slate-900 p-6 rounded border border-gray-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Security & Profile</h1>
-                    <p className="text-[10px] font-bold text-[#F7CA00] tracking-[0.2em] uppercase mt-0.5">Manage your digital identity</p>
+                    <p className="text-[10px] font-bold text-[#F59E0B] tracking-[0.2em] uppercase mt-0.5">Manage your digital identity</p>
                 </div>
                 <div className="flex gap-4">
                     <Link href="/dashboard" className="px-5 py-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-all">
@@ -106,22 +106,22 @@ export default function ProfileDashboard() {
 
                     {/* Change Security Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm hover:border-[#F7CA00] transition-colors group cursor-pointer">
+                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm hover:border-[#F59E0B] transition-colors group cursor-pointer">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded">
-                                    <Key className="h-5 w-5 text-[#F7CA00]" />
+                                    <Key className="h-5 w-5 text-[#F59E0B]" />
                                 </div>
-                                <ArrowUpRight className="h-4 w-4 text-slate-200 group-hover:text-[#F7CA00] transition-colors" />
+                                <ArrowUpRight className="h-4 w-4 text-slate-200 group-hover:text-[#F59E0B] transition-colors" />
                             </div>
                             <h3 className="text-xs font-black uppercase tracking-widest mb-1">Update Password</h3>
                             <p className="text-[10px] font-bold text-slate-400 italic">Rotate credentials for better security.</p>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm hover:border-[#F7CA00] transition-colors group cursor-pointer">
+                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded shadow-sm hover:border-[#F59E0B] transition-colors group cursor-pointer">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded">
-                                    <ShieldCheck className="h-5 w-5 text-[#F7CA00]" />
+                                    <ShieldCheck className="h-5 w-5 text-[#F59E0B]" />
                                 </div>
-                                <ArrowUpRight className="h-4 w-4 text-slate-200 group-hover:text-[#F7CA00] transition-colors" />
+                                <ArrowUpRight className="h-4 w-4 text-slate-200 group-hover:text-[#F59E0B] transition-colors" />
                             </div>
                             <h3 className="text-xs font-black uppercase tracking-widest mb-1">Two-Factor Auth</h3>
                             <p className="text-[10px] font-bold text-slate-400 italic">Add layers of hardware protection.</p>
@@ -133,10 +133,10 @@ export default function ProfileDashboard() {
                 <div className="lg:col-span-4 space-y-6">
                     <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Security Health</h2>
                     <div className="bg-slate-900 dark:bg-slate-900 text-white p-8 rounded-lg shadow-xl shadow-slate-900/10 space-y-8 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#F7CA00]/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#F59E0B]/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
 
                         <div className="space-y-2">
-                            <p className="text-[10px] font-black text-[#F7CA00] uppercase tracking-widest">Login Security</p>
+                            <p className="text-[10px] font-black text-[#F59E0B] uppercase tracking-widest">Login Security</p>
                             <h4 className="text-2xl font-black italic tracking-tighter uppercase leading-none">Robust Protection</h4>
                         </div>
 
@@ -146,7 +146,7 @@ export default function ProfileDashboard() {
                                 <span>85%</span>
                             </div>
                             <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-[#F7CA00] w-[85%] rounded-full" />
+                                <div className="h-full bg-[#F59E0B] w-[85%] rounded-full" />
                             </div>
                         </div>
 

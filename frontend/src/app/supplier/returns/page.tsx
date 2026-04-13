@@ -50,7 +50,7 @@ export default function SupplierReturns() {
                 <div className="flex gap-6 border-b border-gray-200 overflow-x-auto">
                     {TABS.map(t => (
                         <button key={t} onClick={() => setFilter(t)}
-                            className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 whitespace-nowrap ${filter === t ? 'border-[#F7CA00] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+                            className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 whitespace-nowrap ${filter === t ? 'border-[#F59E0B] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
                             {t === 'all' ? 'Return Logs' : t}
                         </button>
                     ))}
@@ -110,7 +110,7 @@ export default function SupplierReturns() {
                                     <p className={`text-[11px] font-black uppercase tracking-widest mb-0.5 ${STATUS_COLOR[ret.status] || 'text-slate-600'}`}>
                                         {ret.status || 'Pending'}
                                     </p>
-                                    <p className="text-sm font-bold text-[#007185]">
+                                    <p className="text-sm font-bold text-[#F59E0B]">
                                         {ret.supplier_name || ret.purchase_order_number || `Return #${ret.id}`}
                                     </p>
                                     <p className="text-xs text-slate-400 mt-0.5">

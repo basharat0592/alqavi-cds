@@ -51,7 +51,7 @@ export default function CustomerReportsPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 border border-white/10">
+                    <div className="w-14 h-14 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 border border-white/10">
                         <Users className="h-7 w-7 text-white" />
                     </div>
                     <div>
@@ -60,8 +60,8 @@ export default function CustomerReportsPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadData} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#EEAF1C] shadow-sm"><RefreshCw className="h-4 w-4" /></button>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all">
+                    <button onClick={loadData} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#F59E0B] shadow-sm"><RefreshCw className="h-4 w-4" /></button>
+                    <button className="flex items-center gap-2 px-5 py-2.5 bg-[#F59E0B] text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all">
                         <Download className="h-4 w-4" /> Download Identity Report
                     </button>
                 </div>
@@ -114,7 +114,7 @@ export default function CustomerReportsPage() {
                                 <tr key={i} className="hover:bg-slate-50/5 transition-colors group">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center font-black text-white text-xs shadow-lg group-hover:rotate-6 transition-all duration-500">
+                                            <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center font-black text-white text-xs shadow-lg group-hover:rotate-6 transition-all duration-500">
                                                 {(b.name || 'C')[0].toUpperCase()}
                                             </div>
                                             <div>
@@ -129,7 +129,7 @@ export default function CustomerReportsPage() {
                                           <span className="px-3 py-1 bg-slate-50 text-slate-400 text-[9px] font-black uppercase rounded-lg border border-slate-100">Tier: Standard</span>}
                                     </td>
                                     <td className="px-6 py-4 text-center font-black text-slate-700 dark:text-slate-300">{b.orders} <span className="text-[9px] font-bold text-slate-400 uppercase ml-1">Orders</span></td>
-                                    <td className="px-6 py-4 text-right font-black text-[#EEAF1C] text-base">{formatCurrency(b.spent)}</td>
+                                    <td className="px-6 py-4 text-right font-black text-[#F59E0B] text-base">{formatCurrency(b.spent)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -139,7 +139,7 @@ export default function CustomerReportsPage() {
 
             {/* Strategic Acquisition Footnote */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="p-8 bg-[#EEAF1C] rounded-2xl text-white relative overflow-hidden group shadow-2xl">
+                <div className="p-8 bg-[#F59E0B] rounded-2xl text-white relative overflow-hidden group shadow-2xl">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl animate-pulse" />
                     <div className="relative z-10">
                         <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 backdrop-blur-md">
@@ -147,7 +147,7 @@ export default function CustomerReportsPage() {
                         </div>
                         <h4 className="text-2xl font-black uppercase tracking-tight mb-3">Client Retention Drive</h4>
                         <p className="text-blue-100 text-xs font-bold leading-relaxed opacity-80 mb-8 italic">Your 10% top buyers contribute to 42% of your total revenue. Launch targeted loyalty campaigns to increase conversion velocity.</p>
-                        <button className="flex items-center gap-2 px-6 py-3 bg-white text-[#EEAF1C] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-slate-50 transition-all active:scale-95">
+                        <button className="flex items-center gap-2 px-6 py-3 bg-white text-[#F59E0B] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-slate-50 transition-all active:scale-95">
                             Generate Campaign List <ArrowRight className="h-3.5 w-3.5" />
                         </button>
                     </div>

@@ -26,15 +26,15 @@ export default function SupplierSupport() {
                 <input
                     type="text"
                     placeholder="Search for solutions or documentation..."
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-[#F7CA00] transition-all text-sm"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-[#F59E0B] transition-all text-sm"
                 />
             </div>
 
             {/* Topic Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
                 {TOPICS.map((topic, idx) => (
-                    <div key={idx} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-[#F7CA00] transition-all cursor-pointer group">
-                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-[#F7CA00] group-hover:scale-110 transition-transform mb-3">
+                    <div key={idx} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-[#F59E0B] transition-all cursor-pointer group">
+                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-[#F59E0B] group-hover:scale-110 transition-transform mb-3">
                             <topic.icon size={20} />
                         </div>
                         <h3 className="font-bold text-slate-900 text-sm mb-1">{topic.title}</h3>
@@ -78,7 +78,7 @@ export default function SupplierSupport() {
                     </p>
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-100">
                         <span className="text-sm font-black text-slate-900">+92 321 8765432</span>
-                        <button className="text-[11px] font-bold text-[#007185] hover:text-[#F7CA00] uppercase transition-colors">Copy</button>
+                        <button className="text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B] uppercase transition-colors">Copy</button>
                     </div>
                 </div>
             </div>

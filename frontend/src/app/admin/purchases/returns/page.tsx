@@ -166,14 +166,14 @@ export default function PurchaseReturnsPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={load}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={openAdd}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         New Return
@@ -183,7 +183,7 @@ export default function PurchaseReturnsPage() {
 
             {/* ── Inline Form ── */}
             {showForm && (
-                <div className="mb-6 bg-white dark:bg-[#1a252f] border border-[#EEAF1C]/30 rounded-xl shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                <div className="mb-6 bg-white dark:bg-[#1a252f] border border-[#F59E0B]/30 rounded-xl shadow-sm overflow-hidden animate-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">
                             {editing ? 'Edit Return' : 'New Purchase Return'}
@@ -201,7 +201,7 @@ export default function PurchaseReturnsPage() {
                                     value={form.return_number}
                                     onChange={(e) => setForm(f => ({ ...f, return_number: e.target.value }))}
                                     disabled={!!editing}
-                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 disabled:opacity-60 disabled:cursor-not-allowed ${errors.return_number ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
+                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400 disabled:opacity-60 disabled:cursor-not-allowed ${errors.return_number ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
                                 />
                                 {errors.return_number && <p className="text-red-500 text-xs mt-1">{errors.return_number}</p>}
                             </div>
@@ -211,7 +211,7 @@ export default function PurchaseReturnsPage() {
                                     value={form.supplier_name}
                                     onChange={(e) => setForm(f => ({ ...f, supplier_name: e.target.value }))}
                                     placeholder="Enter supplier name"
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                                 />
                             </div>
                             <div>
@@ -220,7 +220,7 @@ export default function PurchaseReturnsPage() {
                                     type="date"
                                     value={form.return_date}
                                     onChange={(e) => setForm(f => ({ ...f, return_date: e.target.value }))}
-                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all ${errors.return_date ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
+                                    className={`w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all ${errors.return_date ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`}
                                 />
                             </div>
                             <div>
@@ -228,7 +228,7 @@ export default function PurchaseReturnsPage() {
                                 <select
                                     value={form.purchase_order}
                                     onChange={e => setForm(f => ({ ...f, purchase_order: e.target.value }))}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="">None (standalone return)</option>
                                     {purchases.map(p => <option key={p.id} value={p.id}>{p.purchase_number}</option>)}
@@ -239,7 +239,7 @@ export default function PurchaseReturnsPage() {
                                 <select
                                     value={form.status}
                                     onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-800 dark:text-slate-200 cursor-pointer"
                                 >
                                     <option value="pending">Pending</option>
                                     <option value="completed">Completed</option>
@@ -255,7 +255,7 @@ export default function PurchaseReturnsPage() {
                                 onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                                 placeholder="Describe the reason for this return..."
                                 rows={2}
-                                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 resize-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
+                                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 resize-none placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                             />
                         </div>
 
@@ -264,10 +264,10 @@ export default function PurchaseReturnsPage() {
                             <div className="border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden">
                                 <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
                                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                        <Package className="h-3.5 w-3.5 text-[#EEAF1C]" />
+                                        <Package className="h-3.5 w-3.5 text-[#F59E0B]" />
                                         Return Items
                                     </span>
-                                    <button onClick={addItem} className="text-xs text-[#EEAF1C] hover:underline font-medium flex items-center gap-1">
+                                    <button onClick={addItem} className="text-xs text-[#F59E0B] hover:underline font-medium flex items-center gap-1">
                                         <Plus className="h-3.5 w-3.5" /> Add Item
                                     </button>
                                 </div>
@@ -279,7 +279,7 @@ export default function PurchaseReturnsPage() {
                                                 <select
                                                     value={item.product}
                                                     onChange={e => updateItem(i, 'product', e.target.value)}
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200 cursor-pointer"
+                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-800 dark:text-slate-200 cursor-pointer"
                                                 >
                                                     <option value="">Select product</option>
                                                     {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -291,7 +291,7 @@ export default function PurchaseReturnsPage() {
                                                     value={item.quantity}
                                                     onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
                                                     placeholder="Qty"
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200"
+                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-800 dark:text-slate-200"
                                                 />
                                             </div>
                                             <div className="col-span-3">
@@ -300,7 +300,7 @@ export default function PurchaseReturnsPage() {
                                                     value={item.refund_price}
                                                     onChange={(e) => updateItem(i, 'refund_price', parseFloat(e.target.value) || 0)}
                                                     placeholder="Refund price"
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-800 dark:text-slate-200"
+                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-800 dark:text-slate-200"
                                                 />
                                             </div>
                                             <div className="col-span-1 flex justify-center">
@@ -315,7 +315,7 @@ export default function PurchaseReturnsPage() {
                                 </div>
                                 <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-white/5 border-t border-slate-200 dark:border-white/10">
                                     <span className="text-xs text-slate-500">Total Refund</span>
-                                    <span className="text-sm font-bold text-[#EEAF1C]">{formatCurrency(refundTotal)}</span>
+                                    <span className="text-sm font-bold text-[#F59E0B]">{formatCurrency(refundTotal)}</span>
                                 </div>
                             </div>
                         )}
@@ -324,7 +324,7 @@ export default function PurchaseReturnsPage() {
                             <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancel
                             </button>
-                            <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-[#EEAF1C] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm">
+                            <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-[#F59E0B] hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 shadow-sm">
                                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                                 {saving ? 'Saving...' : (editing ? 'Save Changes' : 'Create Return')}
                             </button>
@@ -341,7 +341,7 @@ export default function PurchaseReturnsPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by return number or supplier..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -380,7 +380,7 @@ export default function PurchaseReturnsPage() {
                                     <td colSpan={7} className="px-4 py-16 text-center">
                                         <RotateCcw className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
                                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No purchase returns found.</p>
-                                        <button onClick={openAdd} className="text-sm text-[#EEAF1C] hover:underline font-medium">
+                                        <button onClick={openAdd} className="text-sm text-[#F59E0B] hover:underline font-medium">
                                             Create your first return record
                                         </button>
                                     </td>
@@ -389,7 +389,7 @@ export default function PurchaseReturnsPage() {
                                 filtered.map(row => (
                                     <tr key={row.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
                                         <td className="px-4 py-3">
-                                            <span className="text-[#EEAF1C] font-medium text-sm">#{row.return_number}</span>
+                                            <span className="text-[#F59E0B] font-medium text-sm">#{row.return_number}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-slate-500 dark:text-slate-400 text-sm">{row.purchase_number || '—'}</span>
@@ -410,7 +410,7 @@ export default function PurchaseReturnsPage() {
                                             <div className="flex justify-end items-center gap-1">
                                                 <button
                                                     onClick={() => setViewRow(row)}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#F59E0B] hover:bg-blue-50 dark:hover:bg-[#F59E0B]/10 transition-colors"
                                                     title="View details"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -479,7 +479,7 @@ export default function PurchaseReturnsPage() {
                             )}
                             <div className="pt-3 border-t border-slate-100 dark:border-white/10">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Refund</p>
-                                <p className="text-2xl font-bold text-[#EEAF1C]">{formatCurrency(viewRow.total_refund_amount || 0)}</p>
+                                <p className="text-2xl font-bold text-[#F59E0B]">{formatCurrency(viewRow.total_refund_amount || 0)}</p>
                             </div>
                         </div>
                         <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
@@ -522,7 +522,7 @@ export default function PurchaseReturnsPage() {
             {/* ── Toast ── */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#EEAF1C]' : 'bg-red-600'}`}>
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#F59E0B]' : 'bg-red-600'}`}>
                         {toast.type === 'success'
                             ? <CheckCircle className="h-4 w-4 shrink-0" />
                             : <AlertTriangle className="h-4 w-4 shrink-0" />}

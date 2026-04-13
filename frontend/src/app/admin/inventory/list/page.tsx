@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import {
     Search, Plus, Trash2, Edit2, Eye,
-    AlertTriangle, RefreshCw, X, CheckCircle, Package
+    AlertTriangle, RefreshCw, X, Package, Truck, Calendar, MapPin, Save
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { inventoryService, productService } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils'; // if needed
+import { inventoryService } from '@/services/inventory.service';
+import { companyService } from '@/services/company.service';
+import { categoryService } from '@/services/category.service';
+import toast from 'react-hot-toast';
 
 const StatusPill = ({ status }: { status: string }) => {
     let colorClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
@@ -24,95 +26,100 @@ const StatusPill = ({ status }: { status: string }) => {
 
 export default function InventoryListPage() {
     const searchParams = useSearchParams();
-    const warehouseId = searchParams.get('warehouse') || '';
+    const initialWarehouseId = searchParams.get('warehouse') || '';
 
     const [view, setView] = useState<'list' | 'form'>('list');
-    const [inventory, setInventory] = useState<any[]>([]);
+    const [stocks, setStocks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [selectedWarehouse, setSelectedWarehouse] = useState(warehouseId);
+    const [selectedWarehouse, setSelectedWarehouse] = useState(initialWarehouseId);
     const [warehouses, setWarehouses] = useState<any[]>([]);
-
-    const [viewRow, setViewRow] = useState<any | null>(null);
-    const [editRow, setEditRow] = useState<any | null>(null);
-    const [deleteRow, setDeleteRow] = useState<any | null>(null);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     
-    const [allProducts, setAllProducts] = useState<any[]>([]);
+    const [viewRow, setViewRow] = useState<any | null>(null);
+    const [deleteRow, setDeleteRow] = useState<any | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string|number|null>(null);
 
-    // ── Pagination State ──
-    const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
-
     const [form, setForm] = useState({
-        product: '', warehouse: '', sku: '', barcode: '',
-        quantity_available: 0, reorder_level: 0, batch_number: '',
+        product_name: '',
+        category: '',
+        supplier: '',
+        warehouse: '',
+        purchase_type: 'single',
+        cartons: 0,
+        items_per_carton: 0,
+        total_quantity: 0,
+        price_per_carton: 0,
+        price_per_item: 0,
+        date: new Date().toISOString().slice(0, 10),
     });
+
+    // Auto-calculate totals for carton type
+    useEffect(() => {
+        if (form.purchase_type === 'carton') {
+            const total = (Number(form.cartons) || 0) * (Number(form.items_per_carton) || 0);
+            const ppi = Number(form.items_per_carton) > 0 ? (Number(form.price_per_carton) || 0) / Number(form.items_per_carton) : 0;
+            if (total !== form.total_quantity || ppi !== form.price_per_item) {
+                setForm(f => ({ ...f, total_quantity: total, price_per_item: ppi }));
+            }
+        }
+    }, [form.purchase_type, form.cartons, form.items_per_carton, form.price_per_carton]);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [invData, whData, prodData] = await Promise.all([
-                inventoryService.getInventory(),
+            const [stockData, whData, supData, catData] = await Promise.all([
+                inventoryService.getInventory({ warehouse: selectedWarehouse }),
                 inventoryService.getWarehouses(),
-                productService.getAll({ all_items: 'true' } as any)
+                companyService.getSuppliers(),
+                categoryService.getAll()
             ]);
             
-            const defaultWarehouse = whData.find((w: any) => w.is_default) || whData[0];
-            let finalInventory: any[] = [];
-
-            // Map and enrich inventory records that actually exist in the DB
-            const recordsWithInfo = invData.map((inv: any) => {
-                const prod = prodData.find((p: any) => String(p.id) === String(inv.product));
-                const wh = whData.find((w: any) => String(w.id) === String(inv.warehouse));
-                return {
-                    ...inv,
-                    product_name: prod?.name || inv.product_name || 'Unknown Product',
-                    sku: prod?.sku || inv.sku || 'N/A',
-                    barcode: prod?.barcode || inv.barcode || 'N/A',
-                    product_image: prod?.image || prod?.image_url || inv.product_image,
-                    warehouse_name: wh?.name || inv.warehouse_name || 'Default Warehouse',
-                    warehouse_type: wh?.warehouse_type || inv.warehouse_type
-                };
-            });
-
-            // If a warehouse is selected, filter to only show records for that warehouse
-            if (selectedWarehouse) {
-                finalInventory = recordsWithInfo.filter((inv: any) => String(inv.warehouse) === String(selectedWarehouse));
-            } else {
-                finalInventory = recordsWithInfo;
-            }
-
-            setInventory(finalInventory.filter(item => item.product_name && !isNaN(Number(item.quantity_available))));
-            setWarehouses(whData);
-            setAllProducts(prodData);
-        } catch (error) { console.error(error); } finally { setLoading(false); }
+            setStocks(stockData || []);
+            setWarehouses(whData || []);
+            setSuppliers(supData || []);
+            setCategories(catData || []);
+        } catch (error) { 
+            console.error('Error loading data:', error);
+            toast.error("Failed to sync inventory data");
+        } finally { setLoading(false); }
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { loadData(); }, [selectedWarehouse]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!form.product_name || !form.supplier || !form.warehouse) {
+            toast.error("Missing required fields");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const payload = {
-                product: form.product, warehouse: form.warehouse,
-                sku: form.sku, barcode: form.barcode,
-                quantity_available: Number(form.quantity_available),
-                reorder_level: Number(form.reorder_level),
-                batch_number: form.batch_number || null,
+                ...form,
+                total_quantity: Number(form.total_quantity),
+                price_per_item: Number(form.price_per_item),
+                cartons: form.purchase_type === 'carton' ? Number(form.cartons) : null,
+                items_per_carton: form.purchase_type === 'carton' ? Number(form.items_per_carton) : null,
+                price_per_carton: form.purchase_type === 'carton' ? Number(form.price_per_carton) : null,
             };
+
             if (isEditing && editingId) {
                 await inventoryService.updateInventory(editingId, payload);
+                toast.success("Stock record updated");
             } else {
-                await inventoryService.createInventory(payload);
+                await inventoryService.createStock(payload);
+                toast.success("Stock entry committed");
             }
             setView('list');
             loadData();
-        } catch {
-            alert("Error saving record");
+        } catch (error) {
+            console.error(error);
+            toast.error("Transaction failed");
         } finally { setIsSubmitting(false); }
     };
 
@@ -121,99 +128,176 @@ export default function InventoryListPage() {
         setIsSubmitting(true);
         try {
             await inventoryService.deleteInventory(deleteRow.id);
+            toast.success("Record purged");
             setDeleteRow(null);
             loadData();
-        } catch { alert("Error deleting record"); } finally { setIsSubmitting(false); setDeleteRow(null); }
+        } catch { toast.error("Erasure failed"); } finally { setIsSubmitting(false); setDeleteRow(null); }
     };
 
     const handleEditClick = (item: any) => {
         setForm({
-            product: String(item.product), warehouse: String(item.warehouse),
-            sku: item.sku || '', barcode: item.barcode || '',
-            quantity_available: item.quantity_available,
-            reorder_level: item.reorder_level || 0, batch_number: item.batch_number || '',
+            product_name: item.product_name,
+            category: item.category || '',
+            supplier: item.supplier,
+            warehouse: item.warehouse,
+            purchase_type: item.purchase_type,
+            cartons: item.cartons || 0,
+            items_per_carton: item.items_per_carton || 0,
+            total_quantity: item.total_quantity,
+            price_per_carton: item.price_per_carton || 0,
+            price_per_item: item.price_per_item,
+            date: item.date,
         });
-        setIsEditing(true); setEditingId(item.is_virtual ? null : item.id); setView('form');
+        setIsEditing(true); 
+        setEditingId(item.id); 
+        setView('form');
     };
 
     const handleAddClick = () => {
         setForm({
-            product: '', warehouse: selectedWarehouse || '', sku: '', barcode: '',
-            quantity_available: 0, reorder_level: 0, batch_number: '',
+            product_name: '',
+            category: (categories.length > 0 ? categories[0].id : ''),
+            supplier: '',
+            warehouse: selectedWarehouse || (warehouses.length > 0 ? warehouses[0].id : ''),
+            purchase_type: 'single',
+            cartons: 0,
+            items_per_carton: 0,
+            total_quantity: 0,
+            price_per_carton: 0,
+            price_per_item: 0,
+            date: new Date().toISOString().slice(0, 10),
         });
-        setIsEditing(false); setEditingId(null); setView('form');
+        setIsEditing(false); 
+        setEditingId(null); 
+        setView('form');
     };
 
-    const filtered = inventory.filter(item => {
-        const matchesSearch = 
-            (item.product_name?.toLowerCase().includes(search.toLowerCase())) ||
-            (item.sku?.toLowerCase().includes(search.toLowerCase()));
-        const matchesWarehouse = !selectedWarehouse || String(item.warehouse) === String(selectedWarehouse);
-        return matchesSearch && matchesWarehouse;
-    });
-
-    // ── Pagination Logic ──
-    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-    const paginatedData = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [search, selectedWarehouse]);
+    const filtered = stocks.filter(item => 
+        (item.product_name?.toLowerCase().includes(search.toLowerCase())) ||
+        (item.supplier_name?.toLowerCase().includes(search.toLowerCase()))
+    );
 
     if (view === 'form') {
         return (
-            <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
+            <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans text-left text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                     <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-                            {isEditing ? 'Edit Stock Record' : 'New Stock Record'}
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+                            {isEditing ? 'Modify Stock Record' : 'New Stock Record'}
                         </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage inbound procurement records</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Manage inbound procurement records</p>
                     </div>
                 </div>
 
-                <form onSubmit={handleSave} className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm max-w-4xl">
-                    <div className="p-5 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Product</label>
-                                <select required className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 cursor-pointer w-full" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })}>
-                                    <option value="">Select Product...</option>
-                                    {allProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
+                <form onSubmit={handleSave} className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm max-w-5xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-8 space-y-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                            {/* Left Col: Mapping */}
+                            <div className="space-y-6">
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 dark:border-white/5 pb-2">Record Mapping</h3>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Product Name <span className="text-red-500">*</span></label>
+                                    <div className="relative">
+                                        <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                        <input type="text" required className="w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] transition-all font-medium" value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} placeholder="Enter product identity..." />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Product Category <span className="text-red-500">*</span></label>
+                                    <select required className="w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] transition-all font-medium cursor-pointer" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                                        <option value="">{categories.length === 0 ? 'No categories defined' : 'Assign Classification...'}</option>
+                                        {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Warehouse <span className="text-red-500">*</span></label>
+                                        <select required className="w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] transition-all font-medium cursor-pointer" value={form.warehouse} onChange={(e) => setForm({ ...form, warehouse: e.target.value })}>
+                                            <option value="">{warehouses.length === 0 ? 'No warehouses available' : 'Select Target...'}</option>
+                                            {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Entry Date <span className="text-red-500">*</span></label>
+                                        <div className="relative">
+                                            <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                            <input type="date" required className="w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] transition-all font-medium" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Warehouse</label>
-                                <select required className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 cursor-pointer w-full" value={form.warehouse} onChange={(e) => setForm({ ...form, warehouse: e.target.value })}>
-                                    <option value="">Select Warehouse...</option>
-                                    {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">SKU</label>
-                                <input className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" placeholder="System Assigned" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Batch Identifier</label>
-                                <input className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" placeholder="e.g. LOT-01" value={form.batch_number} onChange={(e) => setForm({ ...form, batch_number: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Available Quantity</label>
-                                <input type="number" required min="0" className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" value={form.quantity_available} onChange={(e) => setForm({ ...form, quantity_available: Number(e.target.value) })} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Reorder Level</label>
-                                <input type="number" min="0" className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400" value={form.reorder_level} onChange={(e) => setForm({ ...form, reorder_level: Number(e.target.value) })} />
+
+                            {/* Right Col: Procurement */}
+                            <div className="space-y-6 bg-slate-50 dark:bg-white/5 p-6 rounded-2xl border border-slate-100 dark:border-white/5">
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-200 dark:border-white/10 pb-2">Procurement Definition</h3>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Approved Supplier <span className="text-red-500">*</span></label>
+                                    <select required className="w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] transition-all font-medium cursor-pointer" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })}>
+                                        <option value="">{suppliers.length === 0 ? 'No suppliers available' : 'Select Source...'}</option>
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.company || s.name}</option>)}
+                                    </select>
+                                </div>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Purchase Package</label>
+                                    <div className="flex bg-white dark:bg-black/20 font-black rounded-lg p-1 border border-slate-200 dark:border-white/10">
+                                        <button type="button" onClick={() => setForm({ ...form, purchase_type: 'single' })} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${form.purchase_type === 'single' ? 'bg-[#F59E0B] text-white shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600'}`}>Single Bulk</button>
+                                        <button type="button" onClick={() => setForm({ ...form, purchase_type: 'carton' })} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${form.purchase_type === 'carton' ? 'bg-[#F59E0B] text-white shadow-lg shadow-yellow-500/20' : 'text-slate-400 hover:text-slate-600'}`}>Carton Package</button>
+                                    </div>
+                                </div>
+
+                                {form.purchase_type === 'carton' ? (
+                                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Cartons</label>
+                                            <input type="number" min="0" className="w-full px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B]" value={form.cartons || ''} onChange={(e) => setForm({ ...form, cartons: Number(e.target.value) })} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Items / Carton</label>
+                                            <input type="number" min="0" className="w-full px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B]" value={form.items_per_carton || ''} onChange={(e) => setForm({ ...form, items_per_carton: Number(e.target.value) })} />
+                                        </div>
+                                        <div className="col-span-2 space-y-1.5">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost / Carton</label>
+                                            <input type="number" min="0" step="0.01" className="w-full px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B]" value={form.price_per_carton || ''} onChange={(e) => setForm({ ...form, price_per_carton: Number(e.target.value) })} />
+                                        </div>
+                                        <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
+                                            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 rounded-xl">
+                                                <div className="text-[9px] font-black uppercase tracking-widest text-emerald-600/60 mb-1">Total Units</div>
+                                                <div className="text-base font-black text-emerald-700 dark:text-emerald-400">{form.total_quantity.toLocaleString()}</div>
+                                            </div>
+                                            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 rounded-xl">
+                                                <div className="text-[9px] font-black uppercase tracking-widest text-emerald-600/60 mb-1">Unit Cost</div>
+                                                <div className="text-base font-black text-emerald-700 dark:text-emerald-400">Rs. {Number(form.price_per_item || 0).toFixed(2)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="space-y-1.5 font-black">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Quantity <span className="text-red-500">*</span></label>
+                                            <input type="number" min="0" required className="w-full px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B]" value={form.total_quantity || ''} onChange={(e) => setForm({ ...form, total_quantity: Number(e.target.value) })} />
+                                        </div>
+                                        <div className="space-y-1.5 font-black">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Price / Item <span className="text-red-500">*</span></label>
+                                            <input type="number" min="0" required step="0.01" className="w-full px-4 py-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B]" value={form.price_per_item || ''} onChange={(e) => setForm({ ...form, price_per_item: Number(e.target.value) })} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                     
-                    <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3">
-                        <button type="button" onClick={() => setView('list')} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
-                            Cancel
+                    <div className="px-8 py-5 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end gap-4">
+                        <button type="button" onClick={() => setView('list')} className="px-6 py-3 text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-all">
+                            Discard Changes
                         </button>
-                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white rounded-lg text-sm font-semibold hover:bg-[#EEAF1C]/80 transition-colors shadow-sm disabled:opacity-50 uppercase tracking-widest">
-                            {isSubmitting ? 'Saving...' : 'Commit Changes'}
+                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-3 px-10 py-3 bg-[#F59E0B] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-yellow-600 transition-all shadow-xl shadow-yellow-500/20 disabled:opacity-50 active:scale-95">
+                            {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Commit Stock
                         </button>
                     </div>
                 </form>
@@ -222,28 +306,28 @@ export default function InventoryListPage() {
     }
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans text-left text-left">
             
             {/* ── Page Header ── */}
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Inventory List</h1>
-                    <p className="page-subtitle">Manage and track your current stock levels</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/10">
+                <div className="text-left">
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Stock Inventory</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 font-bold">Manage and monitor cluster stock levels</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
-                        title="Refresh"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] transition-all"
+                        title="Sync Data"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={handleAddClick}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#F59E0B] text-white text-[11px] font-black uppercase tracking-widest rounded-lg hover:bg-yellow-600 transition-all shadow-lg shadow-yellow-500/20 active:scale-95"
                     >
                         <Plus className="h-4 w-4" />
-                        New Stock Entry
+                        Inbound Entry
                     </button>
                 </div>
             </div>
@@ -255,24 +339,19 @@ export default function InventoryListPage() {
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Search by SKU or product..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        placeholder="Filter by product or supplier..."
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] transition-all"
                     />
                 </div>
                 <select
                     value={selectedWarehouse}
                     onChange={e => setSelectedWarehouse(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
                 >
-                    <option value="">All Warehouses</option>
-                    {warehouses.filter(w => w.status?.toLowerCase() !== 'inactive').map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
+                    <option value="">All Storage Nodes</option>
+                    {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
                 </select>
             </div>
-
-            {/* ── Results count ── */}
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
-            </p>
 
             {/* ── Table ── */}
             <div className="bg-white dark:bg-[#1a252f] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
@@ -280,218 +359,120 @@ export default function InventoryListPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
-                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Inventory Item</th>
-                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Storage Location</th>
-                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Available Qty</th>
-                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Stock status</th>
-                                <th className="px-5 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Operations</th>
+                                <th className="px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em]">Identifier</th>
+                                <th className="px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em]">Provider & Location</th>
+                                <th className="px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] text-right">Quantity</th>
+                                <th className="px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                                <th className="px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] text-center">Entry Date</th>
+                                <th className="px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] text-right">Operations</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                            {loading && paginatedData.length === 0 ? (
-                                Array(6).fill(0).map((_, i) => (
+                            {loading && stocks.length === 0 ? (
+                                Array(5).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={6} className="px-4 py-4">
+                                        <td colSpan={6} className="px-5 py-5">
                                             <div className="h-4 bg-slate-100 dark:bg-white/5 rounded-lg w-full" />
                                         </td>
                                     </tr>
                                 ))
-                            ) : paginatedData.length === 0 ? (
+                            ) : stocks.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-16 text-center">
-                                        <Package className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No stock records found.</p>
-                                        <button
-                                            onClick={handleAddClick}
-                                            className="text-sm text-[#EEAF1C] hover:underline font-medium"
-                                        >
-                                            Create your first stock entry
-                                        </button>
+                                    <td colSpan={6} className="px-5 py-24 text-center">
+                                        <Package className="h-12 w-12 text-slate-200 dark:text-white/10 mx-auto mb-3" />
+                                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3">Void Stock Registry</p>
                                     </td>
                                 </tr>
                             ) : (
-                                paginatedData.map((item) => {
-                                    const qtyStatus = item.is_virtual ? 'Pending' : (Number(item.quantity_available) <= Number(item.reorder_level || 0) ? 'Low Stock' : 'In Stock');
-                                    
-                                    return (
-                                        <tr key={item.id} className="border-b border-slate-50 dark:border-white/[0.02] hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-all group">
-                                            <td className="px-5 py-4">
-                                                <p className="text-xs font-black text-[#EEAF1C] uppercase tracking-tighter">#{item.sku || 'N/A'}</p>
-                                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-0.5">{item.product_name || '—'}</p>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <p className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">{item.warehouse_name || 'Main Hub'}</p>
-                                            </td>
-                                            <td className="px-5 py-4 text-right">
-                                                <p className="text-sm font-black text-slate-900 dark:text-white">{Number(item.quantity_available).toLocaleString()}</p>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <StatusPill status={qtyStatus} />
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex justify-end items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => setViewRow(item)}
-                                                        className="p-2 rounded-xl text-slate-500 hover:text-[#EEAF1C] hover:bg-slate-100 dark:hover:bg-[#EEAF1C]/10 transition-all active:scale-90"
-                                                        title="View details"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEditClick(item)}
-                                                        className="p-2 rounded-xl text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-amber-500/10 transition-all active:scale-90"
-                                                        title="Edit record"
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setDeleteRow(item)}
-                                                        className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-red-500/10 transition-all active:scale-90"
-                                                        title="Remove inventory"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
+                                filtered.map((item) => (
+                                    <tr key={item.id} className="border-b border-slate-50 dark:border-white/[0.02] hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-all group">
+                                        <td className="px-5 py-4">
+                                            <p className="text-sm font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tight">{item.product_name}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[9px] font-black text-[#F59E0B] uppercase tracking-[0.1em] opacity-70">S/N: {item.id.slice(0, 8)}</span>
+                                                <span className="text-slate-300 dark:text-white/10">•</span>
+                                                <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{item.category_name || 'UNGROUPED'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Truck className="h-3 w-3 text-slate-400" />
+                                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">{item.supplier_name}</span>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
+                                                <div className="flex items-center gap-1.5">
+                                                    <MapPin className="h-3 w-3 text-slate-400" />
+                                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">{item.warehouse_name}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4 text-right">
+                                            <p className="text-sm font-black text-slate-900 dark:text-white">{Number(item.total_quantity).toLocaleString()}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.purchase_type} Entry</p>
+                                        </td>
+                                        <td className="px-5 py-4 text-right">
+                                            <p className="text-sm font-black text-emerald-600">Rs. {Number(item.price_per_item).toLocaleString()}</p>
+                                        </td>
+                                        <td className="px-5 py-4 text-center">
+                                            <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-100 dark:border-white/10">
+                                                <Calendar className="h-3 w-3 text-slate-400" />
+                                                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">{item.date}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex justify-end items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => handleEditClick(item)}
+                                                    className="p-2 rounded-xl text-slate-500 hover:text-[#F59E0B] hover:bg-slate-100 dark:hover:bg-[#F59E0B]/10 transition-all active:scale-90"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteRow(item)}
+                                                    className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-red-500/10 transition-all active:scale-90"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
                             )}
                         </tbody>
                     </table>
                 </div>
-
-                {/* ── Pagination Footer ── */}
-                {!loading && filtered.length > ITEMS_PER_PAGE && (
-                    <div className="px-4 py-3 bg-slate-50/50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Showing <span className="font-bold text-slate-700 dark:text-slate-200">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-slate-700 dark:text-slate-200">{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)}</span> of <span className="font-bold">{filtered.length}</span> entries
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-50 transition-colors active:scale-95"
-                            >
-                                Previous
-                            </button>
-                            <div className="flex items-center gap-1">
-                                {[...Array(totalPages)].map((_, i) => {
-                                    const p = i + 1;
-                                    // Logic to show limited page numbers if too many
-                                    if (totalPages > 5 && Math.abs(p - currentPage) > 1 && p !== 1 && p !== totalPages) {
-                                        if (p === 2 || p === totalPages - 1) return <span key={p} className="text-slate-400 px-1">...</span>;
-                                        return null;
-                                    }
-                                    return (
-                                        <button
-                                            key={p}
-                                            onClick={() => setCurrentPage(p)}
-                                            className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${currentPage === p ? 'bg-[#EEAF1C] text-white shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10'}`}
-                                        >
-                                            {p}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-50 transition-colors active:scale-95"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
-
-            {/* ── View Modal ── */}
-            {viewRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-                        
-                        {/* Amazon Style Header Bar */}
-                        <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-                            <div>
-                                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Stock Manifest</h3>
-                                <p className="text-[10px] text-[#EEAF1C] font-bold uppercase tracking-widest mt-0.5">SKU: {viewRow.sku || 'N/A'}</p>
-                            </div>
-                            <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-6 text-left">
-                            <div className="grid grid-cols-2 gap-y-6 gap-x-8">
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Product Name</p>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewRow.product_name || '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Storage Site</p>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewRow.warehouse_name || '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Inventory Health</p>
-                                    <StatusPill status={viewRow.is_virtual ? 'Pending' : (Number(viewRow.quantity_available) <= Number(viewRow.reorder_level || 0) ? 'Low Stock' : 'In Stock')} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Batch / Lot #</p>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewRow.batch_number || 'DEFAULT-00'}</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 dark:bg-black/20 p-5 rounded-xl border border-slate-100 dark:border-white/5 text-center">
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Available Quantity</p>
-                                <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{Number(viewRow.quantity_available).toLocaleString()}</p>
-                                <p className="text-[10px] text-[#EEAF1C] font-bold mt-2 uppercase">Ready for distribution</p>
-                            </div>
-                        </div>
-
-                        <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex justify-end">
-                            <button onClick={() => setViewRow(null)} className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95">
-                                Close Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-5 text-center">
-                            <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                        <div className="p-6 text-center text-left">
+                            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="h-6 w-6 text-red-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Delete Record</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-                                Are you sure? This will remove the stock record <br/><strong className="text-slate-700 dark:text-slate-300">#{deleteRow.sku}</strong>.
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Erase Entry?</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                                Are you sure? This will remove the stock entry for <br/><strong className="text-slate-900 dark:text-white">"{deleteRow.product_name}"</strong>.
                             </p>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-3 text-left">
                                 <button
                                     onClick={() => setDeleteRow(null)}
-                                    disabled={isSubmitting}
-                                    className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors"
+                                    className="px-6 py-2 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={confirmDelete}
-                                    disabled={isSubmitting}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
+                                    className="px-6 py-2 bg-red-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 active:scale-95"
                                 >
-                                    {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Delete'}
+                                    Purge Data
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 }
-

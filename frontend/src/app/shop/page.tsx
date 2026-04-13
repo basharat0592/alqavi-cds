@@ -13,7 +13,7 @@ import { Search, X, LayoutGrid, List, Sliders, ChevronRight, CheckCircle } from 
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { getImageUrl } from '@/lib/utils';
-import { Toast } from '@/components/ui/AmazonStyles';
+import { Toast } from '@/components/ui/QaviStyles';
 import ProductCard from '@/components/ui/ProductCard';
 
 
@@ -97,7 +97,7 @@ function ShopContent() {
                                     <li>
                                         <button
                                             onClick={() => setSelectedCat('')}
-                                            className={`text-sm tracking-tight ${!selectedCat ? 'font-bold text-[#F7CA00]' : 'text-[#007185] hover:text-[#F7CA00] hover:underline'}`}
+                                            className={`text-sm tracking-tight ${!selectedCat ? 'font-bold text-[#F59E0B]' : 'text-[#F59E0B] hover:text-[#F59E0B] hover:underline'}`}
                                         >
                                             Every Item
                                         </button>
@@ -106,7 +106,7 @@ function ShopContent() {
                                         <li key={c}>
                                             <button
                                                 onClick={() => setSelectedCat(c)}
-                                                className={`text-sm tracking-tight ${selectedCat === c ? 'font-bold text-[#F7CA00]' : 'text-[#007185] hover:text-[#F7CA00] hover:underline'}`}
+                                                className={`text-sm tracking-tight ${selectedCat === c ? 'font-bold text-[#F59E0B]' : 'text-[#F59E0B] hover:text-[#F59E0B] hover:underline'}`}
                                             >
                                                 {c}
                                             </button>
@@ -120,7 +120,7 @@ function ShopContent() {
                                 <ul className="space-y-2">
                                     {['Under 2,500', '2,500 – 7,500', '7,500 – 15,000', 'Above 15,000'].map(p => (
                                         <li key={p}>
-                                            <button className="text-sm text-[#007185] hover:text-[#F7CA00] hover:underline tracking-tight">
+                                            <button className="text-sm text-[#F59E0B] hover:text-[#F59E0B] hover:underline tracking-tight">
                                                 {p}
                                             </button>
                                         </li>
@@ -167,7 +167,7 @@ function ShopContent() {
                                 <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                 <h2 className="text-xl font-bold dark:text-white">Empty Selection</h2>
                                 <p className="text-sm text-gray-500 max-w-sm mx-auto mt-2">The curated search axis is zero. Broaden your search parameters or explore the main collection.</p>
-                                <button onClick={() => { setSelectedCat(''); }} className="mt-8 px-8 py-2 bg-[#F7CA00] hover:bg-[#F7CA00] text-white font-bold rounded text-xs uppercase shadow-sm">
+                                <button onClick={() => { setSelectedCat(''); }} className="mt-8 px-8 py-2 bg-[#F59E0B] hover:bg-[#F59E0B] text-white font-bold rounded text-xs uppercase shadow-sm">
                                     Reload Inventory
                                 </button>
                             </div>

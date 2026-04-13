@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { SectionCard } from '@/components/ui/AmazonStyles';
+import { SectionCard } from '@/components/ui/QaviStyles';
 
 /* ── Sales Statements Matrix ── */
 export default function SalesStatementsPage() {
@@ -25,7 +25,7 @@ export default function SalesStatementsPage() {
             {/* ── Header ── */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
+                    <div className="w-16 h-16 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
                         <FileText className="h-8 w-8 text-white" />
                     </div>
                     <div>
@@ -35,7 +35,7 @@ export default function SalesStatementsPage() {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#EEAF1C] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                         <Download className="h-4 w-4" /> Export All Statements
                     </button>
                 </div>
@@ -64,12 +64,12 @@ export default function SalesStatementsPage() {
                         <input 
                             type="text" 
                             placeholder="Search Statement ID, Customer Name..." 
-                            className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold outline-none focus:border-[#EEAF1C] transition-all"
+                            className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold outline-none focus:border-[#F59E0B] transition-all"
                         />
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#EEAF1C] shadow-sm"><Filter className="h-4.5 w-4.5" /></button>
-                        <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#EEAF1C] shadow-sm"><Printer className="h-4.5 w-4.5" /></button>
+                        <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#F59E0B] shadow-sm"><Filter className="h-4.5 w-4.5" /></button>
+                        <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#F59E0B] shadow-sm"><Printer className="h-4.5 w-4.5" /></button>
                     </div>
                 </div>
                 
@@ -96,7 +96,7 @@ export default function SalesStatementsPage() {
                                 { id: 'ST-0038', date: '2026-03-31', name: 'Luxury Scents Pak', count: 8, d: 'Rs. 110,000', c: 'Rs. 110,000', b: 'Rs. 0' },
                             ].map((st, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors text-[11px] font-bold">
-                                    <td className="px-6 py-4 text-[#EEAF1C] uppercase font-black">{st.id}</td>
+                                    <td className="px-6 py-4 text-[#F59E0B] uppercase font-black">{st.id}</td>
                                     <td className="px-6 py-4 text-center text-slate-400">{st.date}</td>
                                     <td className="px-6 py-4 text-slate-900 dark:text-white uppercase tracking-tight">{st.name}</td>
                                     <td className="px-6 py-4 text-slate-500 uppercase">{st.count} Items</td>
@@ -104,7 +104,7 @@ export default function SalesStatementsPage() {
                                     <td className="px-6 py-4 text-right text-emerald-600">{st.c}</td>
                                     <td className="px-6 py-4 text-right">{st.b}</td>
                                     <td className="px-6 py-4">
-                                        <button className="p-1.5 text-slate-400 hover:text-[#EEAF1C] transition-colors"><Download className="h-4 w-4" /></button>
+                                        <button className="p-1.5 text-slate-400 hover:text-[#F59E0B] transition-colors"><Download className="h-4 w-4" /></button>
                                     </td>
                                 </tr>
                             ))}

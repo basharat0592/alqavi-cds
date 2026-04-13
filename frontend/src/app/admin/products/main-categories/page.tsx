@@ -11,8 +11,8 @@ import { mainCategoryService, productService } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
+const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
 const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
 
 export default function MainCategoriesPage() {
@@ -33,6 +33,8 @@ export default function MainCategoriesPage() {
         name: '',
         description: '',
         status: 'active' as 'active' | 'inactive',
+        position: 0,
+        is_visible: true,
         product_ids: [] as string[]
     });
 
@@ -60,6 +62,8 @@ export default function MainCategoriesPage() {
             name: cat.name,
             description: cat.description || '',
             status: cat.status || 'active',
+            position: cat.position || 0,
+            is_visible: cat.is_visible !== false,
             product_ids: (cat.product_details || []).map((p: any) => p.id) || []
         });
         setView('form');
@@ -67,7 +71,7 @@ export default function MainCategoriesPage() {
 
     const handleNew = () => {
         setEditMode(null);
-        setForm({ name: '', description: '', status: 'active', product_ids: [] });
+        setForm({ name: '', description: '', status: 'active', position: 0, is_visible: true, product_ids: [] });
         setView('form');
     };
 
@@ -90,6 +94,8 @@ export default function MainCategoriesPage() {
                 name: form.name,
                 description: form.description,
                 status: form.status,
+                position: form.position,
+                is_visible: form.is_visible,
                 product_ids: form.product_ids
             };
 
@@ -142,7 +148,7 @@ export default function MainCategoriesPage() {
                 <div className="mb-8">
                     <button 
                         onClick={() => setView('list')} 
-                        className="text-sm font-medium text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
+                        className="text-sm font-medium text-slate-500 hover:text-[#F59E0B] transition-colors mb-4 flex items-center gap-1"
                     >
                         <ChevronLeft className="h-4 w-4" /> Back to List
                     </button>
@@ -157,7 +163,7 @@ export default function MainCategoriesPage() {
                         <div className="lg:col-span-1 space-y-6">
                             <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
                                 <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                    <Layers className="h-4 w-4 text-[#EEAF1C]" />
+                                    <Layers className="h-4 w-4 text-[#F59E0B]" />
                                     <h2 className="text-sm font-bold text-slate-800 dark:text-white">Page Details</h2>
                                 </div>
                                 <div className="p-6 space-y-5">
@@ -170,6 +176,32 @@ export default function MainCategoriesPage() {
                                             className={inputCls()}
                                             placeholder="e.g. Skin Care Pro"
                                         />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Position</label>
+                                            <input
+                                                type="number"
+                                                value={form.position}
+                                                onChange={e => setForm({ ...form, position: parseInt(e.target.value) || 0 })}
+                                                className={inputCls()}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className={labelCls}>Visiblity</label>
+                                            <div className="flex items-center h-[42px]">
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="sr-only peer" 
+                                                        checked={form.is_visible}
+                                                        onChange={e => setForm({ ...form, is_visible: e.target.checked })}
+                                                    />
+                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#F59E0B]"></div>
+                                                    <span className="ml-3 text-xs font-medium text-slate-600 dark:text-slate-400">{form.is_visible ? 'Visible' : 'Hidden'}</span>
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="space-y-1">
                                         <label className={labelCls}>Visibility status</label>
@@ -200,10 +232,10 @@ export default function MainCategoriesPage() {
                              <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm h-full flex flex-col">
                                 <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
                                     <div className="flex items-center gap-3">
-                                        <Package className="h-4 w-4 text-[#EEAF1C]" />
+                                        <Package className="h-4 w-4 text-[#F59E0B]" />
                                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">Link Products</h2>
                                     </div>
-                                    <span className="text-xs font-bold text-[#EEAF1C] bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40">
+                                    <span className="text-xs font-bold text-[#F59E0B] bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40">
                                         {form.product_ids.length} selected
                                     </span>
                                 </div>
@@ -214,7 +246,7 @@ export default function MainCategoriesPage() {
                                             value={prodSearch}
                                             onChange={e => setProdSearch(e.target.value)}
                                             placeholder="Filter products to link..."
-                                            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all"
+                                            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] transition-all"
                                         />
                                     </div>
                                 </div>
@@ -226,13 +258,13 @@ export default function MainCategoriesPage() {
                                                 key={p.id}
                                                 type="button"
                                                 onClick={() => toggleProductSelection(p.id)}
-                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left border transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10 border-[#EEAF1C]/30' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-[#EEAF1C]/20'}`}
+                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left border transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10 border-[#F59E0B]/30' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/5 hover:border-[#F59E0B]/20'}`}
                                             >
-                                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#EEAF1C] border-[#EEAF1C]' : 'bg-white dark:bg-white/10 border-slate-300 dark:border-white/20'}`}>
+                                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white dark:bg-white/10 border-slate-300 dark:border-white/20'}`}>
                                                     {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#EEAF1C]' : 'text-slate-700 dark:text-slate-300'}`}>{p.name}</p>
+                                                    <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#F59E0B]' : 'text-slate-700 dark:text-slate-300'}`}>{p.name}</p>
                                                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">SKU: {p.sku}</p>
                                                 </div>
                                             </button>
@@ -254,7 +286,7 @@ export default function MainCategoriesPage() {
                         <button
                             type="submit"
                             disabled={saving}
-                            className="flex items-center gap-2 px-8 py-2.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                            className="flex items-center gap-2 px-8 py-2.5 bg-[#F59E0B] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Save Navbar Page
@@ -277,14 +309,14 @@ export default function MainCategoriesPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={handleNew}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         Add Navbar Page
@@ -300,11 +332,11 @@ export default function MainCategoriesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search categories..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                    <Activity className="h-3.5 w-3.5 text-[#EEAF1C]" />
+                    <Activity className="h-3.5 w-3.5 text-[#F59E0B]" />
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
                         {categories.length} Total Navbar Pages
                     </span>
@@ -317,8 +349,10 @@ export default function MainCategoriesPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Position</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Name</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Linked Products</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Visibility</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Status</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>
                             </tr>
@@ -327,14 +361,14 @@ export default function MainCategoriesPage() {
                             {loading && filtered.length === 0 ? (
                                 Array(6).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={4} className="px-4 py-4">
+                                        <td colSpan={6} className="px-4 py-4">
                                             <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-4 py-20 text-center">
+                                    <td colSpan={6} className="px-4 py-20 text-center">
                                         <Layers className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
                                         <p className="text-sm text-slate-500 dark:text-slate-400">No Navbar Pages found.</p>
                                     </td>
@@ -343,19 +377,29 @@ export default function MainCategoriesPage() {
                                 filtered.map((cat) => (
                                     <tr key={cat.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-4 py-3">
-                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#EEAF1C] transition-colors leading-tight">{cat.name}</p>
+                                            <span className="font-mono text-xs font-bold text-slate-400 group-hover:text-[#F59E0B]">
+                                                {String(cat.position || 0).padStart(2, '0')}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#F59E0B] transition-colors leading-tight">{cat.name}</p>
                                             {cat.description && <p className="text-[10px] text-slate-400 font-medium truncate max-w-[250px] mt-0.5">{cat.description}</p>}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-[#EEAF1C] flex items-center justify-center text-xs font-bold border border-blue-100 dark:border-blue-900/30">
+                                                <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 text-[#F59E0B] flex items-center justify-center text-xs font-bold border border-blue-100 dark:border-blue-900/30">
                                                     {cat.products?.length || cat.product_details?.length || 0}
                                                 </div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Products</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-2 py-0.5 rounded border text-[11px] font-semibold uppercase ${cat.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                                            <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${cat.is_visible !== false ? 'bg-orange-50 dark:bg-orange-500/10 text-[#F59E0B] border-orange-200 dark:border-orange-500/20' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                                                {cat.is_visible !== false ? 'Visible' : 'Hidden'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${cat.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
                                                 {cat.status || 'Active'}
                                             </span>
                                         </td>
@@ -363,7 +407,7 @@ export default function MainCategoriesPage() {
                                             <div className="flex items-center justify-end gap-1">
                                                 <button 
                                                     onClick={() => handleEdit(cat)} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                                    className="p-1.5 text-slate-400 hover:text-[#F59E0B] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
@@ -397,7 +441,7 @@ export default function MainCategoriesPage() {
                         </div>
                         <div className="p-8">
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                                Confirm permanent removal of <span className="text-[#EEAF1C] font-bold">"{deleteItem.name}"</span>?
+                                Confirm permanent removal of <span className="text-[#F59E0B] font-bold">"{deleteItem.name}"</span>?
                                 <br/><span className="text-[10px] text-red-500 font-bold uppercase mt-2 block">System hierarchy may be impacted.</span>
                             </p>
                         </div>

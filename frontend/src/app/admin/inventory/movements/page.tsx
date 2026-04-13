@@ -73,7 +73,7 @@ export default function StockMovementsPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -93,13 +93,13 @@ export default function StockMovementsPage() {
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         placeholder="Search product or reference..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <select
                     value={filterType}
                     onChange={e => setFilterType(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="">All Transactions</option>
                     <option value="Purchase">Purchase</option>
@@ -112,7 +112,7 @@ export default function StockMovementsPage() {
                 <select
                     value={selectedWarehouse}
                     onChange={e => setSelectedWarehouse(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                     <option value="">All Node Locations</option>
                     {warehouses.map(wh => (
@@ -166,7 +166,7 @@ export default function StockMovementsPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-[#EEAF1C] font-semibold">#{m.reference_id || 'ADJ-XXX'}</span>
+                                            <span className="text-[#F59E0B] font-semibold">#{m.reference_id || 'ADJ-XXX'}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <StatusPill type={m.movement_type} />

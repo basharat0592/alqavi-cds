@@ -159,7 +159,7 @@ export default function SupplierSalesRegistry() {
                         </div>
                         <div className="pl-4">
                             <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Count</span>
-                            <span className="text-lg font-black text-[#F7CA00]">{orders.length}</span>
+                            <span className="text-lg font-black text-[#F59E0B]">{orders.length}</span>
                         </div>
                     </div>
                 </div>
@@ -174,7 +174,7 @@ export default function SupplierSalesRegistry() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Filter Registry (Ref ID, Subscriber name...)"
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-700 outline-none focus:border-[#F7CA00] transition-all placeholder:font-medium"
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-700 outline-none focus:border-[#F59E0B] transition-all placeholder:font-medium"
                     />
                 </div>
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
@@ -182,7 +182,7 @@ export default function SupplierSalesRegistry() {
                         <button 
                             key={t} 
                             onClick={() => setFilter(t)}
-                            className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all whitespace-nowrap ${filter === t ? 'bg-[#F7CA00] text-slate-900 border border-[#8a7100]/20' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+                            className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all whitespace-nowrap ${filter === t ? 'bg-[#F59E0B] text-slate-900 border border-[#8a7100]/20' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
                         >
                             {t}
                         </button>
@@ -255,7 +255,7 @@ export default function SupplierSalesRegistry() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-center gap-1.5">
-                                                <button className="p-1.5 text-slate-400 hover:text-[#007185] hover:bg-white rounded border border-transparent hover:border-slate-200 transition-all">
+                                                <button className="p-1.5 text-slate-400 hover:text-[#F59E0B] hover:bg-white rounded border border-transparent hover:border-slate-200 transition-all">
                                                     <Eye className="h-3.5 w-3.5" />
                                                 </button>
                                                 <button 

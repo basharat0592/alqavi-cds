@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 const AmazonButton = ({ children, onClick, loading, variant = "primary", className = "" }: { children: React.ReactNode; onClick?: () => void; loading?: boolean; variant?: "primary" | "secondary"; className?: string }) => {
     const base = "px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all shadow-sm border focus:ring-2 focus:ring-[#e77600] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2";
     const styles = variant === "primary"
-        ? "bg-[#FFD814] hover:bg-[#F7CA00] border-[#FCD200] text-black"
+        ? "bg-[#F59E0B] hover:bg-[#F59E0B] border-[#FCD200] text-black"
         : "bg-white hover:bg-[#F3F3F3] border-[#DDD] text-black";
 
     return (
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                         <h1 className="text-[24px] font-normal text-[#111]">Account Settings</h1>
                         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-2">
                             {navItems.map((item) => (
-                                <button key={item.id} onClick={() => setActiveTab(item.id)} className={`px-4 py-2 text-[13px] font-bold whitespace-nowrap rounded-md transition-all ${activeTab === item.id ? "bg-[#FFD814] border-[#FCD200] text-black shadow-sm" : "bg-white hover:bg-[#F3F3F3] border-transparent text-[#007185]"} border`}>{item.title}</button>
+                                <button key={item.id} onClick={() => setActiveTab(item.id)} className={`px-4 py-2 text-[13px] font-bold whitespace-nowrap rounded-md transition-all ${activeTab === item.id ? "bg-[#F59E0B] border-[#FCD200] text-black shadow-sm" : "bg-white hover:bg-[#F3F3F3] border-transparent text-[#F59E0B]"} border`}>{item.title}</button>
                             ))}
                         </div>
                     </div>
@@ -289,7 +289,7 @@ export default function SettingsPage() {
                                                     const isVisible = sidebarVisibility[item.href] !== false;
                                                     return (
                                                         <div key={item.href} className="flex items-center justify-between group">
-                                                            <Link href={item.href} className={`text-[13.5px] font-medium transition-all hover:text-[#e77600] hover:underline ${!isVisible ? 'text-slate-300 line-through' : 'text-[#007185]'}`}>{item.name}</Link>
+                                                            <Link href={item.href} className={`text-[13.5px] font-medium transition-all hover:text-[#e77600] hover:underline ${!isVisible ? 'text-slate-300 line-through' : 'text-[#F59E0B]'}`}>{item.name}</Link>
                                                             <div className="flex items-center gap-3">
                                                                 <button onClick={() => toggleSidebarItem(item.href)} className={`text-[11px] font-black uppercase tracking-tighter ${isVisible ? 'text-[#e77600]' : 'text-slate-400 opacity-50'}`}>{isVisible ? 'Hide' : 'Show'}</button>
                                                                 <div className={`w-1.5 h-1.5 rounded-full ${isVisible ? 'bg-green-500' : 'bg-slate-200'}`} />

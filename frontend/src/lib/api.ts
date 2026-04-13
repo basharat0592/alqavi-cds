@@ -17,3 +17,4 @@ export { companyService, companyCategoryService } from '../services/company.serv
 export { inventoryService } from '../services/inventory.service';
 export { paymentService, paymentCategoryService } from '../services/payment.service';
 export { purchaseService } from '../services/purchase.service';
+export { salesService } from '../services/sales.service';

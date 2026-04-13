@@ -103,7 +103,7 @@ export default function OrderTrackingPage() {
             {/* Amazon Style Header */}
             <div className="bg-[#232f3e] py-3 px-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => router.back()} className="text-white hover:text-[#F7CA00] flex items-center gap-1 text-sm font-bold transition-colors">
+                    <button onClick={() => router.back()} className="text-white hover:text-[#F59E0B] flex items-center gap-1 text-sm font-bold transition-colors">
                         <ArrowLeft size={16} /> Back
                     </button>
                     <h1 className="text-white text-lg font-bold tracking-tight">Track Package</h1>
@@ -125,7 +125,7 @@ export default function OrderTrackingPage() {
                         <button 
                             type="submit"
                             disabled={loading}
-                            className="px-6 py-2 bg-[#F7CA00] hover:bg-[#f0c14b] border border-[#a88734] rounded text-sm font-medium shadow-[0_1px_0_rgba(255,255,255,0.4)_inset] active:shadow-[0_1px_2px_rgba(0,0,0,0.1)_inset]"
+                            className="px-6 py-2 bg-[#F59E0B] hover:bg-[#1a1a2e] border border-[#a88734] rounded text-sm font-medium shadow-[0_1px_0_rgba(255,255,255,0.4)_inset] active:shadow-[0_1px_2px_rgba(0,0,0,0.1)_inset]"
                         >
                             {loading ? <Loader2 className="animate-spin h-4 w-4" /> : 'Track'}
                         </button>
@@ -147,11 +147,11 @@ export default function OrderTrackingPage() {
                             </div>
                             <div>
                                 <p className="uppercase font-bold text-[10px]">Ship to</p>
-                                <p className="text-[#007185] font-medium mt-0.5 hover:text-[#c7511f] cursor-pointer hover:underline">{order.supplier_name}</p>
+                                <p className="text-[#F59E0B] font-medium mt-0.5 hover:text-[#c7511f] cursor-pointer hover:underline">{order.supplier_name}</p>
                             </div>
                             <div className="ml-auto text-right">
                                 <p className="uppercase font-bold text-[10px]">Order # {order.purchase_number}</p>
-                                <p className="text-[#007185] font-medium mt-0.5 hover:text-[#c7511f] cursor-pointer hover:underline">View balance details</p>
+                                <p className="text-[#F59E0B] font-medium mt-0.5 hover:text-[#c7511f] cursor-pointer hover:underline">View balance details</p>
                             </div>
                         </div>
 
@@ -246,7 +246,7 @@ export default function OrderTrackingPage() {
                                         <button 
                                             onClick={() => handleUpdateStatus('received')}
                                             disabled={updating}
-                                            className="px-8 py-2 bg-[#F7CA00] hover:bg-[#F3A847] border border-[#a88734] rounded text-sm font-bold shadow-sm text-[#111]"
+                                            className="px-8 py-2 bg-[#F59E0B] hover:bg-[#F3A847] border border-[#a88734] rounded text-sm font-bold shadow-sm text-[#111]"
                                         >
                                             {updating ? 'Updating...' : 'Confirm Received'}
                                         </button>
@@ -254,7 +254,7 @@ export default function OrderTrackingPage() {
                                 </div>
 
                                 <div className="text-[11px] text-[#565959] flex items-center gap-2">
-                                    <AlertCircle size={14} className="text-[#EEAF1C]" />
+                                    <AlertCircle size={14} className="text-[#F59E0B]" />
                                     <span>Business procurement protocols active</span>
                                 </div>
                             </div>
@@ -307,7 +307,7 @@ export default function OrderTrackingPage() {
                                         setShowCancelConfirm(false);
                                         handleUpdateStatus('cancelled');
                                     }}
-                                    className="w-full py-2.5 bg-[#F7CA00] hover:bg-[#f0c14b] border border-[#a88734] rounded text-sm font-bold shadow-sm"
+                                    className="w-full py-2.5 bg-[#F59E0B] hover:bg-[#1a1a2e] border border-[#a88734] rounded text-sm font-bold shadow-sm"
                                 >
                                     Confirm Cancellation
                                 </button>

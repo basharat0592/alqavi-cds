@@ -59,7 +59,7 @@ export default function AuthGuard({ children, allowedRoles }: {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
                 <div className="text-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-[#EEAF1C] mx-auto mb-4" />
+                    <Loader2 className="h-10 w-10 animate-spin text-[#F59E0B] mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-slate-400 font-medium">Entering Dashboard...</p>
                 </div>
             </div>

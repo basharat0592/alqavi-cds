@@ -64,14 +64,14 @@ export default function StockAdjustmentsPage() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <Link
                         href="/admin/inventory/adjustments/add"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
                         Log Adjustment
@@ -87,7 +87,7 @@ export default function StockAdjustmentsPage() {
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         placeholder="Search product, SKU or reason..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -137,7 +137,7 @@ export default function StockAdjustmentsPage() {
                                                 <div>
                                                     <p className="font-medium text-slate-800 dark:text-slate-200">{adj.product_name}</p>
                                                     <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                                                        <span className="font-bold text-[#EEAF1C] uppercase">{adj.product_sku || 'SYS-ID'}</span>
+                                                        <span className="font-bold text-[#F59E0B] uppercase">{adj.product_sku || 'SYS-ID'}</span>
                                                         <span>•</span>
                                                         <span>{adj.warehouse_name || 'Global Node'}</span>
                                                     </div>
@@ -159,7 +159,7 @@ export default function StockAdjustmentsPage() {
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex flex-col items-end">
                                                 <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                                                    <User className="h-3 w-3 text-[#EEAF1C]" />
+                                                    <User className="h-3 w-3 text-[#F59E0B]" />
                                                     <span>{adj.user_name || 'Admin'}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5">

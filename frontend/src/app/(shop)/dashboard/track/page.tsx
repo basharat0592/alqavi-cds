@@ -116,7 +116,7 @@ export default function TrackOrderDashboard() {
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Live Tracking</h1>
-                    <p className="text-[10px] font-bold text-[#F7CA00] tracking-[0.2em] uppercase mt-0.5">Real-time order monitoring</p>
+                    <p className="text-[10px] font-bold text-[#F59E0B] tracking-[0.2em] uppercase mt-0.5">Real-time order monitoring</p>
                 </div>
                 <form onSubmit={handleTrack} className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -125,7 +125,7 @@ export default function TrackOrderDashboard() {
                         value={orderNumber}
                         onChange={e => setOrderNumber(e.target.value.toUpperCase())}
                         placeholder="ORD-XXXXX"
-                        className="w-full pl-10 pr-24 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-sm font-bold tracking-widest focus:ring-2 focus:ring-[#F7CA00] outline-none"
+                        className="w-full pl-10 pr-24 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-sm font-bold tracking-widest focus:ring-2 focus:ring-[#F59E0B] outline-none"
                     />
                     <button
                         type="submit"
@@ -189,7 +189,7 @@ export default function TrackOrderDashboard() {
 
                                 <div className="text-right">
                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Order Total</p>
-                                    <p className="text-lg font-black text-[#F7CA00]">PKR {order.total_amount?.toLocaleString()}</p>
+                                    <p className="text-lg font-black text-[#F59E0B]">PKR {order.total_amount?.toLocaleString()}</p>
                                 </div>
                             </div>
                         </div>
@@ -206,7 +206,7 @@ export default function TrackOrderDashboard() {
                                 </p>
                                 <button
                                     onClick={() => { setOrder(null); setOrderNumber(''); }}
-                                    className="px-6 py-2 bg-[#F7CA00] text-slate-900 font-bold rounded-lg text-sm hover:bg-amber-400 transition-all"
+                                    className="px-6 py-2 bg-[#F59E0B] text-slate-900 font-bold rounded-lg text-sm hover:bg-amber-400 transition-all"
                                 >
                                     Track Another Order
                                 </button>
@@ -227,7 +227,7 @@ export default function TrackOrderDashboard() {
                             <div className="relative pt-6 pb-2">
                                 <div className="absolute top-[2.75rem] left-[5%] right-[5%] h-[2px] bg-slate-100" />
                                 <div
-                                    className="absolute top-[2.75rem] left-[5%] h-[2px] bg-[#F7CA00] transition-all duration-1000"
+                                    className="absolute top-[2.75rem] left-[5%] h-[2px] bg-[#F59E0B] transition-all duration-1000"
                                     style={{ width: `${Math.max(0, (statusIndex / 5) * 90)}%` }}
                                 />
                                 <div className="flex justify-between relative">
@@ -240,8 +240,8 @@ export default function TrackOrderDashboard() {
                                                 <div className={`w-10 h-10 rounded-lg shadow-sm flex items-center justify-center transition-all duration-500 ${
                                                     isActive
                                                         ? isCurrent
-                                                            ? 'bg-[#F7CA00] text-white scale-110 ring-4 ring-amber-100 z-10'
-                                                            : 'bg-[#F7CA00] text-white z-10'
+                                                            ? 'bg-[#F59E0B] text-white scale-110 ring-4 ring-amber-100 z-10'
+                                                            : 'bg-[#F59E0B] text-white z-10'
                                                         : 'bg-white text-slate-300 border border-slate-100'
                                                 }`}>
                                                     <Icon className="h-4 w-4" />
@@ -250,7 +250,7 @@ export default function TrackOrderDashboard() {
                                                     {step.label}
                                                 </p>
                                                 {isCurrent && (
-                                                    <span className="mt-1 text-[8px] font-black text-[#F7CA00] uppercase tracking-widest">Current</span>
+                                                    <span className="mt-1 text-[8px] font-black text-[#F59E0B] uppercase tracking-widest">Current</span>
                                                 )}
                                             </div>
                                         );
@@ -297,7 +297,7 @@ export default function TrackOrderDashboard() {
                                 ))}
                                 <div className="pt-2 border-t border-gray-100 flex justify-between mt-2">
                                     <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Total</span>
-                                    <span className="text-sm font-black text-[#F7CA00]">PKR {order.total_amount?.toLocaleString()}</span>
+                                    <span className="text-sm font-black text-[#F59E0B]">PKR {order.total_amount?.toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>

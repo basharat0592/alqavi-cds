@@ -8,7 +8,7 @@ import { Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 const INPUT = (err?: boolean) =>
     `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
-    focus:border-[#F7CA00] focus:ring-4 focus:ring-blue-50 placeholder:text-gray-400
+    focus:border-[#F59E0B] focus:ring-4 focus:ring-blue-50 placeholder:text-gray-400
     ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
 
 const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
@@ -65,7 +65,7 @@ export default function SupplierRegisterPage() {
         <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
             <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
                 <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-2xl text-[#F7CA00] tracking-tighter uppercase">AL-QAVI</span>
+                    <span className="font-extrabold text-2xl text-[#F59E0B] tracking-tighter uppercase">AL-QAVI</span>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Supplier Enrollment</span>
                 </Link>
             </header>
@@ -73,7 +73,7 @@ export default function SupplierRegisterPage() {
             <main className="flex-1 flex flex-col items-center py-12 px-4">
                 <div className="w-full max-w-sm">
                     <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4">
-                        <Link href="/register" className="text-xs text-[#0066c0] hover:text-[#F7CA00] hover:underline flex items-center gap-1 mb-6 text-left">
+                        <Link href="/register" className="text-xs text-[#0066c0] hover:text-[#F59E0B] hover:underline flex items-center gap-1 mb-6 text-left">
                             <ArrowLeft className="h-3 w-3" /> All Options
                         </Link>
                         
@@ -162,7 +162,7 @@ export default function SupplierRegisterPage() {
                             </div>
 
                             <button type="submit" disabled={loading}
-                                className="w-full py-2.5 bg-[#F7CA00] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded text-xs font-black uppercase tracking-widest text-white transition-all mt-6 shadow-lg shadow-blue-500/10 active:scale-[0.98]">
+                                className="w-full py-2.5 bg-[#F59E0B] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded text-xs font-black uppercase tracking-widest text-white transition-all mt-6 shadow-lg shadow-blue-500/10 active:scale-[0.98]">
                                 {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" strokeWidth={3} /> : 'Create Account'}
                             </button>
                         </form>

@@ -83,7 +83,7 @@ export default function SupplierInventory() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search Batch or Product..."
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#F7CA00] transition-all text-sm"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#F59E0B] transition-all text-sm"
                     />
                 </div>
                 <div className="flex gap-2">
@@ -91,7 +91,7 @@ export default function SupplierInventory() {
                         <button 
                             key={t} 
                             onClick={() => setFilter(t)}
-                            className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${filter === t ? 'bg-[#F7CA00] text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+                            className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${filter === t ? 'bg-[#F59E0B] text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
                         >
                             {t}
                         </button>

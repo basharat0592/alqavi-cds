@@ -193,7 +193,7 @@ function ReportsEngineInner() {
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Generate comprehensive operational and financial summaries</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadData} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all shadow-sm">
+                    <button onClick={loadData} className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all shadow-sm">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <div className="h-8 w-px bg-slate-200 dark:bg-white/10 mx-1 hidden sm:block" />
@@ -208,7 +208,7 @@ function ReportsEngineInner() {
                     <button 
                         onClick={() => window.print()}
                         disabled={reportResult.length === 0}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all shadow-sm disabled:opacity-30" 
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] transition-all shadow-sm disabled:opacity-30" 
                         title="Print / Save PDF"
                     >
                         <Printer className="h-4 w-4" />
@@ -226,7 +226,7 @@ function ReportsEngineInner() {
                         <select
                             value={filters.type}
                             onChange={e => setFilters({ ...filters, type: e.target.value as any, subType: '' })}
-                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all cursor-pointer text-slate-800 dark:text-slate-200"
+                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all cursor-pointer text-slate-800 dark:text-slate-200"
                         >
                             <option value="">Select Category...</option>
                             {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
@@ -239,7 +239,7 @@ function ReportsEngineInner() {
                             value={filters.subType}
                             onChange={e => setFilters({ ...filters, subType: e.target.value })}
                             disabled={!filters.type}
-                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all cursor-pointer text-slate-800 dark:text-slate-200 disabled:opacity-40"
+                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all cursor-pointer text-slate-800 dark:text-slate-200 disabled:opacity-40"
                         >
                             <option value="">Select View Type...</option>
                             {filters.type && SUB_OPTIONS[filters.type]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -257,7 +257,7 @@ function ReportsEngineInner() {
                         <input
                             type="date" value={filters.dateFrom}
                             onChange={e => setFilters({ ...filters, dateFrom: e.target.value })}
-                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all font-medium text-slate-800 dark:text-slate-200"
+                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all font-medium text-slate-800 dark:text-slate-200"
                         />
                     </div>
 
@@ -266,7 +266,7 @@ function ReportsEngineInner() {
                         <input
                             type="date" value={filters.dateTo}
                             onChange={e => setFilters({ ...filters, dateTo: e.target.value })}
-                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all font-medium text-slate-800 dark:text-slate-200"
+                            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all font-medium text-slate-800 dark:text-slate-200"
                         />
                     </div>
 
@@ -274,7 +274,7 @@ function ReportsEngineInner() {
                         <button
                             onClick={generateReport}
                             disabled={generating || !filters.subType}
-                            className="w-full h-[38px] bg-[#EEAF1C] hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                            className="w-full h-[38px] bg-[#F59E0B] hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                         >
                             {generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
                             Generate Report
@@ -291,7 +291,7 @@ function ReportsEngineInner() {
                             Total Records: <span className="font-semibold">{reportResult.length} Results</span>
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Total Valuation: <span className="text-[#EEAF1C] font-bold">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.total_amount || r.price || 0), 0))}</span>
+                            Total Valuation: <span className="text-[#F59E0B] font-bold">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.total_amount || r.price || 0), 0))}</span>
                         </p>
                     </div>
 
@@ -311,7 +311,7 @@ function ReportsEngineInner() {
                                     {reportResult.map((row, idx) => (
                                         <tr key={idx} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                             <td className="px-4 py-3">
-                                                <span className="text-[#EEAF1C] font-medium text-sm">#{row.purchase_number || row.order_number || row.id.slice(0, 8)}</span>
+                                                <span className="text-[#F59E0B] font-medium text-sm">#{row.purchase_number || row.order_number || row.id.slice(0, 8)}</span>
                                             </td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-sm">
                                                 {formatDate(row.created_at || row.order_date)}

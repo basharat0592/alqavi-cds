@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { SectionCard } from '@/components/ui/AmazonStyles';
+import { SectionCard } from '@/components/ui/QaviStyles';
 
 /* ── Stock Adjustments Audit Page ── */
 export default function StockAdjustmentsReportPage() {
@@ -26,7 +26,7 @@ export default function StockAdjustmentsReportPage() {
             {/* Header */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
+                    <div className="w-16 h-16 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
                         <Boxes className="h-8 w-8 text-white" />
                     </div>
                     <div>
@@ -36,7 +36,7 @@ export default function StockAdjustmentsReportPage() {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#EEAF1C] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                         <Download className="h-4 w-4" /> Export Adjustment Log
                     </button>
                 </div>
@@ -68,9 +68,9 @@ export default function StockAdjustmentsReportPage() {
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Adjustment Ledger</h3>
                     <div className="flex items-center gap-3">
                         <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
-                            <button className="px-4 py-1.5 text-[9px] font-black uppercase bg-white dark:bg-white/10 text-[#EEAF1C] rounded-lg shadow-sm border border-slate-200 dark:border-white/10">All Logs</button>
-                            <button className="px-4 py-1.5 text-[9px] font-black uppercase text-slate-400 hover:text-[#EEAF1C]">Damaged</button>
-                            <button className="px-4 py-1.5 text-[9px] font-black uppercase text-slate-400 hover:text-[#EEAF1C]">Shortage</button>
+                            <button className="px-4 py-1.5 text-[9px] font-black uppercase bg-white dark:bg-white/10 text-[#F59E0B] rounded-lg shadow-sm border border-slate-200 dark:border-white/10">All Logs</button>
+                            <button className="px-4 py-1.5 text-[9px] font-black uppercase text-slate-400 hover:text-[#F59E0B]">Damaged</button>
+                            <button className="px-4 py-1.5 text-[9px] font-black uppercase text-slate-400 hover:text-[#F59E0B]">Shortage</button>
                         </div>
                     </div>
                 </div>
@@ -96,7 +96,7 @@ export default function StockAdjustmentsReportPage() {
                                 { id: 'ADJ-8808', date: '2026-03-31', name: 'Night Serum (Advanced)', type: 'Damaged', q: '-1', r: 'Glass breakage during shelving' },
                             ].map((adj, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors text-[11px] font-bold">
-                                    <td className="px-6 py-4 text-[#EEAF1C] uppercase font-black">{adj.id}</td>
+                                    <td className="px-6 py-4 text-[#F59E0B] uppercase font-black">{adj.id}</td>
                                     <td className="px-6 py-4 text-slate-400">{adj.date}</td>
                                     <td className="px-6 py-4 text-slate-900 dark:text-white uppercase tracking-tight">{adj.name}</td>
                                     <td className="px-6 py-4">
@@ -107,7 +107,7 @@ export default function StockAdjustmentsReportPage() {
                                     <td className={`px-6 py-4 text-center font-black ${adj.q.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'}`}>{adj.q}</td>
                                     <td className="px-6 py-4 text-slate-500 italic max-w-[200px] truncate">{adj.r}</td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="text-[#EEAF1C] hover:underline flex items-center gap-1 justify-end">Audit <Info className="h-3 w-3" /></button>
+                                        <button className="text-[#F59E0B] hover:underline flex items-center gap-1 justify-end">Audit <Info className="h-3 w-3" /></button>
                                     </td>
                                 </tr>
                             ))}

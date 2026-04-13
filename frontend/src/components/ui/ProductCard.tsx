@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Star, ShoppingCart, Eye, Heart, Check, Package } from 'lucide-react';
+import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus } from 'lucide-react';
+import { useCart } from "@/context/CartContext";
 
 interface ProductCardProps {
     id?: string;
     title: string;
+    description?: string;
     image?: string;
     rating?: number;
     reviews?: number;
@@ -14,6 +16,7 @@ interface ProductCardProps {
     originalPrice?: number;
     category?: string;
     badge?: string;
+    batch?: string;
     stock?: number;
     onAddToCart?: (qty: number) => void;
     onWishlist?: () => void;
@@ -22,6 +25,7 @@ interface ProductCardProps {
 export default function ProductCard({
     id = '#',
     title,
+    description,
     image,
     rating = 4.5,
     reviews = 12,
@@ -29,12 +33,16 @@ export default function ProductCard({
     originalPrice,
     category = 'Cosmetic',
     badge,
+    batch,
     stock,
     onAddToCart,
     onWishlist,
 }: ProductCardProps) {
-    const [added, setAdded] = useState(false);
+    const { items, addToCart, updateQuantity } = useCart();
     const [wishlisted, setWishlisted] = useState(false);
+
+    const cartItem = items.find(i => String(i.id) === String(id));
+    const quantityInCart = cartItem?.quantity || 0;
 
     const discount = originalPrice && originalPrice > price
         ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -42,10 +50,12 @@ export default function ProductCard({
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (added) return;
-        setAdded(true);
         onAddToCart?.(1); // Default to 1 unit
-        setTimeout(() => setAdded(false), 2500);
+    };
+
+    const handleUpdateQuantity = (e: React.MouseEvent, delta: number) => {
+        e.preventDefault();
+        updateQuantity(id, quantityInCart + delta);
     };
 
     const handleWishlist = (e: React.MouseEvent) => {
@@ -58,17 +68,22 @@ export default function ProductCard({
         Array.from({ length: 5 }).map((_, i) => (
             <Star
                 key={i}
-                className={`h-3 w-3 ${i < Math.floor(r) ? 'fill-[#EEAF1C] text-[#EEAF1C]' : i < r ? 'fill-[#EEAF1C]/50 text-[#EEAF1C]' : 'fill-gray-200 text-gray-200'}`}
+                className={`h-3 w-3 ${i < Math.floor(r) ? 'fill-[#F59E0B] text-[#F59E0B]' : i < r ? 'fill-[#F59E0B]/50 text-[#F59E0B]' : 'fill-gray-200 text-gray-200'}`}
             />
         ));
 
     return (
-        <div className="group relative bg-white dark:bg-[#1a252f] rounded-2xl border border-gray-100 dark:border-white/5 hover:border-[#EEAF1C]/30 hover:shadow-xl hover:shadow-[#EEAF1C]/8 transition-all duration-400 overflow-hidden flex flex-col">
+        <div className="group relative bg-white dark:bg-[#1a252f] rounded-2xl border border-gray-100 dark:border-white/5 hover:border-[#F59E0B]/30 hover:shadow-xl hover:shadow-[#F59E0B]/8 transition-all duration-400 overflow-hidden flex flex-col">
 
             {/* Badges Row */}
             <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+                {batch && (
+                    <span className="px-2.5 py-1 bg-[#F59E0B] text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md">
+                        {batch}
+                    </span>
+                )}
                 {badge && (
-                    <span className="px-2.5 py-1 bg-[#EEAF1C] text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md">
+                    <span className="px-2.5 py-1 bg-[#131921] text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md border border-white/10">
                         {badge}
                     </span>
                 )}
@@ -103,11 +118,11 @@ export default function ProductCard({
             </button>
 
             {/* Image Area */}
-            <Link href={`/product/${id}`} className="block relative overflow-hidden bg-gray-50 dark:bg-white/[0.03]" style={{ aspectRatio: '4/3' }}>
+            <Link href={`/product/${id}`} className="block relative overflow-hidden bg-gray-100 dark:bg-white/[0.03]" style={{ aspectRatio: '4/3' }}>
                 <img
-                    src={image || 'https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?q=80&w=600&auto=format&fit=crop'}
+                    src={image || '/images/logo.png'}
                     alt={title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-700"
                 />
                 {/* Quick View Overlay */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-400 flex items-center justify-center">
@@ -122,7 +137,7 @@ export default function ProductCard({
 
                 {/* Category + Rating */}
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-[9px] font-black text-[#EEAF1C] uppercase tracking-[0.18em]">{category}</span>
+                    <span className="text-[9px] font-black text-[#F59E0B] uppercase tracking-[0.18em]">{category}</span>
                     <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-0.5">{renderStars(rating)}</div>
                         <span className="text-[9px] font-black text-slate-400 dark:text-white/30">({reviews})</span>
@@ -130,11 +145,18 @@ export default function ProductCard({
                 </div>
 
                 {/* Title */}
-                <Link href={`/product/${id}`} className="block mb-3">
-                    <h3 className="text-sm font-black text-gray-900 dark:text-white line-clamp-2 group-hover:text-[#EEAF1C] transition-colors tracking-tight leading-snug">
+                <Link href={`/product/${id}`} className="block mb-1">
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white line-clamp-1 group-hover:text-[#F59E0B] transition-colors tracking-tight leading-snug">
                         {title}
                     </h3>
                 </Link>
+
+                {/* Description */}
+                {description && (
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 leading-relaxed">
+                        {description}
+                    </p>
+                )}
 
                 {/* Spacer */}
                 <div className="flex-1" />
@@ -145,7 +167,7 @@ export default function ProductCard({
                         <p className="text-[8px] text-slate-400 dark:text-white/25 font-black uppercase tracking-[0.2em] mb-0.5">Price</p>
                         <div className="flex items-baseline gap-2">
                             <p className="text-lg font-black text-gray-900 dark:text-white tracking-tighter leading-none">
-                                Rs.{price.toLocaleString()}
+                                Rs.{(price || 0).toLocaleString()}
                             </p>
                             {originalPrice && originalPrice > price && (
                                 <p className="text-xs text-slate-400 dark:text-white/25 font-bold line-through leading-none">
@@ -164,31 +186,46 @@ export default function ProductCard({
                 </div>
 
                 {/* Add to Cart Button */}
-                <button
-                    onClick={handleAddToCart}
-                    disabled={stock === 0}
-                    className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all duration-300 border
-                        ${added
-                            ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20'
-                            : stock === 0
-                                ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/20 cursor-not-allowed'
-                                : 'bg-[#131921] dark:bg-white/10 border-[#131921] dark:border-white/10 text-white hover:bg-[#EEAF1C] hover:border-[#EEAF1C] hover:shadow-lg hover:shadow-[#EEAF1C]/20 active:scale-95'
-                        }`}
-                >
-                    {added ? (
-                        <>
-                            <Check className="h-3.5 w-3.5 animate-in zoom-in duration-300" />
-                            Added!
-                        </>
-                    ) : stock === 0 ? (
-                        'Out of Stock'
+                <div className="relative h-10">
+                    {quantityInCart === 0 ? (
+                        <button
+                            onClick={handleAddToCart}
+                            disabled={stock === 0}
+                            className={`w-full h-full rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all duration-300 border
+                                ${stock === 0
+                                    ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/20 cursor-not-allowed'
+                                    : 'bg-[#131921] dark:bg-white/10 border-[#131921] dark:border-white/10 text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] hover:shadow-lg hover:shadow-[#F59E0B]/20 active:scale-95'
+                                }`}
+                        >
+                            {stock === 0 ? (
+                                'Out of Stock'
+                            ) : (
+                                <>
+                                    <ShoppingCart className="h-3.5 w-3.5" />
+                                    Add to Cart
+                                </>
+                            )}
+                        </button>
                     ) : (
-                        <>
-                            <ShoppingCart className="h-3.5 w-3.5" />
-                            Add to Cart
-                        </>
+                        <div className="w-full h-full bg-[#F59E0B] rounded-xl flex items-center justify-between px-2 text-white animate-in zoom-in duration-300 overflow-hidden shadow-lg shadow-[#F59E0B]/20">
+                            <button
+                                onClick={(e) => handleUpdateQuantity(e, -1)}
+                                title="Decrease"
+                                className="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
+                            >
+                                <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="text-[11px] font-black">{quantityInCart} in Cart</span>
+                            <button
+                                onClick={(e) => handleUpdateQuantity(e, 1)}
+                                title="Increase"
+                                className="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </button>
+                        </div>
                     )}
-                </button>
+                </div>
             </div>
         </div>
     );

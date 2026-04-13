@@ -20,7 +20,7 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
 const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
     <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-[#EEAF1C]" />
+            <Icon className="h-4 w-4 text-[#F59E0B]" />
             <div>
                 <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
                 {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
@@ -62,7 +62,7 @@ export default function PermissionsPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Key className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -82,12 +82,12 @@ export default function PermissionsPage() {
                 {/* Filters */}
                 <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
                     <div className="relative flex-1 group w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F59E0B] transition-colors" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search permission code or description..."
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all font-medium"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all font-medium"
                         />
                     </div>
                 </div>
@@ -123,7 +123,7 @@ export default function PermissionsPage() {
                                         <tr key={p.id} className="group hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 bg-blue-50 dark:bg-blue-900/10 text-[#EEAF1C] rounded-lg flex items-center justify-center font-black text-[10px] group-hover:bg-[#EEAF1C] group-hover:text-white transition-all">
+                                                    <div className="h-8 w-8 bg-blue-50 dark:bg-blue-900/10 text-[#F59E0B] rounded-lg flex items-center justify-center font-black text-[10px] group-hover:bg-[#F59E0B] group-hover:text-white transition-all">
                                                         P
                                                     </div>
                                                     <div>
@@ -140,7 +140,7 @@ export default function PermissionsPage() {
                                                 </code>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="inline-block px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#EEAF1C] text-[10px] font-bold uppercase tracking-tight">
+                                                <span className="inline-block px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#F59E0B] text-[10px] font-bold uppercase tracking-tight">
                                                     {p.category}
                                                 </span>
                                             </td>

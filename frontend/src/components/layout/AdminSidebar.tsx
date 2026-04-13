@@ -116,38 +116,38 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
     };
 
     return (
-        <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-[#232F3E] h-screen flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-xl border-r border-[#1a2b3c]`}>
+        <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-[#1a1a2e] h-screen flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-xl border-r border-[#1a1a2e]`}>
 
-            {/* ── Amazon Header Area ── */}
-            <div className={`px-4 py-6 flex items-center ${isCollapsed ? 'flex-col gap-4' : 'justify-between'} border-b border-[#37475a]`}>
+            {/* ── Al-Qavi Header Area ── */}
+            <div className={`px-4 py-6 flex items-center ${isCollapsed ? 'flex-col gap-4' : 'justify-between'} border-b border-white/5`}>
                 {!isCollapsed && (
                     <Link href="/admin/dashboard" className="flex flex-col group">
-                        <span className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-widest leading-none mb-1">Administrative</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Administrative</span>
                         <h1 className="text-white font-black text-sm tracking-tight flex items-center gap-1.5 uppercase leading-none">
-                            AL-QAVI <span className="text-[#FF9900]">CONSOLE</span>
+                            AL-QAVI <span className="text-[#F59E0B]">CONSOLE</span>
                         </h1>
                     </Link>
                 )}
                 {isCollapsed && (
-                    <div className="w-8 h-8 bg-[#FF9900] rounded flex items-center justify-center font-black text-[#111] text-xs">
+                    <div className="w-8 h-8 bg-[#F59E0B] rounded flex items-center justify-center font-black text-[#111] text-xs">
                         A
                     </div>
                 )}
                 <button
                     onClick={onToggle}
-                    className="text-[#A1A1AA] hover:text-white transition-colors p-1"
+                    className="text-slate-400 hover:text-white transition-colors p-1"
                     title={isCollapsed ? 'Expand' : 'Collapse'}
                 >
                     {isCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
                 </button>
             </div>
 
-            {/* ── Amazon Vertical Navigation ── */}
+            {/* ── Navigation ── */}
             <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
                 {menuGroups.map((group, gIdx) => (
                     <div key={group.label} className={gIdx !== 0 ? "mt-4" : ""}>
                         {!isCollapsed && (
-                            <h3 className="px-6 text-[11px] font-bold text-[#A1A1AA] uppercase tracking-widest mb-2 opacity-60">
+                            <h3 className="px-6 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                                 {group.label}
                             </h3>
                         )}
@@ -158,19 +158,18 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                                     <Link key={item.href} href={item.href}
                                         className={`group relative flex items-center gap-3 px-6 py-2 transition-all
                                             ${active
-                                                ? 'bg-[#37475a] text-white font-bold border-l-4 border-[#FF9900]'
-                                                : 'text-[#E8E8E8] hover:bg-[#37475a] hover:text-white'}`}>
+                                                ? 'bg-white/5 text-white font-bold border-l-4 border-[#F59E0B]'
+                                                : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
 
-                                        <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#FF9900]' : 'text-[#A1A1AA] group-hover:text-white'}`} />
+                                        <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#F59E0B]' : 'text-slate-400 group-hover:text-white'}`} />
 
                                         {!isCollapsed && (
                                             <span className="text-[13px] tracking-tight whitespace-nowrap overflow-hidden">
                                                 {item.name}
                                             </span>
                                         )}
-
                                         {isCollapsed && (
-                                            <div className="absolute left-full ml-4 px-3 py-1 bg-[#232F3E] text-white text-[12px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl border border-[#37475a]">
+                                            <div className="absolute left-full ml-4 px-3 py-1 bg-[#1a1a2e] text-white text-[12px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl border border-white/5">
                                                 {item.name}
                                             </div>
                                         )}
@@ -182,11 +181,11 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 ))}
             </nav>
 
-            {/* ── Amazon Footer Controls ── */}
-            <div className="mt-auto border-t border-[#37475a] bg-[#1a2b3c] p-3">
+            {/* ── Footer Controls ── */}
+            <div className="mt-auto border-t border-white/5 bg-black/10 p-3">
                 <Link href="/admin/settings"
                     className={`flex items-center gap-3 px-4 py-2 text-[12px] transition-all
-                        ${isActive('/admin/settings') ? 'text-white font-bold' : 'text-[#A1A1AA] hover:text-white'}`}>
+                        ${isActive('/admin/settings') ? 'text-white font-bold' : 'text-slate-400 hover:text-white'}`}>
                     <Settings size={18} />
                     {!isCollapsed && <span>Settings</span>}
                 </Link>

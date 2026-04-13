@@ -4,268 +4,198 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Plus, Search, Edit, Trash2, Package,
-    RefreshCw, Filter, Barcode, Hash,
-    X, AlertTriangle, CheckCircle, Building2, Activity, ShieldCheck, Loader2, ChevronLeft, ChevronRight, User
+    RefreshCw, Filter, Image as ImageIcon,
+    X, AlertTriangle, CheckCircle, Building2, Activity, ShieldCheck, Loader2, ChevronLeft, ChevronRight, Truck, MapPin
 } from 'lucide-react';
-import { productService, companyService, Product, CompanyInfo } from '@/lib/api';
+import { productService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 
 export default function ProductsPage() {
     const router = useRouter();
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [category, setCategory] = useState('');
-    const [selectedCompany, setSelectedCompany] = useState('');
-    const [selectedSupplier, setSelectedSupplier] = useState('');
-    const [categories, setCategories] = useState<any[]>([]);
-    const [companies, setCompanies] = useState<CompanyInfo[]>([]);
-    const [suppliers, setSuppliers] = useState<any[]>([]);
-    const [deleteProd, setDeleteProd] = useState<Product | null>(null);
+    const [deleteProd, setDeleteProd] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [search, category, selectedCompany, selectedSupplier]);
+    const itemsPerPage = 10;
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [prodData, catData, compData, suppData] = await Promise.all([
-                productService.getAll({ all_items: 'true', include_supplier_only: 'true', include_pending: 'true' } as any),
-                productService.getCategories(),
-                companyService.getAll(),
-                companyService.getSuppliers()
-            ]);
-
-            const items = Array.isArray(prodData) ? prodData : (prodData as any).results || [];
-            setProducts(items);
-            setCategories((catData || []).filter((c: any) => c.status === 'active'));
-            setCompanies((compData || []).filter((c: any) => c.is_active !== false));
-            setSuppliers(suppData || []);
+            const data = await productService.getAll();
+            setProducts(data || []);
         } catch (error) {
-            console.error('Failed to load products:', error);
+            console.error('Failed to sync registry:', error);
+            toast.error("Registry sync failed");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    if (loading) return <PageLoader />;
+    useEffect(() => { loadData(); }, []);
 
     const handleDelete = async () => {
         if (!deleteProd) return;
         setDeleting(true);
         try {
             await productService.delete(deleteProd.id);
-            setProducts(prev => prev.filter(p => p.id !== deleteProd.id));
-            toast.success('Product de-registered successfully.');
+            toast.success('Product purged from registry');
+            setDeleteProd(null);
+            loadData();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to remove product from registry.');
+            toast.error('Purge failed');
         } finally {
             setDeleting(false);
             setDeleteProd(null);
         }
     };
 
-    const filtered = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-            (p.sku || '').toLowerCase().includes(search.toLowerCase());
-        const matchesCat = category ? p.category?.toString() === category : true;
-        const matchesComp = selectedCompany ? (typeof p.company === 'object' ? p.company.id?.toString() === selectedCompany : p.company?.toString() === selectedCompany) : true;
-        const matchesSupp = selectedSupplier ? (typeof p.supplier === 'object' ? p.supplier.id?.toString() === selectedSupplier : p.supplier?.toString() === selectedSupplier) : true;
-        return matchesSearch && matchesCat && matchesComp && matchesSupp;
-    });
+    const filtered = products.filter(p =>
+        (p.product_name?.toLowerCase().includes(search.toLowerCase())) ||
+        (p.supplier_name?.toLowerCase().includes(search.toLowerCase())) ||
+        (p.warehouse_name?.toLowerCase().includes(search.toLowerCase()))
+    );
 
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
     const paginatedProducts = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+
+    if (loading && products.length === 0) return <PageLoader />;
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans text-left text-left">
             
             {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">All Products</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage and track your entire inventory</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/10">
+                <div className="text-left">
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Product Registry</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-bold">Manage derived catalog items for storefront distribution</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all font-bold"
-                        title="Refresh"
+                        className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] transition-all"
+                        title="Sync Registry"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={() => router.push('/admin/products/add')}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#F59E0B] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-yellow-600 transition-all shadow-xl shadow-yellow-500/20 active:scale-95"
                     >
                         <Plus className="h-4 w-4" />
-                        Add Product
+                        New Registry
                     </button>
                 </div>
             </div>
 
             {/* ── Filters Bar ── */}
-            <div className="flex flex-col lg:flex-row gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
                 <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Search products by name or SKU..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        placeholder="Search by product, supplier, or location..."
+                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:border-[#F59E0B] transition-all font-medium"
                     />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:flex items-center gap-2">
-                    <select
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
-                    >
-                        <option value="">All Categories</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-
-                    <select
-                        value={selectedCompany}
-                        onChange={(e) => setSelectedCompany(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
-                    >
-                        <option value="">All Manufacturers</option>
-                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-
-                    <select
-                        value={selectedSupplier}
-                        onChange={(e) => setSelectedSupplier(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300"
-                    >
-                        <option value="">All Suppliers</option>
-                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name || s.company_name}</option>)}
-                    </select>
-
-                    <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                        <Activity className="h-3.5 w-3.5 text-[#EEAF1C]" />
-                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
-                            {filtered.length} Products Found
-                        </span>
-                    </div>
                 </div>
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto text-left">
+                    <table className="w-full text-left font-sans">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Product Details</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap uppercase tracking-wider">Uploaded By</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap uppercase tracking-wider">Pricing</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap uppercase tracking-wider">Identifiers</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>
+                            <tr className="bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Product & Identity</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing & Margin</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Batch Status</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Inventory</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                            {loading && filtered.length === 0 ? (
-                                Array(6).fill(0).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        <td colSpan={5} className="px-4 py-4">
-                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : filtered.length === 0 ? (
+                            {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center">
-                                        <Package className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">No assets identified in the global registry.</p>
+                                    <td colSpan={5} className="px-6 py-24 text-center">
+                                        <Package className="h-12 w-12 text-slate-200 dark:text-white/10 mx-auto mb-3" />
+                                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Void Registry</p>
                                     </td>
                                 </tr>
                             ) : (
                                 paginatedProducts.map(prod => (
-                                    <tr key={prod.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#EEAF1C]/30 transition-colors">
-                                                    {(prod.image_url || prod.image) ? (
-                                                        <img src={getImageUrl((prod.image_url || prod.image || '') as string) || undefined} alt="" className="max-w-full max-h-full object-contain p-1" />
+                                    <tr key={prod.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-all group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#F59E0B]/30 transition-all">
+                                                    {prod.image ? (
+                                                        <img src={prod.image} alt="" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <Package className="h-5 w-5 text-slate-300" />
+                                                        <ImageIcon className="h-5 w-5 text-slate-200" />
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-[#EEAF1C] transition-colors leading-tight">{prod.name}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] text-[#EEAF1C] font-bold uppercase">{prod.company_name || 'Generic'}</span>
-                                                        <span className="text-slate-300 dark:text-slate-600 font-bold text-[8px]">•</span>
-                                                        <span className="text-[10px] text-slate-400 font-bold uppercase">{prod.category_name || 'Standard'}</span>
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-1 font-bold">
-                                                        <div className="flex items-center gap-1">
-                                                            <div className={`h-1.5 w-1.5 rounded-full ${ (prod.quantity_in_stock || 0) > 10 ? 'bg-emerald-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                                            <span className={`text-[10px] ${ (prod.quantity_in_stock || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
-                                                                {prod.quantity_in_stock || 0} in stock
+                                                <div className="text-left">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{prod.product_name}</span>
+                                                        {prod.badge && (
+                                                            <span className="px-1.5 py-0.5 bg-[#F59E0B]/10 text-[#F59E0B] text-[8px] font-black rounded uppercase tracking-widest">
+                                                                {prod.badge}
                                                             </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-1 opacity-70">
+                                                        <div className="flex items-center gap-1">
+                                                            <Truck className="h-3 w-3 text-slate-400" />
+                                                            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">{prod.supplier_name}</span>
                                                         </div>
-                                                        <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase border ${prod.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-                                                            {prod.status}
-                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            <MapPin className="h-3 w-3 text-slate-400" />
+                                                            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">{prod.warehouse_name}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="inline-flex flex-col items-center gap-1">
-                                                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight shadow-sm border ${
-                                                    prod.created_by_name?.toLowerCase().includes('supplier') 
-                                                    ? 'bg-[#EEAF1C]/10 text-[#EEAF1C] border-[#EEAF1C]/20' 
-                                                    : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
-                                                }`}>
-                                                    <User size={12} />
-                                                    {prod.created_by_name || 'System'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="inline-flex flex-col items-center">
-                                                <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Rs. {Number(prod.price).toLocaleString()}</span>
-                                                <span className="text-[9px] text-slate-400 font-bold uppercase opacity-70">Price Card</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex flex-col gap-1 items-center">
-                                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{prod.sku || 'N/A'}</span>
-                                                {prod.barcode && (
-                                                    <span className="text-[9px] text-slate-400 font-bold opacity-60 flex items-center gap-1">
-                                                        <Barcode size={10} /> {prod.barcode}
+                                        <td className="px-6 py-4">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between gap-4 w-fit">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Retail:</span>
+                                                    <span className="text-sm font-black text-slate-900 dark:text-white">Rs. {Number(prod.selling_price).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-4 w-fit opacity-60">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Profit:</span>
+                                                    <span className={`text-[10px] font-black ${prod.profit_margin > 20 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                        {Number(prod.profit_margin).toFixed(1)}%
                                                     </span>
-                                                )}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                             <div className="flex items-center justify-end gap-1">
-                                                <button 
-                                                    onClick={() => router.push(`/admin/products/${prod.id}`)} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${prod.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-slate-100 text-slate-500 dark:bg-white/5'}`}>
+                                                {prod.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{Number(prod.total_quantity).toLocaleString()}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Units Avail</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex justify-end items-center gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => router.push(`/admin/products/${prod.id}`)}
+                                                    className="p-2 rounded-xl text-slate-500 hover:text-[#F59E0B] hover:bg-slate-100 dark:hover:bg-[#F59E0B]/10 transition-all"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button 
-                                                    onClick={() => setDeleteProd(prod)} 
-                                                    className="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                                                <button
+                                                    onClick={() => setDeleteProd(prod)}
+                                                    className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -279,61 +209,58 @@ export default function ProductsPage() {
                 </div>
 
                 {/* ── Pagination Hub ── */}
-                {!loading && filtered.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] gap-4 font-bold">
-                        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                            Page {(currentPage - 1) * itemsPerPage + 1} — {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} products
-                        </div>
+                {filtered.length > itemsPerPage && (
+                    <div className="px-6 py-4 bg-slate-50/50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest uppercase">
+                            Registry Page <span className="text-slate-900 dark:text-white">{currentPage}</span> of {totalPages}
+                        </p>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 transition-all"
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-white dark:hover:bg-white/5 transition-all"
                             >
-                                <ChevronLeft className="h-4 w-4" />
+                                Previous
                             </button>
-                            <span className="text-[11px] text-slate-900 dark:text-white uppercase tracking-widest px-3 py-1 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg">
-                                Page {currentPage} / {totalPages}
-                            </span>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-white/10 disabled:opacity-30 transition-all"
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-white dark:hover:bg-white/5 transition-all"
                             >
-                                <ChevronRight className="h-4 w-4" />
+                                Next
                             </button>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Protocol Overlay (Modals) */}
+            {/* ── Delete Modal ── */}
             {deleteProd && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 font-bold">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
-                                <h3 className="text-sm text-slate-800 dark:text-white uppercase tracking-wider">Delete Product</h3>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-[#1a252f] rounded-2xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 text-center text-left text-left">
+                            <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-5">
+                                <AlertTriangle className="h-7 w-7 text-red-600" />
                             </div>
-                            <button onClick={() => setDeleteProd(null)} className="p-1 text-slate-400">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <div className="p-8">
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                                Are you sure you want to delete <span className="text-[#EEAF1C]">"{deleteProd.name}"</span>? This action cannot be undone.
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Erase Asset?</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+                                Permanent registry removal for <br/><strong className="text-slate-900 dark:text-white">"{deleteProd.product_name}"</strong>.
                             </p>
-                        </div>
-                        <div className="px-6 py-4 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3 bg-slate-50/50 dark:bg-white/5">
-                            <button onClick={() => setDeleteProd(null)} disabled={deleting} className="px-4 py-2 text-sm text-slate-600 disabled:opacity-50">Cancel</button>
-                            <button 
-                                onClick={handleDelete} 
-                                disabled={deleting} 
-                                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {deleting && <Loader2 className="h-4 w-4 animate-spin" />} Confirm Delete
-                            </button>
+                            <div className="flex justify-end gap-3 text-left">
+                                <button
+                                    onClick={() => setDeleteProd(null)}
+                                    className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="px-8 py-2.5 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-500/20 active:scale-95 disabled:opacity-50"
+                                >
+                                    {deleting ? 'Purging...' : 'Purge Asset'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -341,4 +268,3 @@ export default function ProductsPage() {
         </div>
     );
 }
-

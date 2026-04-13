@@ -31,42 +31,42 @@ export default function CustomerDashboard() {
             desc: "Track, return, or buy things again",
             icon: Package,
             href: "/dashboard/orders",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Login & Security",
             desc: "Edit login, name, and mobile number",
             icon: ShieldCheck,
             href: "/dashboard/profile",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Track Order",
             desc: "View real-time status of your shipments",
             icon: Truck,
-            href: "/dashboard/track",
-            color: "text-[#F7CA00]"
+            href: "/tracking",
+            color: "text-[#F59E0B]"
         },
         {
             title: "Your Wishlist",
             desc: "View and manage items saved for later",
             icon: Heart,
             href: "/dashboard/wishlist",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Store Directory",
             desc: "Browse our latest cosmetic collections",
             icon: ShoppingBag,
             href: "/shop",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         },
         {
             title: "Help Center",
             desc: "Contact support for any inquiries",
             icon: HelpCircle,
             href: "/shop",
-            color: "text-[#F7CA00]"
+            color: "text-[#F59E0B]"
         }
     ];
 
@@ -91,7 +91,7 @@ export default function CustomerDashboard() {
                             <card.icon className="h-7 w-7" />
                         </div>
                         <div className="flex-1">
-                            <h2 className="text-[17px] font-bold text-slate-900 group-hover:text-[#F7CA00] transition-colors">{card.title}</h2>
+                            <h2 className="text-[17px] font-bold text-slate-900 group-hover:text-[#F59E0B] transition-colors">{card.title}</h2>
                             <p className="text-sm text-slate-500 mt-0.5 leading-snug">{card.desc}</p>
                         </div>
                     </Link>
@@ -119,18 +119,18 @@ export default function CustomerDashboard() {
             <div className="mt-12 pt-8 border-t border-gray-200 grid md:grid-cols-2 gap-8 px-2">
                 <div>
                     <h3 className="font-bold text-slate-900 mb-3">Orders & Shopping Preferences</h3>
-                    <ul className="text-sm space-y-2 text-[#007185]">
-                        <li><Link href="/dashboard/orders" className="hover:text-[#F7CA00] hover:underline underline-offset-2">Your Orders</Link></li>
-                        <li><Link href="/dashboard/wishlist" className="hover:text-[#F7CA00] hover:underline underline-offset-2">Your Wishlist</Link></li>
-                        <li><Link href="/shop" className="hover:text-[#F7CA00] hover:underline underline-offset-2">Recently Viewed Items</Link></li>
+                    <ul className="text-sm space-y-2 text-[#F59E0B]">
+                        <li><Link href="/dashboard/orders" className="hover:text-[#F59E0B] hover:underline underline-offset-2">Your Orders</Link></li>
+                        <li><Link href="/dashboard/wishlist" className="hover:text-[#F59E0B] hover:underline underline-offset-2">Your Wishlist</Link></li>
+                        <li><Link href="/shop" className="hover:text-[#F59E0B] hover:underline underline-offset-2">Recently Viewed Items</Link></li>
                     </ul>
                 </div>
                 <div>
                     <h3 className="font-bold text-slate-900 mb-3">Account Settings</h3>
-                    <ul className="text-sm space-y-2 text-[#007185]">
-                        <li><Link href="/dashboard/profile" className="hover:text-[#F7CA00] hover:underline underline-offset-2">Login & Security</Link></li>
-                        <li><Link href="/dashboard/profile" className="hover:text-[#F7CA00] hover:underline underline-offset-2">Your Addresses</Link></li>
-                        <li><Link href="/dashboard/profile" className="hover:text-[#F7CA00] hover:underline underline-offset-2">Your Content and Devices</Link></li>
+                    <ul className="text-sm space-y-2 text-[#F59E0B]">
+                        <li><Link href="/dashboard/profile" className="hover:text-[#F59E0B] hover:underline underline-offset-2">Login & Security</Link></li>
+                        <li><Link href="/dashboard/profile" className="hover:text-[#F59E0B] hover:underline underline-offset-2">Your Addresses</Link></li>
+                        <li><Link href="/dashboard/profile" className="hover:text-[#F59E0B] hover:underline underline-offset-2">Your Content and Devices</Link></li>
                     </ul>
                 </div>
             </div>

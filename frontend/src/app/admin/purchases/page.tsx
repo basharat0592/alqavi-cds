@@ -144,7 +144,7 @@ export default function PurchasesPage() {
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <ShoppingCart className="h-5 w-5 text-[#EEAF1C]" /> Purchase Orders
+                        <ShoppingCart className="h-5 w-5 text-[#F59E0B]" /> Purchase Orders
                     </h1>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Manage stock purchases from suppliers</p>
                 </div>
@@ -168,7 +168,7 @@ export default function PurchasesPage() {
                         placeholder="Search by PO # or supplier..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] transition-all"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] transition-all"
                     />
                 </div>
 
@@ -177,7 +177,7 @@ export default function PurchasesPage() {
                     <select
                         value={paymentFilter}
                         onChange={e => setPaymentFilter(e.target.value)}
-                        className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg min-w-[140px] outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                        className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg min-w-[140px] outline-none focus:border-[#F59E0B] text-slate-700 dark:text-slate-300 cursor-pointer"
                     >
                         <option value="All">All Payments</option>
                         <option value="unpaid">Unpaid</option>
@@ -191,7 +191,7 @@ export default function PurchasesPage() {
                     <select
                         value={statusFilter}
                         onChange={e => setStatusFilter(e.target.value)}
-                        className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg min-w-[140px] outline-none focus:border-[#EEAF1C] text-slate-700 dark:text-slate-300 cursor-pointer"
+                        className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg min-w-[140px] outline-none focus:border-[#F59E0B] text-slate-700 dark:text-slate-300 cursor-pointer"
                     >
                         <option value="All">All Statuses</option>
                         <option value="ordered">Ordered</option>
@@ -212,7 +212,7 @@ export default function PurchasesPage() {
                     <button
                         onClick={() => window.print()}
                         disabled={purchases.length === 0}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] transition-all shadow-sm disabled:opacity-30"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] transition-all shadow-sm disabled:opacity-30"
                         title="Print / Save PDF"
                     >
                         <Printer className="h-4 w-4" />
@@ -253,7 +253,7 @@ export default function PurchasesPage() {
                                 filtered.map(p => (
                                     <tr key={p.id} className="hover:bg-[#F7FAFA] dark:hover:bg-white/[0.01] transition-colors group border-b border-slate-100 last:border-0">
                                         <td className="px-5 py-3 align-top whitespace-nowrap">
-                                            <span className="text-[#007185] hover:underline font-bold cursor-pointer">#{p.purchase_number}</span>
+                                            <span className="text-[#F59E0B] hover:underline font-bold cursor-pointer">#{p.purchase_number}</span>
                                         </td>
                                         <td className="px-5 py-3 align-top">
                                             <p className="font-bold text-[#232F3E] dark:text-slate-200">{p.supplier_name}</p>
@@ -292,7 +292,7 @@ export default function PurchasesPage() {
 
                                                 <button
                                                     onClick={() => handleViewDetails(p.id)}
-                                                    className="p-1.5 text-slate-400 hover:text-[#EEAF1C] hover:bg-amber-50 rounded transition-all"
+                                                    className="p-1.5 text-slate-400 hover:text-[#F59E0B] hover:bg-amber-50 rounded transition-all"
                                                     title="View Details"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -522,7 +522,7 @@ export default function PurchasesPage() {
                             <div>
                                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Delete Record</h3>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Permanently delete PO <span className="font-semibold text-[#EEAF1C]">#{deleteRow.purchase_number}</span>?
+                                    Permanently delete PO <span className="font-semibold text-[#F59E0B]">#{deleteRow.purchase_number}</span>?
                                 </p>
                             </div>
                         </div>

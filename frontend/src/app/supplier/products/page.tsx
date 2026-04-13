@@ -69,14 +69,14 @@ export default function SupplierProducts() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F7CA00] hover:border-[#F7CA00]/40 transition-all font-bold"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all font-bold"
                         title="Refresh Catalog"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <button
                         onClick={() => router.push('/supplier/products/add')}
-                        className="flex items-center gap-2 px-5 py-2 bg-[#F7CA00] hover:bg-[#e6be00] text-slate-900 text-xs font-black uppercase tracking-wider rounded shadow-sm transition-all active:scale-95"
+                        className="flex items-center gap-2 px-5 py-2 bg-[#F59E0B] hover:bg-[#e6be00] text-slate-900 text-xs font-black uppercase tracking-wider rounded shadow-sm transition-all active:scale-95"
                     >
                         <Plus className="h-4 w-4" />
                         Add New Product
@@ -92,21 +92,21 @@ export default function SupplierProducts() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search your items..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded outline-none focus:border-[#F7CA00] focus:ring-1 focus:ring-[#F7CA00]/10 transition-all placeholder:text-slate-400"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex items-center gap-2">
                     <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded text-sm outline-none focus:border-[#F7CA00] text-slate-600 dark:text-slate-300 font-bold"
+                        className="px-3 py-2 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded text-sm outline-none focus:border-[#F59E0B] text-slate-600 dark:text-slate-300 font-bold"
                     >
                         <option value="all">All Categories</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
 
                     <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded border border-slate-200 dark:border-white/10">
-                        <Activity className="h-3.5 w-3.5 text-[#F7CA00]" />
+                        <Activity className="h-3.5 w-3.5 text-[#F59E0B]" />
                         <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-tight">
                             {filtered.length} Items Listed
                         </span>
@@ -142,7 +142,7 @@ export default function SupplierProducts() {
                                         <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-widest">Your catalog is currently empty.</p>
                                         <button
                                             onClick={() => router.push('/supplier/products/add')}
-                                            className="px-6 py-2 bg-[#F7CA00] text-slate-900 font-bold rounded shadow-sm text-xs uppercase"
+                                            className="px-6 py-2 bg-[#F59E0B] text-slate-900 font-bold rounded shadow-sm text-xs uppercase"
                                         >
                                             Publish Your First Product
                                         </button>
@@ -153,7 +153,7 @@ export default function SupplierProducts() {
                                     <tr key={prod.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group border-b border-slate-200">
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-white dark:bg-white/10 border border-slate-300 dark:border-white/10 rounded flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#F7CA00]/40 transition-colors shadow-inner">
+                                                <div className="w-12 h-12 bg-white dark:bg-white/10 border border-slate-300 dark:border-white/10 rounded flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#F59E0B]/40 transition-colors shadow-inner">
                                                     {prod.image ? (
                                                         <img src={getImageUrl(prod.image || undefined)} alt="" className="max-w-full max-h-full object-cover" />
                                                     ) : (
@@ -161,7 +161,7 @@ export default function SupplierProducts() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white text-[15px] group-hover:text-[#F7CA00] transition-colors leading-tight">{prod.name}</p>
+                                                    <p className="font-bold text-slate-900 dark:text-white text-[15px] group-hover:text-[#F59E0B] transition-colors leading-tight">{prod.name}</p>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{prod.category_name || 'Standard Item'}</span>
                                                         <span className="text-slate-200 dark:text-slate-600 font-bold text-[8px]">•</span>
@@ -195,7 +195,7 @@ export default function SupplierProducts() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => router.push(`/supplier/products/${prod.id}/edit`)}
-                                                    className="px-4 py-1.5 bg-white border border-slate-300 rounded text-xs font-black uppercase tracking-wider text-slate-700 hover:border-[#F7CA00] hover:text-[#F7CA00] transition-all shadow-sm"
+                                                    className="px-4 py-1.5 bg-white border border-slate-300 rounded text-xs font-black uppercase tracking-wider text-slate-700 hover:border-[#F59E0B] hover:text-[#F59E0B] transition-all shadow-sm"
                                                 >
                                                     <Edit className="h-3.5 w-3.5 inline mr-1.5" /> Edit
                                                 </button>

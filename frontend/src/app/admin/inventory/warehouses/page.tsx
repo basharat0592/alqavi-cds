@@ -3,28 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import {
     Plus, Search, RefreshCw, Trash2, Edit2, Eye,
-    Warehouse, X, AlertTriangle, Building2, MapPin, Phone
+    Warehouse, X, AlertTriangle, Building2, MapPin
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { inventoryService } from '@/lib/api';
-
-const StatusPill = ({ status }: { status: string }) => {
-    let bg = 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10';
-    let text = status || 'Unknown';
-
-    if (text.toLowerCase() === 'active') {
-        bg = 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
-    } else if (text.toLowerCase() === 'inactive') {
-        bg = 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
-    }
-
-    return (
-        <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-semibold capitalize ${bg}`}>
-            {text}
-        </span>
-    );
-};
+import { inventoryService } from '@/services/inventory.service';
+import toast from 'react-hot-toast';
 
 export default function WarehousesPage() {
     const router = useRouter();
@@ -43,6 +27,7 @@ export default function WarehousesPage() {
             setWarehouses(data || []);
         } catch (error) {
             console.error(error);
+            toast.error("Failed to load warehouses");
         } finally {
             setLoading(false);
         }
@@ -55,11 +40,12 @@ export default function WarehousesPage() {
         setIsSubmitting(true);
         try {
             await inventoryService.deleteWarehouse(deleteRow.id);
+            toast.success("Warehouse removed");
             setDeleteRow(null);
             loadWarehouses();
         } catch (error) {
             console.error(error);
-            alert("Security Violation: Cannot retire protected hub.");
+            toast.error("Failed to remove warehouse");
         } finally {
             setIsSubmitting(false);
             setDeleteRow(null);
@@ -68,33 +54,32 @@ export default function WarehousesPage() {
 
     const filtered = warehouses.filter(wh =>
         (wh.name?.toLowerCase().includes(search.toLowerCase())) ||
-        (wh.code?.toLowerCase().includes(search.toLowerCase())) ||
-        (wh.city?.toLowerCase().includes(search.toLowerCase()))
+        (wh.location?.toLowerCase().includes(search.toLowerCase()))
     );
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans text-left">
             
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Warehouses</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage network nodes and logistics hubs</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Warehouses</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage storage locations and logistics hubs</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadWarehouses}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#EEAF1C] hover:border-[#EEAF1C]/40 transition-all"
+                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] transition-all"
                         title="Refresh"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <Link
                         href="/admin/inventory/warehouses/add"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white text-sm font-bold rounded-lg hover:bg-yellow-600 transition-all shadow-sm uppercase tracking-widest"
                     >
                         <Plus className="h-4 w-4" />
-                        New Warehouse
+                        Add Warehouse
                     </Link>
                 </div>
             </div>
@@ -106,103 +91,63 @@ export default function WarehousesPage() {
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Search by name, code or city..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400"
+                        placeholder="Search by name or location..."
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
 
             {/* ── Results count ── */}
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {loading ? 'Scanning nodes...' : `${filtered.length} nodes found`}
             </p>
 
             {/* ── Table ── */}
             <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Node ID</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Warehouse Name</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Location</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Contact</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Status</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap">Actions</th>
+                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Warehouse Name</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Location</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                             {loading && filtered.length === 0 ? (
-                                Array(6).fill(0).map((_, i) => (
+                                Array(5).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={6} className="px-4 py-4">
+                                        <td colSpan={3} className="px-6 py-4">
                                             <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-16 text-center">
+                                    <td colSpan={3} className="px-6 py-16 text-center">
                                         <Building2 className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">No logistic nodes found.</p>
-                                        <Link
-                                            href="/admin/inventory/warehouses/add"
-                                            className="text-sm text-[#EEAF1C] hover:underline font-medium"
-                                        >
-                                            Create your first warehouse
-                                        </Link>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">No logistic nodes found.</p>
                                     </td>
                                 </tr>
                             ) : (
                                 filtered.map((wh) => (
                                     <tr key={wh.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-4 py-3">
-                                            <span className="text-[#EEAF1C] font-medium text-sm">
-                                                {wh.code || 'SYS-NODE'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 max-w-[200px]">
-                                            <span className="text-slate-800 dark:text-slate-200 font-medium text-sm truncate block" title={wh.name}>
+                                        <td className="px-6 py-4">
+                                            <span className="text-slate-900 dark:text-white font-bold text-sm">
                                                 {wh.name}
                                             </span>
-                                            <span className="text-xs text-slate-400 block mt-0.5">{wh.type} Hub</span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                                                 <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                                <span className="truncate max-w-[200px]" title={`${wh.address || 'Address Restricted'}, ${wh.city}`}>
-                                                    {wh.city}
-                                                </span>
+                                                <span>{wh.location}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
-                                                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                                <span>{wh.contact_phone || 'Non-disclosed'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <StatusPill status={wh.status} />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex justify-end items-center gap-1">
-                                                <button
-                                                    onClick={() => setViewRow(wh)}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-[#EEAF1C]/10 transition-colors"
-                                                    title="View details"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                                <Link
-                                                    href={`/admin/inventory/warehouses/edit/${wh.id}`}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </Link>
+                                        <td className="px-6 py-4">
+                                            <div className="flex justify-end items-center gap-2">
                                                 <button
                                                     onClick={() => setDeleteRow(wh)}
-                                                    className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -217,91 +162,32 @@ export default function WarehousesPage() {
                 </div>
             </div>
 
-            {/* ── View Modal ── */}
-            {viewRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10">
-                            <div>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Warehouse Node</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Location details</p>
-                            </div>
-                            <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Name</p>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.name || '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Code</p>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{viewRow.code || 'SYS-NODE'}</p>
-                                </div>
-                                <div className="col-span-2">
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Address</p>
-                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{viewRow.address || 'Address Restricted'}, {viewRow.city}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Hub Type</p>
-                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{viewRow.type} Hub</span>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Network Status</p>
-                                    <StatusPill status={viewRow.status} />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Contact Phone</p>
-                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{viewRow.contact_phone || 'Non-disclosed'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Linked Records</p>
-                                    <Link href={`/admin/inventory/list?warehouse=${viewRow.id}`} className="text-sm font-semibold text-[#EEAF1C] hover:underline">
-                                        View Stock Ledger
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="px-5 py-3 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 flex justify-end">
-                            <button onClick={() => setViewRow(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors">
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* ── Delete Modal ── */}
             {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-5 text-center">
-                            <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                        <div className="p-6 text-center text-left">
+                            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="h-6 w-6 text-red-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Delete Item</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                                Are you sure? This will permanently remove <br/><strong className="text-slate-700 dark:text-slate-300">"{deleteRow.name}"</strong>.
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Remove Node?</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                                This will permanently remove <strong className="text-slate-900 dark:text-white">"{deleteRow.name}"</strong> from the network.
                             </p>
-                            <p className="text-xs font-semibold text-red-500 bg-red-50 p-2 rounded-lg mb-5 border border-red-100">
-                                This will orphan all stock records at this location.
-                            </p>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-3">
                                 <button
                                     onClick={() => setDeleteRow(null)}
                                     disabled={isSubmitting}
-                                    className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors"
+                                    className="px-6 py-2 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleDelete}
                                     disabled={isSubmitting}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
+                                    className="px-6 py-2 bg-red-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 disabled:opacity-50"
                                 >
-                                    {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Delete'}
+                                    {isSubmitting ? 'Working...' : 'Delete Node'}
                                 </button>
                             </div>
                         </div>
@@ -312,4 +198,3 @@ export default function WarehousesPage() {
         </div>
     );
 }
-

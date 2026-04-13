@@ -45,7 +45,7 @@ export default function WishlistDashboard() {
                     <h1 className="text-3xl font-medium text-slate-900">Your Wishlist</h1>
                     <p className="text-sm text-slate-500 mt-1 font-medium">Items you've saved for later. Prices and availability may change.</p>
                 </div>
-                <Link href="/shop" className="text-sm font-bold text-[#007185] hover:text-[#F7CA00] hover:underline flex items-center gap-1">
+                <Link href="/shop" className="text-sm font-bold text-[#F59E0B] hover:text-[#F59E0B] hover:underline flex items-center gap-1">
                     Continue Shopping <ChevronRight className="h-4 w-4" />
                 </Link>
             </div>
@@ -67,7 +67,7 @@ export default function WishlistDashboard() {
                             {/* Product Details */}
                             <div className="flex-1 text-center md:text-left">
                                 <div className="mb-2">
-                                    <Link href={`/product/${item.id}`} className="text-lg font-bold text-slate-900 hover:text-[#F7CA00] transition-colors line-clamp-2 leading-snug">
+                                    <Link href={`/product/${item.id}`} className="text-lg font-bold text-slate-900 hover:text-[#F59E0B] transition-colors line-clamp-2 leading-snug">
                                         {item.name}
                                     </Link>
                                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1.5">{item.category}</p>
@@ -85,19 +85,19 @@ export default function WishlistDashboard() {
                             <div className="flex flex-col gap-2.5 w-full md:w-52">
                                 <button
                                     onClick={() => handleAddToCart(item, false)}
-                                    className="w-full py-2 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#F0C14B] rounded-full text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all"
+                                    className="w-full py-2 bg-[#F59E0B] hover:bg-[#F59E0B] border border-[#1a1a2e] rounded-full text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all"
                                 >
                                     <ShoppingCart className="h-4 w-4" /> Add to Cart
                                 </button>
                                 <button
                                     onClick={() => handleAddToCart(item, true)}
-                                    className="w-full py-2 bg-[#F7CA00] text-white hover:bg-[#1E40AF] rounded-full text-xs font-bold shadow-sm transition-all"
+                                    className="w-full py-2 bg-[#F59E0B] text-white hover:bg-[#1E40AF] rounded-full text-xs font-bold shadow-sm transition-all"
                                 >
                                     Buy it now
                                 </button>
                                 <button
                                     onClick={() => removeFromWishlist(item.id)}
-                                    className="w-full py-2 text-[#007185] hover:text-red-700 hover:underline text-xs font-medium mt-1 flex items-center justify-center gap-1.5"
+                                    className="w-full py-2 text-[#F59E0B] hover:text-red-700 hover:underline text-xs font-medium mt-1 flex items-center justify-center gap-1.5"
                                 >
                                     <Trash2 className="h-3.5 w-3.5" /> Delete from list
                                 </button>
@@ -110,7 +110,7 @@ export default function WishlistDashboard() {
                     <Heart className="h-12 w-12 text-gray-200 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-slate-900 mb-2">Your wishlist is empty</h3>
                     <p className="text-sm text-slate-500 max-w-sm mx-auto mb-8">Save items you're interested in by tapping the heart icon on any product in our store.</p>
-                    <Link href="/shop" className="px-10 py-2 bg-[#F7CA00] text-white font-bold rounded-lg hover:bg-[#1E40AF] transition-all">
+                    <Link href="/shop" className="px-10 py-2 bg-[#F59E0B] text-white font-bold rounded-lg hover:bg-[#1E40AF] transition-all">
                         Go Shopping
                     </Link>
                 </div>
