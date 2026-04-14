@@ -92,7 +92,7 @@ export default function ProductCard({
                         -{discount}%
                     </span>
                 )}
-                {stock !== undefined && stock <= 5 && stock > 0 && (
+                {stock !== undefined && stock < 5 && stock > 0 && (
                     <span className="px-2.5 py-1 bg-orange-100 text-orange-700 text-[9px] font-black uppercase tracking-widest rounded-lg border border-orange-200">
                         Only {stock} left
                     </span>

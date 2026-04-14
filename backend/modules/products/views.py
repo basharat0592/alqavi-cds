@@ -1,16 +1,6 @@
 from rest_framework import viewsets, permissions
-from .models import Product, Wishlist, Category, SupplierProduct, MainCategory
-from .serializers import (
-    ProductSerializer, WishlistSerializer, CategorySerializer, 
-    SupplierProductSerializer, MainCategorySerializer
-)
-
-
-class MainCategoryViewSet(viewsets.ModelViewSet):
-    queryset = MainCategory.objects.all().order_by('name')
-    serializer_class = MainCategorySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    pagination_class = None
+from .models import Product, Wishlist, Category
+from .serializers import ProductSerializer, WishlistSerializer, CategorySerializer
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -26,10 +16,55 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        # Annotate with profit for ordering
+        queryset = Product.objects.annotate(
+            profit_amount=ExpressionWrapper(
+                F('selling_price') - F('cost_price'),
+                output_field=DecimalField()
+            )
+        )
+
+        # Basic status filter
         status = self.request.query_params.get('status')
         if status:
             queryset = queryset.filter(status=status.upper())
+
+        # Advanced Filters
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category_id=category)
+
+        supplier = self.request.query_params.get('supplier')
+        if supplier:
+            queryset = queryset.filter(supplier_id=supplier)
+
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
+
+        # Search filter
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(product_name__icontains=search) |
+                Q(supplier__name__icontains=search) |
+                Q(category__name__icontains=search)
+            )
+
+        # Ordering
+        ordering = self.request.query_params.get('ordering')
+        if ordering == 'profit':
+            queryset = queryset.order_by('-profit_amount')
+        elif ordering == 'price_low':
+            queryset = queryset.order_by('selling_price')
+        elif ordering == 'price_high':
+            queryset = queryset.order_by('-selling_price')
+        else:
+            queryset = queryset.order_by('-created_at')
+
         return queryset
 
 

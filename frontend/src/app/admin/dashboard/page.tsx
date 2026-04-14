@@ -280,11 +280,11 @@ export default function AdminDashboard() {
                                                         <select
                                                             value={(order.status || '').toLowerCase()}
                                                             onChange={(e) => handleQuickStatusUpdate(order.id?.toString(), e.target.value)}
-                                                            disabled={updatingRow === order.id?.toString()}
+                                                            disabled={updatingRow === order.id?.toString() || (order.status || '').toUpperCase() === 'DELIVERED'}
                                                             className={`px-2.5 py-1 text-[10px] font-bold capitalize rounded-lg border outline-none transition-colors
-                                                                ${updatingRow === order.id?.toString() ? 'opacity-50' : ''}
+                                                                ${(updatingRow === order.id?.toString() || (order.status || '').toUpperCase() === 'DELIVERED') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                                                                 ${STATUS_COLORS[(order.status || '').toLowerCase()] || 'bg-slate-100 text-slate-600 border-slate-200'}
-                                                                cursor-pointer`}
+                                                                `}
                                                         >
                                                             {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
                                                                 <option key={s} value={s}>{s}</option>
