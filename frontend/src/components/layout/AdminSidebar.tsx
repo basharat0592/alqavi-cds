@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard, Package, TrendingUp, Tag,
+    LayoutDashboard, Package, TrendingUp, Tag, ShoppingCart,
     Boxes, ChevronsLeft, ChevronsRight, Settings, UserCheck, ShoppingBag
 } from 'lucide-react';
 
@@ -41,6 +41,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
         {
             label: 'Management',
             items: [
+                { name: 'Shop (POS)', href: '/admin/sales/create', icon: ShoppingCart },
                 { name: 'Add Category', href: '/admin/products/categories', icon: Tag },
                 { name: 'Add Product', href: '/admin/products', icon: Package },
                 { name: 'Add Stocks', href: '/admin/inventory/list', icon: Boxes },

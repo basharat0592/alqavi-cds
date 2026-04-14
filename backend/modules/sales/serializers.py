@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
 from modules.products.models import Product
+from django.db.models import F
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
@@ -64,6 +65,16 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     cost_price=product.cost_price or 0
                 )
                 total_amount += (price * quantity)
+
+                # Deduct from inventory (both Product and Stock)
+                if product.stock:
+                    stock = product.stock
+                    stock.total_quantity = F('total_quantity') - quantity
+                    stock.save()
+
+                product.total_quantity = F('total_quantity') - quantity
+                product.save()
+                
             except Product.DoesNotExist:
                 continue
         

@@ -26,7 +26,7 @@ export const orderService = {
         return response.data;
     },
     create: async (data: any) => {
-        const response = await api.post('v1/sales/orders/create/', data);
+        const response = await api.post('v1/sales/orders/', data);
         return response.data;
     },
     update: async (id: string, data: any) => {

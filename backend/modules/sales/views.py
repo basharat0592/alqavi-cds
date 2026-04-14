@@ -79,23 +79,24 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"error": "Status is required"}, status=status.HTTP_400_BAD_REQUEST)
         
         # 2. Inventory Deduction Logic
-        if new_status == 'DELIVERED':
+        # Note: Deduction now happens at order creation time to prevent overselling.
+        # However, if the order is cancelled, we should restore the stock.
+        if new_status in ['CANCELLED', 'REJECTED'] and order.status not in ['CANCELLED', 'REJECTED']:
             try:
                 from django.db import transaction
                 with transaction.atomic():
                     for item in order.items.all():
-                        if item.product and item.product.stock:
-                            stock = item.product.stock
-                            # Deduct from Stock entry
-                            stock.total_quantity = F('total_quantity') - item.quantity
-                            stock.save()
+                        if item.product:
+                            if item.product.stock:
+                                stock = item.product.stock
+                                stock.total_quantity = F('total_quantity') + item.quantity
+                                stock.save()
                             
-                            # Deduct from Product snapshot field (if it exists and is used)
                             product = item.product
-                            product.total_quantity = F('total_quantity') - item.quantity
+                            product.total_quantity = F('total_quantity') + item.quantity
                             product.save()
             except Exception as e:
-                return Response({"error": f"Inventory deduction failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": f"Inventory restoration failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # 3. Save new status
         order.status = new_status

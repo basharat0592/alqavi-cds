@@ -20,7 +20,7 @@ const EMPTY_FORM = {
     notes: '',
 };
 
-type LineItem = { product: string; product_name: string; quantity: number; unit_price: number };
+type LineItem = { product: string; product_name: string; quantity: number; unit_price: number; cost_price: number; margin_percent: number; };
 
 // ── Reusable form field wrappers ──────────────────────────────────────────────
 const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
@@ -55,7 +55,7 @@ export default function CreateSalePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM });
-    const [items, setItems] = useState<LineItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+    const [items, setItems] = useState<LineItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, cost_price: 0, margin_percent: 0 }]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'alert' } | null>(null);
 
@@ -86,8 +86,12 @@ export default function CreateSalePage() {
         if (!form.customer_name) e.customer_name = 'Required';
         if (!form.phone_number) e.phone_number = 'Required';
         if (!form.order_date) e.order_date = 'Required';
-        if (items.some(i => !i.product || i.quantity < 1 || i.unit_price <= 0))
+        const invalidItems = items.filter(i => !i.product || i.quantity < 1 || i.unit_price <= 0);
+        if (invalidItems.length > 0) {
             e.items = 'All items require a product, quantity ≥ 1, and valid unit price';
+        } else if (items.some(i => i.cost_price > 0 && i.unit_price < i.cost_price)) {
+            e.items = 'Selling price cannot be less than the supplier (stock) price.';
+        }
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -118,14 +122,40 @@ export default function CreateSalePage() {
         }
     };
 
-    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0, cost_price: 0, margin_percent: 0 }]);
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
                 const p = products.find(p => String(p.id) === String(val));
-                return { ...item, product: val, product_name: p?.name || '', unit_price: p?.selling_price ? parseFloat(String(p.selling_price)) : item.unit_price };
+                const cp = p?.cost_price ? parseFloat(String(p.cost_price)) : 0;
+                const sp = p?.selling_price ? parseFloat(String(p.selling_price)) : 0;
+                return { 
+                    ...item, 
+                    product: val, 
+                    product_name: p?.product_name || p?.name || '', 
+                    cost_price: cp,
+                    unit_price: sp || item.unit_price,
+                    margin_percent: cp > 0 ? parseFloat((((sp - cp) / cp) * 100).toFixed(2)) : 0
+                };
+            }
+            if (field === 'unit_price') {
+                const newPrice = parseFloat(val) || 0;
+                return {
+                    ...item,
+                    unit_price: newPrice,
+                    margin_percent: item.cost_price > 0 ? parseFloat((((newPrice - item.cost_price) / item.cost_price) * 100).toFixed(2)) : 0
+                };
+            }
+            if (field === 'margin_percent') {
+                const newMargin = parseFloat(val) || 0;
+                const newPrice = item.cost_price + (item.cost_price * newMargin / 100);
+                return {
+                    ...item,
+                    margin_percent: newMargin,
+                    unit_price: parseFloat(newPrice.toFixed(2))
+                };
             }
             return { ...item, [field]: val };
         }));
@@ -213,16 +243,16 @@ export default function CreateSalePage() {
 
                         {/* Column headers */}
                         <div className="grid grid-cols-12 gap-3 mb-2 px-1">
-                            <div className="col-span-6 text-xs font-semibold text-slate-500">Product</div>
+                            <div className="col-span-5 text-xs font-semibold text-slate-500">Product</div>
                             <div className="col-span-2 text-xs font-semibold text-slate-500 text-center">Qty</div>
-                            <div className="col-span-3 text-xs font-semibold text-slate-500">Price</div>
+                            <div className="col-span-4 text-xs font-semibold text-slate-500">Price & Margin</div>
                             <div className="col-span-1"></div>
                         </div>
 
                         <div className="space-y-2">
                             {items.map((item, i) => (
-                                <div key={i} className="grid grid-cols-12 gap-3 items-center p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] rounded-lg">
-                                    <div className="col-span-6">
+                                <div key={i} className="grid grid-cols-12 gap-3 items-start p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] rounded-lg">
+                                    <div className="col-span-5">
                                         <select
                                             value={String(item.product)}
                                             onChange={e => updateItem(i, 'product', e.target.value)}
@@ -230,11 +260,17 @@ export default function CreateSalePage() {
                                         >
                                             <option value="">Select product...</option>
                                             {products.map(p => (
-                                                <option key={p.id} value={String(p.id)} disabled={!p.is_in_stock}>
-                                                    {p.name} {p.stock < 1 ? '(Out of Stock)' : `(${p.stock} left)`}
+                                                <option key={p.id} value={String(p.id)} disabled={p.status !== 'ACTIVE' || p.total_quantity < 1}>
+                                                    {p.product_name} {p.total_quantity < 1 ? '(Out of Stock)' : `(${p.total_quantity} left)`}
                                                 </option>
                                             ))}
                                         </select>
+                                        {item.product && (
+                                            <div className="mt-1.5 flex items-center gap-2 px-1">
+                                                <span className="text-[10px] font-bold text-[#F59E0B] uppercase tracking-wider">Stock Price: </span>
+                                                <span className="text-[10px] text-slate-500">{formatCurrency(String(item.cost_price))}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="col-span-2">
                                         <input
@@ -244,18 +280,30 @@ export default function CreateSalePage() {
                                             className={`${fieldCls()} text-center`}
                                         />
                                     </div>
-                                    <div className="col-span-3">
-                                        <div className="relative">
-                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">PKR</span>
-                                            <input
-                                                type="number" min="0" step="0.01"
-                                                value={item.unit_price}
-                                                onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                className={`${fieldCls()} pl-9 font-bold`}
-                                            />
+                                    <div className="col-span-4">
+                                        <div className="flex gap-2">
+                                            <div className="relative w-1/3">
+                                                <input
+                                                    type="number" step="0.1"
+                                                    value={item.margin_percent}
+                                                    onChange={(e) => updateItem(i, 'margin_percent', e.target.value)}
+                                                    className={`${fieldCls(item.cost_price > 0 && item.unit_price < item.cost_price)} text-center pr-5`}
+                                                    title="Margin %"
+                                                />
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">%</span>
+                                            </div>
+                                            <div className="relative w-2/3">
+                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">PKR</span>
+                                                <input
+                                                    type="number" min="0" step="0.01"
+                                                    value={item.unit_price}
+                                                    onChange={(e) => updateItem(i, 'unit_price', e.target.value)}
+                                                    className={`${fieldCls(item.cost_price > 0 && item.unit_price < item.cost_price)} pl-9 font-bold`}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="col-span-1 flex justify-center">
+                                    <div className="col-span-1 flex justify-center pt-2">
                                         <button
                                             onClick={() => removeItem(i)}
                                             className="p-1.5 rounded text-slate-300 hover:text-red-500 transition-colors"

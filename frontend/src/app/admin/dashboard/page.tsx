@@ -336,30 +336,6 @@ export default function AdminDashboard() {
                 )}
             </div>
 
-            {/* ── Quick Access Grid ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-8">
-                {[
-                    { title: 'Shop (POS)', icon: ShoppingBag, href: '/admin/sales/create', color: 'text-indigo-500' },
-                    { title: 'Recent Orders', icon: Clock, href: '/admin/sales/recent', color: 'text-amber-500' },
-                    { title: 'Sales Overview', icon: TrendingUp, href: '/admin/sales', color: 'text-emerald-500' },
-                    { title: 'Add Product', icon: Package, href: '/admin/products/add', color: 'text-blue-500' },
-                    { title: 'Categories', icon: Tag, href: '/admin/products/categories', color: 'text-purple-500' },
-                    { title: 'Add Stocks', icon: Boxes, href: '/admin/inventory/list', color: 'text-indigo-500' },
-                ].map((item, idx) => (
-                    <Link
-                        key={idx}
-                        href={item.href}
-                        className="flex flex-col items-center gap-2.5 p-4 bg-white dark:bg-[#2d3a4b] border border-slate-200 dark:border-white/10 rounded-xl hover:shadow-md hover:border-[#F59E0B]/30 transition-all group active:scale-95"
-                    >
-                        <div className={`p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 ${item.color} group-hover:scale-110 transition-transform`}>
-                            <item.icon className="h-5 w-5" strokeWidth={2} />
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 group-hover:text-[#F59E0B] transition-colors text-center uppercase tracking-wider">
-                            {item.title}
-                        </span>
-                    </Link>
-                ))}
-            </div>
 
             {/* Footer */}
             <div className="mt-16 py-8 border-t border-slate-200 dark:border-white/10 text-center">
