@@ -132,3 +132,45 @@ class OrderViewSet(viewsets.ModelViewSet):
             "top_products": [],
             "recent_purchases": []
         })
+
+
+from .models import PurchaseOrder
+from .serializers import PurchaseOrderSerializer
+from modules.products.models import SupplierProduct
+
+class PurchaseOrderViewSet(viewsets.ModelViewSet):
+    queryset = PurchaseOrder.objects.all().order_by('-order_date')
+    serializer_class = PurchaseOrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return self.queryset
+        # If supplier, only show their own POs
+        return self.queryset.filter(supplier=user)
+
+
+class SupplierDashboardViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        user = request.user
+        
+        # Only relevant for suppliers (or staff impersonating)
+        total_products = SupplierProduct.objects.filter(supplier=user).count()
+        
+        po_qs = PurchaseOrder.objects.filter(supplier=user)
+        pending_orders = po_qs.filter(status='PENDING').count()
+        received_orders = po_qs.filter(status__in=['RECEIVED', 'DELIVERED']).count()
+        
+        total_order_value = po_qs.filter(status__in=['RECEIVED', 'DELIVERED']).aggregate(tot=Sum('total_amount'))['tot'] or 0
+        
+        return Response({
+            "total_products": total_products,
+            "pending_orders": pending_orders,
+            "received_orders": received_orders,
+            "total_order_value": float(total_order_value),
+            "supplier_name": user.get_full_name() or user.username
+        })

@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { 
-    Search, Edit, Trash2, Plus, 
-    RefreshCw, MapPin, Phone, Building2, 
-    Truck, Save, Loader2, UserCheck
+    Search, RefreshCw, Phone, Mail, 
+    Truck, UserCheck, ShieldCheck
 } from 'lucide-react';
-import { companyService } from '@/services/company.service';
+import { userService } from '@/services/user.service';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 
@@ -16,28 +15,20 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
     </div>
 );
 
-const INPUT = "w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 font-medium";
 const LABEL = "block text-[10px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest";
-const PRIMARY_BTN = "bg-[#F59E0B] hover:bg-yellow-600 text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
 
 export default function SuppliersPage() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [saving, setSaving] = useState(false);
-    
-    // Add Supplier Form State
-    const [form, setForm] = useState({
-        name: '',
-        company: '',
-        contact: '',
-        address: ''
-    });
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await companyService.getSuppliers();
+            // Fetch users with role 'Supplier'
+            const data = await userService.getAll({ role_name: 'Supplier' });
+            // The data structure from list_users is {results: [], count: 0} if using Drf, 
+            // but userService.getAll handles both array and results object
             setSuppliers(data || []);
         } catch (err) {
             console.error('Failed to load suppliers', err);
@@ -49,44 +40,10 @@ export default function SuppliersPage() {
 
     useEffect(() => { loadData(); }, []);
 
-    const handleChange = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
-
-    const handleAddSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!form.name.trim()) {
-            toast.error('Name is required');
-            return;
-        }
-
-        setSaving(true);
-        try {
-            await companyService.createSupplier(form);
-            toast.success('Supplier added successfully!');
-            setForm({ name: '', company: '', contact: '', address: '' }); // reset form
-            loadData(); // refresh list
-        } catch (err) {
-            console.error('Add supplier error:', err);
-            toast.error('Failed to add supplier');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleDelete = async (id: number) => {
-        if (!confirm('Are you sure you want to delete this supplier?')) return;
-        try {
-            await companyService.deleteSupplier(id);
-            toast.success('Supplier deleted');
-            setSuppliers(prev => prev.filter(s => s.id !== id));
-        } catch (err) {
-            toast.error('Failed to delete supplier');
-        }
-    };
-
     if (loading && suppliers.length === 0) return <PageLoader />;
 
     const filtered = suppliers.filter(s => {
-        const text = `${s.name} ${s.company} ${s.contact} ${s.address}`.toLowerCase();
+        const text = `${s.first_name} ${s.last_name} ${s.email} ${s.phone}`.toLowerCase();
         return text.includes(search.toLowerCase());
     });
 
@@ -98,61 +55,10 @@ export default function SuppliersPage() {
                     <Truck className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Suppliers</h1>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">External Suppliers</h1>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Registered via User Portal</p>
                 </div>
             </div>
-
-            {/* ADD SUPPLIER FORM */}
-            <SectionCard className="mb-8 p-5">
-                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-[#F59E0B]" />
-                    Add Supplier
-                </h2>
-                <form onSubmit={handleAddSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Name <span className="text-red-500">*</span></label>
-                        <input 
-                            value={form.name} 
-                            onChange={e => handleChange('name', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Supplier Name" 
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Company</label>
-                        <input 
-                            value={form.company} 
-                            onChange={e => handleChange('company', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Company Name" 
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Contact</label>
-                        <input 
-                            value={form.contact} 
-                            onChange={e => handleChange('contact', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Phone Number" 
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Address</label>
-                        <input 
-                            value={form.address} 
-                            onChange={e => handleChange('address', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Address" 
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <button type="submit" disabled={saving} className={`${PRIMARY_BTN} w-full h-[42px]`}>
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Save
-                        </button>
-                    </div>
-                </form>
-            </SectionCard>
 
             {/* SUPPLIERS LIST */}
             <div className="space-y-4">
@@ -162,7 +68,7 @@ export default function SuppliersPage() {
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Search suppliers..."
+                            placeholder="Search registered suppliers..."
                             className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F59E0B] transition-all font-medium"
                         />
                     </div>
@@ -176,11 +82,11 @@ export default function SuppliersPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Supplier Name</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Company</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Supplier / User</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Email Address</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Contact</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Address</th>
-                                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest">Actions</th>
+                                    <th className="px-6 py-4 text-center text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Status</th>
+                                    <th className="px-6 py-4 text-center text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest">Verification</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-[#1a252f]">
@@ -189,7 +95,7 @@ export default function SuppliersPage() {
                                         <td colSpan={5} className="px-6 py-24 text-center">
                                             <div className="flex flex-col items-center gap-2 opacity-40">
                                                 <Truck className="h-12 w-12 text-slate-400" />
-                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No suppliers found</p>
+                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No registered suppliers found</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -197,31 +103,39 @@ export default function SuppliersPage() {
                                     filtered.map(s => (
                                         <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
                                             <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">
-                                                <span className="text-sm font-bold text-slate-900 dark:text-white">{s.name}</span>
-                                            </td>
-                                            <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">
-                                                <div className="flex items-center gap-2">
-                                                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{s.company || '--'}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[10px] font-bold text-[#F59E0B]">
+                                                        {s.first_name?.[0] || s.username?.[0] || '?'}{s.last_name?.[0] || ''}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{(s.first_name || s.last_name) ? `${s.first_name || ''} ${s.last_name || ''}` : s.username}</div>
+                                                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">@{s.username}</div>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                    <span className="text-xs font-medium">{s.email}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">
+                                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                                                     <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{s.contact || '--'}</span>
+                                                    <span className="text-xs font-medium">{s.phone || '--'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{s.address || '--'}</span>
-                                                </div>
+                                            <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5 text-center">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                                                    s.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                    {s.status}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button onClick={() => handleDelete(s.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-1.5 text-blue-500 font-bold text-[9px] uppercase tracking-widest">
+                                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                                    System Verified
                                                 </div>
                                             </td>
                                         </tr>

@@ -29,7 +29,6 @@ INSTALLED_APPS = [
     'modules.sales',
     'modules.payments',
     'modules.company',
-    'modules.supplier',
 ]
 
 MIDDLEWARE = [

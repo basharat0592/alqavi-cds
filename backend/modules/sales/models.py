@@ -70,3 +70,72 @@ class OrderItem(models.Model):
     def __str__(self):
         product_name = self.product.product_name if self.product else "Deleted Product"
         return f"{self.quantity} x {product_name}"
+
+
+class PurchaseOrder(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RECEIVED', 'Received'),
+        ('CANCELLED', 'Cancelled'),
+        ('DELIVERED', 'Delivered'),
+    ]
+
+    purchase_number = models.CharField(max_length=20, unique=True)
+    supplier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='purchase_orders')
+    reference_number = models.CharField(max_length=50, null=True, blank=True)
+    
+    warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    payment_status = models.CharField(max_length=20, choices=[
+        ('UNPAID', 'Unpaid'),
+        ('PARTIAL', 'Partially Paid'),
+        ('PAID', 'Paid'),
+    ], default='UNPAID')
+    
+    order_date = models.DateTimeField(auto_now_add=True)
+    expected_delivery_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.purchase_number:
+            suffix = ''.join(random.choices(string.digits, k=6))
+            self.purchase_number = f"PO-{suffix}"
+        super().save(*args, **kwargs)
+
+    class Meta:
+        db_table = 'purchase_orders'
+        ordering = ['-order_date']
+
+    def __str__(self):
+        return f"PO {self.purchase_number} - {self.supplier.username}"
+
+
+class PurchaseOrderItem(models.Model):
+    PACKAGING_CHOICES = [
+        ('SINGLE', 'Single Units'),
+        ('CARTON', 'Carton Pack'),
+    ]
+
+    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('products.SupplierProduct', on_delete=models.SET_NULL, null=True)
+    
+    packaging_type = models.CharField(max_length=10, choices=PACKAGING_CHOICES, default='SINGLE')
+    items_per_carton = models.PositiveIntegerField(default=1) # If carton, how many pieces inside?
+    
+    quantity = models.PositiveIntegerField(default=1) # Number of cartons or items
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Cost Price (from supplier)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Planned Sale Price for distributor
+
+    @property
+    def total_units(self):
+        if self.packaging_type == 'CARTON':
+            return self.quantity * self.items_per_carton
+        return self.quantity
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name if self.product else 'Deleted'}"

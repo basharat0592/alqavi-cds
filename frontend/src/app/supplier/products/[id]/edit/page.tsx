@@ -6,7 +6,7 @@ import {
     Loader2, Image as ImageIcon, Plus, X, 
     ChevronLeft, HelpCircle, Info
 } from 'lucide-react';
-import { productService, mainCategoryService, categoryService } from '@/lib/api';
+import { supplierProductService, mainCategoryService, categoryService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -27,17 +27,14 @@ export default function EditSupplierProductAmazon() {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        category: '',
-        main_category: '',
         price: '',
-        cost: '',
+        cost_price: '',
         retail_price: '',
         sku: '',
         barcode: '',
         status: 'active',
         batch_number: 'INITIAL-LOG',
-        quantity_in_stock: '0',
-        is_supplier_only: 'true',
+        quantity: '0',
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -54,35 +51,28 @@ export default function EditSupplierProductAmazon() {
                 const [catRes, mCatRes, productData] = await Promise.all([
                     categoryService.getAll(),
                     mainCategoryService.getAll(),
-                    productService.getById(id)
+                    supplierProductService.getById(id)
                 ]);
                 
                 setCategories(catRes || []);
                 setMainCategories(mCatRes || []);
                 
-                // Pre-populate form
                 if (productData) {
                     setFormData({
                         name: productData.name || '',
                         description: productData.description || '',
-                        category: productData.category?.id?.toString() || productData.category?.toString() || '',
-                        main_category: productData.main_categories && productData.main_categories.length > 0 ? productData.main_categories[0].id?.toString() : '',
                         price: productData.price?.toString() || '',
-                        cost: productData.cost?.toString() || '',
+                        cost_price: productData.cost_price?.toString() || '',
                         retail_price: productData.retail_price?.toString() || '',
                         sku: productData.sku || '',
                         barcode: productData.barcode || '',
                         status: productData.status || 'active',
                         batch_number: productData.batch_number || 'INITIAL-LOG',
-                        quantity_in_stock: productData.quantity_in_stock?.toString() || '0',
-                        is_supplier_only: String(productData.is_supplier_only || false),
+                        quantity: productData.quantity?.toString() || '0',
                     });
                     
                     if (productData.image) {
                         setMainImagePreview(getImageUrl(productData.image));
-                    }
-                    if (productData.images) {
-                        setExistingImages(productData.images);
                     }
                 }
             } catch (err) {
@@ -122,7 +112,7 @@ export default function EditSupplierProductAmazon() {
             const data = new FormData();
             Object.keys(formData).forEach(key => {
                 const val = (formData as any)[key];
-                if (val !== undefined && val !== '') {
+                if (val !== undefined && val !== '' && key !== 'main_category') {
                     data.append(key, val);
                 }
             });
@@ -130,16 +120,12 @@ export default function EditSupplierProductAmazon() {
             if (mainImage) data.append('image', mainImage);
             additionalImages.forEach(file => data.append('upload_images', file));
             
-            if (formData.main_category) {
-                data.append('main_categories', formData.main_category);
-            }
-
-            await productService.update(id, data);
+            await supplierProductService.update(id, data);
             toast.success("Product successfully updated.");
             router.push('/supplier/products');
         } catch (err: any) {
             console.error(err);
-            toast.error(err.response?.data?.error || "Failed to update product.");
+            toast.error(err.response?.data ? JSON.stringify(err.response.data) : "Failed to update product.");
         } finally {
             setSaving(false);
         }
@@ -153,12 +139,12 @@ export default function EditSupplierProductAmazon() {
     );
 
     return (
-        <div className="min-h-screen bg-[#f3f3f3] pb-24 font-sans">
+        <div className="min-h-screen bg-[#f3f3f3] pb-24 font-sans border-t-4 border-[#F59E0B]">
             <div className="max-w-[1240px] mx-auto px-6 pt-8">
                 
                 {/* Back Nav */}
                 <div className="mb-6">
-                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold">
                         <ChevronLeft size={16} /> Back to listing tool
                     </button>
                 </div>
@@ -167,20 +153,17 @@ export default function EditSupplierProductAmazon() {
                     
                     {/* Left Panel */}
                     <div className="lg:col-span-1 hidden lg:block">
-                        <div className="bg-white border border-[#ddd] rounded-lg p-5 sticky top-8">
-                            <h3 className="text-[13px] font-bold text-[#111] mb-4">Edit Configuration</h3>
+                        <div className="bg-white border border-[#ddd] rounded-lg p-5 sticky top-8 shadow-sm">
+                            <h3 className="text-[13px] font-black text-[#111] mb-4 uppercase tracking-tighter">Edit Configuration</h3>
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3 text-[13px] text-[#ff9900] font-bold">
-                                    <div className="w-5 h-5 rounded-full border-2 border-[#ff9900] flex items-center justify-center text-[10px]">1</div>
-                                    Vital Info
+                                    <div className="w-5 h-5 rounded-full border-2 border-[#ff9900] flex items-center justify-center text-[10px]">1</div> Vital Info
                                 </div>
                                 <div className="flex items-center gap-3 text-[13px] text-gray-400 font-medium">
-                                    <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex items-center justify-center text-[10px]">2</div>
-                                    Offer
+                                    <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex items-center justify-center text-[10px]">2</div> Offer
                                 </div>
                                 <div className="flex items-center gap-3 text-[13px] text-gray-400 font-medium">
-                                    <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex items-center justify-center text-[10px]">3</div>
-                                    Images
+                                    <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex items-center justify-center text-[10px]">3</div> Images
                                 </div>
                             </div>
                         </div>
@@ -189,7 +172,7 @@ export default function EditSupplierProductAmazon() {
                     {/* Main Content */}
                     <div className="lg:col-span-3">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-medium text-[#111]">Edit Product: {formData.name}</h2>
+                            <h2 className="text-2xl font-bold text-[#111] tracking-tight">Edit Product: {formData.name}</h2>
                             <p className="text-[13px] text-gray-600 mt-1">Update your existing marketplace listing.</p>
                         </div>
 
@@ -198,7 +181,7 @@ export default function EditSupplierProductAmazon() {
                             {/* Vital Info */}
                             <div className={cardCls}>
                                 <div className="px-6 py-4 bg-[#f8f8f8] border-b border-[#ddd]">
-                                    <h3 className="text-[15px] font-bold text-[#111]">Vital Info</h3>
+                                    <h3 className="text-[15px] font-black text-[#111] uppercase tracking-tighter">Vital Info</h3>
                                 </div>
                                 <div className="p-8 space-y-6 max-w-[600px]">
                                     <div>
@@ -212,44 +195,9 @@ export default function EditSupplierProductAmazon() {
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div>
-                                            <label className={labelCls}>Main Category</label>
-                                            <select name="main_category" value={formData.main_category} onChange={handleChange} className={inputCls}>
-                                                <option value="">Select Category</option>
-                                                {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={labelCls}>Sub Category</label>
-                                            <select name="category" value={formData.category} onChange={handleChange} className={inputCls}>
-                                                <option value="">Select Sub-Category</option>
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-
                                     <div>
                                         <label className={labelCls}>External Product ID</label>
                                         <input name="barcode" value={formData.barcode} onChange={handleChange} className={inputCls} />
-                                    </div>
-
-                                    <div className="pt-4 border-t border-[#eee]">
-                                        <div className="flex items-start gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-md">
-                                            <input 
-                                                type="checkbox" 
-                                                id="show_to_admin"
-                                                checked={formData.is_supplier_only === 'false'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, is_supplier_only: e.target.checked ? 'false' : 'true' }))}
-                                                className="mt-1 h-4 w-4 text-[#ff9900] border-gray-300 rounded focus:ring-[#ff9900]"
-                                            />
-                                            <label htmlFor="show_to_admin" className="cursor-pointer">
-                                                <span className="text-[13px] font-bold text-[#111] block">Show to Admin Registry</span>
-                                                <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">
-                                                    If checked, this product will appear in the main Admin Dashboard catalog for procurement and inventory tracking.
-                                                </span>
-                                            </label>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -257,7 +205,7 @@ export default function EditSupplierProductAmazon() {
                             {/* Offer */}
                             <div className={cardCls}>
                                 <div className="px-6 py-4 bg-[#f8f8f8] border-b border-[#ddd]">
-                                    <h3 className="text-[15px] font-bold text-[#111]">Offer</h3>
+                                    <h3 className="text-[15px] font-black text-[#111] uppercase tracking-tighter">Offer</h3>
                                 </div>
                                 <div className="p-8 space-y-6 max-w-[600px]">
                                     <div className="grid grid-cols-2 gap-6">
@@ -278,12 +226,23 @@ export default function EditSupplierProductAmazon() {
                                         <div>
                                             <label className={labelCls}>Stock Units</label>
                                             <input 
-                                                name="quantity_in_stock" 
-                                                value={formData.quantity_in_stock} 
+                                                name="quantity" 
+                                                value={formData.quantity} 
                                                 onChange={handleChange} 
                                                 type="number"
                                                 className={inputCls} 
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <label className={labelCls}>Cost Price</label>
+                                            <input name="cost_price" value={formData.cost_price} onChange={handleChange} type="number" className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Retail Price</label>
+                                            <input name="retail_price" value={formData.retail_price} onChange={handleChange} type="number" className={inputCls} />
                                         </div>
                                     </div>
 
@@ -308,7 +267,7 @@ export default function EditSupplierProductAmazon() {
                             {/* Images */}
                             <div className={cardCls}>
                                 <div className="px-6 py-4 bg-[#f8f8f8] border-b border-[#ddd]">
-                                    <h3 className="text-[15px] font-bold text-[#111]">Images</h3>
+                                    <h3 className="text-[15px] font-black text-[#111] uppercase tracking-tighter">Images</h3>
                                 </div>
                                 <div className="p-8 space-y-8">
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -323,7 +282,7 @@ export default function EditSupplierProductAmazon() {
                                                 ) : (
                                                     <div className="text-center">
                                                         <ImageIcon className="h-8 w-8 text-gray-300 mx-auto" />
-                                                        <p className="text-[11px] text-gray-400">Add Image</p>
+                                                        <p className="text-[11px] text-gray-400 font-bold">Add Image</p>
                                                     </div>
                                                 )}
                                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleMainImageChange} />
@@ -333,15 +292,9 @@ export default function EditSupplierProductAmazon() {
                                         <div className="md:col-span-3">
                                             <p className="text-[13px] font-bold text-gray-700 mb-2">Manage Gallery</p>
                                             <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                                                {/* Existing Images */}
-                                                {existingImages.map((img, i) => (
-                                                    <div key={i} className="aspect-square border border-[#ddd] rounded-md overflow-hidden bg-white">
-                                                        <img src={getImageUrl(img.image)} alt="" className="w-full h-full object-cover" />
-                                                    </div>
-                                                ))}
                                                 {/* New Images */}
                                                 {additionalImages.map((file, i) => (
-                                                    <div key={`new-${i}`} className="aspect-square border border-[#ff9900] rounded-md overflow-hidden relative group">
+                                                    <div key={`new-${i}`} className="aspect-square border border-[#F59E0B] rounded-md overflow-hidden relative group">
                                                         <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
                                                         <button 
                                                             type="button" 
@@ -355,7 +308,7 @@ export default function EditSupplierProductAmazon() {
                                                 <button 
                                                     type="button"
                                                     onClick={() => galleryInputRef.current?.click()}
-                                                    className="aspect-square bg-[#f8f8f8] border border-dashed border-[#ddd] rounded-md flex items-center justify-center text-gray-400"
+                                                    className="aspect-square bg-[#f8f8f8] border border-dashed border-[#ddd] rounded-md flex items-center justify-center text-gray-400 hover:text-[#F59E0B] transition-colors"
                                                 >
                                                     <Plus />
                                                 </button>
@@ -367,12 +320,12 @@ export default function EditSupplierProductAmazon() {
                             </div>
 
                             {/* Actions */}
-                            <div className="bg-white border border-[#ddd] rounded-lg p-6 flex items-center justify-end gap-3 sticky bottom-4 shadow-xl">
-                                <button type="button" onClick={() => router.back()} className="px-6 py-1.5 bg-white border border-[#adb1b8] rounded-[3px] text-[13px] font-medium">Cancel</button>
+                            <div className="bg-white border border-[#ddd] rounded-lg p-6 flex items-center justify-end gap-3 sticky bottom-4 shadow-xl z-50">
+                                <button type="button" onClick={() => router.back()} className="px-6 py-1.5 bg-white border border-[#adb1b8] rounded-[3px] text-[13px] font-medium transition-colors hover:bg-slate-50">Cancel</button>
                                 <button 
                                     type="submit"
                                     disabled={saving}
-                                    className="px-8 py-1.5 bg-[#f0c14b] border border-[#a88734] hover:bg-[#ebbd40] rounded-[3px] text-[13px] font-medium shadow-sm flex items-center gap-2"
+                                    className="px-8 py-1.5 bg-[#1a1a2e] border border-[#a88734] hover:bg-[#F59E0B] hover:text-slate-900 rounded-[3px] text-[13px] font-bold shadow-sm text-white flex items-center gap-2 transition-all active:scale-95"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : null}
                                     {saving ? 'Updating...' : 'Save and finish'}

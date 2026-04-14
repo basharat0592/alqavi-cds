@@ -68,26 +68,6 @@ export const companyService = {
         await api.delete(`/v1/company/${id}/`);
     },
 
-    // ── Suppliers ───────────────────────────────────────────────────────────
-    getSuppliers: async (): Promise<any[]> => {
-        const { data } = await api.get('/v1/company/suppliers/');
-        return Array.isArray(data) ? data : data.results || [];
-    },
-    getSupplierById: async (id: number | string): Promise<any> => {
-        const { data } = await api.get(`/v1/company/suppliers/${id}/`);
-        return data;
-    },
-    createSupplier: async (payload: any): Promise<any> => {
-        const { data } = await api.post('/v1/company/suppliers/create/', payload);
-        return data;
-    },
-    updateSupplier: async (id: number | string, payload: any): Promise<any> => {
-        const { data } = await api.patch(`/v1/company/suppliers/${id}/`, payload);
-        return data;
-    },
-    deleteSupplier: async (id: number | string): Promise<void> => {
-        await api.delete(`/v1/company/suppliers/${id}/`);
-    }
 };
 
 export const companyCategoryService = {

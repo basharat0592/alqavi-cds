@@ -90,6 +90,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'username', 'email', 'password', 'password_confirm', 'first_name', 
             'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role'
         ]
+        extra_kwargs = {
+            'username': {'required': False}
+        }
     
     def validate(self, data):
         """Validate passwords match."""
@@ -99,6 +102,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """Create user with hashed password and store plain version."""
+        # Auto-generate username from email if not provided
+        if not validated_data.get('username'):
+            validated_data['username'] = validated_data.get('email')
+            
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
         user.plain_password = password

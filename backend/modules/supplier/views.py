@@ -9,3 +9,8 @@ class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return only active suppliers by default."""
+        queryset = Supplier.objects.filter(status='active')
+        return queryset

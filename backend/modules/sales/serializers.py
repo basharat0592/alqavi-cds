@@ -73,3 +73,30 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return OrderSerializer(instance, context=self.context).data
+
+
+from .models import PurchaseOrder, PurchaseOrderItem
+
+class PurchaseOrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = PurchaseOrderItem
+        fields = [
+            'id', 'product', 'product_name', 'quantity', 
+            'packaging_type', 'items_per_carton', 'price', 'selling_price'
+        ]
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    items = PurchaseOrderItemSerializer(many=True, read_only=True)
+    supplier_name = serializers.CharField(source='supplier.username', read_only=True)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'id', 'purchase_number', 'supplier', 'supplier_name', 'reference_number',
+            'warehouse', 'total_amount', 'shipping_cost', 'tax_amount',
+            'status', 'payment_status', 'order_date', 'expected_delivery_date', 
+            'notes', 'items'
+        ]
+        read_only_fields = ['id', 'purchase_number', 'order_date']

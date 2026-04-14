@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Product, Wishlist, Category
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory
+
+
+class MainCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainCategory
+        fields = '__all__'
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -10,7 +16,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    supplier_name = serializers.ReadOnlyField(source='supplier.name')
+    supplier_name = serializers.SerializerMethodField()
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     category_name = serializers.ReadOnlyField(source='category.name')
     profit_margin = serializers.SerializerMethodField()
@@ -24,6 +30,11 @@ class ProductSerializer(serializers.ModelSerializer):
             'selling_price', 'batch', 'badge', 'status', 'profit_margin', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'profit_margin']
+
+    def get_supplier_name(self, obj):
+        if obj.supplier:
+            return f"{obj.supplier.first_name} {obj.supplier.last_name}"
+        return "N/A"
 
     def get_profit_margin(self, obj):
         if obj.selling_price and obj.cost_price and obj.selling_price > 0:
@@ -39,3 +50,20 @@ class WishlistSerializer(serializers.ModelSerializer):
         model = Wishlist
         fields = ['id', 'user', 'product', 'product_details', 'created_at']
         read_only_fields = ['id', 'created_at', 'product_details']
+
+
+class SupplierProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.ReadOnlyField(source='category.name')
+    supplier_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SupplierProduct
+        fields = [
+            'id', 'supplier', 'supplier_name', 'name', 'category', 'category_name',
+            'description', 'price', 'cost_price', 'retail_price', 'quantity', 
+            'sku', 'barcode', 'batch_number', 'image', 'status', 'created_at'
+        ]
+        read_only_fields = ['id', 'supplier', 'supplier_name', 'status', 'created_at']
+
+    def get_supplier_name(self, obj):
+        return f"{obj.supplier.first_name} {obj.supplier.last_name}"

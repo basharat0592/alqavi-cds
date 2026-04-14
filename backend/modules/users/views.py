@@ -47,6 +47,10 @@ def list_users(request):
     if role:
         users = users.filter(role_id=role)
 
+    role_name = request.query_params.get('role_name')
+    if role_name:
+        users = users.filter(role__name__iexact=role_name)
+
     status_filter = request.query_params.get('status')
     if status_filter:
         users = users.filter(status=status_filter)
@@ -77,19 +81,6 @@ def create_user(request):
     if serializer.is_valid():
         user = serializer.save()
         
-        # Automatically create Supplier profile if the role is 'Supplier'
-        if user.role and user.role.name.lower() == 'supplier':
-            from modules.company.models import Supplier
-            Supplier.objects.get_or_create(
-                user=user,
-                defaults={
-                    'name': request.data.get('business_name', f"{user.first_name} {user.last_name}"),
-                    'email': user.email,
-                    'phone': getattr(user, 'phone', ''),
-                    'contact_person': f"{user.first_name} {user.last_name}"
-                }
-            )
-
         if request.user.is_authenticated:
             UserActivityLog.objects.create(
                 user=request.user,
@@ -448,16 +439,6 @@ def signup_supplier(request):
     serializer = UserCreateSerializer(data=data)
     if serializer.is_valid():
         user = serializer.save()
-        
-        # Create Supplier Profile
-        from modules.company.models import Supplier
-        Supplier.objects.create(
-            user=user,
-            name=request.data.get('company_name', f"{user.first_name} {user.last_name}"),
-            email=user.email,
-            phone=user.phone,
-            contact_person=f"{user.first_name} {user.last_name}"
-        )
         
         # Log Initial Activity
         UserActivityLog.objects.create(

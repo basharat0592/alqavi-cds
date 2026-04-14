@@ -8,7 +8,7 @@ import type {
 export type { Product, ProductParams, Order, AppUser, AppRole, ActivityLog, CompanyInfo, CompanyCategory, UserSettingsData, ProductCategory, PaginatedResponse };
 
 // Export all refactored services from their respective files
-export { productService } from '../services/product.service';
+export { productService, supplierProductService } from '../services/product.service';
 export { orderService } from '../services/order.service';
 export { categoryService } from '../services/category.service';
 export { mainCategoryService } from '../services/main-category.service';

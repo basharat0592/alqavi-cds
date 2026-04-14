@@ -1,6 +1,6 @@
 from django.db import models
 from core.models import BaseModel
-from modules.supplier.models import Supplier
+from django.conf import settings
 
 
 class Warehouse(BaseModel):
@@ -26,7 +26,7 @@ class Stock(BaseModel):
 
     product_name = models.CharField(max_length=255)
     category = models.ForeignKey('products.Category', on_delete=models.CASCADE, related_name='stocks', null=True, blank=True)
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='stocks')
+    supplier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stocks')
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stocks')
     purchase_type = models.CharField(max_length=20, choices=PURCHASE_TYPE_CHOICES)
     

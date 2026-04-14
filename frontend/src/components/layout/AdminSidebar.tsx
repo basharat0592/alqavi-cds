@@ -4,8 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard, Package, TrendingUp, Tag,
-    Boxes, ChevronsLeft, ChevronsRight, Settings, UserCheck, ShoppingBag
+    Boxes, ChevronsLeft, ChevronsRight, Settings, UserCheck, ShoppingBag,
+    ShoppingCart, Bell, Store, Activity, Sliders, Receipt, CornerDownLeft, 
+    Building, CreditCard, Wallet, CornerUpLeft, PieChart, DollarSign, Users, Shield, Key
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 
 /* ═══════════════════════════════════════════════
@@ -29,24 +32,75 @@ interface NavGroup {
    ═══════════════════════════════════════════════ */
 export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
     const pathname = usePathname();
+    const [hiddenPages, setHiddenPages] = useState<Record<string, boolean>>({});
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        const loadVisibility = () => {
+            const saved = localStorage.getItem('admin_sidebar_visibility');
+            if (saved) setHiddenPages(JSON.parse(saved));
+        };
+        loadVisibility();
+        window.addEventListener('sidebarVisibilityChanged', loadVisibility);
+        return () => window.removeEventListener('sidebarVisibilityChanged', loadVisibility);
+    }, []);
+
     const menuGroups: NavGroup[] = [
         {
-            label: 'Command Center',
+            label: 'Operations',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+                { name: 'Sale Point (POS)', href: '/admin/sale', icon: ShoppingCart },
                 { name: 'Recent Orders', href: '/admin/sales/recent', icon: ShoppingBag },
-                { name: 'Sales Overview', href: '/admin/sales', icon: TrendingUp },
-            ],
+                { name: 'System Alerts', href: '/admin/alerts', icon: Bell }
+            ]
         },
         {
-            label: 'Management',
+            label: 'Catalog',
             items: [
-                { name: 'Add Category', href: '/admin/products/categories', icon: Tag },
-                { name: 'Add Product', href: '/admin/products', icon: Package },
-                { name: 'Add Stocks', href: '/admin/inventory/list', icon: Boxes },
-                { name: 'Add Supplier', href: '/admin/company/suppliers', icon: UserCheck },
-            ],
+                { name: 'All Products', href: '/admin/products', icon: Package },
+                { name: 'Categories', href: '/admin/products/main-categories', icon: Tag },
+                { name: 'Sub Categories', href: '/admin/products/categories', icon: Tag }
+            ]
         },
+        {
+            label: 'Inventory',
+            items: [
+                { name: 'Stock List', href: '/admin/inventory/list', icon: Boxes },
+                { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
+                { name: 'Stock Movements', href: '/admin/inventory/movements', icon: Activity },
+                { name: 'Adjustments', href: '/admin/inventory/adjustments', icon: Sliders }
+            ]
+        },
+        {
+            label: 'Purchasing',
+            items: [
+                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'Purchase Orders', href: '/admin/purchases', icon: Receipt },
+                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: CornerDownLeft },
+                { name: 'Company', href: '/admin/company', icon: Building }
+            ]
+        },
+        {
+            label: 'Sales Flow',
+            items: [
+                { name: 'Sales Ledger', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+                { name: 'Customer Balance', href: '/admin/payments/customer', icon: Wallet },
+                { name: 'Return Registry', href: '/admin/sale-returns', icon: CornerUpLeft }
+            ]
+        },
+        {
+            label: 'Security & Core',
+            items: [
+                { name: 'Reports', href: '/admin/reports', icon: PieChart },
+                { name: 'Profit & Loss', href: '/admin/reports?type=accounting', icon: DollarSign },
+                { name: 'System Users', href: '/admin/users', icon: Users },
+                { name: 'Roles', href: '/admin/users/roles', icon: Shield },
+                { name: 'Permissions', href: '/admin/users/permissions', icon: Key }
+            ]
+        }
     ];
 
     const isActive = (href: string) => {
@@ -86,41 +140,49 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
 
             {/* ── Navigation ── */}
             <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
-                {menuGroups.map((group, gIdx) => (
-                    <div key={group.label} className={gIdx !== 0 ? "mt-4" : ""}>
-                        {!isCollapsed && (
-                            <h3 className="px-6 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                                {group.label}
-                            </h3>
-                        )}
-                        <div className="space-y-0.5">
-                            {group.items.map((item) => {
-                                const active = isActive(item.href);
-                                return (
-                                    <Link key={item.href} href={item.href}
-                                        className={`group relative flex items-center gap-3 px-6 py-2 transition-all
-                                            ${active
-                                                ? 'bg-white/5 text-white font-bold border-l-4 border-[#F59E0B]'
-                                                : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
+                {menuGroups.map((group, gIdx) => {
+                    const itemsToRender = mounted 
+                        ? group.items.filter(item => hiddenPages[item.href] !== false)
+                        : group.items;
 
-                                        <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#F59E0B]' : 'text-slate-400 group-hover:text-white'}`} />
+                    if (itemsToRender.length === 0) return null;
 
-                                        {!isCollapsed && (
-                                            <span className="text-[13px] tracking-tight whitespace-nowrap overflow-hidden">
-                                                {item.name}
-                                            </span>
-                                        )}
-                                        {isCollapsed && (
-                                            <div className="absolute left-full ml-4 px-3 py-1 bg-[#1a1a2e] text-white text-[12px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl border border-white/5">
-                                                {item.name}
-                                            </div>
-                                        )}
-                                    </Link>
-                                );
-                            })}
+                    return (
+                        <div key={group.label} className={gIdx !== 0 ? "mt-4" : ""}>
+                            {!isCollapsed && (
+                                <h3 className="px-6 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">
+                                    {group.label}
+                                </h3>
+                            )}
+                            <div className="space-y-0.5">
+                                {itemsToRender.map((item) => {
+                                    const active = isActive(item.href);
+                                    return (
+                                        <Link key={item.href} href={item.href}
+                                            className={`group relative flex items-center gap-3 px-6 py-2 transition-all
+                                                ${active
+                                                    ? 'bg-white/5 text-white font-bold border-l-4 border-[#F59E0B]'
+                                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
+
+                                            <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#F59E0B]' : 'text-slate-400 group-hover:text-white'}`} />
+
+                                            {!isCollapsed && (
+                                                <span className="text-[13px] tracking-tight whitespace-nowrap overflow-hidden">
+                                                    {item.name}
+                                                </span>
+                                            )}
+                                            {isCollapsed && (
+                                                <div className="absolute left-full ml-4 px-3 py-1 bg-[#1a1a2e] text-white text-[12px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl border border-white/5">
+                                                    {item.name}
+                                                </div>
+                                            )}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </nav>
 
             {/* ── Footer Controls ── */}

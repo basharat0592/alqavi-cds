@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Package, RefreshCw, Plus, Search, Edit, Barcode, Activity, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
-import { productService, categoryService } from '@/lib/api';
+import { supplierProductService, categoryService } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
@@ -28,7 +28,7 @@ export default function SupplierProducts() {
         setLoading(true);
         try {
             const [items, cats] = await Promise.all([
-                productService.getAll({ all_items: 'true' } as any),
+                supplierProductService.getAll({ all_items: 'true' } as any),
                 categoryService.getAll()
             ]);
             setProducts(items || []);
@@ -166,9 +166,9 @@ export default function SupplierProducts() {
                                                         <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{prod.category_name || 'Standard Item'}</span>
                                                         <span className="text-slate-200 dark:text-slate-600 font-bold text-[8px]">•</span>
                                                         <div className="flex items-center gap-1">
-                                                            <div className={`h-1.5 w-1.5 rounded-full ${(prod.quantity_in_stock || 0) > 10 ? 'bg-emerald-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                                            <span className={`text-[10px] font-bold ${(prod.quantity_in_stock || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
-                                                                {prod.quantity_in_stock || 0} Available
+                                                            <div className={`h-1.5 w-1.5 rounded-full ${(prod.quantity || 0) > 10 ? 'bg-emerald-500' : (prod.quantity || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                                            <span className={`text-[10px] font-bold ${(prod.quantity || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
+                                                                {prod.quantity || 0} Available
                                                             </span>
                                                         </div>
                                                     </div>
@@ -204,7 +204,7 @@ export default function SupplierProducts() {
                                                         if (confirm(`Are you sure you want to permanently delete "${prod.name}"?`)) {
                                                             try {
                                                                 setLoading(true);
-                                                                await productService.delete(prod.id);
+                                                                await supplierProductService.delete(prod.id);
                                                                 toast.success('Product deleted successfully.');
                                                                 loadData();
                                                             } catch (error) {

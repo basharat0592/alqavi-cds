@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import Warehouse, Stock
-from modules.supplier.serializers import SupplierSerializer
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -11,9 +10,12 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
 
 class StockSerializer(serializers.ModelSerializer):
-    supplier_name = serializers.ReadOnlyField(source='supplier.name')
+    supplier_name = serializers.SerializerMethodField()
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     category_name = serializers.ReadOnlyField(source='category.name')
+
+    def get_supplier_name(self, obj):
+        return f"{obj.supplier.first_name} {obj.supplier.last_name}"
 
     class Meta:
         model = Stock

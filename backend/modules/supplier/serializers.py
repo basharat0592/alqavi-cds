@@ -11,6 +11,7 @@ class SupplierSerializer(serializers.ModelSerializer):
             'company',
             'contact',
             'address',
+            'status',
             'created_at',
             'updated_at',
         ]
