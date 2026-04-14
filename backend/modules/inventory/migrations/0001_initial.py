@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('supplier', '0002_alter_supplier_address_alter_supplier_company_and_more'),
+        # ('supplier', '0002_alter_supplier_address_alter_supplier_company_and_more'),
     ]
 
     operations = [

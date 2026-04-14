@@ -6,6 +6,25 @@ from django.conf import settings
 from django.utils.text import slugify
 
 
+class MainCategory(BaseModel):
+    """Broad product classification (e.g. Skin Care, Hair Care)"""
+    name = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'main_categories'
+        verbose_name = 'Main Category'
+        verbose_name_plural = 'Main Categories'
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
 class Category(BaseModel):
     """Product classification"""
     STATUS_CHOICES = [
@@ -13,6 +32,7 @@ class Category(BaseModel):
         ('INACTIVE', 'Inactive'),
     ]
 
+    main_category = models.ForeignKey(MainCategory, on_delete=models.CASCADE, related_name='categories', null=True)
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(null=True, blank=True)
@@ -33,37 +53,20 @@ class Category(BaseModel):
 
 
 class Product(BaseModel):
-    """Catalog entry record"""
-    BADGE_CHOICES = [
-        ('NEW', 'New Arrival'),
-        ('SALE', 'Flash Sale'),
-        ('HOT', 'Hot'),
-        ('BEST SELLER', 'Best Seller'),
-        ('LIMITED', 'Limited Edition'),
-    ]
-
-    STATUS_CHOICES = [
-        ('ACTIVE', 'Active'),
-        ('INACTIVE', 'Inactive'),
-    ]
-
+    # ... (existing Product model)
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='products')
-    
-    # Auto-populated fields from Stock
     product_name = models.CharField(max_length=255, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     cost_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     total_quantity = models.IntegerField(null=True, blank=True)
-
-    # Core product fields
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)
-    batch = models.CharField(max_length=100, null=True, blank=True, help_text="Dynamic tag like 'SPECIALTY' or 'POPULAR'")
-    badge = models.CharField(max_length=20, choices=BADGE_CHOICES, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    batch = models.CharField(max_length=100, null=True, blank=True)
+    badge = models.CharField(max_length=20, null=True, blank=True)
+    status = models.CharField(max_length=20, default='ACTIVE')
 
     class Meta:
         db_table = 'products'
@@ -73,7 +76,6 @@ class Product(BaseModel):
 
     def save(self, *args, **kwargs):
         if self.stock:
-            # Auto-populate from linked stock entry
             if not self.product_name:
                 self.product_name = self.stock.product_name
             self.category = self.stock.category
@@ -86,6 +88,31 @@ class Product(BaseModel):
     def __str__(self):
         return self.product_name
 
+
+class SupplierProduct(BaseModel):
+    """Products uploaded/maintained by suppliers"""
+    name = models.CharField(max_length=255)
+    sku = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    barcode = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    supplier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='supplier_products')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplier_products')
+    
+    image = models.ImageField(upload_to='supplier_products/', null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    retail_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    quantity = models.PositiveIntegerField(default=0)
+    
+    is_approved = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'supplier_products'
+        verbose_name = 'Supplier Product'
+        verbose_name_plural = 'Supplier Products'
+
+    def __str__(self):
+        return self.name
 
 class Wishlist(BaseModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist')
