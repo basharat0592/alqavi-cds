@@ -54,7 +54,7 @@ export default function ProductCategoriesPage() {
         setForm({
             name: cat.name,
             description: cat.description || '',
-            status: (cat as any).status || 'ACTIVE',
+            status: cat.status as 'ACTIVE' | 'INACTIVE' || 'ACTIVE',
         });
         setView('form');
     };

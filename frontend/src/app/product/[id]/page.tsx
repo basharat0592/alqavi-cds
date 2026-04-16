@@ -52,7 +52,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     const allProducts = await productService.getAll();
                     const apiArr = Array.isArray(allProducts) ? allProducts : (allProducts as any).results || [];
                     const related = apiArr
-                        .filter((p: any) => p.id !== data.id && p.status === 'active')
+                        .filter((p: any) => p.id !== data.id && p.status === 'ACTIVE')
                         .slice(0, 4);
                     setRelatedProducts(related);
                 }

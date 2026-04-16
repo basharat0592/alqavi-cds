@@ -68,7 +68,19 @@ export default function Header() {
 
     const getDashboardLink = () => {
         if (!user) return '/login';
-        return '/admin/dashboard';
+        const role = (user.role || '').toString().toLowerCase();
+        if (['admin', 'staff', 'superuser', 'manager'].some(r => role.includes(r)) || user.is_staff || user.is_superuser) {
+            return '/admin/dashboard';
+        } else if (role === 'supplier') {
+            return '/supplier/dashboard';
+        }
+        return '/';
+    };
+
+    const isCustomer = () => {
+        if (!user) return false;
+        const role = (user.role || '').toString().toLowerCase();
+        return !(['admin', 'staff', 'superuser', 'manager'].some(r => role.includes(r)) || user.is_staff || user.is_superuser || role === 'supplier');
     };
 
     return (
@@ -179,14 +191,29 @@ export default function Header() {
                                             </span>
                                         </div>
                                         <div className="py-2">
-                                            <Link href={getDashboardLink()} onClick={() => setAccountOpen(false)}
-                                                className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 transition">
-                                                <LayoutDashboard className="h-4 w-4 text-gray-400" /> Dashboard
-                                            </Link>
-                                            <Link href="/shop" onClick={() => setAccountOpen(false)}
-                                                className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 transition">
-                                                <Package className="h-4 w-4 text-gray-400" /> All Products
-                                            </Link>
+                                            {isCustomer() ? (
+                                                <>
+                                                    <Link href="/dashboard/orders" onClick={() => setAccountOpen(false)}
+                                                        className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 transition">
+                                                        <Package className="h-4 w-4 text-[#4f46e5]" /> My Orders
+                                                    </Link>
+                                                    <Link href="/shop" onClick={() => setAccountOpen(false)}
+                                                        className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 transition">
+                                                        <Package className="h-4 w-4 text-gray-400" /> Browse Products
+                                                    </Link>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Link href={getDashboardLink()} onClick={() => setAccountOpen(false)}
+                                                        className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 transition">
+                                                        <LayoutDashboard className="h-4 w-4 text-gray-400" /> Dashboard
+                                                    </Link>
+                                                    <Link href="/shop" onClick={() => setAccountOpen(false)}
+                                                        className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 transition">
+                                                        <Package className="h-4 w-4 text-gray-400" /> All Products
+                                                    </Link>
+                                                </>
+                                            )}
                                             <div className="px-4 my-2">
                                                 <hr className="border-gray-100" />
                                             </div>
@@ -305,10 +332,17 @@ export default function Header() {
                     <hr className="border-white/10 my-2" />
                     {user ? (
                         <>
-                            <Link href={getDashboardLink()} onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-3 py-2 hover:text-[#febd69] transition">
-                                <LayoutDashboard className="h-4 w-4" /> Dashboard
-                            </Link>
+                            {isCustomer() ? (
+                                <Link href="/dashboard/orders" onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-3 py-2 hover:text-[#febd69] transition">
+                                    <Package className="h-4 w-4" /> My Orders
+                                </Link>
+                            ) : (
+                                <Link href={getDashboardLink()} onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-3 py-2 hover:text-[#febd69] transition">
+                                    <LayoutDashboard className="h-4 w-4" /> Dashboard
+                                </Link>
+                            )}
                             <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
                                 className="flex items-center gap-3 py-2 text-red-400 hover:text-red-300 transition w-full">
                                 <LogOut className="h-4 w-4" /> Sign Out

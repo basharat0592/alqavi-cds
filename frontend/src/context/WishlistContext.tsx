@@ -5,7 +5,7 @@ import api from '@/lib/axios';
 import { authService } from '@/lib/auth';
 
 interface WishlistItem {
-    id: number;
+    id: string;
     name: string;
     price: number | string;
     image: string;
@@ -16,8 +16,8 @@ interface WishlistItem {
 interface WishlistContextType {
     wishlist: WishlistItem[];
     addToWishlist: (item: WishlistItem) => void;
-    removeFromWishlist: (id: number) => void;
-    isInWishlist: (id: number) => boolean;
+    removeFromWishlist: (id: string) => void;
+    isInWishlist: (id: string) => boolean;
     wishlistCount: number;
     refreshWishlist: () => void;
     loading: boolean;
@@ -47,8 +47,8 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
             const response = await api.get('/v1/products/wishlist/');
             const backendItems = response.data.map((item: any) => ({
                 id: item.product_details.id,
-                name: item.product_details.name,
-                price: item.product_details.price,
+                name: item.product_details.product_name,
+                price: item.product_details.selling_price || 0,
                 image: item.product_details.image,
                 category: item.product_details.category_name,
                 addedAt: item.created_at
@@ -72,7 +72,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     }, [wishlist]);
 
     const addToWishlist = async (item: WishlistItem) => {
-        if (wishlist.find(i => i.id === item.id)) return;
+        if (wishlist.find(i => String(i.id) === String(item.id))) return;
 
         if (authService.isAuthenticated()) {
             try {
@@ -86,7 +86,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const removeFromWishlist = async (id: number) => {
+    const removeFromWishlist = async (id: string) => {
         if (authService.isAuthenticated()) {
             try {
                 await api.delete(`/v1/products/wishlist/${id}/remove/`);
@@ -95,11 +95,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
                 console.error("Failed to remove from database wishlist", err);
             }
         } else {
-            setWishlist(prev => prev.filter(i => i.id !== id));
+            setWishlist(prev => prev.filter(i => String(i.id) !== String(id)));
         }
     };
 
-    const isInWishlist = (id: number) => wishlist.some(i => i.id === id);
+    const isInWishlist = (id: string) => wishlist.some(i => String(i.id) === String(id));
 
     return (
         <WishlistContext.Provider value={{ 

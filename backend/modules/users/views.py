@@ -79,14 +79,14 @@ def create_user(request):
         
         # Automatically create Supplier profile if the role is 'Supplier'
         if user.role and user.role.name.lower() == 'supplier':
-            from modules.company.models import Supplier
+            from modules.supplier.models import Supplier
             Supplier.objects.get_or_create(
                 user=user,
                 defaults={
                     'name': request.data.get('business_name', f"{user.first_name} {user.last_name}"),
+                    'company': request.data.get('company_name', ''),
                     'email': user.email,
-                    'phone': getattr(user, 'phone', ''),
-                    'contact_person': f"{user.first_name} {user.last_name}"
+                    'contact': getattr(user, 'phone', '')
                 }
             )
 
@@ -450,13 +450,12 @@ def signup_supplier(request):
         user = serializer.save()
         
         # Create Supplier Profile
-        from modules.company.models import Supplier
+        from modules.supplier.models import Supplier
         Supplier.objects.create(
             user=user,
             name=request.data.get('company_name', f"{user.first_name} {user.last_name}"),
             email=user.email,
-            phone=user.phone,
-            contact_person=f"{user.first_name} {user.last_name}"
+            contact=user.phone if hasattr(user, 'phone') else ''
         )
         
         # Log Initial Activity

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
     Search, Edit, Trash2, Plus, 
     RefreshCw, MapPin, Phone, Building2, 
-    Truck, Save, Loader2, UserCheck
+    Truck, Save, Loader2, UserCheck, Mail, KeyRound
 } from 'lucide-react';
 import { companyService } from '@/services/company.service';
 import toast from 'react-hot-toast';
@@ -31,7 +31,9 @@ export default function SuppliersPage() {
         name: '',
         company: '',
         contact: '',
-        address: ''
+        address: '',
+        email: '',
+        password: ''
     });
 
     const loadData = async () => {
@@ -62,7 +64,7 @@ export default function SuppliersPage() {
         try {
             await companyService.createSupplier(form);
             toast.success('Supplier added successfully!');
-            setForm({ name: '', company: '', contact: '', address: '' }); // reset form
+            setForm({ name: '', company: '', contact: '', address: '', email: '', password: '' }); // reset form
             loadData(); // refresh list
         } catch (err) {
             console.error('Add supplier error:', err);
@@ -86,7 +88,7 @@ export default function SuppliersPage() {
     if (loading && suppliers.length === 0) return <PageLoader />;
 
     const filtered = suppliers.filter(s => {
-        const text = `${s.name} ${s.company} ${s.contact} ${s.address}`.toLowerCase();
+        const text = `${s.name} ${s.company} ${s.contact} ${s.address} ${s.email || ''}`.toLowerCase();
         return text.includes(search.toLowerCase());
     });
 
@@ -108,49 +110,74 @@ export default function SuppliersPage() {
                     <Plus className="w-4 h-4 text-[#F59E0B]" />
                     Add Supplier
                 </h2>
-                <form onSubmit={handleAddSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Name <span className="text-red-500">*</span></label>
-                        <input 
-                            value={form.name} 
-                            onChange={e => handleChange('name', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Supplier Name" 
-                        />
+                <form onSubmit={handleAddSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label className={LABEL}>Name <span className="text-red-500">*</span></label>
+                            <input 
+                                value={form.name} 
+                                onChange={e => handleChange('name', e.target.value)} 
+                                className={INPUT} 
+                                placeholder="Supplier Name" 
+                            />
+                        </div>
+                        <div>
+                            <label className={LABEL}>Company</label>
+                            <input 
+                                value={form.company} 
+                                onChange={e => handleChange('company', e.target.value)} 
+                                className={INPUT} 
+                                placeholder="Company Name" 
+                            />
+                        </div>
+                        <div>
+                            <label className={LABEL}>Contact</label>
+                            <input 
+                                value={form.contact} 
+                                onChange={e => handleChange('contact', e.target.value)} 
+                                className={INPUT} 
+                                placeholder="Phone Number" 
+                            />
+                        </div>
+                        <div>
+                            <label className={LABEL}>Address</label>
+                            <input 
+                                value={form.address} 
+                                onChange={e => handleChange('address', e.target.value)} 
+                                className={INPUT} 
+                                placeholder="Address" 
+                            />
+                        </div>
                     </div>
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Company</label>
-                        <input 
-                            value={form.company} 
-                            onChange={e => handleChange('company', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Company Name" 
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label className={LABEL}><Mail className="w-3 h-3 inline mr-1" />Gmail (Login)</label>
+                            <input 
+                                type="email"
+                                value={form.email} 
+                                onChange={e => handleChange('email', e.target.value)} 
+                                className={INPUT} 
+                                placeholder="supplier@gmail.com" 
+                            />
+                        </div>
+                        <div>
+                            <label className={LABEL}><KeyRound className="w-3 h-3 inline mr-1" />Password</label>
+                            <input 
+                                type="password"
+                                value={form.password} 
+                                onChange={e => handleChange('password', e.target.value)} 
+                                className={INPUT} 
+                                placeholder="Min 8 characters" 
+                            />
+                        </div>
+                        <div className="md:col-span-2 flex justify-end">
+                            <button type="submit" disabled={saving} className={`${PRIMARY_BTN} h-[42px] px-8`}>
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Save Supplier
+                            </button>
+                        </div>
                     </div>
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Contact</label>
-                        <input 
-                            value={form.contact} 
-                            onChange={e => handleChange('contact', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Phone Number" 
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <label className={LABEL}>Address</label>
-                        <input 
-                            value={form.address} 
-                            onChange={e => handleChange('address', e.target.value)} 
-                            className={INPUT} 
-                            placeholder="Address" 
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <button type="submit" disabled={saving} className={`${PRIMARY_BTN} w-full h-[42px]`}>
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Save
-                        </button>
-                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium">If Gmail & Password are provided, a login account will be auto-created for the supplier portal.</p>
                 </form>
             </SectionCard>
 
@@ -179,6 +206,7 @@ export default function SuppliersPage() {
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Supplier Name</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Company</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Contact</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Email (Login)</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest border-r border-slate-200 dark:border-white/10">Address</th>
                                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 whitespace-nowrap uppercase tracking-widest">Actions</th>
                                 </tr>
@@ -186,7 +214,7 @@ export default function SuppliersPage() {
                             <tbody className="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-[#1a252f]">
                                 {filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-24 text-center">
+                                        <td colSpan={6} className="px-6 py-24 text-center">
                                             <div className="flex flex-col items-center gap-2 opacity-40">
                                                 <Truck className="h-12 w-12 text-slate-400" />
                                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No suppliers found</p>
@@ -209,6 +237,12 @@ export default function SuppliersPage() {
                                                 <div className="flex items-center gap-2">
                                                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                                                     <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{s.contact || '--'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{s.email || '--'}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 border-r border-slate-100 dark:border-white/5">

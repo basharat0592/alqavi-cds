@@ -54,4 +54,8 @@ export const inventoryService = {
         // Alias for createStock for existing components
         return inventoryService.createStock(payload);
     },
+    getMovements: async (params?: any): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/movements/', { params });
+        return data.results || data || [];
+    },
 };

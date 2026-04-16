@@ -6,7 +6,7 @@ import {
     Package, Tag, Image as ImageIcon,
     Save, Loader2, Truck, ChevronLeft, MapPin,
     Percent, DollarSign, Layers, Filter,
-    CheckCircle, ArrowRight, Info
+    CheckCircle, ArrowRight, Info, AlertTriangle
 } from 'lucide-react';
 import { productService, inventoryService } from '@/lib/api';
 import { companyService } from '@/services/company.service';
@@ -32,6 +32,7 @@ export default function AddEditProductPage() {
     const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
     const [filteredStocks, setFilteredStocks] = useState<any[]>([]);
     const [selectedStock, setSelectedStock] = useState<any | null>(null);
+    const [existingProducts, setExistingProducts] = useState<any[]>([]);
 
     // Pricing logic
     const [pricingMode, setPricingMode] = useState<'percent' | 'manual'>('percent');
@@ -54,16 +55,25 @@ export default function AddEditProductPage() {
     useEffect(() => {
         const fetchResources = async () => {
             try {
-                const [stockData, supData] = await Promise.all([
+                const [stockData, supData, prodData] = await Promise.all([
                     inventoryService.getInventory(),
                     companyService.getSuppliers(),
+                    productService.getAll({ page_size: 1000 }).catch(() => [])
                 ]);
-                setAllStocks(stockData || []);
-                setFilteredStocks(stockData || []);
+                const stocks = stockData || [];
+                const products = Array.isArray(prodData) ? prodData : (prodData as any)?.results || [];
+
+                setAllStocks(stocks);
+                setFilteredStocks(stocks);
                 setAllSuppliers(supData || []);
+                setExistingProducts(products);
 
                 if (isEdit) {
                     const prod = await productService.getById(id as string);
+                    
+                    // Set supplier filter to match the product's supplier
+                    if (prod.supplier) setSelectedSupplier(prod.supplier.toString());
+
                     setFormData({
                         stock: prod.stock || '',
                         selling_price: prod.selling_price || '',
@@ -74,8 +84,9 @@ export default function AddEditProductPage() {
                     });
                     setSellingPrice(prod.selling_price || '');
                     if (prod.image) setImagePreview(prod.image);
+                    
                     if (prod.stock) {
-                        const s = (stockData || []).find((st: any) => st.id === prod.stock);
+                        const s = stocks.find((st: any) => st.id === prod.stock);
                         if (s) setSelectedStock(s);
                     }
                 }
@@ -90,17 +101,25 @@ export default function AddEditProductPage() {
 
     // Filter stocks when supplier changes
     useEffect(() => {
-        if (selectedSupplier === 'all') {
-            setFilteredStocks(allStocks);
-        } else {
-            setFilteredStocks(allStocks.filter(s => s.supplier?.toString() === selectedSupplier || s.supplier_name?.toLowerCase() === allSuppliers.find(sup => sup.id?.toString() === selectedSupplier)?.name?.toLowerCase()));
+        if (loading) return; // Wait for initial fetch to complete
+
+        const filtered = selectedSupplier === 'all' 
+            ? allStocks 
+            : allStocks.filter(s => 
+                s.supplier?.toString() === selectedSupplier || 
+                s.supplier_id?.toString() === selectedSupplier ||
+                s.supplier_name?.toLowerCase() === allSuppliers.find(sup => sup.id?.toString() === selectedSupplier)?.name?.toLowerCase()
+            );
+        
+        setFilteredStocks(filtered);
+
+        // Only clear the selection if the current selected stock is not in the new filtered list
+        // and we are NOT in the middle of initial edit-mode loading
+        if (selectedStock && !filtered.find(s => s.id === selectedStock.id)) {
+            setSelectedStock(null);
+            setFormData(prev => ({ ...prev, stock: '' }));
         }
-        // Reset stock selection when filter changes
-        setSelectedStock(null);
-        setSellingPrice('');
-        setProfitPercent('');
-        setFormData(prev => ({ ...prev, stock: '', selling_price: '' }));
-    }, [selectedSupplier, allStocks]);
+    }, [selectedSupplier, allStocks, allSuppliers, loading]);
 
     // Pricing calculations
     const costPrice = selectedStock ? Number(selectedStock.price_per_item) : 0;
@@ -242,20 +261,36 @@ export default function AddEditProductPage() {
                                     <Package className="inline h-3 w-3 mr-1" />
                                     Select Stock Entry <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    required
-                                    value={formData.stock}
-                                    onChange={e => handleStockSelect(e.target.value)}
-                                    className={selectCls}
-                                >
-                                    <option value="">-- Choose a stock entry --</option>
-                                    {filteredStocks.map(s => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.product_name} — {s.supplier_name} ({s.total_quantity} units)
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                    { (() => {
+                                        const isDuplicate = !isEdit && formData.stock && existingProducts.some(p => String(p.stock) === String(formData.stock));
+                                        return (
+                                            <div className="space-y-2">
+                                                <select
+                                                    required
+                                                    value={formData.stock}
+                                                    onChange={e => handleStockSelect(e.target.value)}
+                                                    className={selectCls + (isDuplicate ? ' border-red-500 bg-red-50/10' : '')}
+                                                >
+                                                    <option value="">-- Choose a stock entry --</option>
+                                                    {filteredStocks.map(s => (
+                                                        <option key={s.id} value={s.id}>
+                                                            {s.product_name} — {s.supplier_name} ({s.total_quantity} units)
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {isDuplicate && (
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl animate-in shake duration-500">
+                                                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                                                        <div>
+                                                            <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Duplicate Entry Detected</p>
+                                                            <p className="text-[9px] text-red-500 font-bold">This stock item is already in your product catalog.</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })() }
+                                </div>
 
                             {/* Stock Preview */}
                             {selectedStock && (

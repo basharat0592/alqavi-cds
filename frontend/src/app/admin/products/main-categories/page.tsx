@@ -32,7 +32,7 @@ export default function MainCategoriesPage() {
     const [form, setForm] = useState({
         name: '',
         description: '',
-        status: 'active' as 'active' | 'inactive',
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
         position: 0,
         is_visible: true,
         product_ids: [] as string[]
@@ -61,7 +61,7 @@ export default function MainCategoriesPage() {
         setForm({
             name: cat.name,
             description: cat.description || '',
-            status: cat.status || 'active',
+            status: cat.status || 'ACTIVE',
             position: cat.position || 0,
             is_visible: cat.is_visible !== false,
             product_ids: (cat.product_details || []).map((p: any) => p.id) || []
@@ -71,7 +71,7 @@ export default function MainCategoriesPage() {
 
     const handleNew = () => {
         setEditMode(null);
-        setForm({ name: '', description: '', status: 'active', position: 0, is_visible: true, product_ids: [] });
+        setForm({ name: '', description: '', status: 'ACTIVE', position: 0, is_visible: true, product_ids: [] });
         setView('form');
     };
 
@@ -210,8 +210,8 @@ export default function MainCategoriesPage() {
                                             onChange={e => setForm({ ...form, status: e.target.value as any })}
                                             className={selectCls}
                                         >
-                                            <option value="active">Active</option>
-                                            <option value="inactive">Inactive</option>
+                                            <option value="ACTIVE">Active</option>
+                                            <option value="INACTIVE">Inactive</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1">
@@ -399,8 +399,8 @@ export default function MainCategoriesPage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${cat.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-                                                {cat.status || 'Active'}
+                                            <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${cat.status === 'ACTIVE' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                                                {cat.status || 'ACTIVE'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right">

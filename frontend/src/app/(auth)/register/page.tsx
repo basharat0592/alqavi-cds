@@ -21,7 +21,7 @@ export default function RegisterChoicePage() {
                         <p className="text-xs text-gray-600 font-medium">Please select your primary activity on the platform</p>
                     </div>
 
-                    <div className="p-8 grid md:grid-cols-3 gap-6">
+                    <div className="p-8 grid md:grid-cols-2 gap-6">
                         {/* Customer Choice */}
                         <Link href="/register/customer" 
                             className="group p-6 border border-[#ddd] rounded hover:border-[#F59E0B] hover:shadow-md transition-all flex flex-col gap-4 focus:ring-2 focus:ring-[#F59E0B] outline-none text-left">
@@ -49,21 +49,6 @@ export default function RegisterChoicePage() {
                                     <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#F59E0B]" />
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-1 leading-relaxed">List and wholesale your brand products across Pakistan.</p>
-                            </div>
-                        </Link>
-
-                        {/* Admin Choice */}
-                        <Link href="/register/admin" 
-                            className="group p-6 border border-[#ddd] rounded hover:border-red-600 hover:shadow-md transition-all flex flex-col gap-4 focus:ring-2 focus:ring-red-600 outline-none text-left">
-                            <div className="w-12 h-12 bg-white border border-[#ddd] rounded flex items-center justify-center group-hover:border-red-600">
-                                <ShieldCheck className="h-6 w-6 text-gray-700" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800 flex items-center justify-between">
-                                    Admin
-                                    <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-600" />
-                                </h2>
-                                <p className="text-xs text-gray-500 mt-1 leading-relaxed">Manage system operations, users, and distributor analytics.</p>
                             </div>
                         </Link>
                     </div>

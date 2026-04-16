@@ -86,6 +86,7 @@ export default function CheckoutPage() {
                 customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
                 shipping_address: `${shippingInfo.address}, ${shippingInfo.city}`,
                 phone_number: shippingInfo.phone,
+                payment_method: payMethod.toUpperCase(),
                 notes: `Email: ${shippingInfo.email} | Payment: ${payMethod.toUpperCase()}`,
                 items: items.map((i: any) => ({
                     id: i.id,
@@ -242,7 +243,11 @@ export default function CheckoutPage() {
                                 {items.map((item: any) => (
                                     <div key={item.id} className="py-4 flex gap-4 items-center">
                                         <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center p-1.5 border border-slate-100">
-                                            <img src={getImageUrl(item.image)} className="w-full h-full object-contain" alt={item.name} />
+                                            {getImageUrl(item.image) ? (
+                                                <img src={getImageUrl(item.image)!} className="w-full h-full object-contain" alt={item.name} />
+                                            ) : (
+                                                <Package className="w-6 h-6 text-gray-300 opacity-50" />
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="text-sm font-bold text-slate-900 truncate">{item.name}</h4>
@@ -332,7 +337,11 @@ export default function CheckoutPage() {
                                     {items.map((item: any) => (
                                         <div key={item.id} className="px-4 py-3 flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center p-1 border border-slate-100 shrink-0">
-                                                <img src={getImageUrl(item.image)} className="w-full h-full object-contain" alt={item.name} />
+                                                {getImageUrl(item.image) ? (
+                                                    <img src={getImageUrl(item.image)!} className="w-full h-full object-contain" alt={item.name} />
+                                                ) : (
+                                                    <Package className="w-5 h-5 text-gray-300 opacity-50" />
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>

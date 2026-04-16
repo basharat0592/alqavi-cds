@@ -24,12 +24,12 @@ INSTALLED_APPS = [
     
     # Local apps
     'modules.users',
+    'modules.supplier',
     'modules.products',
     'modules.inventory',
     'modules.sales',
     'modules.payments',
     'modules.company',
-    'modules.supplier',
 ]
 
 MIDDLEWARE = [

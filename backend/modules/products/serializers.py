@@ -13,17 +13,25 @@ class ProductSerializer(serializers.ModelSerializer):
     supplier_name = serializers.ReadOnlyField(source='supplier.name')
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     category_name = serializers.ReadOnlyField(source='category.name')
+    name = serializers.ReadOnlyField(source='product_name')
     profit_margin = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
-            'id', 'stock', 'product_name', 'category', 'category_name',
+            'id', 'stock', 'product_name', 'name', 'category', 'category_name',
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
             'cost_price', 'total_quantity', 'image', 'description', 
             'selling_price', 'batch', 'badge', 'status', 'profit_margin', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'profit_margin']
+        extra_kwargs = {
+            'stock': {'required': False, 'allow_null': True},
+            'selling_price': {'required': False, 'allow_null': True},
+            'category': {'required': False, 'allow_null': True},
+            'supplier': {'required': False, 'allow_null': True},
+            'warehouse': {'required': False, 'allow_null': True},
+        }
 
     def get_profit_margin(self, obj):
         if obj.selling_price and obj.cost_price and obj.selling_price > 0:

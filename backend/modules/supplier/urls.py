@@ -1,12 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SupplierViewSet
+from .views import SupplierViewSet, PurchaseOrderViewSet
 
 router = DefaultRouter()
-router.register(r'suppliers', SupplierViewSet, basename='supplier')
+router.register(r'list', SupplierViewSet, basename='supplier')
+router.register(r'orders', PurchaseOrderViewSet, basename='purchase-order')
 
 urlpatterns = [
-    # Support for legacy /create/ suffix if needed by frontend
-    path('suppliers/create/', SupplierViewSet.as_view({'post': 'create'}), name='supplier-create-legacy'),
     path('', include(router.urls)),
 ]

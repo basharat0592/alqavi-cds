@@ -2,187 +2,142 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
-import {
-    Bell,
-    Search,
-    User,
-    Building2,
-    LayoutDashboard,
-    Package,
-    Boxes,
-    TrendingUp,
-    ShoppingCart,
-    HelpCircle,
-    Settings,
-    LogOut,
-    ChevronDown,
-    ChevronRight,
-    Home
-} from 'lucide-react';
-import { authService } from '@/lib/auth';
 import AuthGuard from '@/components/auth/AuthGuard';
-import api from '@/lib/axios';
-import { getImageUrl } from '@/lib/utils';
-
-const SIDEBAR_LINKS = [
-    { href: '/supplier/dashboard', label: 'Dashboard', icon: Home },
-    { href: '/supplier/orders', label: 'Recent Orders', icon: ShoppingCart },
-    { href: '/supplier/products', label: 'Your Catalog', icon: Package },
-    { href: '/supplier/inventory', label: 'Warehouse Status', icon: Boxes },
-    { href: '/supplier/sales', label: 'Sale Registry', icon: TrendingUp },
-    { href: '/supplier/profile', label: 'Login & Security', icon: User },
-    { href: '/supplier/support', label: 'Partner Support', icon: HelpCircle },
-];
+import { 
+    LayoutDashboard, Package, ShoppingBag, LogOut, 
+    Menu, Bell, Box, User, Settings
+} from 'lucide-react';
+import Link from 'next/link';
+import { authService } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
     const router = useRouter();
     const pathname = usePathname();
-
-    const fetchLatestProfile = async () => {
-        try {
-            const { data } = await api.get('v1/users/profile/');
-            setProfile(data);
-        } catch (err) {
-            console.error("Failed to sync profile:", err);
-        }
-    };
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        setUser(authService.getUser());
-        fetchLatestProfile();
+        const u = authService.getUser();
+        if (u) setUser(u);
     }, []);
 
-    // Helper for profile image (Avatar)
-    const renderAvatar = () => {
-        const name = profile?.first_name || user?.name || 'P';
-        const initial = name.charAt(0).toUpperCase();
+    const navItems = [
+        { name: 'Overview', href: '/supplier/dashboard', icon: LayoutDashboard },
+        { name: 'My Products', href: '/supplier/products', icon: Package },
+        { name: 'Admin Orders', href: '/supplier/orders', icon: ShoppingBag },
+    ];
 
-        if (profile?.avatar) {
-            return (
-                <img 
-                    src={getImageUrl(profile.avatar)} 
-                    alt="" 
-                    className="w-8 h-8 rounded-full border border-white/20 object-cover shadow-sm group-hover:border-[#F59E0B] transition-colors"
-                />
-            );
-        }
-
-        return (
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-xs border border-white/10 group-hover:border-[#F59E0B] transition-colors">
-                {initial}
-            </div>
-        );
+    const handleLogout = () => {
+        authService.logout();
+        router.push('/login');
     };
 
     return (
-        <AuthGuard allowedRoles={['supplier']}>
-            <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col">
-                {/* Global Brand Navbar - High End Amazon Style */}
-                <header className="bg-[#131921] h-14 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-50 shadow-md shrink-0">
-                    {/* Left: Logo */}
-                    <Link href="/supplier/dashboard" className="flex items-center gap-3 group">
-                        <div className="w-8 h-8 bg-[#F59E0B] rounded-lg flex items-center justify-center font-black text-slate-900 group-hover:scale-105 transition-transform shadow-[0_0_15px_rgba(247,202,0,0.3)]">A</div>
-                        <div className="flex flex-col">
-                            <span className="font-extrabold text-[13px] tracking-tight text-white uppercase leading-none">Al-Qavi</span>
-                            <span className="text-[9px] text-[#F59E0B] font-black uppercase tracking-[0.2em] leading-none mt-1">Supplier Hub</span>
+        <AuthGuard allowedRoles={['supplier', 'admin']}>
+            <div className="min-h-screen bg-slate-50 flex font-sans">
+                {/* Desktop Sidebar */}
+                <aside className={cn(
+                    "fixed inset-y-0 left-0 bg-[#1a1a2e] text-white transition-all duration-300 z-50",
+                    isSidebarOpen ? "w-64" : "w-20"
+                )}>
+                    <div className="flex flex-col h-full">
+                        {/* Logo */}
+                        <div className="h-16 flex items-center px-6 border-b border-white/5">
+                            <Box className="h-6 w-6 text-[#F59E0B] shrink-0" />
+                            {isSidebarOpen && (
+                                <span className="ml-3 font-black text-sm tracking-tight uppercase">
+                                    Supplier <span className="text-[#F59E0B]">Hub</span>
+                                </span>
+                            )}
                         </div>
-                    </Link>
 
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-6">
-                        <Link href="/supplier/profile" className="flex items-center gap-3 cursor-pointer group pr-2 border-r border-white/10">
-                            <div className="flex flex-col text-right">
-                                <span className="text-[10px] text-gray-300 font-medium leading-none">Hello, {profile?.first_name || user?.name || 'Partner'}</span>
-                                <div className="flex items-center justify-end gap-1 mt-0.5">
-                                    <span className="text-xs font-black text-white group-hover:text-[#F59E0B] transition-colors uppercase tracking-tight">Account</span>
-                                    <ChevronDown size={12} className="text-gray-400" />
+                        {/* Navigation */}
+                        <nav className="flex-1 py-6 px-4 space-y-1">
+                            {navItems.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link 
+                                        key={item.href} 
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
+                                            isActive 
+                                                ? "bg-[#F59E0B] text-white shadow-lg shadow-amber-500/20" 
+                                                : "text-slate-400 hover:bg-white/5 hover:text-white"
+                                        )}
+                                    >
+                                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "group-hover:text-white")} />
+                                        {isSidebarOpen && <span className="text-sm font-bold">{item.name}</span>}
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-white/5 space-y-1">
+                            {isSidebarOpen && (
+                                <div className="px-3 py-2 mb-2">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Logged in as</p>
+                                    <p className="text-xs font-bold text-white truncate">{user?.name || user?.email}</p>
                                 </div>
-                            </div>
-                            {renderAvatar()}
-                        </Link>
-
-                        <button
-                            onClick={() => {
-                                authService.logout();
-                                window.location.href = '/login';
-                            }}
-                            className="bg-[#F59E0B] hover:bg-[#e6be00] text-slate-900 px-4 py-1.5 rounded font-black text-[11px] uppercase tracking-wider shadow-sm transition-all active:scale-95"
-                        >
-                            Sign Out
-                        </button>
-                    </div>
-                </header>
-
-                {/* Main Content Area: Responsive Split with Sidebar */}
-                <div className="flex-1 flex flex-col lg:flex-row max-w-[1250px] mx-auto w-full px-4 lg:px-8 py-6 gap-8 overflow-hidden">
-
-                    {/* Minimalist Amazon Sidebar */}
-                    <aside className="w-full lg:w-64 shrink-0 space-y-6 animate-in slide-in-from-left duration-500">
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900 mb-6">Menu Settings</h2>
-                            <nav className="space-y-1">
-                                {SIDEBAR_LINKS.map(link => {
-                                    const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
-                                    return (
-                                        <Link
-                                            key={link.href}
-                                            href={link.href}
-                                            className={`
-                                                flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
-                                                ${isActive
-                                                    ? 'bg-blue-50 text-[#F59E0B] font-bold border border-blue-100'
-                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F59E0B]'
-                                                }
-                                            `}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <link.icon className={`h-4 w-4 ${isActive ? 'text-[#F59E0B]' : 'text-slate-400'}`} />
-                                                <span>{link.label}</span>
-                                            </div>
-                                            <ChevronRight className={`h-3 w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-                                        </Link>
-                                    );
-                                })}
-                            </nav>
-                        </div>
-
-                        <div className="pt-6 border-t font-bold">
-                            <button
-                                onClick={() => { authService.logout(); window.location.href = '/'; }}
-                                className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:underline"
+                            )}
+                            <button 
+                                onClick={handleLogout}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all"
                             >
-                                <LogOut className="h-4 w-4" />
-                                <span>Logout Session</span>
+                                <LogOut className="h-5 w-5 shrink-0" />
+                                {isSidebarOpen && <span className="text-sm font-bold">Logout</span>}
                             </button>
                         </div>
-                    </aside>
+                    </div>
+                </aside>
 
-                    {/* Content Area */}
-                    <main className="flex-1 lg:border-l lg:pl-8 overflow-y-auto no-scrollbar">
-                        {/* Breadcrumb Style Navigation */}
-                        <div className="flex items-center gap-2 text-xs mb-8 text-slate-500 font-medium uppercase tracking-wider">
-                            <Link href="/supplier/dashboard" className="hover:text-[#F59E0B] hover:underline">Supplier Portal</Link>
-                            <ChevronRight className="h-3 w-3" />
-                            <span className="text-slate-900 font-bold">
-                                {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Overview'}
-                            </span>
+                {/* Main Content Area */}
+                <div className={cn(
+                    "flex-1 flex flex-col transition-all duration-300",
+                    isSidebarOpen ? "ml-64" : "ml-20"
+                )}>
+                    {/* Header */}
+                    <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-40 px-8 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"
+                            >
+                                <Menu className="h-5 w-5" />
+                            </button>
+                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                                {navItems.find(i => i.href === pathname)?.name || 'Dashboard'}
+                            </h2>
                         </div>
 
+                        <div className="flex items-center gap-4">
+                            <button className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 relative">
+                                <Bell className="h-5 w-5" />
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-white" />
+                            </button>
+                            <div className="h-8 w-px bg-slate-200 mx-2" />
+                            <div className="flex items-center gap-3">
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-xs font-black text-slate-900 leading-tight uppercase">{user?.name}</p>
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">Verified Partner</p>
+                                </div>
+                                <div className="h-10 w-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-700 font-black text-sm border-2 border-white shadow-sm overflow-hidden">
+                                    {user?.avatar ? (
+                                        <img src={user.avatar} alt="P" className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.name?.[0] || 'S'
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Content */}
+                    <main className="p-8 pb-20">
                         {children}
                     </main>
-
-                </div>
-
-                {/* Footer Brand */}
-                <div className="mt-auto py-10 bg-white border-t border-gray-200 text-center shrink-0">
-                    <div className="flex items-center justify-center gap-2 mb-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                        <div className="w-6 h-6 bg-slate-900 rounded flex items-center justify-center font-bold text-white text-[10px]">A</div>
-                        <span className="font-black text-xs tracking-tighter uppercase text-slate-900">Al-Qavi Distributor Network</span>
-                    </div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">© 2026 Partner Enterprise Portal</p>
                 </div>
             </div>
         </AuthGuard>

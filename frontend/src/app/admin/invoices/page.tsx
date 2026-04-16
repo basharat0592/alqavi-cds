@@ -36,10 +36,10 @@ const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: a
 );
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-    'delivered': { label: 'Settled', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-    'processing': { label: 'Pending', cls: 'bg-blue-100 text-[#F59E0B] border-blue-200' },
-    'pending': { label: 'Due', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
-    'cancelled': { label: 'Void', cls: 'bg-red-100 text-red-700 border-red-200' },
+    'DELIVERED': { label: 'Settled', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    'PROCESSING': { label: 'Pending', cls: 'bg-blue-100 text-[#F59E0B] border-blue-200' },
+    'PENDING': { label: 'Due', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
+    'CANCELLED': { label: 'Void', cls: 'bg-red-100 text-red-700 border-red-200' },
 };
 
 export default function InvoicesPage() {
@@ -105,8 +105,8 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[
                     { label: 'Total Invoices', val: invoices.length, icon: FileText, color: 'text-blue-600' },
-                    { label: 'Settled', val: invoices.filter(i => i.status === 'delivered').length, icon: CheckCircle2, color: 'text-emerald-600' },
-                    { label: 'Pending', val: invoices.filter(i => i.status === 'processing').length, icon: Clock, color: 'text-amber-600' },
+                    { label: 'Settled', val: invoices.filter(i => i.status === 'DELIVERED').length, icon: CheckCircle2, color: 'text-emerald-600' },
+                    { label: 'Pending', val: invoices.filter(i => i.status === 'PROCESSING').length, icon: Clock, color: 'text-amber-600' },
                     { label: 'Total Value', val: formatCurrency(invoices.reduce((s, i) => s + Number(i.total_amount), 0)), icon: DollarSign, color: 'text-indigo-600' },
                 ].map((stat, i) => (
                     <SectionCard key={i} className="p-4 flex items-center gap-4 border-l-4 border-l-[#F59E0B]">
@@ -133,14 +133,14 @@ export default function InvoicesPage() {
                     />
                 </div>
                 <div className="flex bg-slate-50 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10 gap-1">
-                    {['all', 'delivered', 'processing', 'pending'].map(s => (
+                    {['all', 'DELIVERED', 'PROCESSING', 'PENDING'].map(s => (
                         <button 
                             key={s} 
                             onClick={() => setFilterStatus(s)}
                             className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all
                                 ${filterStatus === s ? 'bg-white dark:bg-[#1a252f] text-[#F59E0B] shadow-sm shadow-black/5 ring-1 ring-slate-200 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600'}`}
                         >
-                            {s === 'delivered' ? 'Settled' : s}
+                            {s === 'DELIVERED' ? 'Settled' : s === 'all' ? 'All' : s}
                         </button>
                     ))}
                 </div>
@@ -199,7 +199,7 @@ export default function InvoicesPage() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             {(() => {
-                                                const s = STATUS_MAP[inv.status?.toLowerCase()] || { label: inv.status, cls: 'bg-slate-100 text-slate-600' };
+                                                const s = STATUS_MAP[inv.status?.toUpperCase()] || { label: inv.status, cls: 'bg-slate-100 text-slate-600' };
                                                 return (
                                                     <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${s.cls}`}>
                                                         {s.label}

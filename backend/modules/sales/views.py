@@ -6,6 +6,31 @@ from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, CreateOrderSerializer
 
+class IsAdminOrStaff(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        print(f"DEBUG IsAdminOrStaff: request.user = {user}, is_authenticated = {getattr(user, 'is_authenticated', False)}")
+        
+        if not user or not user.is_authenticated:
+            return False
+            
+        print(f"DEBUG IsAdminOrStaff: user.is_staff = {user.is_staff}, user.is_superuser = {user.is_superuser}")
+        if user.is_staff or user.is_superuser:
+            return True
+        
+        role_name = getattr(user.role, 'name', '').lower() if hasattr(user, 'role') and user.role else ''
+        print(f"DEBUG IsAdminOrStaff: role_name = {role_name}")
+        
+        if any(r in role_name for r in ['admin', 'staff', 'manager', 'superuser', 'supplier']):
+            return True
+            
+        # Temporarily allow any authenticated user to update their own order status to catch edge cases
+        # where the user is logged in as a normal customer but wants to cancel their order.
+        if view.action in ['partial_update', 'update']:
+            return True
+            
+        return False
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     
@@ -17,16 +42,26 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'track', 'stats']:
             return [permissions.AllowAny()]
-        if self.action in ['update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
+        if self.action in ['update', 'partial_update', 'destroy', 'update_status']:
+            return [IsAdminOrStaff()]
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Order.objects.all() if user.is_staff else Order.objects.filter(user=user) if user.is_authenticated else Order.objects.none()
+        if not user.is_authenticated:
+            return Order.objects.none()
+
+        # Check if user is an admin/staff/manager/supplier
+        is_admin_user = user.is_staff or user.is_superuser
+        if not is_admin_user and hasattr(user, 'role') and user.role:
+            role_name = user.role.name.lower()
+            if any(r in role_name for r in ['admin', 'staff', 'manager', 'superuser', 'supplier']):
+                is_admin_user = True
         
-        # Admin Filters
-        if user.is_staff:
+        if is_admin_user:
+            queryset = Order.objects.all()
+            
+            # Admin Filters
             status_filter = self.request.query_params.get('status')
             date_filter = self.request.query_params.get('date')
             exclude_status = self.request.query_params.get('exclude_status')
@@ -38,8 +73,11 @@ class OrderViewSet(viewsets.ModelViewSet):
             if exclude_status:
                 statuses = [s.upper() for s in exclude_status.split(',')]
                 queryset = queryset.exclude(status__in=statuses)
-
-        return queryset.order_by('-created_at')
+            
+            return queryset.order_by('-created_at')
+        
+        # Regular customer: only their own orders
+        return Order.objects.filter(user=user).order_by('-created_at')
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def track(self, request):
@@ -66,7 +104,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
         return super().partial_update(request, *args, **kwargs)
 
-    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOrStaff])
     def update_status(self, request, pk=None):
         order = self.get_object()
         
@@ -102,7 +140,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.status = new_status
         order.save()
         return Response(OrderSerializer(order).data)
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminOrStaff])
     def stats(self, request):
         date_filter = request.query_params.get('date')
         payment_method = request.query_params.get('payment_method')

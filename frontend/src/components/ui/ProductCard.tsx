@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus } from 'lucide-react';
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 interface ProductCardProps {
     id?: string;
@@ -39,7 +40,8 @@ export default function ProductCard({
     onWishlist,
 }: ProductCardProps) {
     const { items, addToCart, updateQuantity } = useCart();
-    const [wishlisted, setWishlisted] = useState(false);
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    const wishlisted = isInWishlist(String(id));
 
     const cartItem = items.find(i => String(i.id) === String(id));
     const quantityInCart = cartItem?.quantity || 0;
@@ -60,7 +62,18 @@ export default function ProductCard({
 
     const handleWishlist = (e: React.MouseEvent) => {
         e.preventDefault();
-        setWishlisted(w => !w);
+        if (wishlisted) {
+            removeFromWishlist(String(id));
+        } else {
+            addToWishlist({
+                id: String(id),
+                name: title,
+                price: price,
+                image: image || '',
+                category: category || 'Beauty',
+                addedAt: new Date().toISOString()
+            });
+        }
         onWishlist?.();
     };
 
@@ -122,7 +135,7 @@ export default function ProductCard({
                 <img
                     src={image || '/images/logo.png'}
                     alt={title}
-                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
                 {/* Quick View Overlay */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-400 flex items-center justify-center">

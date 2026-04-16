@@ -82,7 +82,7 @@ export default function StockManagementOverview() {
         <div className="max-w-[1400px] mx-auto pb-24 px-4 mt-4 font-sans animate-in fade-in duration-500">
             
             {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Activity className="h-5 w-5 text-white" />
@@ -103,6 +103,11 @@ export default function StockManagementOverview() {
                 </div>
             </div>
 
+            {/* ── Sub Navigation Section (Simplified) ── */}
+            <div className="mb-6">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Stock Ledger Control</p>
+            </div>
+
             {/* ── Metrics Grid ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 <MetricCard label="Stock Identifiers" value={stats.total_items} icon={Box} color="text-blue-600" link="/admin/inventory/list" />
@@ -120,7 +125,10 @@ export default function StockManagementOverview() {
                             <ShieldCheck className="h-4 w-4 text-[#F59E0B]" />
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-white/5">
-                            {tools.map((tool, idx) => (
+                            {[
+                                { name: 'Inventory Ledger', desc: 'Central tracking of all stock levels', icon: Package, link: '/admin/inventory/list' },
+                                { name: 'Stock Adjustments', desc: 'Manual corrections and audits', icon: Settings, link: '/admin/inventory/adjustments' },
+                            ].map((tool, idx) => (
                                 <Link key={idx} href={tool.link} className="flex items-center p-6 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
                                     <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl flex items-center justify-center mr-5 group-hover:bg-[#F59E0B] group-hover:text-white transition-all transform group-hover:rotate-12">
                                         <tool.icon className="h-5 w-5" />
@@ -143,8 +151,13 @@ export default function StockManagementOverview() {
                             <AlertCircle className="h-4 w-4 text-red-500" />
                             <h2 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Mesh Violations</h2>
                         </div>
-                        
                         <div className="space-y-4">
+                            <div className="pt-2">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs text-slate-500">Live Stock Count</span>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 pr-1">{stats.total_items} Products</span>
+                                </div>
+                            </div>
                             <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl">
                                 <p className="text-[10px] font-black text-red-700 dark:text-red-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                     <Activity className="h-3 w-3" /> Low Stock Protocol

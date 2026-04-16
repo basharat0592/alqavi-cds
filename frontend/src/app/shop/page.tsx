@@ -34,7 +34,7 @@ function ShopContent() {
         productService.getAll()
             .then(d => {
                 const api = Array.isArray(d) ? d : (d as any).results || [];
-                setProducts(api.filter((p: any) => p.status === 'active'));
+                setProducts(api.filter((p: any) => p.status === 'ACTIVE'));
             })
             .finally(() => setLoading(false));
     }, []);

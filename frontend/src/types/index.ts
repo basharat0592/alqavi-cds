@@ -6,13 +6,19 @@
 // ─── Enums / Union Types ──────────────────────────────────────────────────────
 
 export type OrderStatus =
+    | 'PENDING'
+    | 'CONFIRMED'
+    | 'PROCESSING'
+    | 'SHIPPED'
+    | 'DELIVERED'
+    | 'CANCELLED'
     | 'pending'
     | 'processing'
     | 'shipped'
     | 'delivered'
     | 'cancelled';
 
-export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'pending' | 'completed' | 'failed' | 'refunded';
 
 export type StockStatus = 'In Stock' | 'Low Stock' | 'Critical' | 'Out of Stock';
 
@@ -70,7 +76,6 @@ export interface Product {
     image_url?: string;
     additional_images?: any[];
     status?: string;
-    batch?: string;
     batches?: any[];
     is_active?: boolean;
     is_in_stock?: boolean;
@@ -92,7 +97,7 @@ export interface ProductCategory {
     description?: string;
     slug: string;
     image?: string;
-    status: 'active' | 'inactive';
+    status: 'ACTIVE' | 'INACTIVE' | 'active' | 'inactive';
     created_at?: string;
     updated_at?: string;
 }
@@ -285,7 +290,6 @@ export interface DashboardStats {
     pendingOrders: number;
     deliveredOrders?: number;
     totalCustomers?: number;
-    totalProfit?: number;
     revenueChange?: number;
     ordersChange?: number;
     productsChange?: number;
@@ -321,7 +325,6 @@ export interface Inventory {
     warehouse_name: string;
     batch?: number | string | null;
     batch_number?: string | null;
-    entry_date?: string;
     current_stock: number;
     reserved_stock: number;
     available_stock: number;

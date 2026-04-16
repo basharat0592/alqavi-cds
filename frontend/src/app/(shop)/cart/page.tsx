@@ -57,12 +57,19 @@ export default function CartPage() {
 
                             <div className="space-y-10">
                                 {items.map(item => {
-                                    const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+                                    const rawPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+                                    const price = isNaN(rawPrice) ? 0 : (rawPrice || 0);
                                     return (
                                         <div key={item.id} className="flex flex-col md:flex-row gap-6 pb-10 border-b border-gray-100 dark:border-slate-800 last:border-0">
                                             {/* Thumbnail */}
                                             <Link href={`/product/${item.id}`} className="w-40 h-40 flex-shrink-0 bg-gray-50 dark:bg-slate-800 p-4 border border-gray-100 rounded group overflow-hidden">
-                                                <img src={getImageUrl(item.image) || ''} alt={item.name} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-transform group-hover:scale-105" />
+                                                {getImageUrl(item.image) ? (
+                                                    <img src={getImageUrl(item.image)!} alt={item.name} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-transform group-hover:scale-105" />
+                                                ) : (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                                                        <Package className="w-8 h-8 opacity-50" />
+                                                    </div>
+                                                )}
                                             </Link>
 
                                             {/* Info */}
@@ -73,7 +80,7 @@ export default function CartPage() {
                                                             {item.name}
                                                         </h3>
                                                     </Link>
-                                                    <div className="text-lg font-black dark:text-white text-right shrink-0">PKR {price.toLocaleString()}</div>
+                                                    <div className="text-lg font-black dark:text-white text-right shrink-0">PKR {(price || 0).toLocaleString()}</div>
                                                 </div>
                                                 <p className="text-xs text-emerald-600 font-bold uppercase tracking-tighter">In Stock</p>
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">{item.category}</p>
@@ -102,7 +109,7 @@ export default function CartPage() {
                             </div>
 
                             <div className="mt-8 text-right">
-                                <p className="text-lg font-bold dark:text-white tracking-tight">Subtotal ({cartCount} items): <span className="text-xl font-black">PKR {cartTotal.toLocaleString()}</span></p>
+                                <p className="text-lg font-bold dark:text-white tracking-tight">Subtotal ({cartCount} items): <span className="text-xl font-black">PKR {(cartTotal || 0).toLocaleString()}</span></p>
                             </div>
                         </div>
 
@@ -119,13 +126,13 @@ export default function CartPage() {
                                         <div className="w-full h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                             <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${(cartTotal / shippingThreshold) * 100}%` }} />
                                         </div>
-                                        <p className="text-xs text-gray-500 leading-tight">Add PKR <span className="font-bold text-[#F59E0B] underline">{remainingForFree.toLocaleString()}</span> for free shipping.</p>
+                                        <p className="text-xs text-gray-500 leading-tight">Add PKR <span className="font-bold text-[#F59E0B] underline">{(remainingForFree || 0).toLocaleString()}</span> for free shipping.</p>
                                     </div>
                                 )}
 
                                 <div>
                                     <p className="text-lg font-medium dark:text-white leading-tight">Subtotal ({cartCount} items):</p>
-                                    <p className="text-2xl font-black dark:text-white tracking-widest mt-1">PKR {cartTotal.toLocaleString()}</p>
+                                    <p className="text-2xl font-black dark:text-white tracking-widest mt-1">PKR {(cartTotal || 0).toLocaleString()}</p>
                                 </div>
 
                                 <Link href="/checkout" className="block w-full py-2 bg-[#F59E0B] hover:bg-[#F59E0B] text-white font-bold rounded-lg text-sm text-center shadow-sm active:shadow-inner active:scale-[0.98] transition-all">

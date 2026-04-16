@@ -13,17 +13,14 @@ import PageLoader from '@/components/ui/PageLoader';
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 const statusStyle: Record<string, string> = {
-    pending: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
-    draft: 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200',
-    processing: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    delivered: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
-    received: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
-    cancelled: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
+    'PENDING': 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+    'ACCEPTED': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'DELIVERED': 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    'CANCELLED': 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
 };
 
 const StatusPill = ({ status }: { status: string }) => {
-    const s = (status || '').toLowerCase();
+    const s = (status || '').toUpperCase();
     return (
         <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-semibold capitalize ${statusStyle[s] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
             {(status || '').replace('_', ' ')}
@@ -109,7 +106,7 @@ export default function PurchasesPage() {
         setIsUpdating(true);
         try {
             const payload: any = { status: editRow.status };
-            if (editRow.status !== 'cancelled') {
+            if (editRow.status !== 'CANCELLED') {
                 if (editRow.payment_status) payload.payment_status = editRow.payment_status;
                 if (editRow.payment_method) payload.payment_method = editRow.payment_method;
             }
@@ -194,9 +191,10 @@ export default function PurchasesPage() {
                         className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg min-w-[140px] outline-none focus:border-[#F59E0B] text-slate-700 dark:text-slate-300 cursor-pointer"
                     >
                         <option value="All">All Statuses</option>
-                        <option value="ordered">Ordered</option>
-                        <option value="received">Received</option>
-                        <option value="cancelled">Cancelled</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="ACCEPTED">Accepted</option>
+                        <option value="DELIVERED">Delivered</option>
+                        <option value="CANCELLED">Cancelled</option>
                     </select>
                 </div>
 
@@ -448,13 +446,10 @@ export default function PurchasesPage() {
                                         onChange={e => setEditRow({ ...editRow, status: e.target.value })}
                                         className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm bg-white shadow-sm"
                                     >
-                                        {editRow.status !== 'received' && editRow.status !== 'cancelled' && (
-                                            <option value={editRow.status} disabled className="italic">{editRow.status}</option>
-                                        )}
-                                        <option value="received">Received / Arrived</option>
-                                        {!(editRow.status === 'shipped' || editRow.status === 'delivered' || editRow.status === 'received') && (
-                                            <option value="cancelled">Cancelled</option>
-                                        )}
+                                        <option value="PENDING">Pending</option>
+                                        <option value="ACCEPTED">Accepted</option>
+                                        <option value="DELIVERED">Delivered</option>
+                                        <option value="CANCELLED">Cancelled</option>
                                     </select>
                                 </div>
 

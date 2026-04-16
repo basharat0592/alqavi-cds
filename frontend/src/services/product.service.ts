@@ -58,8 +58,16 @@ export const productService = {
     },
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-    getCategories: async () => {
-        // Placeholder or link to category service if needed
-        return [];
+    getCategories: async (): Promise<any[]> => {
+        try {
+            const { data } = await api.get('v1/products/categories/');
+            return Array.isArray(data) ? data : data.results || [];
+        } catch {
+            return [];
+        }
+    },
+    createCategory: async (payload: { name: string, description?: string }): Promise<any> => {
+        const { data } = await api.post('v1/products/categories/', payload);
+        return data;
     }
 };

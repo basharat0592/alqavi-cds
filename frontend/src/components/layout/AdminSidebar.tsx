@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard, Package, TrendingUp, Tag, ShoppingCart,
-    Boxes, ChevronsLeft, ChevronsRight, Settings, UserCheck, ShoppingBag
+    Boxes, ChevronsLeft, ChevronsRight, Settings, UserCheck, ShoppingBag, Truck
 } from 'lucide-react';
-
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -45,7 +44,8 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 { name: 'Add Category', href: '/admin/products/categories', icon: Tag },
                 { name: 'Add Product', href: '/admin/products', icon: Package },
                 { name: 'Add Stocks', href: '/admin/inventory/list', icon: Boxes },
-                { name: 'Add Supplier', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'Suppliers & B2B', href: '/admin/suppliers', icon: UserCheck },
+                { name: 'PO Tracking', href: '/admin/tracking', icon: Truck },
             ],
         },
     ];
@@ -98,7 +98,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                             {group.items.map((item) => {
                                 const active = isActive(item.href);
                                 return (
-                                    <Link key={item.href} href={item.href}
+                                    <Link key={item.name + item.href} href={item.href}
                                         className={`group relative flex items-center gap-3 px-6 py-2 transition-all
                                             ${active
                                                 ? 'bg-white/5 text-white font-bold border-l-4 border-[#F59E0B]'

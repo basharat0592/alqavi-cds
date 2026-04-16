@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]): string {
  * @param amount  - Number or numeric string
  * @param currency - ISO currency code (default: 'PKR')
  */
-export function formatCurrency(amount: number | string, currency = 'PKR'): string {
+export function formatCurrency(amount: number | string | null | undefined, currency = 'PKR'): string {
     const symbols: Record<string, string> = {
         USD: '$',
         EUR: '\u20ac',
@@ -19,6 +19,11 @@ export function formatCurrency(amount: number | string, currency = 'PKR'): strin
         PKR: 'PKR ',
     };
     const symbol = symbols[currency] ?? currency;
+
+    if (amount === null || amount === undefined || amount === '') {
+        return `${symbol}0.00`;
+    }
+
     const value = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (Number.isNaN(value)) return `${symbol}0.00`;
     return `${symbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
