@@ -6,5 +6,7 @@ router = DefaultRouter()
 router.register(r'suppliers', SupplierViewSet, basename='company-supplier')
 
 urlpatterns = [
+    # Support for legacy /create/ suffix requested by frontend
+    path('suppliers/create/', SupplierViewSet.as_view({'post': 'create'}), name='company-supplier-create-legacy'),
     path('', include(router.urls)),
 ]

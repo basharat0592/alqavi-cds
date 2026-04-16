@@ -57,9 +57,42 @@ export const productService = {
         await api.delete(`v1/products/wishlist/${id}/`);
     },
 
+    // ── Supplier Specific Listings ──────────────────────────────────────────
+    getAllSupplier: async (params?: any): Promise<any> => {
+        try {
+            const { data } = await api.get('v1/products/supplier-items/', { params });
+            return data;
+        } catch (error) {
+            console.error("Failed to fetch supplier products", error);
+            return { results: [] };
+        }
+    },
+    getByIdSupplier: async (id: string | number): Promise<any> => {
+        const { data } = await api.get(`v1/products/supplier-items/${id}/`);
+        return data;
+    },
+    createSupplier: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/products/supplier-items/', payload, {
+            headers: {
+                'Content-Type': payload instanceof FormData ? 'multipart/form-data' : 'application/json',
+            },
+        });
+        return data;
+    },
+    updateSupplier: async (id: string | number, payload: any): Promise<any> => {
+        const { data } = await api.patch(`v1/products/supplier-items/${id}/`, payload, {
+            headers: {
+                'Content-Type': payload instanceof FormData ? 'multipart/form-data' : 'application/json',
+            },
+        });
+        return data;
+    },
+    deleteSupplier: async (id: string | number): Promise<void> => {
+        await api.delete(`v1/products/supplier-items/${id}/`);
+    },
+
     // ── Helpers ──────────────────────────────────────────────────────────────
     getCategories: async () => {
-        // Placeholder or link to category service if needed
         return [];
     }
 };

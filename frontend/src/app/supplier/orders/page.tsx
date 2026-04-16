@@ -12,20 +12,19 @@ const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-PK', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
-    draft: { label: 'Draft', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: Clock },
-    pending: { label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
-    processing: { label: 'Processing', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Activity },
-    shipped: { label: 'Shipped', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: Package },
-    delivered: { label: 'Delivered', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-    received: { label: 'Received', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-    partially_received: { label: 'Partial', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: AlertCircle },
-    cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-600 border-red-200', icon: XCircle },
+    DRAFT: { label: 'Draft', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: Clock },
+    PENDING: { label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
+    PROCESSING: { label: 'Processing', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Activity },
+    SHIPPED: { label: 'Shipped', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: Package },
+    DELIVERED: { label: 'Delivered', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+    RECEIVED: { label: 'Received', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+    CANCELLED: { label: 'Cancelled', color: 'bg-red-50 text-red-600 border-red-200', icon: XCircle },
 };
 
 const PAY_META: Record<string, { label: string; color: string }> = {
-    pending: { label: 'Pending', color: 'text-amber-600 bg-amber-50 border-amber-200' },
-    partially_paid: { label: 'Partial', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
-    paid: { label: 'Paid', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+    UNPAID: { label: 'Pending', color: 'text-amber-600 bg-amber-50 border-amber-200' },
+    PARTIAL: { label: 'Partial', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+    PAID: { label: 'Paid', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
 };
 
 function StatusBadge({ status, map }: { status: string; map: Record<string, { label: string; color: string; icon?: any }> }) {
@@ -111,13 +110,17 @@ export default function SupplierOrders() {
 
                 {/* Filter Tabs */}
                 <div className="flex gap-6 border-b border-gray-200">
-                    {TABS.map(t => (
+                    {['all', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'].map(t => (
                         <button
                             key={t}
                             onClick={() => setStatusFilter(t)}
                             className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 ${statusFilter === t ? 'border-[#F59E0B] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
                         >
-                            {t === 'all' ? 'All Orders' : t}
+                            {t === 'all' ? 'All Orders' :
+                                t === 'PENDING' ? 'Ordered' :
+                                    t === 'PROCESSING' ? 'Confirmed' :
+                                        t === 'SHIPPED' ? 'In Transit' :
+                                            t === 'DELIVERED' ? 'Delivered' : t}
                         </button>
                     ))}
                 </div>
@@ -241,12 +244,12 @@ export default function SupplierOrders() {
                                                 }}
                                                 className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs font-bold text-slate-700 outline-none focus:border-[#F59E0B] transition-shadow cursor-pointer"
                                             >
-                                                <option value="pending">Pending</option>
-                                                <option value="processing">Processing</option>
-                                                <option value="shipped">Shipped</option>
-                                                <option value="delivered">Delivered</option>
-                                                <option value="received">Mark Received (Final)</option>
-                                                <option value="cancelled">Cancel Order</option>
+                                                <option value="PENDING">Ordered</option>
+                                                <option value="PROCESSING">Confirmed</option>
+                                                <option value="SHIPPED">In Transit</option>
+                                                <option value="DELIVERED">Delivered</option>
+                                                <option value="RECEIVED">Received (Final)</option>
+                                                <option value="CANCELLED">Cancel Order</option>
                                             </select>
                                         </div>
                                     )}

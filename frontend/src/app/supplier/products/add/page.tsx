@@ -52,12 +52,12 @@ export default function AddSupplierProductAmazon() {
     useEffect(() => {
         const fetchMeta = async () => {
             try {
-                const [catRes, mCatRes] = await Promise.all([
+                const [catRes, mCatRes] = await Promise.allSettled([
                     categoryService.getAll(),
                     mainCategoryService.getAll()
                 ]);
-                setCategories(catRes || []);
-                setMainCategories(mCatRes || []);
+                setCategories(catRes.status === 'fulfilled' ? (catRes.value || []) : []);
+                setMainCategories(mCatRes.status === 'fulfilled' ? (mCatRes.value || []) : []);
             } catch (err) {
                 console.error("Failed to load metadata", err);
             } finally {
@@ -97,21 +97,21 @@ export default function AddSupplierProductAmazon() {
         setSaving(true);
         try {
             const data = new FormData();
-            Object.keys(formData).forEach(key => {
-                const val = (formData as any)[key];
-                if (val !== undefined && val !== '') {
-                    data.append(key, val);
-                }
-            });
+
+            // Map form keys to backend SupplierProduct schema
+            data.append('name', formData.name);
+            data.append('description', formData.description);
+            if (formData.category) data.append('category', formData.category);
+            data.append('retail_price', formData.price);
+            data.append('cost_price', formData.cost || '0');
+            data.append('quantity', formData.quantity_in_stock || '0');
+            data.append('sku', formData.sku);
+            data.append('barcode', formData.barcode);
 
             if (mainImage) data.append('image', mainImage);
             additionalImages.forEach(file => data.append('upload_images', file));
 
-            if (formData.main_category) {
-                data.append('main_categories', formData.main_category);
-            }
-
-            await productService.create(data);
+            await productService.createSupplier(data);
             toast.success("Product successfully added.");
             router.push('/supplier/products');
         } catch (err: any) {
@@ -244,8 +244,8 @@ export default function AddSupplierProductAmazon() {
 
                                     <div className="pt-4 border-t border-[#eee]">
                                         <div className="flex items-start gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-md">
-                                            <input 
-                                                type="checkbox" 
+                                            <input
+                                                type="checkbox"
                                                 id="show_to_admin"
                                                 checked={formData.is_supplier_only === 'false'}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, is_supplier_only: e.target.checked ? 'false' : 'true' }))}

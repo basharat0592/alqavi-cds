@@ -57,8 +57,8 @@ export default function SupplierDashboard() {
         try {
             const statsPromise = api.get('/v1/sales/supplier/dashboard/stats/');
             const retailPromise = api.get('/v1/sales/orders/');
-            const wholesalePromise = api.get('/v1/sales/purchases/', { 
-                params: { status: 'delivered,received,cancelled' } 
+            const wholesalePromise = api.get('/v1/sales/purchases/', {
+                params: { status: 'delivered,received,cancelled' }
             });
 
             const [statsRes, retailRes, wholesaleRes] = await Promise.all([
@@ -80,7 +80,7 @@ export default function SupplierDashboard() {
                 is_wholesale: true
             }));
 
-            const combined = [...retailList, ...normalizedWholesale].sort((a, b) => 
+            const combined = [...retailList, ...normalizedWholesale].sort((a, b) =>
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
 
@@ -163,7 +163,7 @@ export default function SupplierDashboard() {
 
     return (
         <div className="max-w-[1000px] mx-auto py-10 animate-in fade-in duration-700 px-4 space-y-12">
-            
+
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-100 pb-6 gap-4">
                 <div>
@@ -180,24 +180,24 @@ export default function SupplierDashboard() {
 
             {/* KPI Stats Top */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 {[
+                {[
                     { label: 'Live Catalog', val: stats?.total_products || '0', color: 'text-blue-600' },
                     { label: 'Pending POs', val: stats?.pending_orders || '0', color: 'text-amber-600' },
                     { label: 'Finalized', val: stats?.received_orders || '0', color: 'text-emerald-600' },
                     { label: 'Net Revenue', val: formatCurrency(stats?.total_order_value || 0), color: 'text-slate-900' },
-                 ].map((s, i) => (
+                ].map((s, i) => (
                     <div key={i} className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{s.label}</span>
                         <p className={`text-lg font-bold ${s.color}`}>{s.val}</p>
                     </div>
-                 ))}
+                ))}
             </div>
 
             {/* Amazon Quick Action Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {QUICK_ACTIONS.map((card, idx) => (
-                    <Link 
-                        key={idx} 
+                    <Link
+                        key={idx}
                         href={card.href}
                         className="flex items-start gap-4 p-5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm group"
                     >
@@ -212,7 +212,7 @@ export default function SupplierDashboard() {
                 ))}
 
                 {/* Logout Card */}
-                <button 
+                <button
                     onClick={() => {
                         authService.logout();
                         window.location.href = '/login';
@@ -280,14 +280,14 @@ export default function SupplierDashboard() {
                                         <td className="px-6 py-4 text-center"><StatusPill status={entry.status} /></td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-                                                <button 
+                                                <button
                                                     onClick={() => router.push(entry.is_wholesale ? `/supplier/orders` : `/supplier/sales`)}
                                                     className="p-1 px-1.5 border border-slate-200 rounded text-slate-400 hover:text-[#F59E0B] hover:bg-white transition-all shadow-sm"
                                                     title="View"
                                                 >
                                                     <Eye className="h-3.5 w-3.5" />
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={() => handleDelete(entry)}
                                                     className="p-1 px-1.5 border border-slate-200 rounded text-slate-400 hover:text-red-500 hover:bg-white transition-all shadow-sm"
                                                     title="Purge"

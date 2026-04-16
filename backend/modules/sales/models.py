@@ -75,13 +75,15 @@ class OrderItem(models.Model):
 class PurchaseOrder(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('SHIPPED', 'In Transit'),
+        ('DELIVERED', 'Delivered'),
         ('RECEIVED', 'Received'),
         ('CANCELLED', 'Cancelled'),
-        ('DELIVERED', 'Delivered'),
     ]
 
     purchase_number = models.CharField(max_length=20, unique=True)
-    supplier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='purchase_orders')
+    supplier = models.ForeignKey('supplier.Supplier', on_delete=models.CASCADE, related_name='purchase_orders')
     reference_number = models.CharField(max_length=50, null=True, blank=True)
     
     warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True)
@@ -91,6 +93,7 @@ class PurchaseOrder(models.Model):
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    is_inventory_synced = models.BooleanField(default=False)
     payment_status = models.CharField(max_length=20, choices=[
         ('UNPAID', 'Unpaid'),
         ('PARTIAL', 'Partially Paid'),

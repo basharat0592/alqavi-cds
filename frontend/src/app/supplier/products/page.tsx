@@ -28,11 +28,12 @@ export default function SupplierProducts() {
         setLoading(true);
         try {
             const [items, cats] = await Promise.all([
-                productService.getAll({ all_items: 'true' } as any),
+                productService.getAllSupplier(),
                 categoryService.getAll()
             ]);
-            setProducts(items || []);
-            setCategories(cats || []);
+            const rawItems = items as any;
+            setProducts(Array.isArray(rawItems) ? rawItems : rawItems?.results || []);
+            setCategories(Array.isArray(cats) ? cats : (cats as any)?.results || []);
         } catch (error) {
             console.error('Failed to load products:', error);
             toast.error('Failed to synchronize catalog.');
@@ -155,7 +156,7 @@ export default function SupplierProducts() {
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 bg-white dark:bg-white/10 border border-slate-300 dark:border-white/10 rounded flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#F59E0B]/40 transition-colors shadow-inner">
                                                     {prod.image ? (
-                                                        <img src={getImageUrl(prod.image || undefined)} alt="" className="max-w-full max-h-full object-cover" />
+                                                        <img src={getImageUrl(prod.image) || undefined} alt="" className="max-w-full max-h-full object-cover" />
                                                     ) : (
                                                         <Package className="h-6 w-6 text-slate-200" />
                                                     )}
@@ -166,9 +167,9 @@ export default function SupplierProducts() {
                                                         <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{prod.category_name || 'Standard Item'}</span>
                                                         <span className="text-slate-200 dark:text-slate-600 font-bold text-[8px]">•</span>
                                                         <div className="flex items-center gap-1">
-                                                            <div className={`h-1.5 w-1.5 rounded-full ${(prod.quantity_in_stock || 0) > 10 ? 'bg-emerald-500' : (prod.quantity_in_stock || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                                            <span className={`text-[10px] font-bold ${(prod.quantity_in_stock || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
-                                                                {prod.quantity_in_stock || 0} Available
+                                                            <div className={`h-1.5 w-1.5 rounded-full ${(prod.quantity || 0) > 10 ? 'bg-emerald-500' : (prod.quantity || 0) > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                                            <span className={`text-[10px] font-bold ${(prod.quantity || 0) > 0 ? 'text-slate-500' : 'text-red-500'}`}>
+                                                                {prod.quantity || 0} Available
                                                             </span>
                                                         </div>
                                                     </div>
@@ -177,8 +178,8 @@ export default function SupplierProducts() {
                                         </td>
                                         <td className="px-5 py-4 text-center">
                                             <div className="inline-flex flex-col items-center">
-                                                <span className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight">{formatCurrency(prod.price)}</span>
-                                                <span className="text-[9px] text-slate-400 font-black uppercase opacity-70 tracking-widest mt-0.5">Sale Multiplier</span>
+                                                <span className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight">{formatCurrency(prod.retail_price || 0)}</span>
+                                                <span className="text-[9px] text-slate-400 font-black uppercase opacity-70 tracking-widest mt-0.5">Supplier Price</span>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4 text-center">
@@ -204,7 +205,7 @@ export default function SupplierProducts() {
                                                         if (confirm(`Are you sure you want to permanently delete "${prod.name}"?`)) {
                                                             try {
                                                                 setLoading(true);
-                                                                await productService.delete(prod.id);
+                                                                await productService.deleteSupplier(prod.id);
                                                                 toast.success('Product deleted successfully.');
                                                                 loadData();
                                                             } catch (error) {

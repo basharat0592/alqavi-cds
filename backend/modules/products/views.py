@@ -1,7 +1,8 @@
+from django.core.exceptions import ValidationError
 from rest_framework import viewsets, permissions
 from django.db.models import F, ExpressionWrapper, DecimalField, Q
-from .models import Product, Wishlist, Category
-from .serializers import ProductSerializer, WishlistSerializer, CategorySerializer
+from .models import Product, Wishlist, Category, SupplierProduct
+from .serializers import ProductSerializer, WishlistSerializer, CategorySerializer, SupplierProductSerializer
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -76,7 +77,90 @@ class WishlistViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        user = self.request.user
+        print(f"DEBUG: Wishlist access by user: {user}, is_customer: {getattr(user, 'is_customer', False)}, real_id: {getattr(user, 'real_id', 'None')}")
+        if hasattr(user, 'is_customer') and user.is_customer:
+            return self.queryset.filter(user_id=user.real_id).order_by('-created_at')
+        return self.queryset.none()
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        if hasattr(user, 'is_customer') and user.is_customer:
+            from modules.customer.models import Customer
+            customer_instance = Customer.objects.filter(id=user.real_id).first()
+            if customer_instance:
+                serializer.save(user=customer_instance)
+                return
+        serializer.save()
+
+
+class SupplierProductViewSet(viewsets.ModelViewSet):
+    """ViewSet for products uploaded by suppliers for review"""
+    serializer_class = SupplierProductSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        # Admins can filter by supplier; Suppliers only see their own
+        if getattr(user, 'is_staff', False):
+            queryset = SupplierProduct.objects.all().order_by('-created_at')
+            supplier_id = self.request.query_params.get('supplier')
+            
+            if supplier_id and supplier_id != 'undefined' and supplier_id != 'null':
+                # Try to resolve if it's an Auth User ID (Integer) instead of Supplier UUID
+                if supplier_id.isdigit():
+                    from django.contrib.auth import get_user_model
+                    from modules.supplier.models import Supplier
+                    User = get_user_model()
+                    target_user = User.objects.filter(id=int(supplier_id)).first()
+                    if target_user:
+                        target_supplier = Supplier.objects.filter(email=target_user.email).first()
+                        if target_supplier:
+                            supplier_id = str(target_supplier.id)
+                
+                try:
+                    queryset = queryset.filter(supplier_id=supplier_id)
+                except (ValueError, TypeError, ValidationError):
+                    pass
+            return queryset
+            
+        # Handle Suppliers (Shadow Users from MultiTableJWTAuthentication)
+        if hasattr(user, 'is_supplier') and user.is_supplier:
+            # If the SupplierProduct model still links to the User table, 
+            # we need to find the User record corresponding to this supplier 
+            # if one exists, or return nothing if they are fully isolated.
+            # Assuming for now they might have a linked user or we filter by their real_id 
+            # if the DB schema was updated (which it doesn't seem to be).
+            # To avoid 500, we'll return an empty queryset if we can't find a valid link.
+            if hasattr(user, 'real_id') and user.real_id:
+                # If the schema uses the User ID, and Suppliers are NOT Users, 
+                # this filter will return empty anyway, but it won't crash.
+                return SupplierProduct.objects.filter(supplier_id=user.real_id).order_by('-created_at')
+            return SupplierProduct.objects.none()
+
+        # Fallback for standard authenticated Users
+        if user.is_authenticated and hasattr(user, 'id') and user.id:
+            return SupplierProduct.objects.filter(supplier=user).order_by('-created_at')
+            
+        return SupplierProduct.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        
+        # Resolve the actual Supplier instance for Shadow Users
+        if hasattr(user, 'is_supplier') and user.is_supplier:
+            from modules.supplier.models import Supplier
+            supplier_instance = Supplier.objects.filter(id=user.real_id).first()
+            if supplier_instance:
+                serializer.save(supplier=supplier_instance)
+                return
+            else:
+                print(f"DEBUG: Supplier instance NOT FOUND for real_id: {getattr(user, 'real_id', 'None')}")
+        
+        # Fallback for staff/admin
+        try:
+            serializer.save()
+        except Exception as e:
+            print(f"DEBUG: SupplierProduct save failed: {str(e)}")
+            raise e

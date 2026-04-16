@@ -5,14 +5,52 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
     ChevronLeft, Save, RefreshCw, Building2, 
-    MapPin, Loader2 
+    MapPin, Loader2, ChevronRight
 } from 'lucide-react';
 import { inventoryService } from '@/lib/api';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border rounded-xl text-sm outline-none focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#1D4ED8] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
-const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
+/* ─────────────────────────────────────────────────────────────────────────────
+   PROFESSIONAL AMAZON RETAIL DESIGN SYSTEM (SYNCED)
+   ───────────────────────────────────────────────────────────────────────────── */
+const AmazonButton = ({ children, onClick, loading, variant = "primary", className = "", type = "button", disabled = false }: any) => {
+    const primary = "bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] #9c7e31 #846a29 hover:from-[#f5d78e] hover:to-[#eeb933] shadow-[0_1px_0_rgba(255,255,255,0.4)_inset,0_1px_3px_rgba(0,0,0,0.1)]";
+    const secondary = "bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] #a2a6ac #8d9096 hover:from-[#eef1f3] hover:to-[#dce0e4] shadow-sm";
+    
+    return (
+        <button 
+            type={type} onClick={onClick} disabled={loading || disabled} 
+            className={`h-[31px] px-5 rounded-[3px] text-[13px] font-[500] text-[#0f1111] border transition-all active:shadow-inner flex items-center justify-center gap-2 ${variant === 'primary' ? primary : secondary} ${className}`}
+        >
+            {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const AmazonInput = ({ label, className = "", required = false, ...props }: { label?: string, required?: boolean } & React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => (
+    <div className="w-full">
+        {label && <label className="block text-[13px] font-bold text-[#0f1111] mb-1.5">{label} {required && <span className="text-red-600">*</span>}</label>}
+        {props.type === 'select' ? (
+            <select
+                className={`w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] cursor-pointer ${className}`}
+                {...(props as any)}
+            >
+                {props.children}
+            </select>
+        ) : props.type === 'textarea' ? (
+            <textarea
+                className={`w-full p-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] placeholder:text-[#888] ${className}`}
+                {...(props as any)}
+            />
+        ) : (
+            <input
+                className={`w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] placeholder:text-[#888] ${className}`}
+                {...(props as any)}
+            />
+        )}
+    </div>
+);
 
 export default function EditWarehousePage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -90,7 +128,6 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
     const validate = () => {
         const e: Record<string, string> = {};
         if (!form.name.trim()) e.name = 'Name is required';
-        if (!form.code.trim()) e.code = 'Internal code is required';
         if (!form.address.trim()) e.address = 'Street address is required';
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -110,156 +147,104 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
             };
 
             await inventoryService.updateWarehouse(id, payload);
-            toast.success('Warehouse configuration updated!');
-            setTimeout(() => router.push('/admin/inventory/warehouses'), 1000);
+            toast.success('Warehouse updated');
+            router.push('/admin/inventory/warehouses');
         } catch (err: any) {
-            console.error(err);
-            toast.error('Failed to update warehouse.');
+            toast.error('Failed to update warehouse');
         } finally {
             setSaving(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <RefreshCw className="h-8 w-8 animate-spin text-[#1D4ED8]" />
-            </div>
-        );
-    }
+    if (loading) return <div className="flex items-center justify-center min-h-[400px]"><RefreshCw className="h-8 w-8 animate-spin text-[#c45500]" /></div>;
 
     return (
-        <div className="max-w-4xl mx-auto py-8 px-6 font-sans">
-            <div className="mb-8">
-                <Link 
-                    href="/admin/inventory/warehouses" 
-                    className="text-sm font-medium text-slate-500 hover:text-[#1D4ED8] transition-colors mb-4 flex items-center gap-1"
-                >
-                    <ChevronLeft className="h-4 w-4" /> Back to Warehouses
-                </Link>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Edit Warehouse</h1>
-                <p className="text-sm text-slate-500">Update configuration for: {form.name}</p>
+        <div className="bg-[#eaeded] min-h-screen pb-20 font-sans animate-in fade-in duration-500 text-left">
+            
+            {/* ── PROFESSIONAL HEADER ── */}
+            <div className="bg-white border-b border-[#ddd] py-6 shadow-sm">
+                <div className="max-w-[1240px] mx-auto px-4 md:px-8">
+                    <div className="flex items-center gap-1 text-[11px] text-[#565959] mb-4">
+                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                        <ChevronRight size={10} />
+                        <Link href="/admin/inventory/warehouses" className="hover:text-[#c45500] hover:underline">Warehouses</Link>
+                        <ChevronRight size={10} />
+                        <span className="text-[#c45500]">Edit Warehouse</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-[28px] font-normal text-[#111]">Edit Warehouse</h1>
+                            <p className="text-[13px] text-[#565959] mt-1">Configure storage details for {form.name}</p>
+                        </div>
+                        <button onClick={() => router.back()} className="text-[14px] text-[#007185] hover:text-[#c45500] font-bold flex items-center gap-1 transition-colors">
+                            <ChevronLeft size={18} /> Back to list
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Identification Section */}
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <Building2 className="h-4 w-4 text-[#1D4ED8]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Hub Identification</h2>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1">
-                            <label className={labelCls}>Warehouse Name <span className="text-red-500">*</span></label>
-                            <input 
-                                className={inputCls(!!errors.name)} 
-                                placeholder="e.g. Karachi North Hub"
-                                value={form.name} 
-                                onChange={e => handle('name', e.target.value)} 
-                            />
-                            {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+            <div className="max-w-[1240px] mx-auto mt-10 px-4 md:px-8">
+                <form onSubmit={handleSubmit} className="space-y-8 max-w-[900px] animate-in slide-in-from-bottom-5 duration-500">
+                    
+                    {/* 1. WAREHOUSE INFO */}
+                    <div className="bg-white border border-[#ddd] rounded-lg p-10 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-[#111]"></div>
+                        
+                        <div className="flex items-center gap-4 mb-10 pb-6 border-b border-[#eee]">
+                            <div className="p-3 bg-slate-50 rounded-xl"><Building2 className="h-8 w-8 text-[#111]" /></div>
+                            <div>
+                                <h2 className="text-[24px] font-bold text-[#111]">1. Warehouse Info</h2>
+                                <p className="text-[14px] text-[#565959]">Essential identification and node type.</p>
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Internal Code <span className="text-red-500">*</span></label>
-                            <input 
-                                className={inputCls(!!errors.code)} 
-                                placeholder="WH-001"
-                                value={form.code} 
-                                onChange={e => handle('code', e.target.value)} 
-                            />
-                            {errors.code && <p className="text-xs text-red-500">{errors.code}</p>}
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Node Type</label>
-                            <select className={selectCls} value={form.type} onChange={e => handle('type', e.target.value)}>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                            <AmazonInput label="Warehouse Name" value={form.name} onChange={e => handle('name', e.target.value)} placeholder="e.g. Karachi Central" required />
+                            <AmazonInput label="Internal Code" value={form.code} onChange={e => handle('code', e.target.value)} placeholder="e.g. WH-PK-01" />
+                            <AmazonInput label="Warehouse Type" type="select" value={form.type} onChange={e => handle('type', e.target.value)}>
                                 <option>Main</option>
                                 <option>Regional</option>
                                 <option>Store</option>
-                            </select>
-                        </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Operational Status</label>
-                            <select className={selectCls} value={form.status} onChange={e => handle('status', e.target.value)}>
+                            </AmazonInput>
+                            <AmazonInput label="Status" type="select" value={form.status} onChange={e => handle('status', e.target.value)}>
                                 <option>Active</option>
                                 <option>Inactive</option>
-                            </select>
+                            </AmazonInput>
                         </div>
                     </div>
-                </div>
 
-                {/* Location Section */}
-                <div className="bg-white dark:bg-[#0D1921] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <MapPin className="h-4 w-4 text-[#1D4ED8]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Location & Contact</h2>
-                    </div>
-                    <div className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                                <label className={labelCls}>Contact Person</label>
-                                <input 
-                                    className={inputCls()} 
-                                    placeholder="Node Manager Name"
-                                    value={form.contact_person} 
-                                    onChange={e => handle('contact_person', e.target.value)} 
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>Phone Number</label>
-                                <input 
-                                    className={inputCls()} 
-                                    placeholder="+92 XXX XXXXXXX"
-                                    value={form.contact_phone} 
-                                    onChange={e => handle('contact_phone', e.target.value)} 
-                                />
+                    {/* 2. LOCATION & CONTACT */}
+                    <div className="bg-white border border-[#ddd] rounded-lg p-10 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-[#e47911]"></div>
+                        
+                        <div className="flex items-center gap-4 mb-10 pb-6 border-b border-[#eee]">
+                            <div className="p-3 bg-slate-50 rounded-xl"><MapPin className="h-8 w-8 text-[#e47911]" /></div>
+                            <div>
+                                <h2 className="text-[24px] font-bold text-[#111]">2. Location & Contact</h2>
+                                <p className="text-[14px] text-[#565959]">Physical address and management details.</p>
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className={labelCls}>Street Address <span className="text-red-500">*</span></label>
-                            <textarea 
-                                className={`${inputCls(!!errors.address)} h-24 resize-none`} 
-                                placeholder="Physical address..."
-                                value={form.address} 
-                                onChange={e => handle('address', e.target.value)} 
-                            />
-                            {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-1">
-                                <label className={labelCls}>City</label>
-                                <input className={inputCls()} value={form.city} onChange={e => handle('city', e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>State</label>
-                                <input className={inputCls()} value={form.state} onChange={e => handle('state', e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                                <label className={labelCls}>Postal Code</label>
-                                <input className={inputCls()} value={form.postal_code} onChange={e => handle('postal_code', e.target.value)} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4">
-                    <button
-                        type="button"
-                        onClick={() => router.push('/admin/inventory/warehouses')}
-                        className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
-                    >
-                        Discard
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-[#1D4ED8] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
-                    >
-                        {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Commit Changes
-                    </button>
-                </div>
-            </form>
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                                <AmazonInput label="Contact Person" value={form.contact_person} onChange={e => handle('contact_person', e.target.value)} placeholder="Node Manager" />
+                                <AmazonInput label="Phone Number" value={form.contact_phone} onChange={e => handle('contact_phone', e.target.value)} placeholder="+92 XXX XXXXXXX" />
+                            </div>
+                            <AmazonInput label="Street Address" type="textarea" value={form.address} onChange={e => handle('address', e.target.value)} rows={3} placeholder="Full physical address..." required />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <AmazonInput label="City" value={form.city} onChange={e => handle('city', e.target.value)} />
+                                <AmazonInput label="State" value={form.state} onChange={e => handle('state', e.target.value)} />
+                                <AmazonInput label="Postal Code" value={form.postal_code} onChange={e => handle('postal_code', e.target.value)} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-3">
+                        <AmazonButton variant="secondary" onClick={() => router.push('/admin/inventory/warehouses')} className="w-[140px]">Cancel</AmazonButton>
+                        <AmazonButton type="submit" loading={saving} className="w-[200px] h-[40px] text-[15px]">Save Changes</AmazonButton>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

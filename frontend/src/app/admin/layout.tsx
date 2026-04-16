@@ -190,7 +190,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const unreadCount = activities.filter(a => !a.read).length;
 
     return (
-        <AuthGuard allowedRoles={['admin', 'staff', 'supplier']}>
+        <AuthGuard allowedRoles={['admin', 'staff']}>
             <div className={cn("h-screen bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-col font-sans overflow-hidden text-slate-900 dark:text-slate-100", theme)}>
                 <MobileTopBar
                     onMenuToggle={() => setMobileOpen(!mobileOpen)} adminName={adminName} adminAvatar={adminAvatar}

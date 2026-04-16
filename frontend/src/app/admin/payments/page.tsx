@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { paymentService, paymentCategoryService } from '@/lib/api';
@@ -7,8 +7,9 @@ import {
     DollarSign, Search, RefreshCw, Plus, ArrowUpRight, ArrowDownLeft,
     Filter, Calendar, X, Loader2, CreditCard, Banknote, Wallet,
     CheckCircle2, Clock, Trash2, Printer, Download, Eye, LayoutGrid,
-    ChevronDown, AlertTriangle, User, Save, FileText, Settings
+    ChevronDown, AlertTriangle, User, Save, FileText, Settings, ChevronRight
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface Payment {
     id: number;
@@ -24,45 +25,24 @@ interface Payment {
     created_at: string;
 }
 
-const METHOD_ICONS: Record<string, any> = {
-    cash: Wallet,
-    bank_transfer: Banknote,
-    check: FileText,
-    mobile_wallet: CreditCard,
-    other: LayoutGrid,
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - PAYMENTS
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
 };
 
-
-/* ══════════════════════════════════════════════
-   COMPONENTS
-   ══════════════════════════════════════════════ */
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
-
-const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
-    <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-[#F59E0B]" />
-            <div>
-                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
-                {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
-            </div>
-        </div>
-    </div>
-);
-
-const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg text-sm outline-none transition-all
-    focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 placeholder:text-slate-400
-    ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-
-const LABEL = "block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-1.5";
-
-const PRIMARY_BTN = "bg-[#F59E0B] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2.5 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
-const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2.5 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
+const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[4px] text-[14px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
 export default function PaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -90,188 +70,156 @@ export default function PaymentsPage() {
             setPayments(Array.isArray(pData) ? pData : []);
             setStats(sData);
             setCategories(cData);
-        } catch (error) {
-            console.error('Failed to load payments', error);
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { } finally { setLoading(false); }
     };
 
     useEffect(() => { loadData(); }, []);
 
-    const filtered = payments.filter(p => {
+    const filtered = (payments || []).filter(p => {
         const matchesSearch =
-            p.payer_payee.toLowerCase().includes(search.toLowerCase()) ||
-            p.reference_number?.toLowerCase().includes(search.toLowerCase()) ||
-            p.description?.toLowerCase().includes(search.toLowerCase());
+            (p.payer_payee || '').toLowerCase().includes(search.toLowerCase()) ||
+            (p.reference_number || '').toLowerCase().includes(search.toLowerCase()) ||
+            (p.description || '').toLowerCase().includes(search.toLowerCase());
         const matchesType = typeFilter === 'all' || p.payment_type === typeFilter;
         return matchesSearch && matchesType;
     });
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-6 pb-12">
-
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <DollarSign className="h-5 w-5 text-white" strokeWidth={2.5} />
+            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
+                <div className="max-w-[1400px] mx-auto px-6 text-left">
+                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
+                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                        <ChevronRight size={10} />
+                        <span className="text-[#c45500]">Payments</span>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Transaction Logs</h1>
-                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Financial Ledger Control</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-[22px] font-normal text-[#111]">Payments</h1>
+                            <p className="text-[13px] text-[#565959] mt-0.5">Track money in and out of the business</p>
+                        </div>
+                        {!formOpen && (
+                            <div className="flex gap-2">
+                                <Btn variant="secondary" onClick={loadData} loading={loading}>
+                                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                                </Btn>
+                                <Btn onClick={() => setFormOpen(true)}>
+                                    <Plus size={14} /> Add Payment
+                                </Btn>
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {!formOpen && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={loadData} className={SECONDARY_BTN}>
-                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            Sync Ledger
-                        </button>
-                        <button onClick={() => setFormOpen(true)} className={PRIMARY_BTN}>
-                            <Plus className="h-3.5 w-3.5" />
-                            Log Transaction
-                        </button>
-                    </div>
-                )}
             </div>
 
-            {formOpen ? (
-                <CreateView
-                    onClose={() => setFormOpen(false)}
-                    onSuccess={() => { setFormOpen(false); loadData(); showToast('Transaction recorded successfully'); }}
-                    categories={categories}
-                />
-            ) : (
-                <>
-                    {/* Metrics Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard label="Inflow" val={stats.total_inbound} icon={ArrowDownLeft} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/10" />
-                        <StatCard label="Outflow" val={stats.total_outbound} icon={ArrowUpRight} color="text-red-600" bg="bg-red-50 dark:bg-red-900/10" />
-                        <StatCard label="Internal" val={stats.total_expenses} icon={LayoutGrid} color="text-amber-600" bg="bg-amber-50 dark:bg-amber-900/10" />
-                        <StatCard label="Net Balance" val={stats.net_balance} icon={DollarSign} color="text-[#F59E0B]" bg="bg-blue-50 dark:bg-blue-900/10" />
-                    </div>
-
-                    {/* Filter Bar */}
-                    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row items-center gap-4">
-                        <div className="relative flex-1 group w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F59E0B] transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Search by entity, ID or reference..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all font-medium"
-                            />
+            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+                {formOpen ? (
+                    <CreateView
+                        onClose={() => setFormOpen(false)}
+                        onSuccess={() => { setFormOpen(false); loadData(); showToast('Payment saved'); }}
+                        categories={categories}
+                    />
+                ) : (
+                    <>
+                        {/* Stats Card */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <StatCard label="Income" val={stats.total_inbound} icon={ArrowDownLeft} color="text-green-700" bg="#e7f4ed" />
+                            <StatCard label="Expense" val={stats.total_outbound} icon={ArrowUpRight} color="text-red-700" bg="#fbeae9" />
+                            <StatCard label="Internal" val={stats.total_expenses} icon={LayoutGrid} color="text-amber-700" bg="#fcf8e3" />
+                            <StatCard label="Net Balance" val={stats.net_balance} icon={DollarSign} color="text-[#111]" bg="#f0f2f2" />
                         </div>
-                        <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-lg border border-slate-200 dark:border-white/10 w-full md:w-auto">
-                            {['all', 'inbound', 'outbound'].map((type) => (
-                                <button
-                                    key={type}
-                                    onClick={() => setTypeFilter(type)}
-                                    className={`flex-1 md:flex-initial px-6 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${typeFilter === type
-                                        ? 'bg-white dark:bg-white/10 text-[#F59E0B] shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                        }`}
-                                >
-                                    {type}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
 
-                    {/* Main Table */}
-                    <SectionCard>
-                        <SectionHeader title="Transaction Journal" icon={FileText} subtitle="Real-time financial activity" />
-                        {loading ? (
-                            <div className="py-20 flex flex-col items-center justify-center gap-3">
-                                <Loader2 className="h-8 w-8 text-[#F59E0B] animate-spin" />
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Synchronizing Records...</p>
+                        {/* Search & Tabs */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-4 mb-6 shadow-sm flex flex-col md:flex-row items-center gap-4">
+                            <div className="relative flex-1 w-full">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                                <input
+                                    placeholder="Search by name, ID or info..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className={inputCls + " pl-10 h-[38px]"}
+                                />
                             </div>
-                        ) : filtered.length === 0 ? (
-                            <div className="py-24 text-center">
-                                <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-white/10">
-                                    <Filter className="h-6 w-6 text-slate-300" />
-                                </div>
-                                <h3 className="text-slate-900 dark:text-white font-bold uppercase tracking-tight">No Results Found</h3>
-                                <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 font-medium italic">Try adjusting your filters or search terms.</p>
+                            <div className="flex bg-[#f3f3f3] p-1 rounded-[4px] border border-[#ddd] gap-1 shrink-0">
+                                {['all', 'inbound', 'outbound'].map((type) => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setTypeFilter(type)}
+                                        className={`px-4 py-1.5 text-[11px] font-bold uppercase rounded-[3px] transition-all
+                                            ${typeFilter === type ? 'bg-white text-[#c45500] shadow-sm' : 'text-[#565959] hover:bg-[#eee]'}`}
+                                    >
+                                        {type === 'inbound' ? 'Income' : type === 'outbound' ? 'Expense' : 'All'}
+                                    </button>
+                                ))}
                             </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                                            <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Voucher</th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Method</th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Entity Information</th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Classification</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Amount</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                                        {filtered.map((payment) => (
-                                            <tr key={payment.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-medium text-[#F59E0B]">#{payment.id}</span>
-                                                        <span className="text-[11px] text-slate-500 font-medium">{formatDate(payment.date)}</span>
-                                                    </div>
+                        </div>
+
+                        {/* History Table */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
+                                        <th className="px-6 py-3">Voucher #</th>
+                                        <th className="px-6 py-3">Payment Mode</th>
+                                        <th className="px-6 py-3">Person / Company</th>
+                                        <th className="px-6 py-3">Category</th>
+                                        <th className="px-6 py-3 text-right">Amount</th>
+                                        <th className="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[#eee]">
+                                    {loading ? (
+                                        <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 text-[#aaa] animate-spin mx-auto" /></td></tr>
+                                    ) : filtered.length === 0 ? (
+                                        <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#565959]">No payments found.</td></tr>
+                                    ) : (
+                                        filtered.map((payment) => (
+                                            <tr key={payment.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-[#111]">#{payment.id}</div>
+                                                    <div className="text-[11px] text-[#aaa] mt-1">{formatDate(payment.date)}</div>
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm text-slate-700 dark:text-slate-300 font-medium capitalize">{payment.method.replace('_', ' ')}</span>
-                                                    </div>
+                                                <td className="px-6 py-4 text-[#565959] capitalize">
+                                                    {payment.method.replace('_', ' ')}
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{payment.payer_payee || "Internal Protocol"}</span>
-                                                        <span className="text-[11px] text-slate-500 italic">By: {payment.user_name}</span>
-                                                    </div>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-[#111]">{payment.payer_payee || "Internal"}</div>
+                                                    <div className="text-[11px] text-[#aaa] mt-1 italic">By: {payment.user_name}</div>
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="inline-block px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#F59E0B] text-[11px] font-semibold uppercase tracking-tight">
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-block px-2 py-0.5 rounded-[2px] border border-blue-100 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase">
                                                         {payment.category_name}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <span className={`text-sm font-bold tracking-tight ${payment.payment_type === 'inbound' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className={`font-bold ${payment.payment_type === 'inbound' ? 'text-green-700' : 'text-red-700'}`}>
                                                         {payment.payment_type === 'inbound' ? '+' : '-'}{formatCurrency(payment.amount)}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-[#F59E0B] hover:bg-blue-50 dark:hover:bg-[#F59E0B]/10 transition-colors" title="View Details">
-                                                            <Eye className="h-4 w-4" />
-                                                        </button>
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-[#F59E0B] hover:bg-blue-50 dark:hover:bg-[#F59E0B]/10 transition-colors" title="Download Receipt">
-                                                            <Download className="h-4 w-4" />
-                                                        </button>
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Delete Entry">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
+                                                        <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </SectionCard>
-                </>
-            )}
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
+            </div>
 
             {/* Toast Hub */}
             {toast && (
-                <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right duration-300">
-                    <div className={`flex items-center gap-3 px-6 py-3 rounded shadow-2xl border-l-[6px] ${toast.type === 'success' ? 'bg-[#232f3e] border-[#F59E0B] text-white' : 'bg-red-900 border-red-500 text-white'}`}>
-                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#F59E0B]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
-                        <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
-                        <button onClick={() => setToast(null)} className="ml-4 hover:opacity-70 transition-opacity">
-                            <X className="h-4 w-4" />
-                        </button>
+                <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right">
+                    <div className={`flex items-center gap-3 px-6 py-3 rounded-[4px] shadow-2xl border-l-[4px] ${toast.type === 'success' ? 'bg-[#232f3e] border-[#f0c14b] text-white' : 'bg-red-900 border-red-500 text-white'}`}>
+                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#f0c14b]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
+                        <p className="text-sm font-bold">{toast.msg}</p>
+                        <button onClick={() => setToast(null)} className="ml-4 opacity-50 hover:opacity-100"><X size={16} /></button>
                     </div>
                 </div>
             )}
@@ -281,20 +229,18 @@ export default function PaymentsPage() {
 
 function StatCard({ label, val, icon: Icon, color, bg }: any) {
     return (
-        <SectionCard className="p-4 relative group hover:border-[#F59E0B]/30 transition-all">
+        <div className="bg-white border border-[#ddd] p-5 rounded-[4px] shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-[4px] h-full" style={{ backgroundColor: color === 'text-green-700' ? '#27ae60' : color === 'text-red-700' ? '#c0392b' : '#34495e' }}></div>
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">{label}</p>
-                    <p className={`text-xl font-black tracking-tighter ${color} mb-0.5`}>Rs. {Math.abs(val).toLocaleString()}</p>
+                    <p className="text-[11px] font-bold text-[#565959] uppercase mb-1">{label}</p>
+                    <p className={`text-[20px] font-bold ${color}`}>Rs. {Math.abs(val).toLocaleString()}</p>
                 </div>
-                <div className={`p-2.5 ${bg} rounded-xl border border-slate-200/50 dark:border-white/5`}>
-                    <Icon className={`h-4.5 w-4.5 ${color}`} strokeWidth={2.5} />
+                <div className="p-2.5 rounded-[4px] border border-[#eee]" style={{ backgroundColor: bg }}>
+                    <Icon size={18} className={color} />
                 </div>
             </div>
-            <div className="mt-3 h-1 w-full bg-slate-50 dark:bg-white/5 rounded-full overflow-hidden">
-                <div className={`h-full ${color.replace('text-', 'bg-')} opacity-20 w-2/3 transition-all duration-1000 group-hover:w-full`} />
-            </div>
-        </SectionCard>
+        </div>
     );
 }
 
@@ -318,139 +264,111 @@ function CreateView({ onClose, onSuccess, categories }: any) {
         try {
             await paymentService.create(formData);
             onSuccess();
-        } catch (error) {
-            console.error('Entry failed', error);
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { toast.error("Failed to save payment"); } finally { setLoading(false); }
     };
 
     return (
-        <SectionCard className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SectionHeader title="Protocol Configuration" icon={Settings} />
+        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
+            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex justify-between items-center">
+                <h2 className="text-[16px] font-bold text-[#111]">New Payment</h2>
+                <button onClick={onClose} className="text-[#aaa] hover:text-[#111]"><X size={20} /></button>
+            </div>
             <form onSubmit={handleSubmit}>
-                <div className="p-6 lg:p-8 space-y-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Transaction Core */}
+                <div className="p-8 space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                        {/* Type & Amount */}
                         <div className="space-y-6">
-                            <div className="p-4 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded shadow-inner">
-                                <label className={LABEL}>Protocol Selection</label>
-                                <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-[13px] font-bold text-[#111] mb-2">Payment Type</label>
+                                <div className="grid grid-cols-2 gap-2 p-1 bg-[#f3f3f3] rounded-[4px]">
                                     {['inbound', 'outbound'].map(t => (
                                         <button
                                             key={t}
                                             type="button"
                                             onClick={() => set('payment_type', t)}
-                                            className={`py-2 px-3 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${formData.payment_type === t
-                                                ? 'bg-white dark:bg-slate-800 border-[#a88734] text-[#131921] dark:text-[#F59E0B] shadow-sm'
-                                                : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700'
-                                                }`}
+                                            className={`py-1.5 rounded-[3px] text-[11px] font-bold uppercase transition-all
+                                                ${formData.payment_type === t ? 'bg-white text-[#c45500] shadow-sm' : 'text-[#565959] hover:bg-[#eee]'}`}
                                         >
-                                            {t === 'inbound' ? 'Receive (+)' : 'Disburse (-)'}
+                                            {t === 'inbound' ? 'Income' : 'Expense'}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-
                             <div>
-                                <label className={LABEL}>Valuation (PKR)</label>
+                                <label className="block text-[13px] font-bold text-[#111] mb-2">Amount (PKR)</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aaa] font-bold text-sm">Rs.</span>
                                     <input
-                                        required
-                                        type="number"
-                                        step="0.01"
+                                        required type="number" step="0.01"
                                         value={formData.amount}
                                         onChange={e => set('amount', e.target.value)}
                                         placeholder="0.00"
-                                        className={INPUT() + " pl-10 text-lg font-bold text-gray-900"}
+                                        className={inputCls + " pl-10 h-[38px] text-lg font-bold"}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Remittance Detail */}
-                        <div className="space-y-6 lg:border-x lg:border-gray-100 lg:dark:border-slate-800 lg:px-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Details */}
+                        <div className="space-y-6 lg:px-8 lg:border-x border-[#eee]">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className={LABEL}>Method</label>
-                                    <select
-                                        value={formData.method}
-                                        onChange={e => set('method', e.target.value)}
-                                        className={INPUT()}
-                                    >
-                                        <option value="cash">Hard Cash</option>
-                                        <option value="bank_transfer">Bank Wire</option>
-                                        <option value="check">Bankers Check</option>
+                                    <label className="block text-[13px] font-bold text-[#111] mb-2">Mode</label>
+                                    <select value={formData.method} onChange={e => set('method', e.target.value)} className={inputCls + " cursor-pointer"}>
+                                        <option value="cash">Cash</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                        <option value="check">Check</option>
                                         <option value="mobile_wallet">Digital Wallet</option>
-                                        <option value="other">Other Protocol</option>
+                                        <option value="other">Other</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className={LABEL}>Classification</label>
-                                    <select
-                                        required
-                                        value={formData.category}
-                                        onChange={e => set('category', e.target.value)}
-                                        className={INPUT()}
-                                    >
-                                        <option value="">Select Category...</option>
+                                    <label className="block text-[13px] font-bold text-[#111] mb-2">Category</label>
+                                    <select required value={formData.category} onChange={e => set('category', e.target.value)} className={inputCls + " cursor-pointer"}>
+                                        <option value="">Select...</option>
                                         {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
                             </div>
                             <div>
-                                <label className={LABEL}>External Entity (Payer/Payee)</label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        value={formData.payer_payee}
-                                        onChange={e => set('payer_payee', e.target.value)}
-                                        placeholder="Individual or Entity Name"
-                                        className={INPUT() + " pl-10"}
-                                    />
-                                </div>
+                                <label className="block text-[13px] font-bold text-[#111] mb-2">Name (Person / Company)</label>
+                                <input
+                                    type="text" value={formData.payer_payee}
+                                    onChange={e => set('payer_payee', e.target.value)}
+                                    placeholder="Enter entity name"
+                                    className={inputCls}
+                                />
                             </div>
                         </div>
 
-                        {/* Reference & Audit */}
+                        {/* Reference & Note */}
                         <div className="space-y-6">
                             <div>
-                                <label className={LABEL}>Reference Identifier</label>
+                                <label className="block text-[13px] font-bold text-[#111] mb-2">Reference #</label>
                                 <input
-                                    type="text"
-                                    value={formData.reference_number}
+                                    type="text" value={formData.reference_number}
                                     onChange={e => set('reference_number', e.target.value)}
-                                    placeholder="Voucher # or Invoice #"
-                                    className={INPUT()}
+                                    placeholder="Voucher or Invoice #"
+                                    className={inputCls}
                                 />
                             </div>
                             <div>
-                                <label className={LABEL}>Internal Protocol Note</label>
+                                <label className="block text-[13px] font-bold text-[#111] mb-2">Note (Internal)</label>
                                 <textarea
-                                    rows={2}
-                                    value={formData.description}
+                                    rows={2} value={formData.description}
                                     onChange={e => set('description', e.target.value)}
-                                    placeholder="Additional context for this financial event..."
-                                    className={INPUT() + " resize-none h-[76px]"}
+                                    placeholder="Additional details..."
+                                    className={inputCls + " h-[60px] resize-none py-2"}
                                 />
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {/* Footer Actions */}
-                <div className="px-8 py-5 bg-gray-50 dark:bg-slate-800 border-t border-[#ddd] dark:border-slate-800 flex items-center justify-between">
-                    <button type="button" onClick={onClose} className={SECONDARY_BTN + " !px-8"}>Discard Entry</button>
-                    <button type="submit" disabled={loading} className={PRIMARY_BTN + " !px-10 uppercase tracking-widest border-b-2 border-b-[#a88734]"}>
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        {loading ? 'Processing...' : 'Synchronize to Ledger'}
-                    </button>
+                <div className="px-8 py-5 bg-[#f7f8fa] border-t border-[#ddd] flex items-center justify-end gap-3">
+                    <button type="button" onClick={onClose} className="text-[13px] font-bold text-[#565959] hover:underline mr-4">Discard</button>
+                    <Btn type="submit" loading={loading} className="w-[160px] h-[35px]">Save Payment</Btn>
                 </div>
             </form>
-        </SectionCard>
+        </div>
     );
 }
-
-

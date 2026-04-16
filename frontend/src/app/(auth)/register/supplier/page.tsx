@@ -23,6 +23,7 @@ export default function SupplierRegisterPage() {
         company_name: '',
         email: '',
         phone: '',
+        address: '',
         password: '',
         confirmPassword: ''
     });
@@ -50,6 +51,7 @@ export default function SupplierRegisterPage() {
                 username: formData.email.split('@')[0],
                 email: formData.email,
                 phone: formData.phone,
+                address: formData.address,
                 password: formData.password,
                 password_confirm: formData.password
             });
@@ -138,6 +140,16 @@ export default function SupplierRegisterPage() {
                                     name="phone" type="text" required
                                     value={formData.phone} onChange={handleChange}
                                     placeholder="0300-1234567"
+                                    className={INPUT()}
+                                />
+                            </div>
+
+                            <div>
+                                <label className={LABEL}>Business / Godown Address</label>
+                                <input
+                                    name="address" type="text" required
+                                    value={formData.address} onChange={handleChange}
+                                    placeholder="City, Area, Street address"
                                     className={INPUT()}
                                 />
                             </div>

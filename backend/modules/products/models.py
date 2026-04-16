@@ -94,15 +94,19 @@ class SupplierProduct(BaseModel):
     name = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, unique=True, null=True, blank=True)
     barcode = models.CharField(max_length=100, unique=True, null=True, blank=True)
-    supplier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='supplier_products')
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier_products')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplier_products')
     
     image = models.ImageField(upload_to='supplier_products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     
-    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    retail_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    quantity = models.PositiveIntegerField(default=0)
+    # Matching DB schema exactly
+    price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cost_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, default=0)
+    retail_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, default=0)
+    quantity = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, default='ACTIVE')
+    batch_number = models.CharField(max_length=100, null=True, blank=True)
     
     is_approved = models.BooleanField(default=False)
     
@@ -115,7 +119,7 @@ class SupplierProduct(BaseModel):
         return self.name
 
 class Wishlist(BaseModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist')
+    user = models.ForeignKey('customer.Customer', on_delete=models.CASCADE, related_name='wishlist')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
 
     class Meta:

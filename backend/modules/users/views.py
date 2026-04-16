@@ -40,8 +40,8 @@ def get_profile(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_users(request):
-    """List all users with optional filters."""
-    users = User.objects.all()
+    """List internal users, strictly excluding Customers and Suppliers for data isolation."""
+    users = User.objects.exclude(role__name__iexact='customer').exclude(role__name__iexact='supplier')
 
     role = request.query_params.get('role')
     if role:
@@ -72,24 +72,57 @@ def user_detail(request, user_id):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_user(request):
-    """Create a new user."""
+    """Create a new user, with dedicated logic for Suppliers."""
+    from modules.users.models import Role
+    role_id = request.data.get('role')
+    role = None
+    if role_id:
+        role = Role.objects.filter(id=role_id).first()
+    
+    # Check if this is meant to be a supplier
+    if role and role.name.lower() == 'supplier':
+        from django.contrib.auth.hashers import make_password
+        from modules.supplier.models import Supplier
+        
+        email = request.data.get('email')
+        if not email:
+            return Response({'email': ['This field is required']}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if Supplier.objects.filter(email=email).exists():
+            return Response({'email': ['Supplier with this email already exists']}, status=status.HTTP_400_BAD_REQUEST)
+
+        password = request.data.get('password') or 'Alqavi@123'
+        supplier = Supplier.objects.create(
+            username=request.data.get('username') or email.split('@')[0],
+            email=email,
+            password=make_password(password),
+            plain_password=password,
+            name=request.data.get('business_name') or f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip() or email,
+            company=request.data.get('business_name', ''),
+            contact=request.data.get('phone', ''),
+            address=request.data.get('address', ''),
+            contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip()
+        )
+        
+        if request.user.is_authenticated:
+            UserActivityLog.objects.create(
+                user=request.user,
+                action='create',
+                description=f'Created supplier: {supplier.email}'
+            )
+            
+        return Response({
+            'id': supplier.id,
+            'email': supplier.email,
+            'role_name': 'Supplier',
+            'message': 'Supplier created in dedicated registry.'
+        }, status=status.HTTP_201_CREATED)
+
+    # Standard User creation
     serializer = UserCreateSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
         
-        # Automatically create Supplier profile if the role is 'Supplier'
-        if user.role and user.role.name.lower() == 'supplier':
-            from modules.supplier.models import Supplier
-            Supplier.objects.get_or_create(
-                user=user,
-                defaults={
-                    'name': request.data.get('business_name', f"{user.first_name} {user.last_name}"),
-                    'email': user.email,
-                    'phone': getattr(user, 'phone', ''),
-                    'contact_person': f"{user.first_name} {user.last_name}"
-                }
-            )
-
         if request.user.is_authenticated:
             UserActivityLog.objects.create(
                 user=request.user,
@@ -400,74 +433,75 @@ def update_user_settings(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
-    """Public customer registration with 'Customer' role auto-assignment."""
-    data = request.data.copy()
+    """Public customer registration - Redirects to isolated Customer registry."""
+    from django.contrib.auth.hashers import make_password
+    from modules.customer.models import Customer
     
-    # Ensure 'Customer' role exists
-    customer_role, _ = Role.objects.get_or_create(
-        name='Customer',
-        defaults={'description': 'Standard shopping customer'}
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if Customer.objects.filter(email=email).exists():
+        return Response({'email': ['Account with this email already exists']}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create standalone Customer
+    customer = Customer.objects.create(
+        username=email.split('@')[0],
+        email=email,
+        password=make_password(password),
+        plain_password=password,
+        first_name=request.data.get('first_name', ''),
+        last_name=request.data.get('last_name', ''),
+        phone=request.data.get('phone', ''),
+        address=request.data.get('address', ''),
+        city=request.data.get('city', ''),
+        country=request.data.get('country', ''),
+        postal_code=request.data.get('postal_code', '')
     )
     
-    # We pass the role ID as a string or UUID
-    data['role'] = customer_role.id
-    data['status'] = 'active'
-    
-    from .serializers import UserCreateSerializer
-    serializer = UserCreateSerializer(data=data)
-    if serializer.is_valid():
-        user = serializer.save()
-        
-        # Log Initial Activity
-        UserActivityLog.objects.create(
-            user=user,
-            action='create',
-            description=f'Customer account registered: {user.email}'
-        )
-        
-        return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        'message': 'Account created successfully',
+        'id': customer.id,
+        'email': customer.email
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup_supplier(request):
-    """Public supplier registration with 'Supplier' role auto-assignment and Supplier Profile creation."""
-    data = request.data.copy()
+    """Public supplier registration - Creates record ONLY in Supplier table as requested."""
+    from django.contrib.auth.hashers import make_password
+    from modules.supplier.models import Supplier
     
-    # Ensure 'Supplier' role exists
-    supplier_role, _ = Role.objects.get_or_create(
-        name='Supplier',
-        defaults={'description': 'External distributor / brand partner'}
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if Supplier.objects.filter(email=email).exists():
+        return Response({'email': ['Supplier with this email already exists']}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create Supplier directly
+    supplier = Supplier.objects.create(
+        username=email.split('@')[0],
+        email=email,
+        password=make_password(password),
+        plain_password=password,
+        name=request.data.get('company_name', email),
+        company=request.data.get('company_name', ''),
+        contact=request.data.get('phone', ''),
+        address=request.data.get('address', ''),
+        contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip() or email
     )
     
-    data['role'] = supplier_role.id
-    data['status'] = 'active'
-    
-    from .serializers import UserCreateSerializer
-    serializer = UserCreateSerializer(data=data)
-    if serializer.is_valid():
-        user = serializer.save()
-        
-        # Create Supplier Profile
-        from modules.supplier.models import Supplier
-        Supplier.objects.create(
-            user=user,
-            name=request.data.get('company_name', f"{user.first_name} {user.last_name}"),
-            email=user.email,
-            phone=user.phone,
-            contact_person=f"{user.first_name} {user.last_name}"
-        )
-        
-        # Log Initial Activity
-        UserActivityLog.objects.create(
-            user=user,
-            action='create',
-            description=f'Supplier account registered: {user.email}'
-        )
-        
-        return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        'message': 'Supplier registered successfully',
+        'id': supplier.id,
+        'email': supplier.email
+    }, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

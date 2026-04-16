@@ -5,13 +5,38 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
     ChevronLeft, Save, RefreshCw, Building2, 
-    MapPin
+    MapPin, ChevronRight
 } from 'lucide-react';
 import { inventoryService } from '@/services/inventory.service';
 import toast from 'react-hot-toast';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const labelCls = 'block text-[10px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest';
+/* ─────────────────────────────────────────────────────────────────────────────
+   PROFESSIONAL AMAZON RETAIL DESIGN SYSTEM (SYNCED)
+   ───────────────────────────────────────────────────────────────────────────── */
+const AmazonButton = ({ children, onClick, loading, variant = "primary", className = "", type = "button", disabled = false }: any) => {
+    const primary = "bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] #9c7e31 #846a29 hover:from-[#f5d78e] hover:to-[#eeb933] shadow-[0_1px_0_rgba(255,255,255,0.4)_inset,0_1px_3px_rgba(0,0,0,0.1)]";
+    const secondary = "bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] #a2a6ac #8d9096 hover:from-[#eef1f3] hover:to-[#dce0e4] shadow-sm";
+    
+    return (
+        <button 
+            type={type} onClick={onClick} disabled={loading || disabled} 
+            className={`h-[31px] px-5 rounded-[3px] text-[13px] font-[500] text-[#0f1111] border transition-all active:shadow-inner flex items-center justify-center gap-2 ${variant === 'primary' ? primary : secondary} ${className}`}
+        >
+            {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const AmazonInput = ({ label, className = "", required = false, ...props }: { label?: string, required?: boolean } & React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => (
+    <div className="w-full">
+        {label && <label className="block text-[13px] font-bold text-[#0f1111] mb-1.5">{label} {required && <span className="text-red-600">*</span>}</label>}
+        <input
+            className={`w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] placeholder:text-[#888] ${className}`}
+            {...(props as any)}
+        />
+    </div>
+);
 
 export default function AddWarehousePage() {
     const router = useRouter();
@@ -42,82 +67,73 @@ export default function AddWarehousePage() {
         setSaving(true);
         try {
             await inventoryService.createWarehouse(form);
-            toast.success('Warehouse registered successfully!');
-            setTimeout(() => router.push('/admin/inventory/warehouses'), 1000);
+            toast.success('Warehouse added');
+            router.push('/admin/inventory/warehouses');
         } catch (err: any) {
-            console.error(err);
-            toast.error('Failed to register warehouse.');
+            toast.error('Failed to add warehouse');
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <div className="max-w-xl mx-auto py-12 px-6 font-sans text-left text-left">
-            <div className="mb-10 text-left">
-                <Link 
-                    href="/admin/inventory/warehouses" 
-                    className="text-[10px] font-black text-slate-400 hover:text-[#F59E0B] transition-colors mb-4 flex items-center gap-1 uppercase tracking-widest"
-                >
-                    <ChevronLeft className="h-3 w-3" /> Back to Registry
-                </Link>
-                <div className="flex items-center gap-3 mt-4">
-                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
-                        <Building2 className="h-5 w-5 text-white" />
+        <div className="bg-[#eaeded] min-h-screen pb-20 font-sans animate-in fade-in duration-500 text-left">
+            
+            {/* ── PROFESSIONAL HEADER ── */}
+            <div className="bg-white border-b border-[#ddd] py-6 shadow-sm">
+                <div className="max-w-[1240px] mx-auto px-4 md:px-8">
+                    <div className="flex items-center gap-1 text-[11px] text-[#565959] mb-4">
+                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                        <ChevronRight size={10} />
+                        <Link href="/admin/inventory/warehouses" className="hover:text-[#c45500] hover:underline">Warehouses</Link>
+                        <ChevronRight size={10} />
+                        <span className="text-[#c45500]">Add Warehouse</span>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Add Warehouse</h1>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Initialize a new storage node</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-[28px] font-normal text-[#111]">Add Warehouse</h1>
+                            <p className="text-[13px] text-[#565959] mt-1">Add a new storage location</p>
+                        </div>
+                        <button onClick={() => router.back()} className="text-[14px] text-[#007185] hover:text-[#c45500] font-bold flex items-center gap-1 transition-colors">
+                            <ChevronLeft size={18} /> Back to list
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
-                    <div className="space-y-1.5 text-left">
-                        <label className={labelCls}>Warehouse Name <span className="text-red-500">*</span></label>
-                        <input 
-                            className={inputCls(!!errors.name)} 
-                            placeholder="e.g. Karachi Central Hub"
-                            value={form.name} 
-                            onChange={e => handle('name', e.target.value)} 
-                        />
-                        {errors.name && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{errors.name}</p>}
-                    </div>
-
-                    <div className="space-y-1.5 text-left">
-                        <label className={labelCls}>Physical Location <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                            <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                            <input 
-                                className={inputCls(!!errors.location)} 
-                                placeholder="e.g. Plot 42, Sector 5, Karachi"
-                                value={form.location} 
-                                onChange={e => handle('location', e.target.value)} 
-                            />
+            <div className="max-w-[1240px] mx-auto mt-10 px-4 md:px-8">
+                <div className="max-w-[800px] animate-in slide-in-from-bottom-5 duration-500">
+                    <div className="bg-white border border-[#ddd] rounded-lg p-10 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-[#e47911]"></div>
+                        
+                        <div className="flex items-center gap-4 mb-10 pb-6 border-b border-[#eee]">
+                            <div className="p-3 bg-slate-50 rounded-xl"><Building2 className="h-8 w-8 text-[#e47911]" /></div>
+                            <div>
+                                <h2 className="text-[24px] font-bold text-[#111]">Location Details</h2>
+                                <p className="text-[14px] text-[#565959]">Enter the warehouse name and physical address.</p>
+                            </div>
                         </div>
-                        {errors.location && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{errors.location}</p>}
+
+                        <form onSubmit={handleSubmit} className="space-y-8 text-left">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                                <div className="space-y-1">
+                                    <AmazonInput label="Warehouse Name" value={form.name} onChange={e => handle('name', e.target.value)} placeholder="e.g. Karachi Central Hub" required />
+                                    {errors.name && <p className="text-[11px] text-red-600 font-bold mt-1">{errors.name}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <AmazonInput label="Location" value={form.location} onChange={e => handle('location', e.target.value)} placeholder="e.g. Plot 42, Sector 5, Karachi" required />
+                                    {errors.location && <p className="text-[11px] text-red-600 font-bold mt-1">{errors.location}</p>}
+                                </div>
+                            </div>
+
+                            <div className="pt-10 flex border-t border-[#eee] justify-end gap-3">
+                                <AmazonButton variant="secondary" onClick={() => router.push('/admin/inventory/warehouses')} className="w-[140px]">Cancel</AmazonButton>
+                                <AmazonButton type="submit" loading={saving} className="w-[200px] h-[40px] text-[15px]">Add Warehouse</AmazonButton>
+                            </div>
+                        </form>
                     </div>
                 </div>
-
-                <div className="flex justify-end gap-4">
-                    <button
-                        type="button"
-                        onClick={() => router.push('/admin/inventory/warehouses')}
-                        className="px-6 py-3 text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-all"
-                    >
-                        Discard
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="flex items-center gap-3 px-10 py-3.5 bg-[#F59E0B] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-yellow-600 transition-all shadow-xl shadow-yellow-500/20 disabled:opacity-50 active:scale-95"
-                    >
-                        {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Register Node
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     );
 }

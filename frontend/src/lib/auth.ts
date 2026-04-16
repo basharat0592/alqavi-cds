@@ -53,7 +53,7 @@ export const authService = {
         const detail = error.response?.data;
         let errorMessage = defaultMsg;
         console.error("Auth Error Detail:", detail);
-        
+
         if (detail) {
             if (typeof detail === 'string') errorMessage = detail;
             else if (typeof detail === 'object') {

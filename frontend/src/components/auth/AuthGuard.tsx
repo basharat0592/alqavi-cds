@@ -26,28 +26,37 @@ export default function AuthGuard({ children, allowedRoles }: {
             return;
         }
 
-        // Token exists — allow in. The backend handles real authorization.
-        // Role matching is done loosely to avoid locking out admins whose role
-        // is stored differently (is_staff, is_superuser, or role object).
-        if (allowedRoles && allowedRoles.includes('admin')) {
+        // Perform role-based authorization check
+        const userStr = localStorage.getItem('cosmetic_distro_user');
+        if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
-                const userStr = localStorage.getItem('cosmetic_distro_user');
-                if (userStr && userStr !== 'undefined' && userStr !== 'null') {
-                    const user = JSON.parse(userStr);
-                    const roleStr = String(user?.role_name || user?.role || '').toLowerCase();
-                    const isAdmin =
-                        roleStr.includes('admin') ||
-                        user?.is_staff === true ||
-                        user?.is_superuser === true;
+                const user = JSON.parse(userStr);
+                const roleStr = String(user?.role_name || user?.role || '').toLowerCase();
+                
+                const isAdmin = roleStr.includes('admin') || user?.is_staff || user?.is_superuser;
+                const isSupplier = roleStr.includes('supplier');
+                const isCustomer = roleStr.includes('customer');
+                
+                if (allowedRoles && allowedRoles.length > 0) {
+                    const isAuthorized = allowedRoles.some(r => {
+                        const role = r.toLowerCase();
+                        if (role === 'admin') return isAdmin;
+                        if (role === 'supplier') return isSupplier;
+                        if (role === 'customer') return isCustomer;
+                        return roleStr.includes(role);
+                    });
 
-                    if (!isAdmin) {
-                        // Not admin — but maybe this is a stale user object from before the fix.
-                        // If token exists, give benefit of the doubt and let backend decide.
-                        // Don't redirect — just let them in. The API calls will fail with 403/401 if truly unauthorized.
+                    if (!isAuthorized) {
+                        redirected.current = true;
+                        if (isAdmin) router.replace('/admin/dashboard');
+                        else if (isSupplier) router.replace('/supplier/dashboard');
+                        else if (isCustomer) router.replace('/dashboard');
+                        else router.replace('/login');
+                        return;
                     }
                 }
-            } catch {
-                // JSON parse error — ignore
+            } catch (e) {
+                console.error("AuthGuard evaluation failed:", e);
             }
         }
 

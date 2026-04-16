@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderItem
+from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem
 from modules.products.models import Product
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -73,3 +73,46 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return OrderSerializer(instance, context=self.context).data
+
+
+class PurchaseOrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.ReadOnlyField(source='product.name')
+    subtotal = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PurchaseOrderItem
+        fields = ['id', 'product', 'product_name', 'packaging_type', 'items_per_carton', 'quantity', 'price', 'selling_price', 'total_units', 'subtotal']
+
+    def get_subtotal(self, obj):
+        return float(obj.quantity * obj.price)
+
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    items = PurchaseOrderItemSerializer(many=True, read_only=True)
+    supplier_name = serializers.SerializerMethodField()
+    supplier_phone = serializers.ReadOnlyField(source='supplier.phone')
+    supplier_email = serializers.ReadOnlyField(source='supplier.email')
+    warehouse_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'id', 'purchase_number', 'supplier', 'supplier_name', 'reference_number',
+            'warehouse', 'warehouse_name', 'total_amount', 'shipping_cost', 'tax_amount',
+            'status', 'payment_status', 'order_date', 'expected_delivery_date', 'notes', 'items',
+            'supplier_phone', 'supplier_email'
+        ]
+
+    def get_supplier_name(self, obj):
+        return obj.supplier.username if obj.supplier else 'Internal'
+
+    def get_warehouse_name(self, obj):
+        return obj.warehouse.name if obj.warehouse else 'Default Warehouse'
+
+
+class OrderStatsSerializer(serializers.Serializer):
+    total_products = serializers.IntegerField()
+    pending_orders = serializers.IntegerField()
+    received_orders = serializers.IntegerField()
+    total_order_value = serializers.DecimalField(max_digits=15, decimal_places=2)
+    supplier_name = serializers.CharField()

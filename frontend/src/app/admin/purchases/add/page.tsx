@@ -1,529 +1,541 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import {
-    ShoppingCart, Plus, Trash2, X, CheckCircle, AlertTriangle,
-    Package, Loader2, ArrowLeft, Save, DollarSign, Clipboard, ShieldCheck,
-    Hash
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShoppingCart, Plus, Trash2, X, CheckCircle, Package, ArrowLeft, ChevronRight, RefreshCw, Save, Search, ChevronDown } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { userService } from '@/services/user.service';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getImageUrl } from '@/lib/utils';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
 
-const EMPTY_FORM = {
-    purchase_number: '', supplier: '', supplier_name: '', supplier_phone: '',
-    order_date: new Date().toISOString().slice(0, 10),
-    expected_delivery_date: '', tax_amount: '0', shipping_cost: '0',
-    status: 'ordered', payment_status: 'unpaid', payment_method: 'cash', notes: '',
+/* ─── Shared Components ─── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
 };
 
-type LineItem = {
-    product: string;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    packaging_type: 'piece' | 'pack' | 'carton';
-    pieces_per_unit: number;
-};
-
-// ── Reusable form field wrappers ──────────────────────────────────────────────
-const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
-    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-        {children}{required && <span className="text-red-500 ml-0.5">*</span>}
-    </label>
-);
-
-const fieldCls = (err?: boolean) =>
-    `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
-
-const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
-
-// ── Section panel wrapper ─────────────────────────────────────────────────────
-const Panel = ({ title, icon: Icon, action, children }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
-            <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-[#F59E0B]" />}
-                <span className="text-sm font-semibold text-slate-800 dark:text-white">{title}</span>
-            </div>
-            {action}
-        </div>
-        <div className="p-5">{children}</div>
+const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+    <div className="w-full">
+        <label className="block text-[13px] font-bold text-[#0f1111] mb-1">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        {children}
     </div>
 );
 
+const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white";
+const selectCls = `${inputCls} cursor-pointer`;
+
+const EMPTY_FORM = {
+    purchase_number: '', supplier: '', supplier_name: '',
+    order_date: new Date().toISOString().slice(0, 10),
+    status: 'ordered', payment_method: 'cash', notes: '',
+};
+
+type LineItem = { 
+    product: string; 
+    product_name: string; 
+    packaging_type: 'SINGLE' | 'CARTON';
+    items_per_carton: number;
+    quantity: number; 
+    unit_price: number; 
+};
+
+/* ─── Rich Product Selector ─── */
+const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const filtered = products.filter((p: any) =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const selected = products.find((p: any) => String(p.id) === String(selectedId));
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className={inputCls + " h-[42px] flex items-center justify-between text-left px-3 bg-white hover:bg-[#f3f7f7] transition-all group"}
+            >
+                {selected ? (
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-8 h-8 bg-slate-50 rounded border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                            {selected.image ? (
+                                <img src={getImageUrl(selected.image) || ''} className="w-full h-full object-cover" alt="" />
+                            ) : (
+                                <Package size={16} className="text-slate-300" />
+                            )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[13px] font-bold text-[#0f1111] truncate">{selected.name}</span>
+                            <span className="text-[10px] text-slate-500 font-medium">SKU: {selected.sku || 'N/A'}</span>
+                        </div>
+                    </div>
+                ) : <span className="text-[#565959]">Select product...</span>}
+                <ChevronDown size={14} className={`text-slate-400 shrink-0 ml-2 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+                <div className="absolute top-[calc(100%+4px)] left-0 w-[350px] sm:w-[500px] bg-white border border-slate-300 rounded-[8px] shadow-2xl z-[1000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 border-b bg-[#fcfdff] sticky top-0 z-[1001]">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                autoFocus
+                                placeholder="Search by name or SKU..."
+                                className="w-full h-[36px] pl-9 pr-3 border border-slate-300 rounded-[4px] text-[13px] outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600]/20"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
+                        {filtered.length === 0 ? (
+                            <div className="p-8 text-center bg-slate-50">
+                                <Package className="mx-auto h-8 w-8 text-slate-200 mb-2" />
+                                <p className="text-[13px] font-medium text-slate-500">No matching products from this supplier</p>
+                            </div>
+                        ) : (
+                            filtered.map((p: any) => (
+                                <div
+                                    key={p.id}
+                                    onClick={() => { onSelect(p.id); setOpen(false); }}
+                                    className="flex items-center gap-4 p-3 hover:bg-[#f3f7f7] cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
+                                >
+                                    <div className="w-14 h-14 bg-white flex items-center justify-center rounded border border-slate-200 shrink-0 overflow-hidden group-hover:border-[#e77600]/40 transition-colors">
+                                        {p.image ? (
+                                            <img src={getImageUrl(p.image) || ''} className="w-full h-full object-cover" alt="" />
+                                        ) : (
+                                            <Package size={24} className="text-slate-200" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <p className="text-[14px] font-bold text-[#111] leading-tight group-hover:text-[#c45500] transition-colors">{p.name}</p>
+                                            <span className="text-[13px] font-black text-[#B12704] whitespace-nowrap">{formatCurrency(p.retail_price || 0)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1.5 font-medium">
+                                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">SKU: {p.sku || 'N/A'}</span>
+                                            <div className="flex items-center gap-1">
+                                                <div className={`h-1.5 w-1.5 rounded-full ${p.quantity > 10 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                                <span className="text-[11px] text-slate-500">{p.quantity || 0} in stock</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function AddPurchasePage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const hasPrefilled = useRef(false);
-
     const [products, setProducts] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM });
-    const [items, setItems] = useState<LineItem[]>([{
-        product: '',
-        product_name: '',
-        quantity: 1,
-        unit_price: 0,
-        packaging_type: 'piece',
-        pieces_per_unit: 1
+    const [items, setItems] = useState<LineItem[]>([{ 
+        product: '', 
+        product_name: '', 
+        packaging_type: 'SINGLE',
+        items_per_carton: 1,
+        quantity: 1, 
+        unit_price: 0 
     }]);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'alert' } | null>(null);
-
-    const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
-    };
+    const [successOrder, setSuccessOrder] = useState<any | null>(null);
 
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [prodsRes, usersRes, suppRes] = await Promise.allSettled([
-                productService.getAll?.({ all_items: 'true', include_pending: 'true', include_supplier_only: 'true' } as any) ?? Promise.resolve([]),
+            const [usersRes, suppRes] = await Promise.allSettled([
                 userService.getAll(),
                 (companyService as any).getSuppliers?.() ?? Promise.resolve([])
             ]);
 
-            if (prodsRes.status === 'fulfilled') {
-                const prods = prodsRes.value;
-                setProducts(Array.isArray(prods) ? prods : (prods as any)?.results || []);
-            }
-
-            // Registered Suppliers from Supplier Page (Users with Supplier role)
-            const users = usersRes.status === 'fulfilled' ? (Array.isArray(usersRes.value) ? usersRes.value : []) : [];
-            const registeredSuppliers = users.filter((u: any) =>
-                (u.role_name || '').toLowerCase().includes('supplier')
-            ).map((u: any) => ({
-                id: u.id,
-                name: u.business_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
-                phone: u.phone_number || u.phone || '',
-                city: u.address || ''
+            const usersArr = usersRes.status === 'fulfilled' ? (Array.isArray(usersRes.value) ? usersRes.value : []) : [];
+            const fromUsers = usersArr.filter((u: any) => (u.role_name || '').toLowerCase().includes('supplier')).map((u: any) => ({
+                id: u.id, name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username, phone: u.phone || '', city: u.address || '', isUser: true
+            }));
+            const fromCompanyRaw = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
+            const fromCompMapped = fromCompanyRaw.map((s: any) => ({
+                id: s.id, name: s.company || s.name, phone: s.contact || '', city: s.address || '', isUser: false
             }));
 
-            // Also include official Supplier model records
-            const suppliersList = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
+            // Prioritize dashboad users over registry records on name overlap
+            const merged = Array.from(new Map([...fromCompMapped, ...fromUsers].map(s => [s.name, s])).values());
+            setSuppliers(merged);
 
-            // Merge both for complete registry
-            const merged = [...registeredSuppliers, ...suppliersList];
-            const unique = Array.from(new Map(merged.map(item => [item.name, item])).values());
-
-            setSuppliers(unique);
-
-            const num = `PO-${Date.now().toString().slice(-6)}`;
-            setForm(prev => ({ ...prev, purchase_number: num }));
-        } catch {
-            showToast('Failed to load data', 'alert');
-        } finally {
-            setLoading(false);
-        }
+            setForm(prev => ({ ...prev, purchase_number: `PO-${Date.now().toString().slice(-6)}` }));
+        } catch { toast.error('Failed to load data'); } finally { setLoading(false); }
     }, []);
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    // Fetch supplier-specific products when supplier is selected
     useEffect(() => {
-        if (!loading && searchParams && !hasPrefilled.current) {
-            const sn = searchParams.get('supplier_name');
-            const pid = searchParams.get('product_id');
-            const qty = parseInt(searchParams.get('quantity') || '1');
-
-            if (pid && products.length > 0) {
-                const foundProduct = products.find(prod => String(prod.id) === pid);
-                if (foundProduct) {
-                    hasPrefilled.current = true;
-                    setItems([{
-                        product: foundProduct.id.toString(),
-                        product_name: foundProduct.name,
-                        quantity: qty,
-                        unit_price: parseFloat(foundProduct.price || 0),
-                        packaging_type: foundProduct.unit_type || 'piece',
-                        pieces_per_unit: foundProduct.pieces_per_unit || 1
-                    }]);
-                    const vendor = foundProduct.supplier_name || foundProduct.company_name || sn || '';
-                    if (vendor) {
-                        const matchedSupplier = suppliers.find(c => c.name.toLowerCase().trim() === vendor.toLowerCase().trim());
-                        setForm(f => ({
-                            ...f,
-                            supplier: matchedSupplier ? matchedSupplier.id : f.supplier,
-                            supplier_name: matchedSupplier ? matchedSupplier.name : vendor,
-                            supplier_phone: matchedSupplier ? (matchedSupplier.phone || matchedSupplier.whatsapp || '') : f.supplier_phone
-                        }));
-                    }
-                }
-            } else if (sn && products.length > 0) {
-                hasPrefilled.current = true;
-                const matched = suppliers.find(c => c.name.toLowerCase().trim() === sn.toLowerCase().trim());
-                const currentSn = matched ? matched.name : sn;
-                setForm(f => ({
-                    ...f,
-                    supplier: matched ? matched.id : f.supplier,
-                    supplier_name: currentSn,
-                    supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone
-                }));
-                const supplierProds = products.filter(p => p.company_name === currentSn || p.supplier_name === currentSn);
-                if (supplierProds.length > 0) {
-                    setItems(supplierProds.map(p => ({
-                        product: p.id.toString(),
-                        product_name: p.name,
-                        quantity: 1,
-                        unit_price: parseFloat(p.price || 0),
-                        packaging_type: p.unit_type || 'piece',
-                        pieces_per_unit: p.pieces_per_unit || 1
-                    })));
-                }
-            }
+        if (!form.supplier) {
+            setProducts([]);
+            return;
         }
-    }, [loading, suppliers, products, searchParams]);
 
-    const validate = () => {
-        const e: Record<string, string> = {};
-        if (!form.purchase_number) e.purchase_number = 'Missing purchase number';
-        if (!form.supplier) e.supplier = 'Missing supplier field';
-        if (!form.order_date) e.order_date = 'Missing order date';
-        if (items.some(i => !i.product)) e.items = 'Missing product field in items';
-        else if (items.some(i => i.quantity < 1 || i.unit_price <= 0)) e.items = 'Invalid item quantity or price';
-        setErrors(e);
-        return Object.keys(e).length === 0;
-    };
+        const fetchSupplierProducts = async () => {
+            try {
+                const res = await productService.getAllSupplier({ supplier: form.supplier });
+                const raw = res as any;
+                setProducts(Array.isArray(raw) ? raw : raw?.results || []);
+            } catch (error) {
+                console.error("Failed to fetch products for supplier", error);
+                setProducts([]);
+            }
+        };
 
-    const [successOrder, setSuccessOrder] = useState<any | null>(null);
+        fetchSupplierProducts();
+    }, [form.supplier]);
 
     const handleSave = async () => {
-        if (!validate()) return;
+        if (!form.supplier || items.some(i => !i.product)) return toast.error('Please fill all required fields');
+        
+        // Stock Validation
+        for (const item of items) {
+            const p = products.find(prod => String(prod.id) === String(item.product));
+            if (!p) continue;
+            
+            const totalUnitsNeeded = item.packaging_type === 'CARTON' 
+                ? (item.quantity * item.items_per_carton) 
+                : item.quantity;
+            
+            if (totalUnitsNeeded > p.quantity) {
+                return toast.error(`Cannot purchase more than ${p.quantity} units of ${p.name}`);
+            }
+        }
+
         setSaving(true);
         try {
-            const res = await purchaseService.create({ ...form, items });
-            setSuccessOrder(res);
-            showToast('Purchase order created successfully!');
-        } catch (e: any) {
-            showToast(e?.response?.data?.error || 'Failed to create purchase order', 'alert');
+            const data = await purchaseService.create({ ...form, items });
+            setSuccessOrder(data);
+            toast.success('Purchase order created!');
+        } catch (err: any) {
+            console.error(err);
+            const msg = err.response?.data?.error || err.response?.data?.message || 'Failed to create purchase';
+            toast.error(msg);
         } finally {
             setSaving(false);
         }
     };
 
-    const addItem = () => setItems(prev => [...prev, {
-        product: '',
-        product_name: '',
-        quantity: 1,
-        unit_price: 0,
-        packaging_type: 'piece',
-        pieces_per_unit: 1
+    const addItem = () => setItems(prev => [...prev, { 
+        product: '', 
+        product_name: '', 
+        packaging_type: 'SINGLE',
+        items_per_carton: 1,
+        quantity: 1, 
+        unit_price: 0 
     }]);
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
-                const p = products.find(p => p.id === val || p.id === Number(val));
-                return {
-                    ...item,
-                    product: val,
-                    product_name: p?.name || '',
-                    unit_price: p?.price ? parseFloat(p.price) : item.unit_price,
-                    packaging_type: p?.unit_type || 'piece',
-                    pieces_per_unit: p?.pieces_per_unit || 1
-                };
+                const p = products.find(p => String(p.id) === String(val));
+                return { ...item, product: val, product_name: p?.name || '', unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price };
+            }
+            // Strict Clamping for quantities
+            if (field === 'quantity' || field === 'items_per_carton' || field === 'packaging_type') {
+                const updatedItem = { ...item, [field]: val };
+                const p = products.find(prod => String(prod.id) === String(updatedItem.product));
+                if (p) {
+                    const maxQty = updatedItem.packaging_type === 'CARTON' 
+                        ? Math.floor(p.quantity / (updatedItem.items_per_carton || 1)) 
+                        : p.quantity;
+                    
+                    if (updatedItem.quantity > maxQty) {
+                        updatedItem.quantity = Math.max(1, maxQty);
+                    }
+                }
+                return updatedItem;
             }
             return { ...item, [field]: val };
         }));
     };
 
     const lineTotal = items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
-    const grandTotal = lineTotal + parseFloat(form.tax_amount || '0') + parseFloat(form.shipping_cost || '0');
-
-    if (loading) {
-        return (
-            <div className="flex flex-col h-[60vh] items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 text-[#F59E0B] animate-spin" />
-                <p className="text-sm text-slate-500">Loading product and supplier data...</p>
-            </div>
-        );
-    }
+    
+    const calculateSubtotal = (item: LineItem) => {
+        return (item.quantity || 0) * (item.unit_price || 0);
+    };
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+            <div className="max-w-[1100px] mx-auto px-6 pt-5">
 
-            {/* ── Page Header ── */}
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">New Purchase Order</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Create a new inbound procurement record</p>
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
+                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                    <ChevronRight size={10} />
+                    <Link href="/admin/purchases" className="hover:text-[#c45500] hover:underline">Purchases</Link>
+                    <ChevronRight size={10} />
+                    <span className="text-[#c45500]">New Purchase</span>
                 </div>
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                </button>
-            </div>
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-[22px] font-normal">Create Purchase Order</h1>
+                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                        <ArrowLeft size={14} /> Back
+                    </button>
+                </div>
+                <div className="border-b border-[#ddd] mb-6" />
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {loading ? (
+                    <div className="text-center py-20 text-[13px] text-[#565959]">Loading data...</div>
+                ) : (
+                    <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-                {/* ── Left column ── */}
-                <div className="lg:col-span-8 space-y-5">
+                        {/* LEFT: Form */}
+                        <div className="flex-1 min-w-0 space-y-5">
 
-                    {/* Order Details */}
-                    <Panel title="Order Details" icon={Clipboard}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <FieldLabel required>PO Number</FieldLabel>
-                                <input
-                                    value={form.purchase_number}
-                                    onChange={(e) => setForm(f => ({ ...f, purchase_number: e.target.value }))}
-                                    className={fieldCls(!!errors.purchase_number)}
-                                />
-                                {errors.purchase_number && <p className="text-red-500 text-xs mt-1">{errors.purchase_number}</p>}
-                            </div>
-                            <div>
-                                <FieldLabel required>Supplier Entity</FieldLabel>
-                                <select
-                                    value={form.supplier}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        const matched = suppliers.find(c => String(c.id) === val);
-                                        const currentName = matched ? matched.name : '';
-
-                                        // Filter products specifically for this supplier ID
-                                        const supplierProds = products.filter(p =>
-                                            p.supplier === Number(val) ||
-                                            (currentName && String(p.supplier_name || '').toLowerCase() === currentName.toLowerCase())
-                                        );
-
-                                        if (supplierProds.length > 0) {
-                                            setItems(supplierProds.slice(0, 1).map(p => ({
-                                                product: p.id.toString(),
-                                                product_name: p.name,
-                                                quantity: 1,
-                                                unit_price: parseFloat(p.price || 0),
-                                                packaging_type: 'piece',
-                                                pieces_per_unit: 1
-                                            })));
-                                        } else {
-                                            setItems([{
-                                                product: '',
-                                                product_name: '',
-                                                quantity: 1,
-                                                unit_price: 0,
-                                                packaging_type: 'piece',
-                                                pieces_per_unit: 1
-                                            }]);
-                                        }
-
-                                        setForm(f => ({
-                                            ...f,
-                                            supplier: val,
-                                            supplier_name: currentName
-                                        }));
-                                    }}
-                                    className={`${selectCls} ${errors.supplier ? 'border-red-400' : ''}`}
-                                >
-                                    <option value="">Select a registered supplier...</option>
-                                    {suppliers.map(c => (
-                                        <option key={`${c.id}-${c.name}`} value={String(c.id)}>{c.name}{c.city ? ` — ${c.city}` : ''}</option>
-                                    ))}
-                                </select>
-                                {errors.supplier && <p className="text-red-500 text-xs mt-1">{errors.supplier}</p>}
-                            </div>
-                            <div>
-                                <FieldLabel required>Order Date</FieldLabel>
-                                <input
-                                    type="date"
-                                    value={form.order_date}
-                                    onChange={(e) => setForm(f => ({ ...f, order_date: e.target.value }))}
-                                    className={fieldCls(!!errors.order_date)}
-                                />
-                                {errors.order_date && <p className="text-red-500 text-xs mt-1">{errors.order_date}</p>}
-                            </div>
-                        </div>
-                    </Panel>
-
-                    {/* Order Items */}
-                    <Panel
-                        title="Order Items"
-                        icon={Package}
-                        action={
-                            <button
-                                onClick={addItem}
-                                className="flex items-center gap-2 px-4 py-2 text-[12px] font-bold text-white bg-[#F59E0B] rounded-xl hover:bg-amber-600 transition-all shadow-sm"
-                            >
-                                <Plus className="h-4 w-4" strokeWidth={2.5} /> Add Item
-                            </button>
-                        }
-                    >
-                        {errors.items && (
-                            <div className="mb-6 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-center gap-3">
-                                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-                                <p className="text-red-600 text-xs font-medium">{errors.items}</p>
-                            </div>
-                        )}
-
-                        <div className="space-y-4">
-                            {items.map((item, i) => (
-                                <div key={i} className="relative group bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-xl p-5 hover:border-[#F59E0B]/40 transition-all">
-
-                                    <div className="flex flex-col md:flex-row items-end justify-between gap-4">
-                                        <div className="flex-1 w-full">
-                                            <FieldLabel required>Product</FieldLabel>
-                                            <select
-                                                value={String(item.product)}
-                                                onChange={e => updateItem(i, 'product', e.target.value)}
-                                                className={selectCls + " font-medium text-slate-800 dark:text-white"}
-                                            >
-                                                <option value="">Select a product...</option>
-                                                {products
-                                                    .filter(p => {
-                                                        if (!form.supplier) return true;
-                                                        const pSupplierId = p.supplier && typeof p.supplier === 'object' ? p.supplier.id : p.supplier;
-                                                        return String(pSupplierId) === String(form.supplier) ||
-                                                            String(p.supplier_name || '').toLowerCase() === String(form.supplier_name).toLowerCase();
-                                                    })
-                                                    .map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)
-                                                }
-                                            </select>
-                                        </div>
-
-                                        <div className="w-full md:w-32">
-                                            <FieldLabel required>Quantity</FieldLabel>
-                                            <div className="relative">
-                                                <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                <input
-                                                    type="number" min="1"
-                                                    value={item.quantity}
-                                                    onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                                                    className={fieldCls() + " pl-9 font-bold text-slate-900 dark:text-white"}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="w-full md:w-40">
-                                            <FieldLabel required>Price (Each)</FieldLabel>
-                                            <div className="relative">
-                                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                <input
-                                                    type="number" min="0" step="0.01"
-                                                    value={item.unit_price}
-                                                    onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                    className={fieldCls() + " pl-9 text-right font-bold text-slate-900 dark:text-white"}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="w-full md:w-auto mt-4 md:mt-0 pb-1">
-                                            <button
-                                                onClick={() => removeItem(i)}
-                                                className="flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                            >
-                                                <Trash2 className="h-5 w-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 pt-3 flex items-center justify-end border-t border-slate-50 dark:border-white/5">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-4">Subtotal</p>
-                                        <p className="text-lg font-bold text-[#F59E0B]">{formatCurrency((item.quantity || 0) * (item.unit_price || 0))}</p>
-                                    </div>
+                            {/* Order Info */}
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h2 className="text-[14px] font-bold">Order Information</h2>
+                                    <p className="text-[12px] text-[#565959]">Enter order number, supplier, and date.</p>
                                 </div>
-                            ))}
-                        </div>
-                    </Panel>
-                </div>
-
-                {/* ── Right column ── */}
-                <div className="lg:col-span-4 space-y-5">
-                    <Panel title="Order Status & Summary" icon={ShieldCheck}>
-                        <div className="space-y-4">
-                            <div>
-                                <FieldLabel>Order Status</FieldLabel>
-                                <select
-                                    value={form.status}
-                                    onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                                    className={selectCls}
-                                >
-                                    <option value="draft">Draft</option>
-                                    <option value="ordered">Ordered</option>
-                                    <option value="received">Received</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <FieldLabel>Payment Method</FieldLabel>
-                                <select
-                                    value={form.payment_method}
-                                    onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
-                                    className={selectCls}
-                                >
-                                    <option value="cash">Cash</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="online_payment">Online Payment</option>
-                                </select>
-                            </div>
-
-                            {/* Grand total */}
-                            <div className="pt-4 border-t border-slate-100 dark:border-white/10 mt-6">
-                                <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-white/10">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Amount</span>
-                                    <span className="text-2xl font-bold text-[#F59E0B]">{formatCurrency(lineTotal)}</span>
+                                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <Field label="Order Number" required>
+                                        <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
+                                    </Field>
+                                    <Field label="Supplier" required>
+                                        <select className={selectCls} value={form.supplier} onChange={e => {
+                                            const val = e.target.value;
+                                            const matched = suppliers.find(c => String(c.id) === val);
+                                            setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
+                                        }}>
+                                            <option value="">Select supplier...</option>
+                                            {suppliers.map(c => <option key={c.id} value={String(c.id)}>{c.name} {c.isUser ? '(Dashboard User)' : '(Manual Entry)'}</option>)}
+                                        </select>
+                                    </Field>
+                                    <Field label="Order Date" required>
+                                        <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
+                                    </Field>
+                                    <Field label="Status">
+                                        <select className={selectCls} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                                            <option value="ordered">Ordered</option>
+                                            <option value="received">Received</option>
+                                        </select>
+                                    </Field>
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="w-full py-4 bg-[#F59E0B] text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 shadow-xl mt-6"
-                            >
-                                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 stroke-[2.5]" />}
-                                {saving ? 'Creating...' : 'Create Order'}
-                            </button>
-                        </div>
-                    </Panel>
-                </div>
-            </div>
+                            {/* Line Items */}
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm relative z-[10]">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-[14px] font-bold">Order Items</h2>
+                                        <p className="text-[12px] text-[#565959]">Select products, quantities, and prices.</p>
+                                    </div>
+                                    <Btn variant="secondary" onClick={addItem}><Plus size={14} /> Add Item</Btn>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div className="grid grid-cols-12 gap-3 text-[11px] font-bold text-[#565959] uppercase tracking-wide px-1">
+                                        <div className="col-span-5">Product Selector</div>
+                                        <div className="col-span-2">Pack Type</div>
+                                        <div className="col-span-2 text-center">Order Qty</div>
+                                        <div className="col-span-2 text-center">Pcs/Ctn</div>
+                                        <div className="col-span-1 text-center font-bold">Action</div>
+                                    </div>
+                                    {items.map((item, i) => {
+                                        const p = products.find(prod => String(prod.id) === String(item.product));
+                                        const maxQty = p ? (item.packaging_type === 'CARTON' ? Math.floor(p.quantity / (item.items_per_carton || 1)) : p.quantity) : 9999;
+                                        const isMax = p && item.quantity >= maxQty;
 
-            {/* ── Al-Qavi premium Success Modal ── */}
-            {successOrder && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-[20px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col border border-slate-200 dark:border-white/10">
-                        <div className="p-8 text-center flex flex-col items-center">
-                            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 border border-emerald-100 dark:border-emerald-500/20">
-                                <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-500" />
+                                        return (
+                                        <div key={i} className="grid grid-cols-12 gap-3 items-center bg-[#f7f8fa] border border-[#eee] rounded-[3px] p-3 transition-colors hover:border-slate-300">
+                                            <div className="col-span-5">
+                                                <ProductSelector 
+                                                    selectedId={item.product}
+                                                    products={products}
+                                                    inputCls={selectCls}
+                                                    onSelect={(val: any) => updateItem(i, 'product', val)}
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <select 
+                                                    className={selectCls + " text-[12px]"} 
+                                                    value={item.packaging_type} 
+                                                    onChange={e => updateItem(i, 'packaging_type', e.target.value)}
+                                                >
+                                                    <option value="SINGLE">Single</option>
+                                                    <option value="CARTON">Carton</option>
+                                                </select>
+                                            </div>
+                                            <div className="col-span-2 relative">
+                                                <input 
+                                                    className={inputCls + " text-center font-bold " + (isMax ? 'text-red-600 border-red-400 focus:border-red-500' : 'text-[#c45500]')} 
+                                                    type="number" 
+                                                    min="1" 
+                                                    value={item.quantity} 
+                                                    onChange={e => updateItem(i, 'quantity', parseInt(e.target.value) || 1)} 
+                                                />
+                                                {isMax && (
+                                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black text-red-600 uppercase tracking-tighter bg-white px-1 leading-none animate-bounce">
+                                                        Reached Max!
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="col-span-2 text-center">
+                                                <input 
+                                                    className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-gray-50' : '') + " text-center font-medium"} 
+                                                    type="number" 
+                                                    min="1" 
+                                                    disabled={item.packaging_type !== 'CARTON'}
+                                                    value={item.items_per_carton || 1} 
+                                                    onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 1)} 
+                                                />
+                                            </div>
+                                            <div className="col-span-1 flex justify-center">
+                                                <button onClick={() => removeItem(i)} className="text-[#888] hover:text-red-600 transition-colors p-1">
+                                                    <X size={15} />
+                                                </button>
+                                            </div>
+                                            {item.product && (
+                                                <div className="col-span-12 flex justify-between items-center text-[12px] text-[#565959] mt-2 pt-2 border-t border-gray-200/50">
+                                                    <div className="flex items-center gap-4">
+                                                        <div>
+                                                            Cost: <span className="font-bold text-[#111]">{formatCurrency(item.unit_price)}</span>
+                                                        </div>
+                                                        <div className="w-[1px] h-3 bg-gray-300" />
+                                                        <div>
+                                                            Units: <span className="font-bold text-[#111]">
+                                                                {item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity} pcs
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        Subtotal: <span className="font-bold text-[#b12704] text-[14px]">{formatCurrency(calculateSubtotal(item))}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        )
+                                    })}
+                                </div>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 tracking-tight">Order Confirmed</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">Order #{successOrder.purchase_number} has been recorded successfully.</p>
 
-                            <div className="w-full space-y-3">
-                                <button
-                                    onClick={() => router.push('/admin/purchases')}
-                                    className="w-full py-3.5 bg-[#F59E0B] hover:bg-slate-900 dark:hover:bg-white text-white dark:hover:text-slate-900 rounded-xl text-xs font-bold shadow-lg shadow-[#F59E0B]/20 transition-all uppercase tracking-widest"
-                                >
-                                    View Orders
-                                </button>
-                                <button
-                                    onClick={() => setSuccessOrder(null)}
-                                    className="w-full py-3.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all uppercase tracking-widest"
-                                >
-                                    New Order
-                                </button>
+                            {/* Notes */}
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h2 className="text-[14px] font-bold">Notes (Optional)</h2>
+                                </div>
+                                <div className="p-6">
+                                    <textarea
+                                        className="w-full p-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] resize-none"
+                                        rows={3}
+                                        placeholder="Any notes for this purchase order..."
+                                        value={form.notes}
+                                        onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* RIGHT: Summary */}
+                        <div className="w-full lg:w-[280px] shrink-0 space-y-4">
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
+                                <div className="px-5 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h3 className="text-[14px] font-bold">Order Summary</h3>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <Field label="Payment Method">
+                                        <select className={selectCls} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
+                                            <option value="cash">Cash</option>
+                                            <option value="bank_transfer">Bank Transfer</option>
+                                            <option value="online_payment">Online Payment</option>
+                                        </select>
+                                    </Field>
+
+                                    <div className="border-t border-[#eee] pt-4 space-y-2">
+                                        <div className="flex justify-between text-[13px] text-[#565959]">
+                                            <span>Items ({items.length})</span>
+                                            <span>{formatCurrency(lineTotal)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[15px] font-bold text-[#0f1111] pt-2 border-t border-[#eee]">
+                                            <span>Total</span>
+                                            <span className="text-[#c45500]">{formatCurrency(lineTotal)}</span>
+                                        </div>
+                                    </div>
+
+                                    <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSave} loading={saving}>
+                                        <Save size={14} /> Create Purchase
+                                    </Btn>
+                                    <button onClick={() => router.back()} className="w-full text-[12px] text-[#565959] hover:text-[#c45500] hover:underline text-center">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-amber-50 border border-amber-200 rounded-[4px] p-4 text-[12px] text-amber-700 leading-relaxed">
+                                All prices and quantities should be verified before submitting this order.
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
-            {/* ── Toast ── */}
-            {toast && (
-                <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                        {toast.type === 'success'
-                            ? <CheckCircle className="h-4 w-4 shrink-0" />
-                            : <AlertTriangle className="h-4 w-4 shrink-0" />}
-                        {toast.msg}
+            {/* Success Modal */}
+            {successOrder && (
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-xl text-center">
+                        <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle size={24} className="text-emerald-600" />
+                        </div>
+                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Purchase Created!</h3>
+                        <p className="text-[13px] text-[#565959]">
+                            Order <span className="font-bold text-[#111]">#{successOrder.purchase_number}</span> has been saved successfully.
+                            {successOrder.status === 'RECEIVED' && (
+                                <span className="block mt-2 text-[#c45500] font-medium italic">
+                                    Inventory updated! This order is now in the "Received (Fulfilled)" tab.
+                                </span>
+                            )}
+                        </p>
+                        <div className="mt-6 space-y-3">
+                            <button onClick={() => router.push('/admin/purchases')} className="w-full h-[31px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] rounded-[3px] text-[13px] font-medium">
+                                View All Purchases
+                            </button>
+                            <button onClick={() => {
+                                setSuccessOrder(null);
+                                setForm({ ...EMPTY_FORM, purchase_number: `PO-${Date.now().toString().slice(-6)}` });
+                                setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+                            }} className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline">
+                                Create Another
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

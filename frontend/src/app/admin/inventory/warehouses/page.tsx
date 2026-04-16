@@ -1,200 +1,252 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Plus, Search, RefreshCw, Trash2, Edit2, Eye,
-    Warehouse, X, AlertTriangle, Building2, MapPin
+    Plus, Search, Edit2, Trash2, MapPin, 
+    Warehouse, Box, RefreshCw, Save, X, 
+    ChevronRight, ChevronLeft, Trash, AlertTriangle
 } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { inventoryService } from '@/services/inventory.service';
+import { inventoryService } from '@/lib/api';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - WAREHOUSES
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+    <div className="w-full">
+        <label className="block text-[13px] font-bold text-[#0f1111] mb-1">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        {children}
+    </div>
+);
+
+const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
 export default function WarehousesPage() {
-    const router = useRouter();
+    const [view, setView] = useState<'list' | 'form'>('list');
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState('');
-    
-    const [viewRow, setViewRow] = useState<any | null>(null);
-    const [deleteRow, setDeleteRow] = useState<any | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editWh, setEditWh] = useState<any | null>(null);
+    const [deleteWh, setDeleteWh] = useState<any | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
-    const loadWarehouses = async () => {
+    const [form, setForm] = useState({
+        name: '',
+        location: '',
+        capacity: ''
+    });
+
+    const load = async () => {
         setLoading(true);
         try {
             const data = await inventoryService.getWarehouses();
             setWarehouses(data || []);
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to load warehouses");
-        } finally {
-            setLoading(false);
-        }
+        } catch { toast.error("Refresh failure"); } finally { setLoading(false); }
     };
 
-    useEffect(() => { loadWarehouses(); }, []);
+    useEffect(() => { load(); }, []);
 
-    const handleDelete = async () => {
-        if (!deleteRow) return;
-        setIsSubmitting(true);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!form.name || !form.location) return toast.error("Required fields missing");
+        setSaving(true);
         try {
-            await inventoryService.deleteWarehouse(deleteRow.id);
-            toast.success("Warehouse removed");
-            setDeleteRow(null);
-            loadWarehouses();
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to remove warehouse");
-        } finally {
-            setIsSubmitting(false);
-            setDeleteRow(null);
+            if (editWh) {
+                await inventoryService.updateWarehouse(editWh.id, form);
+                toast.success('Warehouse updated');
+            } else {
+                await inventoryService.createWarehouse(form);
+                toast.success('Warehouse saved');
+            }
+            load(); setView('list');
+        } catch { toast.error('Failed to save'); } finally { setSaving(false); }
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteWh) return;
+        setDeleting(true);
+        try {
+            await inventoryService.deleteWarehouse(deleteWh.id);
+            setWarehouses(prev => prev.filter(w => w.id !== deleteWh.id));
+            toast.success('Warehouse deleted');
+        } catch { toast.error('Failed to delete'); } finally {
+            setDeleting(false);
+            setDeleteWh(null);
         }
     };
 
-    const filtered = warehouses.filter(wh =>
-        (wh.name?.toLowerCase().includes(search.toLowerCase())) ||
-        (wh.location?.toLowerCase().includes(search.toLowerCase()))
+    const filtered = (warehouses || []).filter(w => 
+        w.name.toLowerCase().includes(search.toLowerCase()) || 
+        w.location.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans text-left">
-            
-            {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Warehouses</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage storage locations and logistics hubs</p>
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+            <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
+                
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
+                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                    <ChevronRight size={10} />
+                    <span className="text-[#c45500]">Warehouses</span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={loadWarehouses}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] transition-all"
-                        title="Refresh"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <Link
-                        href="/admin/inventory/warehouses/add"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white text-sm font-bold rounded-lg hover:bg-yellow-600 transition-all shadow-sm uppercase tracking-widest"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Warehouse
-                    </Link>
+
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-[22px] font-normal">
+                        {view === 'list' ? 'Warehouses List' : (editWh ? 'Edit Warehouse' : 'Add Warehouse')}
+                    </h1>
+                    {view === 'list' ? (
+                        <div className="flex gap-2">
+                             <Btn variant="secondary" onClick={load} loading={loading}>
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                            </Btn>
+                            <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }}><Plus size={14} /> Add Warehouse</Btn>
+                        </div>
+                    ) : (
+                        <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                            <ChevronLeft size={14} /> Back to List
+                        </button>
+                    )}
                 </div>
-            </div>
+                <div className="border-b border-[#ddd] mb-6" />
 
-            {/* ── Filters Bar ── */}
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Search by name or location..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] transition-all placeholder:text-slate-400"
-                    />
-                </div>
-            </div>
+                {view === 'list' ? (
+                    <div className="space-y-6">
+                        {/* Search Area */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
+                            <div className="relative max-w-sm">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                                <input
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="Search warehouses..."
+                                    className={`${inputCls} pl-10 h-[35px]`}
+                                />
+                            </div>
+                        </div>
 
-            {/* ── Results count ── */}
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                {loading ? 'Scanning nodes...' : `${filtered.length} nodes found`}
-            </p>
-
-            {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Warehouse Name</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Location</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                            {loading && filtered.length === 0 ? (
-                                Array(5).fill(0).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        <td colSpan={3} className="px-6 py-4">
-                                            <div className="h-4 bg-slate-100 dark:bg-white/5 rounded w-full" />
-                                        </td>
-                                    </tr>
-                                ))
+                        {/* List Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {loading && warehouses.length === 0 ? (
+                                <div className="col-span-full py-20 text-center text-[13px] text-[#565959]">Loading...</div>
                             ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={3} className="px-6 py-16 text-center">
-                                        <Building2 className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">No logistic nodes found.</p>
-                                    </td>
-                                </tr>
+                                <div className="col-span-full py-20 text-center text-[13px] text-[#565959]">No warehouses found.</div>
                             ) : (
-                                filtered.map((wh) => (
-                                    <tr key={wh.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <span className="text-slate-900 dark:text-white font-bold text-sm">
-                                                {wh.name}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                                                <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                                <span>{wh.location}</span>
+                                filtered.map(wh => (
+                                    <div key={wh.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm hover:shadow-md transition-all group overflow-hidden">
+                                        <div className="p-5 border-b border-[#eee] bg-[#fcfdff] flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-white border border-[#ddd] rounded-full flex items-center justify-center text-[#007185]">
+                                                    <Warehouse size={20} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-[15px] group-hover:text-[#007185] truncate max-w-[150px]">{wh.name}</h3>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex justify-end items-center gap-2">
-                                                <button
-                                                    onClick={() => setDeleteRow(wh)}
-                                                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, capacity: wh.capacity || '' }); setView('form'); }} className="p-1.5 text-[#565959] hover:bg-[#f3f3f3] rounded border border-[#ddd] bg-white"><Edit2 size={14} /></button>
+                                                <button onClick={() => setDeleteWh(wh)} className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-[#ddd] bg-white"><Trash2 size={14} /></button>
                                             </div>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                        <div className="p-5 space-y-3">
+                                            <div className="flex items-start gap-2 text-[13px] text-[#565959] h-10 line-clamp-2">
+                                                <MapPin size={14} className="opacity-40 shrink-0 mt-0.5" /> {wh.location}
+                                            </div>
+                                            <div className="pt-3 border-t border-[#f7f7f7] flex items-center justify-between">
+                                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Stock Items</div>
+                                                <div className="text-[13px] font-bold">{wh.stock_count || 0} Products</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ))
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
+                    </div>
+                ) : (
+                    /* Entry Form */
+                    <div className="flex flex-col lg:flex-row gap-6 items-start">
+                        <div className="flex-1 space-y-6">
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h2 className="text-[14px] font-bold">Details</h2>
+                                </div>
+                                <div className="p-6 space-y-5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        <div className="col-span-full">
+                                            <Field label="Warehouse Name" required>
+                                                <input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Warehouse" />
+                                            </Field>
+                                        </div>
+                                        <div className="col-span-full">
+                                            <Field label="Address" required>
+                                                <input className={inputCls} value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Warehouse address" />
+                                            </Field>
+                                        </div>
+                                        <Field label="Capacity (Optional)">
+                                            <input type="number" className={inputCls} value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Storage capacity" />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="w-full lg:w-[280px] shrink-0 space-y-4">
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
+                                <div className="px-5 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h3 className="text-[14px] font-bold text-center">Save</h3>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                     <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
+                                        <Save size={14} /> {editWh ? 'Update' : 'Save'}
+                                    </Btn>
+                                    <button onClick={() => setView('list')} className="w-full text-[12px] text-[#565959] hover:text-[#c45500] hover:underline text-center">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* ── Delete Modal ── */}
-            {deleteRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 text-center text-left">
-                            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-                                <AlertTriangle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Remove Node?</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                                This will permanently remove <strong className="text-slate-900 dark:text-white">"{deleteRow.name}"</strong> from the network.
-                            </p>
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    onClick={() => setDeleteRow(null)}
-                                    disabled={isSubmitting}
-                                    className="px-6 py-2 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    disabled={isSubmitting}
-                                    className="px-6 py-2 bg-red-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 disabled:opacity-50"
-                                >
-                                    {isSubmitting ? 'Working...' : 'Delete Node'}
-                                </button>
-                            </div>
+            {/* Delete Modal */}
+            {deleteWh && (
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-xl text-center">
+                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                            <AlertTriangle size={24} className="text-red-600" />
+                        </div>
+                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Delete?</h3>
+                        <p className="text-[13px] text-[#565959]">
+                            Delete <span className="font-bold text-[#111]">"{deleteWh.name}"</span>?
+                        </p>
+                        <div className="mt-6 space-y-2">
+                            <button onClick={confirmDelete} className="w-full h-[31px] bg-red-600 text-white border border-red-700 rounded-[3px] text-[13px] font-medium shadow-sm active:bg-red-800">
+                                {deleting ? 'Deleting...' : 'Delete Now'}
+                            </button>
+                            <button onClick={() => setDeleteWh(null)} className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline">
+                                Cancel
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 }
