@@ -11,7 +11,7 @@ export type { Product, ProductParams, Order, AppUser, AppRole, ActivityLog, Comp
 export { productService } from '../services/product.service';
 export { orderService } from '../services/order.service';
 export { categoryService } from '../services/category.service';
-export { mainCategoryService } from '../services/main-category.service';
+export { sectionService } from '../services/section.service';
 export { roleService, userService, permissionService, settingsService } from '../services/user.service';
 export { companyService, companyCategoryService } from '../services/company.service';
 export { inventoryService } from '../services/inventory.service';

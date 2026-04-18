@@ -7,7 +7,9 @@ import {
     Package, Boxes, UserCheck, Clock, TrendingUp, DollarSign, Tag,
     ShoppingBag, ChevronDown, Search, Eye, Loader2, Calendar, Filter,
     RefreshCw, ChevronRight, LayoutDashboard, Truck, Activity, ShieldCheck,
-    CreditCard, ExternalLink, History, BarChart3, Store, Bell, UserPlus, FileText
+    CreditCard, ExternalLink, History, BarChart3, Store, Bell, UserPlus, FileText,
+    ArrowUpRight, ArrowDownRight, MoreVertical, ArrowRight, Wallet, CheckCircle,
+    CheckCircle2
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 import { formatCurrency } from '@/lib/utils';
@@ -26,32 +28,33 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
             className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
         </button>
     );
 };
 
-const MetricCard = ({ label, value, subtext, color = "#111", borderTop = "#e47911", alert = false }: any) => (
+const MetricCard = ({ label, value, subtext, icon: Icon, borderTop = "#e47911", alert = false }: any) => (
     <div className={`bg-white border border-[#ddd] p-5 rounded-[4px] shadow-sm hover:shadow-md transition-all relative overflow-hidden group ${alert ? 'bg-amber-50/20' : ''}`}>
         <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: borderTop }}></div>
-        <p className="text-[12px] font-bold text-[#565959] uppercase tracking-tight mb-2">{label}</p>
-        <div className="flex items-baseline gap-1">
-            <span className="text-[26px] font-medium leading-none" style={{ color: color }}>{value}</span>
+        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-widest mb-2">{label}</p>
+        <div className="flex items-center justify-between">
+            <span className="text-[24px] font-medium text-[#111] tracking-tight">{value}</span>
+            <Icon size={20} className="text-[#adb1b8] group-hover:text-[#565959] transition-colors" />
         </div>
         {subtext && (
-            <div className="flex items-center gap-1.5 mt-3">
-                <span className={`text-[11px] font-medium ${alert ? 'text-amber-700' : 'text-[#565959]'}`}>{subtext}</span>
+            <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-[#eee]">
+                <span className={`text-[11px] font-medium ${alert ? 'text-[#b12704]' : 'text-[#007185]'}`}>{subtext}</span>
             </div>
         )}
     </div>
 );
 
-export default function AdminDashboard() {
+export default function AdminDashboardPremium() {
     const router = useRouter();
     const [filterDate, setFilterDate] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<string>('ALL');
-    
+
     const dashboardFilters = useMemo(() => ({
         date: filterDate || undefined,
         payment_method: paymentMethod !== 'ALL' ? paymentMethod : undefined
@@ -63,9 +66,10 @@ export default function AdminDashboard() {
     const [updatingRow, setUpdatingRow] = useState<string | null>(null);
 
     const filteredOrders = useMemo(() => {
-        if (!searchQuery) return recentOrders;
+        let activeOrders = recentOrders.filter((o: any) => (o.status || '').toUpperCase() !== 'DELIVERED');
+        if (!searchQuery) return activeOrders;
         const q = searchQuery.toLowerCase();
-        return recentOrders.filter((o: any) => 
+        return activeOrders.filter((o: any) =>
             (o.order_number || '').toLowerCase().includes(q) ||
             (o.customer_name || '').toLowerCase().includes(q)
         );
@@ -84,59 +88,97 @@ export default function AdminDashboard() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            
-            {/* Breadcrumb & Header */}
-            <div className="max-w-[1440px] mx-auto px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
-                <div>
-                    <div className="flex items-center gap-1 text-[11px] text-[#565959] mb-1">
+
+            {/* ── Amazon Retail Header ── */}
+            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
+                <div className="max-w-[1440px] mx-auto px-6 text-left">
+                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
                         <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                         <ChevronRight size={10} />
                         <span className="text-[#c45500]">Overview</span>
                     </div>
-                    <h1 className="text-[24px] font-normal leading-tight">Dashboard</h1>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="flex bg-white border border-[#adb1b8] rounded-[4px] p-0.5 shadow-sm">
-                        <div className="flex items-center gap-2 px-3 py-1 border-r border-[#ddd]">
-                            <Calendar size={13} className="text-[#565959]" />
-                            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-[12px] outline-none border-none font-medium cursor-pointer" />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-[22px] font-normal text-[#111]">System Overview</h1>
+                            <p className="text-[13px] text-[#565959] mt-0.5">Manage and track your overall business metrics</p>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1">
-                            <Filter size={13} className="text-[#565959]" />
-                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="bg-transparent text-[12px] outline-none border-none font-medium cursor-pointer">
-                                <option value="ALL">All Payments</option>
-                                <option value="COD">C.O.D</option>
-                                <option value="ONLINE">Bank Transfer</option>
-                                <option value="SHOP">Shop POS</option>
-                            </select>
+                        <div className="flex items-center gap-3">
+                            <div className="flex bg-white border border-[#adb1b8] rounded-[3px] p-0.5 shadow-sm">
+                                <div className="flex items-center gap-2 px-3 py-1 border-r border-[#ddd]">
+                                    <Calendar size={13} className="text-[#565959]" />
+                                    <input
+                                        type="date"
+                                        value={filterDate}
+                                        onChange={(e) => setFilterDate(e.target.value)}
+                                        className="bg-transparent text-[12px] outline-none border-none font-medium cursor-pointer"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-1">
+                                    <Filter size={13} className="text-[#565959]" />
+                                    <select
+                                        value={paymentMethod}
+                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                        className="bg-transparent text-[12px] outline-none border-none font-medium cursor-pointer"
+                                    >
+                                        <option value="ALL">All Payments</option>
+                                        <option value="COD">C.O.D</option>
+                                        <option value="ONLINE">Bank Transfer</option>
+                                        <option value="SHOP">Shop POS</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <Btn variant="secondary" onClick={refetch} className="h-[31px]">
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            </Btn>
                         </div>
                     </div>
-                    <Btn variant="secondary" onClick={() => { setFilterDate(''); setPaymentMethod('ALL'); refetch(); }}>
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                    </Btn>
                 </div>
             </div>
 
-            <div className="max-w-[1440px] mx-auto px-6">
-                
-                {/* Metrics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                    <MetricCard label="Total Sales" value={formatCurrency(stats.totalRevenue)} subtext="Cumulative revenue" borderTop="#e47911" />
-                    <MetricCard label="Net Profit" value={formatCurrency(stats.totalProfit || 0)} subtext="Total earnings" color="#067d62" borderTop="#067d62" />
-                    <MetricCard label="Orders" value={stats.totalOrders} subtext="Total orders placed" borderTop="#3498db" />
-                    <MetricCard label="Pending Orders" value={stats.pendingOrders || 0} subtext="Requires attention" color="#c45500" borderTop="#f0c14b" alert={true} />
-                    <MetricCard label="Delivered" value={`${Math.round((stats.deliveredOrders / (stats.totalOrders || 1)) * 100)}%`} subtext={`${stats.deliveredOrders} orders complete`} color="#007185" borderTop="#007185" />
+            <div className="max-w-[1440px] mx-auto px-6 mt-8">
+
+                {/* ── METRICS GRID ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <MetricCard
+                        label="Total Sales"
+                        value={formatCurrency(stats.totalRevenue || 0)}
+                        subtext="All time revenue"
+                        icon={DollarSign}
+                        borderTop="#e47911"
+                    />
+                    <MetricCard
+                        label="Total Profit"
+                        value={formatCurrency(stats.totalProfit || 0)}
+                        subtext="Net earnings"
+                        icon={TrendingUp}
+                        borderTop="#067d62"
+                    />
+                    <MetricCard
+                        label="Supplier Payments"
+                        value={formatCurrency(stats.totalPayable || 0)}
+                        subtext="Pending bills"
+                        icon={CreditCard}
+                        borderTop="#f0c14b"
+                        alert={(stats.totalPayable || 0) > 0}
+                    />
+                    <MetricCard
+                        label="Overall Orders"
+                        value={stats.totalOrders || 0}
+                        subtext="Lifetime count"
+                        icon={ShoppingBag}
+                        borderTop="#007185"
+                    />
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 text-left">
-                    {/* Orders Table */}
-                    <div className="flex-1 min-w-0">
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden mb-6">
-                            <div className="flex items-center px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] justify-between">
-                                <h2 className="text-[17px] font-bold">Recent Orders</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    {/* ── MAIN TABLE AREA ── */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
+                            <div className="px-6 py-4 border-b border-[#ddd] flex items-center justify-between bg-[#f7f8fa]">
+                                <h2 className="text-[17px] font-bold text-[#111]">Latest Orders</h2>
                                 <Link href="/admin/sales" className="text-[12px] text-[#007185] hover:text-[#c45500] hover:underline font-bold flex items-center gap-1">
-                                    View all <ChevronRight size={14} />
+                                    View all orders <ChevronRight size={14} />
                                 </Link>
                             </div>
 
@@ -145,63 +187,78 @@ export default function AdminDashboard() {
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                                     <input
                                         type="text"
-                                        placeholder="Search order ID or customer..."
+                                        placeholder="Search order ID or customer name..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full h-[31px] pl-10 pr-4 border border-[#adb1b8] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] transition-all"
+                                        className="w-full h-[35px] pl-10 pr-4 border border-[#adb1b8] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] transition-all"
                                     />
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-[#f0f2f2] border-b border-[#ddd]">
-                                        <tr>
-                                            <th className="px-6 py-3 text-[12px] font-bold text-[#111]">Order #</th>
-                                            <th className="px-6 py-3 text-[12px] font-bold text-[#111]">Customer</th>
-                                            <th className="px-6 py-3 text-[12px] font-bold text-[#111]">Method</th>
-                                            <th className="px-6 py-3 text-[12px] font-bold text-[#111]">Total</th>
-                                            <th className="px-6 py-3 text-[12px] font-bold text-[#111]">Status</th>
-                                            <th className="px-6 py-3 text-[12px] font-bold text-[#111] text-right">Actions</th>
+                            <div className="overflow-x-auto text-left">
+                                <table className="w-full border-collapse">
+                                    <thead className="bg-[#f7f8fa] border-b border-[#ddd]">
+                                        <tr className="text-[12px] font-bold text-[#111]">
+                                            <th className="px-6 py-3">Order Details</th>
+                                            <th className="px-6 py-3 text-right">Amount</th>
+                                            <th className="px-6 py-3">Status Update</th>
+                                            <th className="px-6 py-3 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#eee]">
                                         {filteredOrders.length > 0 ? (
-                                            filteredOrders.map((order: any, i: number) => (
-                                                <tr key={i} className="hover:bg-[#fcfdff] transition-colors text-[13px]">
+                                            filteredOrders.map((order: any) => (
+                                                <tr key={order.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
                                                     <td className="px-6 py-4">
-                                                        <Link href={`/admin/sales/${order.id}`} className="font-bold text-[#007185] hover:underline">
-                                                            #{order.order_number}
-                                                        </Link>
-                                                        <div className="text-[11px] text-[#aaa] mt-0.5">{new Date(order.created_at).toLocaleDateString()}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="font-bold text-[#111]">{order.customer_name || 'Walk-in'}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 uppercase font-bold text-[11px] text-[#565959]">{order.payment_method || 'C.O.D'}</td>
-                                                    <td className="px-6 py-4 font-bold text-[#111]">{formatCurrency(order.total_amount)}</td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="relative inline-block">
-                                                            <select
-                                                                value={(order.status || '').toLowerCase()}
-                                                                onChange={(e) => handleQuickStatusUpdate(order.id?.toString(), e.target.value)}
-                                                                disabled={updatingRow === order.id?.toString() || (order.status || '').toUpperCase() === 'DELIVERED'}
-                                                                className={`h-[26px] pl-2 pr-6 border border-[#adb1b8] rounded-[3px] text-[11px] font-medium outline-none cursor-pointer bg-[#f7f8fa] hover:bg-white
-                                                                    ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-green-700 bg-green-50' : 'text-[#111]'}`}
-                                                            >
-                                                                {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
-                                                                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                                                                ))}
-                                                            </select>
+                                                        <div className="flex flex-col gap-1">
+                                                            <Link href={`/admin/sales/${order.id}/invoice`} className="font-bold text-[#007185] hover:underline">
+                                                                #{order.order_number}
+                                                            </Link>
+                                                            <div className="flex items-center gap-2 text-[11px] text-[#565959] mt-0.5">
+                                                                <span className="font-bold text-[#111]">{order.customer_name || 'Walk-in'}</span>
+                                                                <span>•</span>
+                                                                <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        <Btn variant="secondary" onClick={() => router.push(`/admin/sales/${order.id}`)} className="h-[24px]">View</Btn>
+                                                        <div className="font-bold text-[#111]">{formatCurrency(order.total_amount)}</div>
+                                                        <div className="text-[10px] font-bold text-[#aaa] uppercase tracking-tighter mt-1">{order.payment_method || 'C.O.D'}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="relative">
+                                                            <select
+                                                                value={(order.status || '').toLowerCase()}
+                                                                onChange={(e) => handleQuickStatusUpdate(order.id?.toString(), e.target.value)}
+                                                                disabled={updatingRow === order.id?.toString()}
+                                                                className={`h-[28px] pl-2 pr-8 bg-white border border-[#adb1b8] rounded-[3px] text-[11px] font-medium outline-none cursor-pointer appearance-none focus:border-[#e77600] disabled:opacity-50
+                                                                    ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-green-700 bg-green-50' : 'text-[#111]'}`}
+                                                            >
+                                                                {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+                                                                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                                                                ))}
+                                                            </select>
+                                                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#565959] pointer-events-none" />
+                                                            {updatingRow === order.id?.toString() && (
+                                                                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                                                    <Loader2 size={14} className="animate-spin text-[#c45500]" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <Btn variant="secondary" className="h-[24px] px-2" onClick={() => router.push(`/admin/sales/${order.id}/invoice`)}>
+                                                            <Eye size={12} />
+                                                        </Btn>
                                                     </td>
                                                 </tr>
                                             ))
                                         ) : (
-                                            <tr><td colSpan={6} className="py-20 text-center text-[13px] text-[#565959]">No orders found.</td></tr>
+                                            <tr>
+                                                <td colSpan={4} className="py-20 text-center text-[13px] text-[#565959]">
+                                                    No active orders found.
+                                                </td>
+                                            </tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -209,34 +266,71 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* Quick Menu */}
-                    <div className="w-full lg:w-[320px] space-y-6">
+                    {/* ── SIDEBAR WIDGETS ── */}
+                    <div className="space-y-6 text-left">
+                        {/* Quick Navigation */}
                         <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
-                            <h3 className="text-[15px] font-bold mb-4">Quick Menu</h3>
+                            <h3 className="text-[15px] font-bold text-[#111] mb-5 border-b border-[#eee] pb-2">Quick Menu</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 {[
                                     { title: 'New Sale', icon: Store, href: '/admin/sale' },
                                     { title: 'Products', icon: Boxes, href: '/admin/products' },
-                                    { title: 'Inventory', icon: Package, href: '/admin/inventory/list' },
+                                    { title: 'Stock', icon: Package, href: '/admin/inventory/list' },
                                     { title: 'Suppliers', icon: UserPlus, href: '/admin/company/suppliers' },
-                                    { title: 'Warehouses', icon: Truck, href: '/admin/inventory/warehouses' },
+                                    { title: 'Transactions', icon: History, href: '/admin/sales' },
                                     { title: 'Settings', icon: ShieldCheck, href: '/admin/settings' },
                                 ].map((item, idx) => (
-                                    <Link key={idx} href={item.href} className="flex flex-col items-center gap-2 p-3 bg-[#f7f8fa] hover:bg-[#e7e9ec] border border-[#ddd] rounded-[4px] transition-colors group">
+                                    <Link
+                                        key={idx}
+                                        href={item.href}
+                                        className="flex flex-col items-center gap-2 p-3 bg-[#f7f8fa] hover:bg-[#e7e9ec] border border-[#ddd] rounded-[3px] transition-all group"
+                                    >
                                         <item.icon size={20} className="text-[#565959] group-hover:text-[#e47911]" />
-                                        <span className="text-[11px] font-bold text-[#111]">{item.title}</span>
+                                        <span className="text-[11px] font-black text-[#111] uppercase tracking-tighter">{item.title}</span>
                                     </Link>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="bg-amber-50 border border-amber-200 rounded-[4px] p-4 text-[12px]">
-                            <div className="flex gap-3">
-                                <Activity size={18} className="text-amber-600 shrink-0" />
+                        {/* System Status Alert */}
+                        <div className={`rounded-[4px] p-5 border ${(stats.pendingOrders || 0) > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'} `}>
+                            <div className="flex gap-4">
+                                <Activity size={24} className={(stats.pendingOrders || 0) > 0 ? 'text-[#c45500]' : 'text-green-600'} />
                                 <div>
-                                    <p className="font-bold text-amber-800">Status</p>
-                                    <p className="text-amber-700 mt-1">{stats.pendingOrders > 0 ? `You have ${stats.pendingOrders} pending orders.` : "All orders are up to date."}</p>
+                                    <h4 className="text-[15px] font-bold text-[#111]">System Status</h4>
+                                    <p className="text-[13px] mt-1 text-[#565959] leading-normal">
+                                        {(stats.pendingOrders || 0) > 0
+                                            ? `You have ${stats.pendingOrders} pending orders today.`
+                                            : "All operations are currently up to date."
+                                        }
+                                    </p>
+                                    <button
+                                        onClick={() => router.push('/admin/sales')}
+                                        className="mt-3 text-[11px] font-bold text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1"
+                                    >
+                                        Handle Tasks <ChevronRight size={14} />
+                                    </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Recent Activity Log */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
+                            <div className="bg-[#f7f8fa] px-4 py-2 border-b border-[#ddd]">
+                                <h3 className="text-[13px] font-bold text-[#111]">Recent Activity</h3>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                {recentOrders.slice(0, 5).map((o: any, idx: number) => (
+                                    <div key={idx} className="flex items-start gap-3 text-[12px]">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#adb1b8] mt-1.5 shrink-0"></div>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-[#111]">New Order #{o.order_number} received</span>
+                                            <span className="text-[11px] text-[#565959] mt-0.5">
+                                                {new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -245,3 +339,5 @@ export default function AdminDashboard() {
         </div>
     );
 }
+
+

@@ -39,9 +39,9 @@ export default function CheckoutPage() {
             if (saved) {
                 const parsed = JSON.parse(saved);
                 setShippingInfo(prev => ({ ...prev, ...parsed }));
-                return; // Already have saved data, skip profile fetch
+                return; 
             }
-        } catch {}
+        } catch { }
 
         if (isLoggedIn) {
             settingsService.getProfile().then((profile: any) => {
@@ -55,7 +55,7 @@ export default function CheckoutPage() {
                         city: profile.city || '',
                     });
                 }
-            }).catch(() => {});
+            }).catch(() => { });
         }
     }, [isLoggedIn]);
 
@@ -70,15 +70,12 @@ export default function CheckoutPage() {
         }
     };
 
-    /* Step 1: User fills form & clicks "Place Order" -> save to local & show review */
     const handlePlaceOrder = (e: React.FormEvent) => {
         e.preventDefault();
-        // Persist shipping info for next time
         localStorage.setItem(STORAGE_KEY, JSON.stringify(shippingInfo));
         setShowReview(true);
     };
 
-    /* Step 2: User clicks "Confirm Order" in the review modal -> call API */
     const processOrder = async () => {
         setIsProcessing(true);
         try {
@@ -86,7 +83,8 @@ export default function CheckoutPage() {
                 customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
                 shipping_address: `${shippingInfo.address}, ${shippingInfo.city}`,
                 phone_number: shippingInfo.phone,
-                notes: `Email: ${shippingInfo.email} | Payment: ${payMethod.toUpperCase()}`,
+                payment_method: payMethod === 'cod' ? 'COD' : 'ONLINE',
+                notes: `Email: ${shippingInfo.email} | Auth: ${isLoggedIn ? 'User' : 'Guest'}`,
                 items: items.map((i: any) => ({
                     id: i.id,
                     quantity: i.quantity,
@@ -100,15 +98,13 @@ export default function CheckoutPage() {
             setShowReview(false);
         } catch (err: any) {
             console.error('Order creation failed:', err?.response?.data || err);
-            alert('Error: Failed to process order. Please try again.');
+            const errorMsg = err?.response?.data ? JSON.stringify(err.response.data) : 'Please try again.';
+            alert(`Error: Failed to process order. ${errorMsg}`);
         } finally {
             setIsProcessing(false);
         }
     };
 
-    /* ═══════════════════════════════════════════════════════
-       SUCCESS SCREEN
-    ═══════════════════════════════════════════════════════ */
     if (placedOrderNumber) {
         return (
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95">
@@ -129,255 +125,267 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-                    <Link href={`/tracking?tid=${placedOrderNumber}`} className="flex-1 py-3 bg-[#F59E0B] text-white font-bold rounded-xl hover:bg-[#F59E0B]/90 transition-all shadow-lg text-center">Track Order</Link>
-                    <Link href="/" className="flex-1 py-3 bg-white border border-gray-200 text-slate-700 font-bold rounded-xl hover:bg-gray-50 transition-all text-center">Back to Menu</Link>
+                    <Link href={`/tracking?tid=${placedOrderNumber}`} className="flex-1 py-3 bg-[#f0c14b] text-[#111] font-bold rounded-xl border border-[#a88734] hover:bg-[#f0c14b]/90 transition-all text-center">Track Order</Link>
+                    <Link href="/" className="flex-1 py-3 bg-white border border-gray-200 text-slate-700 font-bold rounded-xl hover:bg-gray-50 transition-all text-center">Back to Shop</Link>
                 </div>
             </div>
         );
     }
 
-    /* ═══════════════════════════════════════════════════════
-       EMPTY CART
-    ═══════════════════════════════════════════════════════ */
     if (items.length === 0) {
         return (
-            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+            <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center p-8 text-center">
                 <ShoppingCart className="h-16 w-16 text-slate-300 mb-6" />
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">Your cart is empty</h2>
-                <Link href="/" className="px-6 py-3 bg-[#F59E0B] text-white font-bold rounded-xl">Browse Menu</Link>
+                <Link href="/" className="px-10 py-2.5 bg-[#f0c14b] text-[#111] font-bold rounded-[3px] border border-[#a88734] shadow-sm">Browse Products</Link>
             </div>
         );
     }
 
     /* ═══════════════════════════════════════════════════════
-       CHECKOUT FORM (All-In-One)
+       PURE AMAZON COMPONENTS (Sourced from Admin Design)
     ═══════════════════════════════════════════════════════ */
+    const cardCls = "bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden mb-5";
+    const headerCls = "px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]";
+    const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] font-medium transition-all bg-white";
+    const btnPrimary = "w-full h-[32px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] text-[13px] font-medium text-[#111] shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2";
+    
+    const AmazonField = ({ label, required, children }: any) => (
+        <div className="space-y-1">
+            <label className="block text-[13px] font-bold text-[#111]">
+                {label} {required && <span className="text-red-600 ml-0.5">*</span>}
+            </label>
+            {children}
+        </div>
+    );
+
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-20">
-            {/* Header */}
-            <div className="bg-white border-b py-4 px-4 sticky top-0 z-50 shadow-sm">
-                <div className="max-w-[1240px] mx-auto flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 bg-[#F59E0B] rounded-lg flex items-center justify-center">
-                            <span className="text-lg font-black text-white">A</span>
-                        </div>
-                        <span className="text-xl font-black text-slate-900 uppercase">Checkout <span className="text-[#F59E0B] font-medium text-lg ml-1">({cartCount})</span></span>
+        <div className="min-h-screen bg-[#F8F9FA] font-sans pb-20 text-[#111]">
+            {/* Amazon Universal Header */}
+            <header className="bg-[#131921] py-3 px-6 sticky top-0 z-[100] border-b border-black">
+                <div className="max-w-[1150px] mx-auto flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2">
+                         <div className="w-8 h-8 bg-[#ff9900] rounded-[2px] flex items-center justify-center font-black text-[#131921] text-xl pb-1">a</div>
+                         <h1 className="text-xl font-bold text-white tracking-tighter">Checkout <span className="text-[#aaa] font-normal text-sm ml-1">({cartCount} items)</span></h1>
                     </Link>
-                    <div className="hidden sm:flex items-center gap-1 text-slate-400">
+                    <div className="flex items-center gap-2 text-[#aaa]">
                         <Lock className="h-4 w-4" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Secure Checkout</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Secure Transaction</span>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="max-w-[1200px] mx-auto px-4 py-8">
-                <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-8">
+            <div className="max-w-[1100px] mx-auto px-6 py-8">
+                <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-6 items-start">
                     
-                    {/* Left Column */}
-                    <div className="flex-1 space-y-6">
+                    {/* LEFT COLUMN: FULFILLMENT */}
+                    <div className="flex-1 space-y-5 min-w-0 w-full">
                         
-                        {/* ── 1. Delivery Details ── */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                            <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-                                <span className="w-8 h-8 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center font-black text-sm">1</span>
-                                <h2 className="text-lg font-black text-slate-900 uppercase">Delivery Details</h2>
+                        {/* 1. SHIPPING ADDRESS */}
+                        <div className={cardCls}>
+                            <div className={headerCls}>
+                                <h3 className="text-[14px] font-bold text-[#111]">1. Shipping Address</h3>
+                                <p className="text-[12px] text-[#565959]">Please enter the delivery destination.</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2 sm:col-span-1 border rounded-xl overflow-hidden focus-within:border-[#F59E0B] transition-colors">
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 px-4 pt-2.5 tracking-widest">First Name *</label>
-                                    <input required className="w-full h-10 px-4 pb-2 bg-transparent text-sm font-bold text-slate-900 outline-none" value={shippingInfo.firstName} onChange={(e) => setShippingInfo({...shippingInfo, firstName: e.target.value})} placeholder="John" />
+                            <div className="p-6 grid grid-cols-2 gap-x-6 gap-y-4">
+                                <AmazonField label="First Name" required>
+                                    <input className={inputCls} required value={shippingInfo.firstName} onChange={(e:any) => setShippingInfo({...shippingInfo, firstName: e.target.value})} />
+                                </AmazonField>
+                                <AmazonField label="Last Name" required>
+                                    <input className={inputCls} required value={shippingInfo.lastName} onChange={(e:any) => setShippingInfo({...shippingInfo, lastName: e.target.value})} />
+                                </AmazonField>
+                                <AmazonField label="Phone Number" required>
+                                    <input className={inputCls} required value={shippingInfo.phone} onChange={(e:any) => setShippingInfo({...shippingInfo, phone: e.target.value})} placeholder="e.g. 0300 1234567" />
+                                </AmazonField>
+                                <AmazonField label="Email Address (Optional)">
+                                    <input className={inputCls} type="email" value={shippingInfo.email} onChange={(e:any) => setShippingInfo({...shippingInfo, email: e.target.value})} />
+                                </AmazonField>
+                                <div className="col-span-2">
+                                    <AmazonField label="Street Address" required>
+                                        <textarea 
+                                            required
+                                            rows={2}
+                                            value={shippingInfo.address}
+                                            onChange={(e) => setShippingInfo({...shippingInfo, address: e.target.value})}
+                                            className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] font-medium transition-all"
+                                        />
+                                    </AmazonField>
                                 </div>
-                                <div className="col-span-2 sm:col-span-1 border rounded-xl overflow-hidden focus-within:border-[#F59E0B] transition-colors">
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 px-4 pt-2.5 tracking-widest">Last Name *</label>
-                                    <input required className="w-full h-10 px-4 pb-2 bg-transparent text-sm font-bold text-slate-900 outline-none" value={shippingInfo.lastName} onChange={(e) => setShippingInfo({...shippingInfo, lastName: e.target.value})} placeholder="Doe" />
-                                </div>
-                                <div className="col-span-2 sm:col-span-1 border rounded-xl overflow-hidden focus-within:border-[#F59E0B] transition-colors">
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 px-4 pt-2.5 tracking-widest">Phone *</label>
-                                    <input required type="tel" className="w-full h-10 px-4 pb-2 bg-transparent text-sm font-bold text-slate-900 outline-none" value={shippingInfo.phone} onChange={(e) => setShippingInfo({...shippingInfo, phone: e.target.value})} placeholder="0300 1234567" />
-                                </div>
-                                <div className="col-span-2 sm:col-span-1 border rounded-xl overflow-hidden focus-within:border-[#F59E0B] transition-colors">
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 px-4 pt-2.5 tracking-widest">Email</label>
-                                    <input type="email" className="w-full h-10 px-4 pb-2 bg-transparent text-sm font-bold text-slate-900 outline-none" value={shippingInfo.email} onChange={(e) => setShippingInfo({...shippingInfo, email: e.target.value})} placeholder="john@example.com" />
-                                </div>
-                                <div className="col-span-2 border rounded-xl overflow-hidden focus-within:border-[#F59E0B] transition-colors">
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 px-4 pt-2.5 tracking-widest">Address *</label>
-                                    <input required className="w-full h-10 px-4 pb-2 bg-transparent text-sm font-bold text-slate-900 outline-none" value={shippingInfo.address} onChange={(e) => setShippingInfo({...shippingInfo, address: e.target.value})} placeholder="House 123, Street 4" />
-                                </div>
-                                <div className="col-span-2 sm:col-span-1 border rounded-xl overflow-hidden focus-within:border-[#F59E0B] transition-colors">
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 px-4 pt-2.5 tracking-widest">City *</label>
-                                    <input required className="w-full h-10 px-4 pb-2 bg-transparent text-sm font-bold text-slate-900 outline-none" value={shippingInfo.city} onChange={(e) => setShippingInfo({...shippingInfo, city: e.target.value})} placeholder="Lahore" />
-                                </div>
+                                <AmazonField label="City" required>
+                                    <input className={inputCls} required value={shippingInfo.city} onChange={(e:any) => setShippingInfo({...shippingInfo, city: e.target.value})} />
+                                </AmazonField>
                             </div>
                         </div>
 
-                        {/* ── 2. Payment Method ── */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                            <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-                                <span className="w-8 h-8 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center font-black text-sm">2</span>
-                                <h2 className="text-lg font-black text-slate-900 uppercase">Payment Method</h2>
+                        {/* 2. PAYMENT METHOD */}
+                        <div className={cardCls}>
+                            <div className={headerCls}>
+                                <h3 className="text-[14px] font-bold text-[#111]">2. Payment Method</h3>
+                                <p className="text-[12px] text-[#565959]">Select how you would like to pay.</p>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="p-6 space-y-3">
                                 {[
-                                    { id: 'cod', name: 'Cash on Delivery', icon: Banknote },
-                                    { id: 'easypaisa', name: 'Easypaisa', icon: Smartphone },
-                                    { id: 'card', name: 'Credit Card', icon: CreditCard }
+                                    { id: 'cod', name: 'Cash on Delivery (COD)', desc: 'Scan & Pay or Cash at doorstep' },
+                                    { id: 'easypaisa', name: 'Easypaisa / Mobile Wallet', desc: 'Secure digital payment' },
+                                    { id: 'card', name: 'Credit or Debit Card', desc: 'Visa, Mastercard, PayPak' }
                                 ].map(m => (
-                                    <label key={m.id} className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 cursor-pointer transition-all text-center
-                                        ${payMethod === m.id ? 'border-[#F59E0B] bg-[#F59E0B]/5 shadow-md shadow-[#F59E0B]/10' : 'border-slate-100 hover:border-[#F59E0B]/30'}`}>
-                                        <input type="radio" name="payment" value={m.id} checked={payMethod === m.id} onChange={() => setPayMethod(m.id as any)} className="sr-only" />
-                                        <m.icon className={`h-8 w-8 ${payMethod === m.id ? 'text-[#F59E0B]' : 'text-slate-400'}`} />
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${payMethod === m.id ? 'text-[#F59E0B]' : 'text-slate-500'}`}>{m.name}</span>
+                                    <label key={m.id} className={`block p-4 border rounded-[4px] cursor-pointer transition-all ${payMethod === m.id ? 'border-[#e77600] bg-[#fcf5ee]' : 'border-[#ddd] hover:bg-[#f7f8fa]'}`}>
+                                        <div className="flex gap-3">
+                                            <input type="radio" name="payment" value={m.id} checked={payMethod === m.id} onChange={() => setPayMethod(m.id as any)} className="mt-1 accent-[#e77600]" />
+                                            <div>
+                                                <p className="text-[13px] font-bold text-[#111]">{m.name}</p>
+                                                <p className="text-[11px] text-[#565959]">{m.desc}</p>
+                                            </div>
+                                        </div>
                                     </label>
                                 ))}
                             </div>
                         </div>
 
-                        {/* ── 3. Review Items ── */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                            <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-                                <span className="w-8 h-8 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center font-black text-sm">3</span>
-                                <h2 className="text-lg font-black text-slate-900 uppercase">Your Items</h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        {/* 3. REVIEW ITEMS */}
+                        <div className={cardCls}>
+                             <div className={headerCls}>
+                                <h3 className="text-[14px] font-bold text-[#111]">3. Items and Shipping</h3>
+                                <p className="text-[12px] text-[#565959]">Review products before placing order.</p>
+                             </div>
+                             <div className="divide-y divide-[#eee]">
                                 {items.map((item: any) => (
-                                    <div key={item.id} className="py-4 flex gap-4 items-center">
-                                        <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center p-1.5 border border-slate-100">
-                                            <img src={getImageUrl(item.image)} className="w-full h-full object-contain" alt={item.name} />
+                                    <div key={item.id} className="p-6 flex gap-6">
+                                        <div className="w-16 h-16 shrink-0 border border-[#eee] rounded-[4px] p-2 flex items-center justify-center bg-white">
+                                            <img src={getImageUrl(item.image)} className="max-w-full max-h-full object-contain" alt={item.name} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-sm font-bold text-slate-900 truncate">{item.name}</h4>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Qty: {item.quantity}</p>
+                                            <h4 className="text-[14px] font-bold text-[#007185] hover:text-[#c45500] hover:underline cursor-pointer">{item.name}</h4>
+                                            <p className="text-[11px] font-bold text-[#c45500] mt-1 italic">Qualifies for Fast Shipping</p>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <span className="text-[13px] font-black text-[#111]">PKR {parseFloat(item.price).toLocaleString()}</span>
+                                                <span className="text-[11px] text-[#565959] font-bold bg-[#f3f3f3] px-2 py-0.5 rounded">Qty: {item.quantity}</span>
+                                            </div>
                                         </div>
-                                        <p className="text-sm font-black text-[#F59E0B] shrink-0">PKR {(parseFloat(item.price) * item.quantity).toLocaleString()}</p>
                                     </div>
                                 ))}
-                            </div>
+                             </div>
                         </div>
                     </div>
 
-                    {/* Right Column: Sticky Summary */}
-                    <div className="w-full lg:w-[400px]">
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 sticky top-24 shadow-sm">
-                            <h3 className="text-lg font-black text-slate-900 uppercase pb-4 mb-4 border-b border-slate-100">Order Summary</h3>
-
-                            <div className="space-y-3 text-sm mb-6">
-                                <div className="flex justify-between text-slate-500 font-bold">
-                                    <span>Subtotal ({cartCount} items)</span>
-                                    <span className="text-slate-900">PKR {cartTotal.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-500 font-bold">
-                                    <span>Delivery Fee</span>
-                                    <span className={shipping === 0 ? 'text-emerald-600 font-black' : 'text-slate-900'}>{shipping === 0 ? 'FREE' : `PKR ${shipping}`}</span>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-100 mb-6">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-lg font-black uppercase text-slate-900">Total</span>
-                                    <span className="text-2xl font-black text-[#F59E0B]">PKR {total.toLocaleString()}</span>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="w-full py-4 bg-[#F59E0B] text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#F59E0B]/90 transition-all shadow-lg shadow-[#F59E0B]/20 active:scale-[0.98] flex justify-center items-center gap-2"
-                            >
-                                <Package className="h-4 w-4" /> Place Order
+                    {/* RIGHT COLUMN: SUMMARY */}
+                    <div className="w-full lg:w-[320px] sticky top-[80px]">
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 space-y-5">
+                            <button type="submit" className={btnPrimary + " h-[35px] text-[14px]"}>
+                                Use this payment method
                             </button>
+                            <p className="text-[11px] text-[#565959] text-center px-2 leading-tight">By placing your order, you agree to Al-Qavi's <span className="text-[#007185] hover:underline cursor-pointer">privacy notice</span> and <span className="text-[#007185] hover:underline cursor-pointer">conditions of use</span>.</p>
+                            
+                            <div className="pt-4 border-t border-[#eee] space-y-3">
+                                <h3 className="text-[16px] font-bold text-[#111]">Order Summary</h3>
+                                <div className="space-y-2 text-[12px] text-[#111]">
+                                    <div className="flex justify-between">
+                                        <span className="text-[#565959]">Items:</span>
+                                        <span>PKR {cartTotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-[#565959]">Shipping & handling:</span>
+                                        <span>PKR {shipping.toLocaleString()}</span>
+                                    </div>
+                                    <div className="pt-2 flex justify-between">
+                                        <span className="w-full border-t border-[#eee]" />
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-[#565959]">Total before tax:</span>
+                                        <span>PKR {total.toLocaleString()}</span>
+                                    </div>
+                                </div>
 
-                            <div className="mt-5 flex gap-2 items-center justify-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                <ShieldCheck className="h-4 w-4" /> Secure & Encrypted
+                                <div className="pt-4 border-t border-[#eee]">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[17px] font-bold text-[#B12704]">Order Total:</span>
+                                        <span className="text-[17px] font-bold text-[#B12704]">PKR {total.toLocaleString()}</span>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+
+                        <div className="mt-4 bg-[#f1f1f1] border border-[#ddd] rounded-[4px] p-4 flex gap-3">
+                             <ShieldCheck className="h-5 w-5 text-[#565959] shrink-0" />
+                             <p className="text-[11px] text-[#565959] leading-tight">Your data is encrypted and secure. We do not store full credit card details on our local servers.</p>
                         </div>
                     </div>
                 </form>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════
-               REVIEW & CONFIRM MODAL
-            ═══════════════════════════════════════════════════════ */}
+            {/* REVIEW MODAL (High-Fidelity) */}
             {showReview && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]">
+                    <div className="bg-white rounded-[4px] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-[#ddd] shadow-2xl animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
-                        <div className="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-xl font-black text-slate-900 uppercase">Review Your Order</h2>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Please confirm the details below</p>
-                            </div>
-                            <button onClick={() => setShowReview(false)} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition-colors">
-                                <X className="h-5 w-5 text-slate-400" />
-                            </button>
+                        <div className="bg-[#f7f8fa] border-b border-[#ddd] px-8 py-5 flex items-center justify-between">
+                            <h2 className="text-[20px] font-medium text-[#111]">Review your order</h2>
+                            <button onClick={() => setShowReview(false)} className="text-[#565959] hover:text-[#111] transition-colors"><X size={24} /></button>
                         </div>
 
-                        <div className="p-6 space-y-5">
-                            {/* Delivery Summary */}
-                            <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-                                <p className="text-[10px] font-black text-[#F59E0B] uppercase tracking-widest mb-2">Delivery To</p>
-                                <p className="text-sm font-bold text-slate-900">{shippingInfo.firstName} {shippingInfo.lastName}</p>
-                                <p className="text-xs text-slate-500 flex items-center gap-2"><MapPin className="h-3 w-3" /> {shippingInfo.address}, {shippingInfo.city}</p>
-                                <p className="text-xs text-slate-500">{shippingInfo.phone}</p>
+                        <div className="p-8 space-y-8 overflow-y-auto max-h-[calc(90vh-140px)]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <h3 className="text-[13px] font-bold text-[#111] uppercase tracking-tighter">Shipping Address</h3>
+                                    <div className="text-[13px] text-[#111] space-y-0.5">
+                                        <p className="font-bold">{shippingInfo.firstName} {shippingInfo.lastName}</p>
+                                        <p>{shippingInfo.address}</p>
+                                        <p>{shippingInfo.city}</p>
+                                        <p className="pt-1">Phone: {shippingInfo.phone}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-[13px] font-bold text-[#111] uppercase tracking-tighter">Payment Method</h3>
+                                    <p className="text-[13px] text-[#111] capitalize font-bold text-[#B12704]">{payMethod.replace('cod', 'Cash on Delivery')}</p>
+                                    <p className="text-[11px] text-[#565959]">Verification may be required upon delivery.</p>
+                                </div>
                             </div>
 
-                            {/* Payment Summary */}
-                            <div className="bg-slate-50 rounded-xl p-4">
-                                <p className="text-[10px] font-black text-[#F59E0B] uppercase tracking-widest mb-2">Payment</p>
-                                <p className="text-sm font-bold text-slate-900 capitalize">{payMethod === 'cod' ? 'Cash on Delivery' : payMethod === 'easypaisa' ? 'Easypaisa / Mobile Wallet' : 'Credit Card'}</p>
-                            </div>
-
-                            {/* Items Summary */}
-                            <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Items ({cartCount})</p>
-                                <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+                            <div className="border border-[#ddd] rounded-[4px] overflow-hidden">
+                                <div className="bg-[#f7f8fa] px-4 py-2 border-b border-[#ddd] flex justify-between text-[11px] font-bold text-[#565959] uppercase tracking-widest">
+                                    <span>Shipment 1 of 1</span>
+                                    <span>Estimated Delivery: 2-3 Days</span>
+                                </div>
+                                <div className="divide-y divide-[#eee]">
                                     {items.map((item: any) => (
-                                        <div key={item.id} className="px-4 py-3 flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center p-1 border border-slate-100 shrink-0">
-                                                <img src={getImageUrl(item.image)} className="w-full h-full object-contain" alt={item.name} />
+                                        <div key={item.id} className="px-5 py-4 flex justify-between items-center text-[13px]">
+                                            <div className="flex gap-4 items-center min-w-0">
+                                                <div className="w-12 h-12 border border-[#eee] rounded-[2px] p-1 shrink-0 bg-white">
+                                                    <img src={getImageUrl(item.image)} className="w-full h-full object-contain" />
+                                                </div>
+                                                <span className="font-bold text-[#007185] truncate">{item.name}</span>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold">× {item.quantity}</p>
+                                            <div className="flex items-center gap-10 shrink-0">
+                                                <span className="font-bold text-[#565959]">Qty: {item.quantity}</span>
+                                                <span className="w-24 text-right font-black text-[#111]">PKR {(parseFloat(item.price) * item.quantity).toLocaleString()}</span>
                                             </div>
-                                            <p className="text-xs font-black text-slate-900 shrink-0">PKR {(parseFloat(item.price) * item.quantity).toLocaleString()}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Totals */}
-                            <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/20 rounded-xl p-4 space-y-2">
-                                <div className="flex justify-between text-xs font-bold text-slate-600">
-                                    <span>Subtotal</span>
-                                    <span>PKR {cartTotal.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-xs font-bold text-slate-600">
-                                    <span>Delivery</span>
-                                    <span>{shipping === 0 ? 'FREE' : `PKR ${shipping}`}</span>
-                                </div>
-                                <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-[#F59E0B]/20">
-                                    <span>Total</span>
-                                    <span className="text-[#F59E0B]">PKR {total.toLocaleString()}</span>
+                            <div className="flex justify-end pt-4" />
+                            <div className="flex justify-end">
+                                <div className="w-[320px] space-y-2">
+                                     <div className="flex justify-between text-[13px]"><span>Items:</span><span>PKR {cartTotal.toLocaleString()}</span></div>
+                                     <div className="flex justify-between text-[13px]"><span>Shipping:</span><span>PKR {shipping.toLocaleString()}</span></div>
+                                     <div className="flex justify-between text-[18px] font-bold text-[#B12704] pt-3 border-t border-[#ddd]">
+                                        <span>Order Total:</span>
+                                        <span>PKR {total.toLocaleString()}</span>
+                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="sticky bottom-0 bg-white z-10 px-6 py-5 border-t border-slate-100 flex gap-3">
+                        <div className="bg-[#f7f8fa] border-t border-[#ddd] p-6 flex justify-between items-center">
+                            <button onClick={() => setShowReview(false)} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline font-bold">Edit Details</button>
                             <button
-                                type="button"
-                                onClick={() => setShowReview(false)}
-                                disabled={isProcessing}
-                                className="flex-1 py-3.5 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50"
-                            >
-                                Edit Details
-                            </button>
-                            <button
-                                type="button"
                                 onClick={processOrder}
                                 disabled={isProcessing}
-                                className="flex-1 py-3.5 bg-[#F59E0B] text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-[#F59E0B]/90 transition-all shadow-lg shadow-[#F59E0B]/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
+                                className="px-12 h-[38px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] text-[14px] font-bold text-[#111] shadow-sm disabled:opacity-50 active:scale-[0.98] transition-all"
                             >
-                                {isProcessing ? 'Processing...' : <><Check className="h-4 w-4" /> Confirm Order</>}
+                                {isProcessing ? 'Placing Order...' : 'Place your order'}
                             </button>
                         </div>
                     </div>

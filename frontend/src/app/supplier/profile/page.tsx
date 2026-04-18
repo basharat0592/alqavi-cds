@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    User, ShieldCheck, MapPin, Building, CreditCard, Bell, 
+    User, ShieldCheck, MapPin, Building, CreditCard, Bell,
     ChevronRight, Camera, Loader2, LogOut, Package, BarChart3, HelpCircle, Key, Headphones
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
@@ -77,8 +77,8 @@ export default function SupplierProfile() {
         }
     };
 
-    const displayName = profile?.first_name 
-        ? `${profile.first_name} ${profile.last_name || ''}`.trim() 
+    const displayName = profile?.first_name
+        ? `${profile.first_name} ${profile.last_name || ''}`.trim()
         : user?.name || 'Partner Account';
 
     const SECTIONS = [
@@ -134,9 +134,9 @@ export default function SupplierProfile() {
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-[#F8FAFC]">
             <div className="max-w-[1020px] mx-auto pt-6 pb-24 px-5">
-                
+
                 {/* ── Breadcrumbs ── */}
                 <nav className="flex items-center text-[13px] text-gray-500 mb-6 font-normal">
                     <span className="cursor-pointer hover:underline hover:text-[#c45500]" onClick={() => router.push('/supplier/dashboard')}>Your Account</span>
@@ -151,7 +151,7 @@ export default function SupplierProfile() {
                     <div className="flex items-center gap-6">
                         <div className="relative group shrink-0">
                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
-                            <div className="w-20 h-20 bg-[#f3f3f3] rounded-full flex items-center justify-center text-gray-400 text-3xl font-bold overflow-hidden border border-gray-100 flex-shrink-0">
+                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 text-3xl font-bold overflow-hidden border border-gray-100 flex-shrink-0">
                                 {uploading ? (
                                     <Loader2 className="h-6 w-6 animate-spin text-[#232f3e] opacity-40" />
                                 ) : profile?.avatar ? (
@@ -160,7 +160,7 @@ export default function SupplierProfile() {
                                     <span className="text-gray-300 font-medium">{displayName.charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
-                            <button 
+                            <button
                                 onClick={() => fileInputRef.current?.click()}
                                 className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-300 rounded-full shadow-sm text-gray-500 hover:bg-gray-50 transition-colors"
                             >
@@ -180,14 +180,13 @@ export default function SupplierProfile() {
                                 {SECTIONS.map((sec, i) => {
                                     const isActive = activeSection === sec.id;
                                     return (
-                                        <button 
+                                        <button
                                             key={i}
                                             onClick={() => setActiveSection(isActive ? null : sec.id)}
-                                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg transition-all shadow-sm active:scale-[0.96] outline-none shrink-0 group ${
-                                                isActive 
-                                                ? 'border-[#e6be00] bg-[#fff9cc] ring-2 ring-[#febd69]/30' 
-                                                : 'border-gray-200 bg-gray-50 hover:border-[#febd69] hover:bg-white'
-                                            }`}
+                                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg transition-all shadow-sm active:scale-[0.96] outline-none shrink-0 group ${isActive
+                                                    ? 'border-[#e6be00] bg-[#fff9cc] ring-2 ring-[#febd69]/30'
+                                                    : 'border-gray-200 bg-gray-50 hover:border-[#febd69] hover:bg-white'
+                                                }`}
                                         >
                                             <sec.icon size={14} className={`${isActive ? 'text-[#c45500]' : 'text-[#232f3e] group-hover:text-[#c45500]'} transition-colors`} strokeWidth={2} />
                                             <span className={`text-[12px] font-bold whitespace-nowrap tracking-tight ${isActive ? 'text-[#c45500]' : 'text-gray-700 group-hover:text-gray-900'}`}>{sec.title}</span>
@@ -198,7 +197,7 @@ export default function SupplierProfile() {
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                        <button 
+                        <button
                             onClick={() => { authService.logout(); window.location.href = '/login'; }}
                             className="px-6 py-1.5 bg-white border border-gray-300 rounded-[7px] text-[13px] font-medium text-gray-800 hover:bg-gray-50 shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-gray-100 transition-all min-w-[120px]"
                         >
@@ -214,7 +213,7 @@ export default function SupplierProfile() {
                             <h3 className="text-xl font-bold text-gray-900">
                                 {SECTIONS.find(s => s.id === activeSection)?.title}
                             </h3>
-                            <button 
+                            <button
                                 onClick={() => setActiveSection(null)}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
@@ -226,37 +225,37 @@ export default function SupplierProfile() {
                             <form onSubmit={handlePasswordChange} className="max-w-[500px] space-y-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-gray-900">Current Password</label>
-                                    <input 
+                                    <input
                                         type="password"
                                         required
                                         value={passwordData.old_password}
-                                        onChange={e => setPasswordData({...passwordData, old_password: e.target.value})}
+                                        onChange={e => setPasswordData({ ...passwordData, old_password: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-gray-900">New Password</label>
-                                    <input 
+                                    <input
                                         type="password"
                                         required
                                         minLength={8}
                                         value={passwordData.new_password}
-                                        onChange={e => setPasswordData({...passwordData, new_password: e.target.value})}
+                                        onChange={e => setPasswordData({ ...passwordData, new_password: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-gray-900">Confirm New Password</label>
-                                    <input 
+                                    <input
                                         type="password"
                                         required
                                         value={passwordData.new_password_confirm}
-                                        onChange={e => setPasswordData({...passwordData, new_password_confirm: e.target.value})}
+                                        onChange={e => setPasswordData({ ...passwordData, new_password_confirm: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                     />
                                 </div>
                                 <div className="pt-4 flex items-center gap-4">
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={updating}
                                         className="px-8 py-2 bg-[#F59E0B] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F59E0B] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#1a1a2e] transition-all disabled:opacity-50"
@@ -271,28 +270,28 @@ export default function SupplierProfile() {
                                     <>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-gray-900">First Name</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.first_name || ''}
-                                                onChange={e => setFormData({...formData, first_name: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, first_name: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-gray-900">Last Name</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.last_name || ''}
-                                                onChange={e => setFormData({...formData, last_name: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
                                         <div className="space-y-1.5 md:col-span-2">
                                             <label className="text-[13px] font-bold text-gray-900">Email Address</label>
-                                            <input 
+                                            <input
                                                 type="email"
                                                 value={formData.email || ''}
-                                                onChange={e => setFormData({...formData, email: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
@@ -300,47 +299,56 @@ export default function SupplierProfile() {
                                 ) : (
                                     <>
                                         <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[13px] font-bold text-gray-900">Company / Business Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.company || ''}
+                                                onChange={e => setFormData({ ...formData, company: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 md:col-span-2">
                                             <label className="text-[13px] font-bold text-gray-900">Phone Number</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.phone || ''}
-                                                onChange={e => setFormData({...formData, phone: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
                                         <div className="space-y-1.5 md:col-span-2">
                                             <label className="text-[13px] font-bold text-gray-900">Address Line</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.address || ''}
-                                                onChange={e => setFormData({...formData, address: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, address: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-gray-900">City</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.city || ''}
-                                                onChange={e => setFormData({...formData, city: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-gray-900">Country</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.country || ''}
-                                                onChange={e => setFormData({...formData, country: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, country: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-gray-900">Postal Code</label>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={formData.postal_code || ''}
-                                                onChange={e => setFormData({...formData, postal_code: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, postal_code: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-[3px] text-[14px] focus:ring-2 focus:ring-[#febd69] focus:border-[#e77600] outline-none shadow-sm transition-all"
                                             />
                                         </div>
@@ -348,14 +356,14 @@ export default function SupplierProfile() {
                                 )}
 
                                 <div className="pt-4 flex items-center gap-4 md:col-span-2">
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={updating}
                                         className="px-8 py-2 bg-[#F59E0B] border border-[#FCD200] rounded-[7px] text-[13px] font-medium text-black hover:bg-[#F59E0B] shadow-sm outline-none focus:ring-2 focus:ring-[#febd69] active:bg-[#1a1a2e] transition-all disabled:opacity-50"
                                     >
                                         {updating ? 'Saving...' : 'Save Changes'}
                                     </button>
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => setActiveSection(null)}
                                         className="px-6 py-2 bg-white border border-gray-300 rounded-[7px] text-[13px] font-medium text-gray-800 hover:bg-gray-50 shadow-sm transition-all"

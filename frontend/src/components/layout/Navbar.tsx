@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from "@/context/CartContext";
 import { getImageUrl } from "@/lib/utils";
 import { authService, User as AuthUser } from '@/lib/auth';
-import { productService, mainCategoryService } from '@/lib/api';
+import { productService, sectionService } from '@/lib/api';
 import Logo from "@/components/ui/Logo";
 
 export default function Navbar() {
@@ -24,7 +24,6 @@ export default function Navbar() {
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchOpen, setSearchOpen] = useState(false);
-    const [mainCategories, setMainCategories] = useState<any[]>([]);
     const [scrolled, setScrolled] = useState(false);
 
     const router = useRouter();
@@ -42,10 +41,6 @@ export default function Navbar() {
             setAllProducts(apiArr);
         }).catch(() => { });
 
-        mainCategoryService.getAll().then(data => {
-            const cats = Array.isArray(data) ? data : (data as any).results || [];
-            setMainCategories(cats.slice(0, 12));
-        }).catch(() => { });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -144,9 +139,6 @@ export default function Navbar() {
                                 <Link href="/tracking" className="px-4 py-2 rounded-lg hover:text-[#1d252c] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-2">
                                     <Globe className="h-3 w-3" /> Track Order
                                 </Link>
-                                {mainCategories.slice(0, 3).map(l => (
-                                    <Link key={l.id} href={`/shop?mcat=${l.slug || l.name}`} className="px-4 py-2 rounded-lg hover:text-[#1d252c] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all">{l.name}</Link>
-                                ))}
                             </nav>
 
                             <div className="relative" ref={userRef}>
@@ -211,7 +203,7 @@ export default function Navbar() {
                                     )}
                                 </Link>
                                 {cartCount > 0 && (
-                                    <button 
+                                    <button
                                         onClick={clearCart}
                                         title="Clear Cart"
                                         className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
@@ -250,11 +242,6 @@ export default function Navbar() {
                                     <Link href="/shop" onClick={() => setMobileOpen(false)} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 text-[11px] font-black uppercase text-[#1d252c] hover:bg-[#F59E0B] hover:text-white transition-all">
                                         Browse Products <ChevronRight className="h-4 w-4" />
                                     </Link>
-                                    {mainCategories.map(l => (
-                                        <Link key={l.id} href={`/shop?mcat=${l.slug || l.name}`} onClick={() => setMobileOpen(false)} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 text-[11px] font-black uppercase text-slate-500 hover:text-[#F59E0B] transition-all">
-                                            {l.name} <ChevronRight className="h-4 w-4" />
-                                        </Link>
-                                    ))}
                                 </div>
                             </div>
                         </div>

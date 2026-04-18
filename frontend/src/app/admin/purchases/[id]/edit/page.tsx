@@ -1,386 +1,341 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    ShoppingCart, Plus, Trash2,
-    CheckCircle, AlertTriangle, Package, Loader2, ArrowLeft, Save,
-    Activity, Filter, Calendar, DollarSign, ArrowRight, ShieldCheck, Clipboard
+    X, CheckCircle, Package, RefreshCw, ChevronRight, 
+    CheckCircle2, Info, Upload, ArrowLeft, Loader2
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
-import { productService } from '@/services/product.service';
-import { companyService } from '@/services/company.service';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import PageLoader from '@/components/ui/PageLoader';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
 
-// ── Shared Utilities (MISSION CONTROL DESIGN) ───────────────────────────────
-const LABEL = ({ children }: { children: React.ReactNode }) => (
-    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">{children}</label>
-);
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - PURCHASE EDIT PAGE
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[35px] px-6 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-sm ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
+};
 
-const INPUT = ({ ...props }) => (
-    <input 
-        {...props} 
-        className={`w-full px-5 py-3 bg-white/95 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white outline-none focus:border-[#1D4ED8]/50 transition-all shadow-sm placeholder:text-slate-300 ${props.className || ''}`} 
-    />
-);
-
-const SELECT = `w-full px-5 py-3 bg-white/95 dark:bg-[#0D1921]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white outline-none focus:border-[#1D4ED8]/50 transition-all shadow-xl shadow-[#1D4ED8]/5 cursor-pointer disabled:opacity-50`;
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white/95 dark:bg-[#0D1921]/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-[#1D4ED8]/5 overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
-
-const SectionHeader = ({ title, icon: Icon, action }: { title: string; icon?: any; action?: React.ReactNode }) => (
-    <div className="px-10 py-6 bg-[#fcfcfc] dark:bg-white/5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-            {Icon && <Icon className="w-5 h-5 text-[#1D4ED8] stroke-[2.5]" />}
-            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{title}</span>
-        </div>
-        {action}
-    </div>
-);
-
-type LineItem = { product: any; product_name: string; quantity: number; unit_price: number };
+const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
 export default function EditPurchasePage({ params }: { params: Promise<{ id: string }> }) {
-    const router = useRouter();
     const { id } = use(params);
-    
-    const [products, setProducts] = useState<any[]>([]);
-    const [companies, setCompanies] = useState<any[]>([]);
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    
-    const [form, setForm] = useState<any>({
-        purchase_number: '', supplier_name: '', supplier_phone: '',
-        order_date: '', expected_delivery_date: '', 
-        tax_amount: '0', shipping_cost: '0',
-        status: 'draft', payment_status: 'pending', notes: '',
-    });
-    const [items, setItems] = useState<LineItem[]>([]);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'alert' } | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [purchase, setPurchase] = useState<any>(null);
+    const [paymentSlip, setPaymentSlip] = useState<File | null>(null);
 
-    const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
-    };
-
-    const loadData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [prodsRes, compsRes, purchaseData] = await Promise.all([
-                productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
-                companyService.getAll(),
-                purchaseService.getById(id)
-            ]);
-
-            setProducts(Array.isArray(prodsRes) ? prodsRes : (prodsRes as any)?.results || []);
-            setCompanies(Array.isArray(compsRes) ? compsRes : []);
-
-            setForm({
-                purchase_number: purchaseData.purchase_number || '',
-                supplier_name: purchaseData.supplier_name || '',
-                supplier_phone: purchaseData.supplier_phone || '',
-                order_date: purchaseData.order_date || '',
-                expected_delivery_date: purchaseData.expected_delivery_date || '',
-                tax_amount: purchaseData.tax_amount || '0',
-                shipping_cost: purchaseData.shipping_cost || '0',
-                status: purchaseData.status || 'draft',
-                payment_status: purchaseData.payment_status || 'pending',
-                notes: purchaseData.notes || '',
-            });
-
-            if (purchaseData.items && Array.isArray(purchaseData.items)) {
-                setItems(purchaseData.items.map((item: any) => ({
-                    product: item.product,
-                    product_name: item.product_name || '',
-                    quantity: item.quantity || 0,
-                    unit_price: item.unit_price || 0
-                })));
-            } else {
-                setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0 }]);
+    useEffect(() => {
+        const fetchPurchase = async () => {
+            try {
+                const data = await purchaseService.getById(id);
+                setPurchase(data);
+            } catch (err: any) {
+                console.error(err);
+                toast.error('Failed to load purchase details');
+                router.push('/admin/purchases');
+            } finally {
+                setLoading(false);
             }
+        };
+        fetchPurchase();
+    }, [id, router]);
 
-        } catch (e) {
-            showToast('Failed to load data', 'alert');
-        } finally {
-            setLoading(false);
-        }
-    }, [id]);
-
-    useEffect(() => { loadData(); }, [loadData]);
-
-    const validate = () => {
-        const e: Record<string, string> = {};
-        if (!form.purchase_number) e.purchase_number = 'Required';
-        if (!form.supplier_name) e.supplier_name = 'Required';
-        if (!form.order_date) e.order_date = 'Required';
-        if (items.some(i => !i.product || i.quantity < 1 || i.unit_price <= 0))
-            e.items = 'Manifest error: All items require product, quantity ≥ 1, and valuation.';
-        setErrors(e);
-        return Object.keys(e).length === 0;
-    };
-
-    const handleSave = async () => {
-        if (!validate()) return;
-        setSaving(true);
+    const handleUpdate = async () => {
+        if (!purchase) return;
+        setIsUpdating(true);
         try {
-            const lineTotal = items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
-            const total_amount = lineTotal + parseFloat(form.tax_amount || '0') + parseFloat(form.shipping_cost || '0');
+            const formData = new FormData();
+            formData.append('status', purchase.status);
             
-            await purchaseService.update(id, { ...form, items, total_amount });
-            showToast('Purchase protocol synchronized successfully!');
-            setTimeout(() => router.push('/admin/purchases'), 1500);
-        } catch (e: any) {
-            showToast(e?.response?.data?.error || 'Registry update failed', 'alert');
+            if (purchase.status !== 'cancelled') {
+                if (purchase.payment_status) formData.append('payment_status', purchase.payment_status.toUpperCase());
+                if (purchase.payment_method) formData.append('payment_method', purchase.payment_method.toUpperCase());
+                
+                if (purchase.payment_status?.toUpperCase() === 'PARTIAL' || purchase.payment_status?.toUpperCase() === 'PAID') {
+                    const finalPaid = purchase.payment_status?.toUpperCase() === 'PAID' ? purchase.total_amount : purchase.paid_amount;
+                    formData.append('paid_amount', (finalPaid || 0).toString());
+                    formData.append('payment_date', purchase.payment_date || new Date().toISOString().slice(0, 10));
+                    formData.append('payment_notes', purchase.payment_notes || '');
+                    if (purchase.transaction_id) formData.append('transaction_id', purchase.transaction_id);
+                    if (paymentSlip) formData.append('payment_slip', paymentSlip);
+                }
+            }
+            
+            await purchaseService.update(id, formData);
+            toast.success('Purchase updated successfully');
+            router.push('/admin/purchases');
+        } catch (err: any) {
+            console.error(err);
+            const msg = err.response?.data?.error || err.response?.data?.message || 'Update failed';
+            toast.error(msg);
         } finally {
-            setSaving(false);
+            setIsUpdating(false);
         }
     };
 
-    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0 }]);
-    const removeItem = (i: number) => setItems(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
-    
-    const updateItem = (i: number, field: string, val: any) => {
-        setItems(prev => prev.map((item, idx) => {
-            if (idx !== i) return item;
-            if (field === 'product') {
-                const p = products.find(p => p.id === val || p.id === Number(val));
-                return { 
-                    ...item, 
-                    product: val, 
-                    product_name: p?.name || '', 
-                    unit_price: p?.price ? parseFloat(p.price) : item.unit_price 
-                };
-            }
-            return { ...item, [field]: val };
-        }));
-    };
-
-    const lineTotal = items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
-    const grandTotal = lineTotal + parseFloat(form.tax_amount || '0') + parseFloat(form.shipping_cost || '0');
-
-    if (loading) {
-        return (
-            <div className="flex flex-col h-[70vh] items-center justify-center gap-6 animate-pulse">
-                <div className="w-16 h-16 bg-[#1D4ED8]/10 rounded-[2rem] flex items-center justify-center text-[#1D4ED8]">
-                    <Loader2 className="h-10 w-10 animate-spin" />
-                </div>
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Recalibrating Procurement Registry...</p>
-            </div>
-        );
-    }
+    if (loading) return <PageLoader />;
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-24 px-4 mt-6 animate-in fade-in duration-700 font-sans text-left">
-            
-            {/* Tactical Header */}
-            <div className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-8 leading-none">
-                <div>
-                    <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-2 leading-none">Update Protocol</h1>
-                    <div className="flex items-center gap-3 leading-none">
-                        <span className="flex items-center gap-1.5 text-[10px] font-black text-[#1D4ED8] uppercase tracking-widest leading-none">
-                            <ShoppingCart className="w-3.5 h-3.5" strokeWidth={3} /> Registry Edit Mode
-                        </span>
-                        <div className="w-1 h-1 bg-slate-200 dark:bg-white/10 rounded-full" />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">PO: {form.purchase_number}</span>
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+            {/* Header */}
+            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
+                <div className="max-w-[1000px] mx-auto px-6 text-left">
+                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
+                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                        <ChevronRight size={10} />
+                        <Link href="/admin/purchases" className="hover:text-[#c45500] hover:underline">Purchases</Link>
+                        <ChevronRight size={10} />
+                        <span className="text-[#c45500]">Edit #{purchase?.purchase_number}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <ArrowLeft size={20} className="text-[#565959]" />
+                            </button>
+                            <div>
+                                <h1 className="text-[22px] font-normal text-[#111]">Edit Purchase Record</h1>
+                                <p className="text-[13px] text-[#565959] mt-0.5">Order #{purchase?.purchase_number} • {purchase?.supplier_name}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => router.back()} className="text-[13px] font-bold text-[#565959] hover:underline px-4">Cancel</button>
+                            <Btn onClick={handleUpdate} loading={isUpdating}>Save Changes</Btn>
+                        </div>
                     </div>
                 </div>
-                <button onClick={() => router.push('/admin/purchases')} className="px-6 py-3 bg-white/95 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-all flex items-center gap-2 active:scale-95 leading-none">
-                    <ArrowLeft className="w-3.5 h-3.5 stroke-[3]" /> Back to Registry
-                </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                
-                {/* Left Column: Form Layers */}
-                <div className="lg:col-span-8 space-y-8">
-                    
-                    {/* Module A: Metadata */}
-                    <SectionCard>
-                        <SectionHeader title="Purchase Parameters" icon={Clipboard} />
-                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-2">
-                                <LABEL>PO Registry ID *</LABEL>
-                                <INPUT 
-                                    value={form.purchase_number}
-                                    onChange={(e: any) => setForm((f: any) => ({ ...f, purchase_number: e.target.value }))}
-                                    className={errors.purchase_number ? 'border-rose-500' : ''}
-                                />
-                                {errors.purchase_number && <p className="text-rose-500 text-[9px] font-black uppercase tracking-widest leading-none">Required Component</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <LABEL>Supplier Entity *</LABEL>
-                                <select
-                                    value={form.supplier_name}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        const matched = companies.find(c => c.name === val);
-                                        setForm((f: any) => ({
-                                            ...f,
-                                            supplier_name: val,
-                                            supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone,
-                                        }));
-                                    }}
-                                    className={SELECT}
-                                >
-                                    <option value="">Select Origin Supplier</option>
-                                    {companies.map((c: any) => (
-                                        <option key={`${c.id}-${c.name}`} value={c.name}>{c.name}{c.city ? ` [${c.city}]` : ''}</option>
-                                    ))}
-                                </select>
-                                {errors.supplier_name && <p className="text-rose-500 text-[9px] font-black uppercase tracking-widest leading-none">Supplier Disconnected</p>}
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-8 md:col-span-2">
-                                <div className="space-y-2 border-t border-slate-100 dark:border-white/5 pt-8">
-                                    <LABEL>Contact Proxy</LABEL>
-                                    <INPUT value={form.supplier_phone} onChange={(e: any) => setForm((f: any) => ({ ...f, supplier_phone: e.target.value }))} placeholder="+92-XXX-XXXXXXX" />
-                                </div>
-                                <div className="space-y-2 border-t border-slate-100 dark:border-white/5 pt-8">
-                                    <LABEL>Registry Date *</LABEL>
-                                    <INPUT type="date" value={form.order_date} onChange={(e: any) => setForm((f: any) => ({ ...f, order_date: e.target.value }))} className={errors.order_date ? 'border-rose-500' : ''} />
-                                </div>
-                            </div>
-                        </div>
-                    </SectionCard>
-
-                    {/* Module B: Item Manifest */}
-                    <SectionCard>
-                        <SectionHeader title="Operational Manifest" icon={Package} action={
-                            <button onClick={addItem} className="px-4 py-2 bg-[#1D4ED8]/10 text-[#1D4ED8] rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#1D4ED8] hover:text-white transition-all flex items-center gap-2 leading-none">
-                                <Plus className="w-3 h-3 stroke-[3]" /> Append Resource Row
-                            </button>
-                        } />
-                        <div className="p-10">
-                            {errors.items && <p className="text-rose-500 text-[10px] mb-6 font-black uppercase tracking-widest text-center py-4 bg-rose-50 dark:bg-rose-500/5 rounded-2xl">{errors.items}</p>}
-                            <div className="space-y-6">
-                                {items.map((item, i) => (
-                                    <div key={i} className="flex flex-col md:flex-row gap-6 items-end p-6 bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] rounded-[2rem] relative group hover:border-[#1D4ED8]/30 transition-all">
-                                        <div className="flex-1 w-full space-y-2">
-                                            <LABEL>System Asset</LABEL>
-                                            <select value={item.product} onChange={e => updateItem(i, 'product', e.target.value)} className={SELECT}>
-                                                <option value="">Locate Asset Base...</option>
-                                                {products
-                                                    .filter(p => {
-                                                        if (!form.supplier_name) return true;
-                                                        const pSupplierName = p.supplier_name || p.company_name || '';
-                                                        return String(pSupplierName).toLowerCase() === String(form.supplier_name).toLowerCase();
-                                                    })
-                                                    .map(p => <option key={p.id} value={p.id}>{p.name}</option>)
-                                                }
-                                            </select>
-                                        </div>
-                                        <div className="w-full md:w-32 space-y-2">
-                                            <LABEL>Quantity</LABEL>
-                                            <INPUT type="number" value={item.quantity} onChange={(e: any) => updateItem(i, 'quantity', parseInt(e.target.value) || 0)} className="text-center" />
-                                        </div>
-                                        <div className="w-full md:w-48 space-y-2">
-                                            <LABEL>Unit Valuation</LABEL>
-                                            <div className="relative">
-                                                <INPUT type="number" value={item.unit_price} onChange={(e: any) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)} className="pl-10" />
-                                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
-                                            </div>
-                                        </div>
-                                        <button onClick={() => removeItem(i)} className="p-3 text-slate-300 hover:text-rose-500 transition-colors bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl hover:-translate-y-1 shadow-sm leading-none">
-                                            <Trash2 className="w-4.5 h-4.5" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </SectionCard>
-                </div>
-
-                {/* Right Column: Summaries & Controls */}
-                <div className="lg:col-span-4 space-y-8">
-                    
-                    {/* Module C: Registry State */}
-                    <SectionCard className="p-10 space-y-8">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Activity className="w-5 h-5 text-emerald-500 stroke-[2.5]" />
-                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white leading-none">Registry Overrides</h3>
-                        </div>
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <LABEL>Order Phase</LABEL>
-                                <select value={form.status} onChange={e => setForm((f: any) => ({ ...f, status: e.target.value }))} className={SELECT}>
-                                    <option value="draft">Internal Draft</option>
-                                    <option value="ordered">Active Order</option>
-                                    <option value="received">Registry Finalized</option>
-                                    <option value="cancelled">Void Transaction</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-white/5">
-                                <LABEL>Projected Arrival</LABEL>
-                                <INPUT type="date" value={form.expected_delivery_date} onChange={(e: any) => setForm((f: any) => ({ ...f, expected_delivery_date: e.target.value }))} />
-                            </div>
-                        </div>
-                    </SectionCard>
-
-                    {/* Module D: Revenue Matrix */}
-                    <SectionCard className="border-[#1D4ED8]/20 ring-4 ring-[#1D4ED8]/5">
-                        <SectionHeader title="Financial Matrix" icon={DollarSign} />
-                        <div className="p-10 space-y-8">
+            <main className="max-w-[1000px] mx-auto px-6 mt-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Main Form Area */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Status Section */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-8 shadow-sm text-left">
+                            <h2 className="text-[16px] font-bold mb-6 flex items-center gap-2">
+                                <Package size={18} className="text-[#c45500]" />
+                                Order Status
+                            </h2>
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center text-slate-400">
-                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">Manifest Value</span>
-                                    <span className="text-xs font-black text-slate-900 dark:text-white leading-none tabular-nums">{formatCurrency(lineTotal)}</span>
-                                </div>
-                                <div className="flex flex-col gap-6 pt-6 border-t border-slate-100 dark:border-white/5">
+                                <label className="block text-[13px] font-bold text-[#111]">Update Progress</label>
+                                <select
+                                    disabled={purchase.status === 'RECEIVED' && purchase.is_inventory_synced}
+                                    value={purchase.status}
+                                    onChange={(e) => setPurchase({ ...purchase, status: e.target.value })}
+                                    className={inputCls + " h-[40px] cursor-pointer" + (purchase.status === 'RECEIVED' && purchase.is_inventory_synced ? ' bg-gray-50 opacity-70' : '')}
+                                >
+                                    <option value="PENDING">Ordered</option>
+                                    <option value="PROCESSING">Confirmed</option>
+                                    <option value="SHIPPED">In Transit</option>
+                                    <option value="DELIVERED">Delivered</option>
+                                    <option value="RECEIVED">Received</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                                {purchase.status === 'RECEIVED' && (
+                                    <div className={`flex items-start gap-2 p-3 rounded-[4px] text-[12px] ${purchase.is_inventory_synced ? 'bg-gray-50 text-[#565959]' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                                        <Info size={16} className="mt-0.5 shrink-0" />
+                                        <p>
+                                            {purchase.is_inventory_synced
+                                                ? "This order has been received and quantities are synced with inventory. Further changes are restricted."
+                                                : "Order is marked as Received, but inventory sync is pending. Saving will trigger the sync process."}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Payment Section */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-8 shadow-sm text-left">
+                            <h2 className="text-[16px] font-bold mb-6 flex items-center gap-2">
+                                <CheckCircle2 size={18} className="text-[#c45500]" />
+                                Payment Verification
+                            </h2>
+
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <button 
+                                    type="button"
+                                    onClick={() => setPurchase({ ...purchase, payment_status: 'PAID' })}
+                                    className={`flex flex-col items-center justify-center p-4 border rounded-[4px] transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-200 shadow-inner' : 'bg-white border-[#ddd] hover:bg-[#f7f8fa]'}`}
+                                >
+                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-[#c45500] border-[#c45500]' : 'border-gray-400'}`}>
+                                        {purchase.payment_status?.toUpperCase() === 'PAID' && <div className="w-2 h-2 bg-white rounded-full" />}
+                                    </div>
+                                    <span className="text-[13px] font-bold">Fully Paid</span>
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setPurchase({ ...purchase, payment_status: 'PARTIAL' })}
+                                    className={`flex flex-col items-center justify-center p-4 border rounded-[4px] transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-200 shadow-inner' : 'bg-white border-[#ddd] hover:bg-[#f7f8fa]'}`}
+                                >
+                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-[#c45500] border-[#c45500]' : 'border-gray-400'}`}>
+                                        {purchase.payment_status?.toUpperCase() === 'PARTIAL' && <div className="w-2 h-2 bg-white rounded-full" />}
+                                    </div>
+                                    <span className="text-[13px] font-bold">Partial Payment</span>
+                                </button>
+                            </div>
+
+                            {(purchase.payment_status?.toUpperCase() === 'PAID' || purchase.payment_status?.toUpperCase() === 'PARTIAL') && (
+                                <div className="bg-[#fcfdff] border border-[#eee] rounded-[4px] p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded text-[12px] text-blue-700 font-medium">
+                                        <Info size={16} />
+                                        Important: Upload the bank transfer slip or receipt below for supplier confirmation.
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="block text-[12px] font-bold text-[#565959]">Payment Receipt / Screenshot</label>
+                                        <div className="relative group">
+                                            <input 
+                                                type="file" 
+                                                id="payment-slip"
+                                                className="hidden" 
+                                                accept="image/*,application/pdf"
+                                                onChange={(e) => setPaymentSlip(e.target.files?.[0] || null)}
+                                            />
+                                            <label 
+                                                htmlFor="payment-slip"
+                                                className="flex flex-col items-center justify-center w-full h-[120px] border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 hover:border-orange-400 transition-all group"
+                                            >
+                                                {paymentSlip ? (
+                                                    <div className="flex items-center gap-3 text-emerald-600 font-bold text-[14px] bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
+                                                        <CheckCircle size={20} />
+                                                        {paymentSlip.name}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-orange-50 group-hover:border-orange-100 transition-colors">
+                                                            <Upload size={20} className="text-gray-400 group-hover:text-orange-500" />
+                                                        </div>
+                                                        <span className="text-[12px] font-medium text-gray-500">Drag & drop or <span className="text-[#007185] hover:underline">browse files</span></span>
+                                                        <span className="text-[10px] text-[#aaa]">Supported: JPG, PNG, PDF (Max 5MB)</span>
+                                                    </div>
+                                                )}
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <LABEL>logistics</LABEL>
-                                            <INPUT type="number" value={form.shipping_cost} onChange={(e: any) => setForm((f: any) => ({ ...f, shipping_cost: e.target.value }))} />
+                                        <div>
+                                            <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Payment Date</label>
+                                            <input 
+                                                type="date" 
+                                                className={inputCls} 
+                                                value={purchase.payment_date ? purchase.payment_date.slice(0, 10) : new Date().toISOString().slice(0, 10)} 
+                                                onChange={e => setPurchase({ ...purchase, payment_date: e.target.value })}
+                                            />
                                         </div>
-                                        <div className="space-y-2">
-                                            <LABEL>Registry Tax</LABEL>
-                                            <INPUT type="number" value={form.tax_amount} onChange={(e: any) => setForm((f: any) => ({ ...f, tax_amount: e.target.value }))} />
+                                        <div>
+                                            <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Transaction reference</label>
+                                            <input 
+                                                type="text" 
+                                                className={inputCls} 
+                                                placeholder="e.g. Bank Ref #, Check #"
+                                                value={purchase.transaction_id || ''} 
+                                                onChange={e => setPurchase({ ...purchase, transaction_id: e.target.value })}
+                                            />
+                                        </div>
+
+                                        {purchase.payment_status?.toUpperCase() === 'PARTIAL' && (
+                                            <>
+                                                <div>
+                                                    <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Amount Paid Now</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aaa] text-[13px]">$</span>
+                                                        <input 
+                                                            type="number" 
+                                                            className={inputCls + " pl-7"} 
+                                                            value={purchase.paid_amount || 0} 
+                                                            onChange={e => setPurchase({ ...purchase, paid_amount: parseFloat(e.target.value) })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Remaining Balance</label>
+                                                    <div className="h-[35px] px-3 border border-[#ddd] bg-[#f7f8fa] rounded-[3px] text-[14px] font-bold text-red-600 flex items-center shadow-sm">
+                                                        {formatCurrency((purchase.total_amount || 0) - (purchase.paid_amount || 0))}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                        
+                                        <div className="col-span-2">
+                                            <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Internal Notes</label>
+                                            <textarea 
+                                                className={inputCls + " h-[80px] py-3 resize-none"} 
+                                                placeholder="Enter any additional payment details for records..."
+                                                value={purchase.payment_notes || ''} 
+                                                onChange={e => setPurchase({ ...purchase, payment_notes: e.target.value })}
+                                            />
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <LABEL>Settlement State</LABEL>
-                                        <select value={form.payment_status} onChange={e => setForm((f: any) => ({ ...f, payment_status: e.target.value }))} className={SELECT}>
-                                            <option value="pending">Awaiting Funds</option>
-                                            <option value="partially_paid">Partial Settlement</option>
-                                            <option value="paid">Accounts Cleared</option>
-                                        </select>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Sidebar */}
+                    <aside className="space-y-6">
+                        {/* Order Summary Card */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm text-left sticky top-8">
+                            <h2 className="text-[14px] font-bold text-[#111] border-b border-[#eee] pb-3 mb-4 uppercase tracking-wider">Purchase Summary</h2>
+                            <div className="space-y-4">
+                                <div className="space-y-2 pb-4 border-b border-[#eee]">
+                                    <div className="flex justify-between text-[13px] text-[#565959]">
+                                        <span>Order Date:</span>
+                                        <span className="font-medium text-[#111]">{formatDate(purchase.created_at)}</span>
                                     </div>
+                                    <div className="flex justify-between text-[13px] text-[#565959]">
+                                        <span>Items:</span>
+                                        <span className="font-medium text-[#111]">{purchase.items?.length || 0} Product(s)</span>
+                                    </div>
+                                    <div className="flex justify-between text-[13px] text-[#565959]">
+                                        <span>Supplier:</span>
+                                        <span className="font-medium text-[#111] truncate max-w-[120px]" title={purchase.supplier_name}>{purchase.supplier_name}</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex justify-between text-[15px] font-bold text-[#111]">
+                                        <span>Order Total:</span>
+                                        <span className="text-[#c45500] font-black">{formatCurrency(purchase.total_amount)}</span>
+                                    </div>
+                                    {purchase.payment_confirmed && (
+                                        <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded text-[11px] font-bold uppercase tracking-widest border border-emerald-100">
+                                            <CheckCircle2 size={14} />
+                                            Supplier Confirmed
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             
-                            <div className="pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col items-center gap-2">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Registry Valuation</p>
-                                <p className="text-4xl font-black text-[#1D4ED8] tracking-tighter tabular-nums leading-none">{formatCurrency(grandTotal)}</p>
+                            <div className="mt-8 space-y-3">
+                                <Btn className="w-full h-[40px]" onClick={handleUpdate} loading={isUpdating}>
+                                    Save Record Updates
+                                </Btn>
+                                <button 
+                                    onClick={() => router.back()}
+                                    className="w-full h-[40px] text-[13px] font-bold text-[#565959] hover:bg-gray-50 rounded-[4px] border border-[#ddd] transition-colors"
+                                >
+                                    Cancel
+                                </button>
                             </div>
-
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="w-full py-5 bg-[#1D4ED8] text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
-                            >
-                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" strokeWidth={3} />}
-                                {saving ? 'Synchronizing...' : 'Commit Registry Changes'}
-                            </button>
                         </div>
-                    </SectionCard>
-                </div>
-            </div>
 
-            {/* Tactical Toast Overlay */}
-            {toast && (
-                <div className="fixed bottom-10 right-10 z-[250] animate-in slide-in-from-right-10 duration-500">
-                    <div className={`${toast.type === 'success' ? 'bg-[#1D4ED8]' : 'bg-rose-500'} text-white px-8 py-5 rounded-[2.5rem] shadow-2xl flex items-center gap-4 border border-white/10 backdrop-blur-xl border border-white/10`}>
-                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                            {toast.type === 'success' ? <CheckCircle className="h-5 w-5 text-white stroke-[3]" /> : <AlertTriangle className="h-5 w-5 text-white stroke-[3]" />}
-                        </div>
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em] leading-none">{toast.msg}</span>
-                    </div>
+                    </aside>
                 </div>
-            )}
+            </main>
         </div>
     );
 }

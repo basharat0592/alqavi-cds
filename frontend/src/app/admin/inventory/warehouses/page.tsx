@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Plus, Search, Edit2, Trash2, MapPin, 
-    Warehouse, Box, RefreshCw, Save, X, 
+    Plus, Search, Edit2, Trash2, MapPin,
+    Warehouse, Box, RefreshCw, Save, X,
     ChevronRight, ChevronLeft, Trash, AlertTriangle
 } from 'lucide-react';
-import { inventoryService } from '@/lib/api';
+import { inventoryService } from '@/services/inventory.service';
+import { productService } from '@/services/product.service';
+import { companyService } from '@/services/company.service';
+import { categoryService } from '@/services/category.service';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -46,6 +49,18 @@ export default function WarehousesPage() {
     const [deleteWh, setDeleteWh] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
 
+    // Quick Add Stock states
+    const [quickAddWh, setQuickAddWh] = useState<any | null>(null);
+    const [allProducts, setAllProducts] = useState<any[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [stockForm, setStockForm] = useState({
+        product_name: '', category: '', supplier: '', purchase_type: 'single',
+        total_quantity: 0, price_per_item: 0, date: new Date().toISOString().slice(0, 10),
+        supplier_product_id: '', supplier_id: ''
+    });
+    const [addingStock, setAddingStock] = useState(false);
+
     const [form, setForm] = useState({
         name: '',
         location: '',
@@ -55,12 +70,45 @@ export default function WarehousesPage() {
     const load = async () => {
         setLoading(true);
         try {
-            const data = await inventoryService.getWarehouses();
-            setWarehouses(data || []);
+            const [whs, prods, sups, cats] = await Promise.all([
+                inventoryService.getWarehouses(),
+                productService.getAllSupplier({ no_pagination: 'true' }),
+                companyService.getSuppliers(),
+                categoryService.getAll()
+            ]);
+            setWarehouses(whs || []);
+            setAllProducts(prods.results || prods || []);
+            setSuppliers(sups || []);
+            setCategories(cats || []);
         } catch { toast.error("Refresh failure"); } finally { setLoading(false); }
     };
 
     useEffect(() => { load(); }, []);
+
+    const handleAddStock = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!stockForm.product_name || !stockForm.supplier_id || !quickAddWh) return toast.error("Required fields missing");
+
+        setAddingStock(true);
+        try {
+            const payload = {
+                ...stockForm,
+                warehouse: quickAddWh.id,
+                category: stockForm.category || null, // Ensure category is null if empty
+                total_quantity: Number(stockForm.total_quantity),
+                price_per_item: Number(stockForm.price_per_item),
+            };
+
+            await inventoryService.createStock(payload);
+            toast.success(`Successfully added ${stockForm.product_name} to ${quickAddWh.name}`);
+            setQuickAddWh(null);
+            load(); // This will now fetch the updated stock_count
+        } catch (error: any) {
+            const msg = error?.response?.data ? JSON.stringify(error.response.data) : "Failed to add stock";
+            toast.error(msg);
+            console.error("Stock Addition Error:", error);
+        } finally { setAddingStock(false); }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,15 +139,15 @@ export default function WarehousesPage() {
         }
     };
 
-    const filtered = (warehouses || []).filter(w => 
-        w.name.toLowerCase().includes(search.toLowerCase()) || 
+    const filtered = (warehouses || []).filter(w =>
+        w.name.toLowerCase().includes(search.toLowerCase()) ||
         w.location.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
-                
+
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -113,7 +161,7 @@ export default function WarehousesPage() {
                     </h1>
                     {view === 'list' ? (
                         <div className="flex gap-2">
-                             <Btn variant="secondary" onClick={load} loading={loading}>
+                            <Btn variant="secondary" onClick={load} loading={loading}>
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Btn>
                             <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }}><Plus size={14} /> Add Warehouse</Btn>
@@ -169,8 +217,20 @@ export default function WarehousesPage() {
                                                 <MapPin size={14} className="opacity-40 shrink-0 mt-0.5" /> {wh.location}
                                             </div>
                                             <div className="pt-3 border-t border-[#f7f7f7] flex items-center justify-between">
-                                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Stock Items</div>
-                                                <div className="text-[13px] font-bold">{wh.stock_count || 0} Products</div>
+                                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{wh.stock_count || 0} Products</div>
+                                                <button
+                                                    onClick={() => {
+                                                        setQuickAddWh(wh);
+                                                        setStockForm({
+                                                            product_name: '', category: '', supplier: '', purchase_type: 'single',
+                                                            total_quantity: 0, price_per_item: 0, date: new Date().toISOString().slice(0, 10),
+                                                            supplier_product_id: '', supplier_id: ''
+                                                        });
+                                                    }}
+                                                    className="text-[11px] font-bold text-[#007185] hover:text-[#c45500] flex items-center gap-1"
+                                                >
+                                                    <Plus size={12} /> Add Product
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -212,7 +272,7 @@ export default function WarehousesPage() {
                                     <h3 className="text-[14px] font-bold text-center">Save</h3>
                                 </div>
                                 <div className="p-5 space-y-4">
-                                     <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
+                                    <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
                                         <Save size={14} /> {editWh ? 'Update' : 'Save'}
                                     </Btn>
                                     <button onClick={() => setView('list')} className="w-full text-[12px] text-[#565959] hover:text-[#c45500] hover:underline text-center">
@@ -224,6 +284,66 @@ export default function WarehousesPage() {
                     </div>
                 )}
             </div>
+
+            {/* Add Stock Modal */}
+            {quickAddWh && (
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-[8px] border border-[#ddd] overflow-hidden w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                            <h3 className="text-[16px] font-bold text-[#111]">Add Product to {quickAddWh.name}</h3>
+                            <button onClick={() => setQuickAddWh(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleAddStock} className="p-6 space-y-4">
+                            <Field label="1. Select Supplier" required>
+                                <select 
+                                    className={inputCls} 
+                                    value={stockForm.supplier_id} 
+                                    onChange={e => setStockForm(f => ({ ...f, supplier_id: e.target.value, supplier_product_id: '' }))}
+                                >
+                                    <option value="">-- Select Supplier --</option>
+                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.company || s.name}</option>)}
+                                </select>
+                            </Field>
+
+                            <Field label="2. Search & Select Product" required>
+                                <select
+                                    className={`${inputCls} h-[40px] font-bold text-[14px] ${!stockForm.supplier_id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    value={stockForm.supplier_product_id}
+                                    disabled={!stockForm.supplier_id}
+                                    onChange={(e) => {
+                                        const p = allProducts.find(x => String(x.id) === e.target.value);
+                                        if (p) {
+                                            setStockForm(f => ({
+                                                ...f,
+                                                supplier_product_id: e.target.value,
+                                                product_name: p.name,
+                                                supplier: p.supplier,
+                                                category: p.category || '',
+                                                price_per_item: p.cost_price || p.price,
+                                                total_quantity: p.quantity || 1
+                                            }));
+                                        }
+                                    }}
+                                >
+                                    <option value="">{stockForm.supplier_id ? '-- Choose Product --' : 'Select a supplier first'}</option>
+                                    {allProducts
+                                        .filter(p => !stockForm.supplier_id || String(p.supplier_id) === String(stockForm.supplier_id))
+                                        .map(p => (
+                                            <option key={p.id} value={p.id}>{p.name} ({p.sku || 'No SKU'}) - {p.quantity} available</option>
+                                        ))}
+                                </select>
+                            </Field>
+
+                            <div className="pt-4 flex gap-2">
+                                <Btn type="submit" className="flex-1 h-[45px] text-[15px] justify-center" loading={addingStock} disabled={!stockForm.supplier_product_id}>
+                                    <Plus size={18} /> Add Selected Product Now
+                                </Btn>
+                                <Btn variant="secondary" onClick={() => setQuickAddWh(null)} className="h-[45px]">Cancel</Btn>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Modal */}
             {deleteWh && (

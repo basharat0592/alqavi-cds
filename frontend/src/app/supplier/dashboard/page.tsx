@@ -1,331 +1,242 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { authService } from '@/lib/auth';
-import api from '@/lib/axios';
-import {
-    Package, Boxes, TrendingUp, ShieldCheck, LogOut, PlusCircle,
-    HelpCircle, RefreshCw, ShoppingBag, ArrowUpRight, Clock,
-    CheckCircle2, XCircle, AlertCircle, Loader2, RotateCcw,
-    DollarSign, BarChart3, User, ArrowRight, Eye, Trash2, Truck
-} from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import {
+    RefreshCw, TrendingUp, Package, Wallet, CheckCircle2,
+    ArrowRight, AlertTriangle, Briefcase, Activity
+} from 'lucide-react';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer
+} from 'recharts';
+import api from '@/lib/axios';
+import { cn } from '@/lib/utils';
+import { authService } from '@/lib/auth';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const formatCurrency = (n: number) =>
-    new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(n);
+// ── Pure Amazon Formatting ──────────────────────────────────────────────────
+const fmt = (n: number) =>
+    new Intl.NumberFormat('en-PK', {
+        style: 'currency',
+        currency: 'PKR',
+        maximumFractionDigits: 0
+    }).format(n);
 
-const formatDate = (d: string | null) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-// ── Status Pills ──────────────────────────────────────────────────────────────
-const STATUS_COLORS: Record<string, string> = {
-    draft: 'bg-slate-100 text-slate-600',
-    ordered: 'bg-blue-50 text-blue-700',
-    received: 'bg-emerald-50 text-emerald-700 font-bold border-emerald-100',
-    completed: 'bg-emerald-50 text-emerald-700 font-bold border-emerald-100',
-    partially_received: 'bg-amber-50 text-amber-700',
-    cancelled: 'bg-red-50 text-red-700 font-bold border-red-100',
-    pending: 'bg-amber-50 text-amber-700',
-    partially_paid: 'bg-indigo-50 text-indigo-700',
-    paid: 'bg-emerald-50 text-emerald-700',
-    delivered: 'bg-emerald-50 text-emerald-700 font-bold border-emerald-100',
-};
-
-const StatusPill = ({ status }: { status: string }) => (
-    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${STATUS_COLORS[status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-        {status.replace('_', ' ')}
-    </span>
-);
+const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function SupplierDashboard() {
-    const [user, setUser] = useState<any>(null);
-    const [stats, setStats] = useState<any>(null);
-    const [sales, setSales] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingSales, setLoadingSales] = useState(true);
-    const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
     const router = useRouter();
+    const [orders, setOrders] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<any>({ totalRemaining: 0, totalPaid: 0, totalVolume: 0, activeSkus: 0 });
 
-    const fetchDashboardData = useCallback(async () => {
+    const fetchDashboard = useCallback(async () => {
         setLoading(true);
-        setLoadingSales(true);
         try {
-            const statsPromise = api.get('/v1/sales/supplier/dashboard/stats/');
-            const retailPromise = api.get('/v1/sales/orders/');
-            const wholesalePromise = api.get('/v1/sales/purchases/', {
-                params: { status: 'delivered,received,cancelled' }
-            });
-
-            const [statsRes, retailRes, wholesaleRes] = await Promise.all([
-                statsPromise, retailPromise, wholesalePromise
+            const [ordersRes, purchasesRes, productsRes] = await Promise.all([
+                api.get('/v1/sales/orders/'),
+                api.get('/v1/sales/purchases/'),
+                api.get('/v1/sales/products/')
             ]);
 
-            setStats(statsRes.data);
+            const retailOrders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.results || [];
+            const purchaseOrders = Array.isArray(purchasesRes.data) ? purchasesRes.data : purchasesRes.data.results || [];
+            const products = Array.isArray(productsRes.data) ? productsRes.data : productsRes.data.results || [];
 
-            const retailList = Array.isArray(retailRes.data) ? retailRes.data : retailRes.data.results || [];
-            const wholesaleList = Array.isArray(wholesaleRes.data) ? wholesaleRes.data : wholesaleRes.data.results || [];
-
-            const normalizedWholesale = wholesaleList.map((po: any) => ({
+            const normalizedPOs = purchaseOrders.map((po: any) => ({
                 id: po.id,
                 order_number: po.purchase_number,
                 created_at: po.order_date || po.created_at,
-                total_amount: po.total_amount,
-                status: po.status,
-                customer_name: 'Wholesale Partner',
+                total_amount: parseFloat(po.total_amount || 0),
+                paid_amount: parseFloat(po.paid_amount || 0),
+                payment_status: po.payment_status?.toUpperCase() || 'UNPAID',
                 is_wholesale: true
             }));
 
-            const combined = [...retailList, ...normalizedWholesale].sort((a, b) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
+            const combined = [...retailOrders, ...normalizedPOs];
+            setOrders(combined);
 
-            setSales(combined.slice(0, 10));
-            setLastRefreshed(new Date());
-        } catch (e) {
-            console.error(e);
+            const rem = normalizedPOs.reduce((sum: number, o: any) => sum + (o.total_amount - o.paid_amount), 0);
+            const paid = combined.reduce((sum: number, o: any) => sum + (o.is_wholesale ? o.paid_amount : parseFloat(o.total_amount)), 0);
+            const vol = combined.reduce((sum: number, o: any) => sum + parseFloat(o.total_amount), 0);
+
+            setStats({
+                totalRemaining: rem,
+                totalPaid: paid,
+                totalVolume: vol,
+                activeSkus: products.length
+            });
+
+        } catch (error) {
+            console.error("Dashboard failed:", error);
         } finally {
             setLoading(false);
-            setLoadingSales(false);
         }
     }, []);
 
-    const handleDelete = async (entry: any) => {
-        if (!confirm(`Are you sure you want to remove ${entry.order_number} from the registry?`)) return;
-        try {
-            if (entry.is_wholesale) {
-                await api.delete(`/v1/sales/purchases/${entry.id}/`);
-            } else {
-                await api.post(`/v1/sales/orders/${entry.id}/delete/`);
-            }
-            toast.success("Record deleted successfully.");
-            fetchDashboardData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error || "Permission denied for deletion.");
-        }
-    };
-
     useEffect(() => {
-        setUser(authService.getUser());
-        fetchDashboardData();
-    }, [fetchDashboardData]);
+        fetchDashboard();
+    }, [fetchDashboard]);
 
-    const QUICK_ACTIONS = [
-        {
-            title: "Your Inventory",
-            desc: "Track manufacturing stock & refills",
-            icon: Boxes,
-            href: "/supplier/inventory",
-            color: "text-[#F59E0B]"
-        },
-        {
-            title: "Purchase Orders",
-            desc: "View wholesale procurement requests",
-            icon: Truck,
-            href: "/supplier/orders",
-            color: "text-[#F59E0B]"
-        },
-        {
-            title: "Sale Registry",
-            desc: "Audit your retail & wholesale ledger",
-            icon: TrendingUp,
-            href: "/supplier/sales",
-            color: "text-[#F59E0B]"
-        },
-        {
-            title: "Product Catalog",
-            desc: "Add, edit, or remove your items",
-            icon: Package,
-            href: "/supplier/products",
-            color: "text-[#F59E0B]"
-        },
-        {
-            title: "Business Profile",
-            desc: "Manage factory details & security",
-            icon: ShieldCheck,
-            href: "/supplier/profile",
-            color: "text-[#F59E0B]"
-        },
-        {
-            title: "Partner Support",
-            desc: "Contact distributor help desk",
-            icon: HelpCircle,
-            href: "/supplier/support",
-            color: "text-[#F59E0B]"
-        }
-    ];
-
-    const supplierName = stats?.supplier_name || user?.name || 'Partner';
+    const graphData = useMemo(() => {
+        const sorted = [...orders].reverse();
+        const dataMap: Record<string, { date: string, val: number }> = {};
+        sorted.forEach(o => {
+            const d = formatDate(o.created_at);
+            if (!dataMap[d]) dataMap[d] = { date: d, val: 0 };
+            dataMap[d].val += parseFloat(o.total_amount || 0);
+        });
+        return Object.values(dataMap).slice(-14);
+    }, [orders]);
 
     return (
-        <div className="max-w-[1000px] mx-auto py-10 animate-in fade-in duration-700 px-4 space-y-12">
+        <div className="max-w-[1240px] mx-auto py-6 px-4 lg:px-0 font-sans bg-[#F8FAFC] min-h-screen">
 
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-100 pb-6 gap-4">
+            {/* ── Amazon Professional Header ── */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-white p-6 rounded shadow-sm border border-gray-300">
                 <div>
-                    <h1 className="text-3xl font-medium text-slate-900 leading-tight">Your Dashboard</h1>
-                    <p className="text-sm text-slate-600 font-medium mt-1">Hello, <span className="font-bold">{supplierName}</span>. Monitor your production metrics and sales below.</p>
+                    <h1 className="text-[24px] font-bold text-[#111] leading-tight">Partner Central Console</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[12px] text-[#565959] font-medium uppercase tracking-widest">System Operational • Live Data</span>
+                    </div>
                 </div>
-                {lastRefreshed && (
-                    <div className="flex flex-col items-end text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                        <span>Registry Sync: Active</span>
-                        <span>Last Latency Check: {lastRefreshed.toLocaleTimeString()}</span>
-                    </div>
-                )}
-            </div>
-
-            {/* KPI Stats Top */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                    { label: 'Live Catalog', val: stats?.total_products || '0', color: 'text-blue-600' },
-                    { label: 'Pending POs', val: stats?.pending_orders || '0', color: 'text-amber-600' },
-                    { label: 'Finalized', val: stats?.received_orders || '0', color: 'text-emerald-600' },
-                    { label: 'Net Revenue', val: formatCurrency(stats?.total_order_value || 0), color: 'text-slate-900' },
-                ].map((s, i) => (
-                    <div key={i} className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{s.label}</span>
-                        <p className={`text-lg font-bold ${s.color}`}>{s.val}</p>
-                    </div>
-                ))}
-            </div>
-
-            {/* Amazon Quick Action Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {QUICK_ACTIONS.map((card, idx) => (
-                    <Link
-                        key={idx}
-                        href={card.href}
-                        className="flex items-start gap-4 p-5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm group"
+                <div className="flex items-center gap-3">
+                    <button onClick={fetchDashboard} className="p-2.5 border border-gray-300 rounded hover:bg-gray-50 bg-white transition-colors">
+                        <RefreshCw className={`h-4 w-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button
+                        onClick={() => router.push('/supplier/sales')}
+                        className="bg-[#f0c14b] border border-[#a88734] hover:bg-[#e7b42d] px-6 py-2 rounded shadow-sm text-[13px] text-[#111] font-bold flex items-center gap-2"
                     >
-                        <div className={`p-4 bg-white border border-gray-100 rounded-full shadow-sm ${card.color}`}>
-                            <card.icon className="h-7 w-7" />
+                        Detailed Financial Ledger <ArrowRight size={14} />
+                    </button>
+                </div>
+            </div>
+
+            {/* ── HIGH LEVEL KPI SECTION (Professional Row) ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[
+                    { label: 'Settled Funds', val: fmt(stats.totalPaid), icon: CheckCircle2, color: 'text-[#007600]', desc: 'Confirmed Cashflow' },
+                    { label: 'Pending Settlement', val: fmt(stats.totalRemaining), icon: Wallet, color: 'text-[#b12704]', desc: 'Wholesale Accounts' },
+                    { label: 'Active Catalog', val: stats.activeSkus, icon: Package, color: 'text-[#007185]', desc: 'Live Stock Items' },
+                    { label: 'Total Volume', val: fmt(stats.totalVolume), icon: TrendingUp, color: 'text-[#111]', desc: 'Year-to-Date Gross' },
+                ].map((kpi, idx) => (
+                    <div key={idx} className="bg-white border border-gray-300 p-5 rounded shadow-sm hover:shadow-md transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[11px] font-bold text-[#565959] uppercase tracking-widest">{kpi.label}</span>
+                            <kpi.icon className={cn("h-4 w-4", kpi.color)} />
                         </div>
-                        <div className="flex-1">
-                            <h2 className="text-[17px] font-bold text-slate-900 group-hover:text-[#F59E0B] transition-colors">{card.title}</h2>
-                            <p className="text-sm text-slate-500 mt-0.5 leading-snug">{card.desc}</p>
-                        </div>
-                    </Link>
+                        <div className={cn("text-[20px] font-black tracking-tight", kpi.color)}>{kpi.val}</div>
+                        <p className="text-[11px] text-[#565959] mt-2 font-medium">{kpi.desc}</p>
+                    </div>
                 ))}
-
-                {/* Logout Card */}
-                <button
-                    onClick={() => {
-                        authService.logout();
-                        window.location.href = '/login';
-                    }}
-                    className="flex items-start gap-4 p-5 bg-white border border-gray-200 rounded-xl hover:bg-rose-50 transition-all shadow-sm group text-left"
-                >
-                    <div className="p-4 bg-white border border-gray-100 rounded-full shadow-sm text-rose-500">
-                        <LogOut className="h-7 w-7" />
-                    </div>
-                    <div className="flex-1">
-                        <h2 className="text-[17px] font-bold text-slate-900 group-hover:text-rose-600 transition-colors">Sign Out</h2>
-                        <p className="text-sm text-slate-500 mt-0.5 leading-snug">Securely end your procurement session</p>
-                    </div>
-                </button>
             </div>
 
-            {/* Simple Sales Registry Table */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
-                    <div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">Recent Transaction Registry</h3>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">Historical wholesale and retail ledger</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* ── MAIN TREND AREA (Left 2/3) ── */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white border border-gray-300 rounded shadow-sm overflow-hidden">
+                        <div className="bg-gray-50 border-b border-gray-300 px-6 py-3 flex items-center justify-between">
+                            <h3 className="text-[15px] font-bold text-[#111]">Gross Sales Velocity (14 Days)</h3>
+                            <span className="text-[11px] font-bold text-[#007185] cursor-pointer hover:underline">View Performance Report</span>
+                        </div>
+                        <div className="p-6">
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={graphData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                                        <XAxis
+                                            dataKey="date"
+                                            axisLine={{ stroke: '#ccc' }}
+                                            tickLine={false}
+                                            tick={{ fontSize: 11, fill: '#555' }}
+                                            dy={10}
+                                        />
+                                        <YAxis hide />
+                                        <Tooltip
+                                            contentStyle={{ border: '1px solid #ccc', fontSize: '13px', borderRadius: '4px' }}
+                                            labelStyle={{ fontWeight: 'bold' }}
+                                        />
+                                        <Area type="monotone" dataKey="val" name="Sales" stroke="#e77600" strokeWidth={3} fill="#ffeddb" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
                     </div>
-                    <Link href="/supplier/sales" className="text-[11px] text-[#F59E0B] font-black hover:underline uppercase tracking-wide">Enter Full Registry</Link>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-[#f0f2f2] text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-gray-200">
-                            <tr>
-                                <th className="px-6 py-3">Reference</th>
-                                <th className="px-6 py-3">Party</th>
-                                <th className="px-6 py-3 text-center">Class</th>
-                                <th className="px-6 py-3">Date</th>
-                                <th className="px-6 py-3 text-right">Settlement</th>
-                                <th className="px-6 py-3 text-center">Protocol</th>
-                                <th className="px-6 py-3 text-center">System</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loadingSales ? (
-                                Array(5).fill(0).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        <td colSpan={7} className="px-6 py-4"><div className="h-3 bg-slate-50 rounded w-full" /></td>
-                                    </tr>
-                                ))
-                            ) : sales.length === 0 ? (
-                                <tr><td colSpan={7} className="py-20 text-center text-slate-400 font-black uppercase text-[10px] tracking-[0.4em] opacity-30">Zero Record Sync</td></tr>
-                            ) : (
-                                sales.map((entry) => (
-                                    <tr key={entry.is_wholesale ? `po-${entry.id}` : `order-${entry.id}`} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 font-bold text-slate-900 text-[11px]">#{entry.order_number}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] font-bold text-slate-800 leading-tight">{entry.customer_name}</span>
-                                                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Verified Member</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`text-[8px] px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border ${entry.is_wholesale ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                                                {entry.is_wholesale ? 'Wholesale' : 'Retail'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-500 text-[11px] whitespace-nowrap">{formatDate(entry.created_at)}</td>
-                                        <td className="px-6 py-4 text-right font-black text-slate-900 text-[11px]">{formatCurrency(parseFloat(entry.total_amount))}</td>
-                                        <td className="px-6 py-4 text-center"><StatusPill status={entry.status} /></td>
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => router.push(entry.is_wholesale ? `/supplier/orders` : `/supplier/sales`)}
-                                                    className="p-1 px-1.5 border border-slate-200 rounded text-slate-400 hover:text-[#F59E0B] hover:bg-white transition-all shadow-sm"
-                                                    title="View"
-                                                >
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(entry)}
-                                                    className="p-1 px-1.5 border border-slate-200 rounded text-slate-400 hover:text-red-500 hover:bg-white transition-all shadow-sm"
-                                                    title="Purge"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            {/* Business Preferences Registry Mock */}
-            <div className="mt-12 pt-8 border-t border-gray-100 grid md:grid-cols-2 gap-8">
-                <div>
-                    <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-50 pb-2 uppercase tracking-wide">Procurement Hub</h3>
-                    <ul className="text-xs space-y-3 font-semibold text-[#F59E0B]">
-                        <li><Link href="/supplier/products" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Active Product Catalog</Link></li>
-                        <li><Link href="/supplier/inventory" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Batch Replenishment Alerts</Link></li>
-                        <li><Link href="/supplier/orders" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Incoming Purchase Registry</Link></li>
-                    </ul>
+                    {/* New Strategy Section: Business Insights */}
+                    <div className="bg-white border border-gray-300 rounded shadow-sm p-6">
+                        <h3 className="text-[17px] font-bold text-[#111] mb-6 border-b border-gray-100 pb-2">Business Operations Overview</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="flex gap-4">
+                                <div className="p-3 bg-blue-50 rounded-lg shrink-0">
+                                    <Activity className="h-6 w-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h4 className="text-[15px] font-bold text-[#111] mb-1">Stock Health</h4>
+                                    <p className="text-[13px] text-[#565959] leading-relaxed">Your inventory sync is showing 100% data integrity with the distribution hub.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="p-3 bg-amber-50 rounded-lg shrink-0">
+                                    <AlertTriangle className="h-6 w-6 text-amber-600" />
+                                </div>
+                                <div>
+                                    <h4 className="text-[15px] font-bold text-[#111] mb-1">Financial Alerts</h4>
+                                    <p className="text-[13px] text-[#565959] leading-relaxed">Ensure all pending Wholesale settlements are audited before the week-end close.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-50 pb-2 uppercase tracking-wide">Account Governance</h3>
-                    <ul className="text-xs space-y-3 font-semibold text-[#F59E0B]">
-                        <li><Link href="/supplier/profile" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Settlement & Security Protocols</Link></li>
-                        <li><Link href="/supplier/profile" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Registered Warehouse Address</Link></li>
-                        <li><Link href="/supplier/support" className="hover:text-[#F59E0B] flex items-center gap-2 group"><div className="w-1 h-1 bg-slate-300 rounded-full group-hover:bg-[#F59E0B] transition-colors" /> Global Partner Logistics Policy</Link></li>
-                    </ul>
-                </div>
-            </div>
 
-            <div className="text-center">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.6em]">Al-Qavi CDS Ecosystem Proxy</p>
+                {/* ── SIDEBAR (Professional Widgets) ── */}
+                <div className="space-y-6">
+                    <div className="bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden">
+                        <div className="bg-gray-100 px-4 py-2 border-b border-gray-300">
+                            <h3 className="text-[13px] font-bold text-[#111]">Recent Activity Summary</h3>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            {orders.slice(0, 10).map((o, idx) => (
+                                <div key={idx} className="flex flex-col border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className="text-[12px] font-bold text-[#007185] hover:underline cursor-pointer" onClick={() => router.push(`/supplier/sales/${o.id}/invoice`)}>#{o.order_number}</span>
+                                        <span className="text-[11px] font-black text-[#565959]">{fmt(parseFloat(o.total_amount))}</span>
+                                    </div>
+                                    <span className="text-[11px] text-[#565959]">{formatDate(o.created_at)} • {o.is_wholesale ? 'Wholesale' : 'Retail'}</span>
+                                </div>
+                            ))}
+                            <button
+                                onClick={() => router.push('/supplier/sales')}
+                                className="w-full py-2 bg-gray-50 border border-gray-300 rounded text-[11px] font-bold text-[#111] hover:bg-gray-100 transition-colors mt-2"
+                            >
+                                View full activity ledger
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#fff9e6] border border-[#f5d7bb] rounded-lg p-5">
+                        <div className="flex gap-3">
+                            <Briefcase className="h-5 w-5 text-[#c45500] shrink-0" />
+                            <div>
+                                <h4 className="text-[14px] font-bold text-[#111] mb-1">Professional Advisory</h4>
+                                <p className="text-[12px] text-[#565959] leading-relaxed">
+                                    Maintaining a 100% settlement rate improves your partner ranking. Wholesale partners are 45% more likely to re-order from high-ranking suppliers.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 text-center lg:text-left border-t border-gray-200">
+                        <div className="flex items-center gap-2 mb-2 opacity-50 grayscale lg:justify-start justify-center">
+                            <div className="w-5 h-5 bg-slate-900 rounded flex items-center justify-center font-bold text-white text-[8px]">A</div>
+                            <span className="font-black text-[9px] tracking-tighter uppercase text-slate-900">Al-Qavi System</span>
+                        </div>
+                        <p className="text-[11px] text-[#565959] font-medium uppercase tracking-[0.2em]">© 2026 Partner Console</p>
+                    </div>
+                </div>
             </div>
         </div>
     );

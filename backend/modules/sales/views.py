@@ -2,9 +2,10 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import models
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem
-from .serializers import OrderSerializer, CreateOrderSerializer, PurchaseOrderSerializer, OrderStatsSerializer
+from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, PurchaseReturn, PurchaseReturnItem
+from .serializers import OrderSerializer, CreateOrderSerializer, PurchaseOrderSerializer, PurchaseReturnSerializer, OrderStatsSerializer
 from modules.products.models import SupplierProduct
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -24,21 +25,33 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Order.objects.all() if user.is_staff else Order.objects.filter(user=user) if user.is_authenticated else Order.objects.none()
-        
-        # Admin Filters
         if user.is_staff:
-            status_filter = self.request.query_params.get('status')
-            date_filter = self.request.query_params.get('date')
-            exclude_status = self.request.query_params.get('exclude_status')
-            
-            if status_filter:
-                queryset = queryset.filter(status=status_filter.upper())
-            if date_filter:
-                queryset = queryset.filter(created_at__date=date_filter)
-            if exclude_status:
-                statuses = [s.upper() for s in exclude_status.split(',')]
-                queryset = queryset.exclude(status__in=statuses)
+            queryset = Order.objects.all()
+        elif user.is_authenticated:
+            queryset = Order.objects.filter(user=user)
+        else:
+            return Order.objects.none()
+        
+        # 2. Query Param Filters (Applied to all)
+        status_filter = self.request.query_params.get('status')
+        date_filter = self.request.query_params.get('date')
+        exclude_status = self.request.query_params.get('exclude_status')
+        search = self.request.query_params.get('search')
+        
+        if status_filter and status_filter != 'All':
+            queryset = queryset.filter(status=status_filter.upper())
+        if date_filter:
+            queryset = queryset.filter(created_at__date=date_filter)
+        if exclude_status:
+            statuses = [s.upper() for s in exclude_status.split(',')]
+            queryset = queryset.exclude(status__in=statuses)
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(tracking_id__icontains=search) | 
+                Q(customer_name__icontains=search) | 
+                Q(phone_number__icontains=search)
+            )
 
         return queryset.order_by('-created_at')
 
@@ -139,6 +152,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                 output_field=DecimalField(max_digits=12, decimal_places=2)
             )
         ).aggregate(tot=Sum('item_profit'))['tot'] or 0
+        
+        # Accounts Payable: Sum of remaining balance on all active Purchase Orders
+        # Condition: PO is not Cancelled
+        total_payable = PurchaseOrder.objects.exclude(status='CANCELLED').annotate(
+            balance=ExpressionWrapper(
+                F('total_amount') - F('paid_amount'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        ).aggregate(tot=Sum('balance'))['tot'] or 0
 
         # Recent Orders (Top 10)
         recent_orders_qs = stat_qs.order_by('-created_at')[:10]
@@ -162,6 +184,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             "total_orders": total_orders,
             "total_revenue": float(total_revenue),
             "total_profit": float(total_profit),
+            "total_payable": float(total_payable),
             "orders_today": Order.objects.filter(created_at__date=timezone.now().date()).count(),
             "pending_orders": pending_orders,
             "delivered_orders": delivered_count,
@@ -180,15 +203,44 @@ class PurchaseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = PurchaseOrder.objects.all()
-        # Filter out Received orders from the main list if requested
-        if self.request.query_params.get('exclude_received') == 'true':
-            qs = qs.exclude(status='RECEIVED')
-            
+        
+        # 1. Base Filter (Staff vs Supplier)
         if user.is_staff:
-            return qs.order_by('-order_date')
-        if hasattr(user, 'is_supplier') and user.is_supplier:
-             return qs.filter(supplier_id=user.real_id).order_by('-order_date')
-        return PurchaseOrder.objects.none()
+            pass # Keep all
+        elif hasattr(user, 'is_supplier') and user.is_supplier:
+            qs = qs.filter(supplier_id=user.real_id)
+        else:
+            return PurchaseOrder.objects.none()
+
+        # 2. Query Param Filters
+        status_param = self.request.query_params.get('status')
+        exclude_received = self.request.query_params.get('exclude_received')
+        payment_status = self.request.query_params.get('payment_status')
+        search = self.request.query_params.get('search')
+        supplier_id = self.request.query_params.get('supplier')
+
+        if exclude_received == 'true':
+            qs = qs.exclude(status__in=['RECEIVED', 'CANCELLED'])
+        
+        if status_param and status_param != 'All':
+            qs = qs.filter(status=status_param.upper())
+        
+        if payment_status and payment_status != 'All':
+            qs = qs.filter(payment_status=payment_status.upper())
+
+        if user.is_staff and supplier_id and supplier_id != 'All':
+            qs = qs.filter(supplier_id=supplier_id)
+            
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(purchase_number__icontains=search) | 
+                Q(supplier__username__icontains=search) |
+                Q(supplier__company__icontains=search) |
+                Q(items__product__name__icontains=search)
+            ).distinct()
+
+        return qs.order_by('-order_date')
 
     def _sync_to_inventory(self, purchase):
         """Helper to sync PO items to Admin inventory and deduct from Supplier"""
@@ -220,45 +272,32 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                     sp.quantity = F('quantity') - units
                     sp.save()
                     
-                    # 2. Locate or Create Admin Product
-                    product = None
-                    if sp.sku:
-                        product = Product.objects.filter(sku=sp.sku).first()
-                    if not product:
-                        product = Product.objects.filter(product_name=sp.name).first()
+                    # 2. Locate or Update Stock entry (Strict Duplicate Prevention)
+                    # We match by product_name only to ensure "Only one product entry should remain in stock"
+                    stock = Stock.objects.filter(product_name=sp.name).first()
 
-                    # 3. Always create a Stock arrival record
-                    new_stock = Stock.objects.create(
-                        product_name=sp.name,
-                        category=sp.category,
-                        supplier=purchase.supplier,
-                        warehouse=warehouse,
-                        purchase_type='single',
-                        total_quantity=units,
-                        price_per_item=item.price,
-                        date=timezone.now().date()
-                    )
-
-                    if product:
-                        # Product exists: Increment total and point to latest stock (optional reference update)
-                        product.total_quantity = F('total_quantity') + units
-                        product.stock = new_stock 
-                        product.save()
+                    if stock:
+                        # Update existing stock entry: add quantity, overwrite others with latest info
+                        stock.total_quantity = F('total_quantity') + units
+                        stock.price_per_item = item.price
+                        stock.supplier = purchase.supplier
+                        stock.warehouse = warehouse
+                        stock.category = sp.category
+                        stock.product = sp # Link back to supplier product
+                        stock.date = timezone.now().date()
+                        stock.save()
                     else:
-                        # Product is new: Create fresh Product
-                        markup = Decimal('1.2')
-                        selling_price = item.selling_price or (item.price * markup)
-                        
-                        Product.objects.create(
-                            stock=new_stock,
+                        # Create new Stock record if none exists
+                        Stock.objects.create(
                             product_name=sp.name,
+                            product=sp, # Link back to supplier product
                             category=sp.category,
                             supplier=purchase.supplier,
                             warehouse=warehouse,
-                            cost_price=item.price,
+                            purchase_type='single',
                             total_quantity=units,
-                            selling_price=selling_price,
-                            status='ACTIVE'
+                            price_per_item=item.price,
+                            date=timezone.now().date()
                         )
             # Finalize sync
             purchase.is_inventory_synced = True
@@ -314,16 +353,6 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             
             # 1. Normalize data - Remove non-model fields that cause crashes
             data.pop('supplier_name', None)
-            data.pop('payment_method', None) 
-            
-            # Map IDs correctly and handle empty strings
-            supplier_id = data.pop('supplier', None)
-            if supplier_id and str(supplier_id).strip():
-                data['supplier_id'] = supplier_id
-            
-            warehouse_id = data.pop('warehouse', None)
-            if warehouse_id and str(warehouse_id).strip():
-                data['warehouse_id'] = warehouse_id
             
             # Normalize Enums to UPPERCASE matching model choices
             if 'status' in data:
@@ -333,17 +362,27 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             
             if 'payment_status' in data:
                 data['payment_status'] = data['payment_status'].upper()
+            if 'payment_method' in data:
+                data['payment_method'] = str(data['payment_method']).upper()
+            
+            # Map IDs correctly and handle empty strings
+            supplier_id = data.pop('supplier', None)
+            if supplier_id and str(supplier_id).strip():
+                data['supplier_id'] = supplier_id
+            
+            warehouse_id = data.pop('warehouse', None)
+            if warehouse_id and str(warehouse_id).strip():
+                data['warehouse_id'] = warehouse_id
                 
             # 2. Create Purchase Order
-            if not data.get('purchase_number'):
-                import random, string
-                data['purchase_number'] = f"PO-{''.join(random.choices(string.digits, k=6))}"
 
             # Only include fields that actually exist in the model to avoid Keyword Argument errors
             allowed_fields = [
                 'purchase_number', 'supplier_id', 'reference_number', 'warehouse_id',
                 'total_amount', 'shipping_cost', 'tax_amount', 'status', 
-                'payment_status', 'expected_delivery_date', 'notes'
+                'payment_status', 'payment_method', 'expected_delivery_date', 'notes',
+                'paid_amount', 'payment_date', 'payment_notes', 'transaction_id', 
+                'payment_confirmed', 'is_inventory_synced'
             ]
             final_data = {k: v for k, v in data.items() if k in allowed_fields}
 
@@ -405,3 +444,146 @@ class SupplierDashboardViewSet(viewsets.ViewSet):
 
         serializer = OrderStatsSerializer(data)
         return Response(serializer.data)
+
+
+class PurchaseReturnViewSet(viewsets.ModelViewSet):
+    """ViewSet for purchase returns with supplier response workflow"""
+    serializer_class = PurchaseReturnSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = PurchaseReturn.objects.all()
+        
+        if user.is_staff:
+            pass
+        elif hasattr(user, 'is_supplier') and user.is_supplier:
+            qs = qs.filter(supplier_id=user.real_id)
+        else:
+            return PurchaseReturn.objects.none()
+
+        return qs.order_by('-created_at')
+
+    @action(detail=False, methods=['post'], url_path='create')
+    def create_return(self, request):
+        from decimal import Decimal
+        from modules.users.models import UserActivityLog
+        try:
+            data = request.data.copy()
+            items_data = data.pop('items', [])
+            
+            # Map supplier name to ID if needed (for frontend compatibility)
+            supplier_id = data.pop('supplier_id', data.pop('supplier', None))
+            if not supplier_id and data.get('supplier_name'):
+                from modules.supplier.models import Supplier
+                s = Supplier.objects.filter(models.Q(name=data['supplier_name']) | models.Q(company=data['supplier_name'])).first()
+                if s: supplier_id = s.id
+
+            po_id = data.pop('purchase_order', None)
+            
+            # Remove non-model fields
+            data.pop('supplier_name', None)
+            
+            allowed_fields = ['status', 'reason', 'return_date', 'total_refund_amount']
+            final_data = {k: v for k, v in data.items() if k in allowed_fields}
+            
+            # Explicitly set Foreign Keys and Handle Empty Strings
+            final_data['supplier_id'] = supplier_id if supplier_id and str(supplier_id).strip() else None
+            final_data['purchase_order_id'] = po_id if po_id and str(po_id).strip() else None
+            
+            ret = PurchaseReturn.objects.create(**final_data)
+            
+            total = Decimal('0.00')
+            for it in items_data:
+                if not it.get('product'): continue
+                
+                p_item = PurchaseReturnItem.objects.create(
+                    purchase_return=ret,
+                    product_id=it.get('product'),
+                    quantity=int(it.get('quantity', 1)),
+                    refund_price=Decimal(str(it.get('refund_price', '0')))
+                )
+                total += (Decimal(str(p_item.quantity)) * p_item.refund_price)
+            
+            ret.total_refund_amount = total
+            ret.save()
+            
+            # Log Activity for Supplier notification
+            try:
+                from modules.users.models import User
+                # Find the user account linked to this supplier
+                sup_user = User.objects.filter(role__name__icontains='supplier', username=ret.supplier.username).first()
+                if sup_user:
+                    UserActivityLog.objects.create(
+                        user=sup_user,
+                        action='other',
+                        description=f"New Return Request RECEIVED: {ret.return_number} from Admin. [ID: {ret.id}] Reason: {ret.reason or 'Not specified'}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+            except: pass
+
+            return Response(PurchaseReturnSerializer(ret).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept_return(self, request, pk=None):
+        """Supplier accepts the return -> Adjust stocks"""
+        ret = self.get_object()
+        if ret.status != 'WAITING_FOR_SUPPLIER':
+            return Response({"error": "Only pending returns can be accepted"}, status=400)
+            
+        from django.db import transaction
+        from django.db.models import F
+        from modules.inventory.models import Stock
+        from modules.products.models import SupplierProduct
+        from modules.users.models import UserActivityLog
+        
+        try:
+            with transaction.atomic():
+                for item in ret.items.all():
+                    sp = item.product
+                    if not sp: continue
+                    
+                    # 1. Deduct from Admin Stock (Matching by product name)
+                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier).update(
+                        total_quantity=F('total_quantity') - item.quantity
+                    )
+                    
+                    # 2. Add back to Supplier Product stock
+                    sp.quantity = F('quantity') + item.quantity
+                    sp.save()
+                
+                ret.status = 'ACCEPTED'
+                ret.save()
+                
+                # Log Success Activity
+                UserActivityLog.objects.create(
+                    user=request.user,
+                    action='update',
+                    description=f"Return {ret.return_number} ACCEPTED. Stocks adjusted.",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+            return Response(PurchaseReturnSerializer(ret).data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    @action(detail=True, methods=['post'], url_path='reject')
+    def reject_return(self, request, pk=None):
+        ret = self.get_object()
+        if ret.status != 'WAITING_FOR_SUPPLIER':
+            return Response({"error": "Only pending returns can be rejected"}, status=400)
+            
+        ret.status = 'REJECTED'
+        ret.save()
+        
+        from modules.users.models import UserActivityLog
+        UserActivityLog.objects.create(
+            user=request.user,
+            action='update',
+            description=f"Return {ret.return_number} REJECTED by supplier.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return Response(PurchaseReturnSerializer(ret).data)

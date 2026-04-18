@@ -42,4 +42,12 @@ export const purchaseService = {
     deleteReturn: async (id: string): Promise<void> => {
         await api.delete(`v1/sales/purchase-returns/${id}/`);
     },
+    acceptReturn: async (id: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchase-returns/${id}/accept/`);
+        return data;
+    },
+    rejectReturn: async (id: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchase-returns/${id}/reject/`);
+        return data;
+    },
 };

@@ -4,10 +4,11 @@ from modules.supplier.serializers import SupplierSerializer
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
+    stock_count = serializers.IntegerField(read_only=True)
     class Meta:
         model = Warehouse
-        fields = ['id', 'name', 'location', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'location', 'stock_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'stock_count', 'created_at', 'updated_at']
 
 
 class StockSerializer(serializers.ModelSerializer):
@@ -18,7 +19,7 @@ class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         fields = [
-            'id', 'product_name', 'category', 'category_name', 
+            'id', 'product_name', 'product', 'category', 'category_name', 
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
             'purchase_type', 'cartons', 'items_per_carton', 'total_quantity', 
             'price_per_carton', 'price_per_item', 'date', 

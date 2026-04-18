@@ -116,13 +116,13 @@ export default function SettingsPage() {
                 }
                 if (cRes.status === 'fulfilled' && cRes.value?.length > 0) {
                     const c = cRes.value[0];
-                    setCompanyId(c.id);
+                    setCompanyId(c.id || null);
                     setStore({ name: c.name || '', email: c.email || '', phone: c.phone || '', website: c.website || '', currency: c.currency || 'PKR', tax_number: c.tax_number || '', address: c.address || '' });
                 }
                 if (sRes.status === 'fulfilled' && sRes.value) {
                     const s = sRes.value;
                     setNotif({ notif_new_order: s.notif_new_order ?? true, notif_low_stock: s.notif_low_stock ?? true, notif_weekly_report: s.notif_weekly_report ?? true, notif_sms: s.notif_sms ?? false });
-                    setTheme(s.theme || 'light');
+                    setTheme((s.theme as 'light' | 'dark') || 'light');
                     setAnimations(s.animations ?? true);
                     setSidebarCollapsed(s.sidebar_collapsed ?? false);
                 }
@@ -210,7 +210,7 @@ export default function SettingsPage() {
                 {/* ── MAIN HUB ── */}
                 {activeTab === 'main' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {TABS.filter(t => !isSupplier || (t.id !== 'store' && t.id !== 'notifications' && t.id !== 'all-pages')).map(tab => (
+                        {TABS.filter(t => !isSupplier || (t.id !== 'store' && t.id !== 'all-pages')).map(tab => (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group">
                                 <div className="bg-white border border-[#ddd] rounded-[4px] p-5 hover:border-[#e47911] transition-all shadow-sm">
                                     <div className="flex items-start gap-3">
@@ -463,9 +463,10 @@ export default function SettingsPage() {
                                         group: 'Main',
                                         items: [
                                             { n: 'Dashboard', h: '/admin/dashboard' },
-                                            { n: 'Recent Orders', h: '/admin/sales/recent' },
-                                            { n: 'Sales List', h: '/admin/sales' },
-                                            { n: 'Tracking', h: '/admin/tracking' },
+                                            { n: 'Recent Activity', h: '/admin/sales/recent' },
+                                            { n: 'Order List', h: '/admin/orders' },
+                                            { n: 'All Sales', h: '/admin/sales' },
+                                            { n: 'Order Tracking', h: '/admin/tracking' },
                                         ]
                                     },
                                     {
@@ -473,36 +474,39 @@ export default function SettingsPage() {
                                         items: [
                                             { n: 'Categories', h: '/admin/products/categories' },
                                             { n: 'Products', h: '/admin/products' },
-                                            { n: 'Main Categories', h: '/admin/products/main-categories' },
+                                            { n: 'Sections', h: '/admin/products/sections' },
                                             { n: 'Current Stocks', h: '/admin/inventory/list' },
                                             { n: 'Warehouses', h: '/admin/inventory/warehouses' },
                                         ]
                                     },
                                     {
-                                        group: 'Suppliers',
+                                        group: 'Procurement',
                                         items: [
                                             { n: 'Supplier List', h: '/admin/company/suppliers' },
-                                            { n: 'Add Purchase', h: '/admin/purchases/add' },
+                                            { n: 'New Purchase', h: '/admin/purchases/add' },
                                             { n: 'Purchase History', h: '/admin/purchases' },
-                                            { n: 'Purchase Returns', h: '/admin/purchases/returns' },
+                                            { n: 'Supplier Catalog', h: '/admin/supplier-products' },
+                                            { n: 'Returns / Refunds', h: '/admin/purchases/returns' },
                                         ]
                                     },
                                     {
-                                        group: 'Sales',
+                                        group: 'Sales Console',
                                         items: [
-                                            { n: 'Sale Point (POS)', h: '/admin/sale' },
-                                            { n: 'Payments', h: '/admin/payments' },
-                                            { n: 'Customers', h: '/admin/payments/customer' },
+                                            { n: 'Point of Sale', h: '/admin/sale' },
+                                            { n: 'Invoices', h: '/admin/invoices' },
+                                            { n: 'Global Payments', h: '/admin/payments' },
+                                            { n: 'Account Holders', h: '/admin/company/customers' },
                                             { n: 'Sale Returns', h: '/admin/sale-returns' },
                                         ]
                                     },
                                     {
-                                        group: 'Admin',
+                                        group: 'Security & Logs',
                                         items: [
-                                            { n: 'Users', h: '/admin/users' },
-                                            { n: 'Roles', h: '/admin/users/roles' },
+                                            { n: 'User Registry', h: '/admin/users' },
+                                            { n: 'Staff Roles', h: '/admin/users/roles' },
                                             { n: 'Permissions', h: '/admin/users/permissions' },
-                                            { n: 'Reports', h: '/admin/reports' },
+                                            { n: 'System Alerts', h: '/admin/alerts' },
+                                            { n: 'Business Reports', h: '/admin/reports' },
                                         ]
                                     },
                                 ].map(g => (

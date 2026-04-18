@@ -12,7 +12,7 @@ class SupplierSerializer(serializers.ModelSerializer):
             'company',
             'contact_person',
             'email',
-            'contact',
+            'phone',
             'address',
             'status',
             'is_active',

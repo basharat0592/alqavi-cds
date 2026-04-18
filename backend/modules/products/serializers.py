@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Wishlist, Category, SupplierProduct
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -30,6 +30,18 @@ class ProductSerializer(serializers.ModelSerializer):
             margin = ((obj.selling_price - obj.cost_price) / obj.selling_price) * 100
             return float(margin)
         return 0.0
+
+
+class MainCategorySerializer(serializers.ModelSerializer):
+    product_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(), source='products', many=True, required=False
+    )
+    product_details = ProductSerializer(source='products', many=True, read_only=True)
+
+    class Meta:
+        model = MainCategory
+        fields = ['id', 'name', 'slug', 'description', 'status', 'position', 'is_visible', 'product_ids', 'product_details', 'created_at']
+        read_only_fields = ['id', 'slug', 'created_at']
 
 
 class WishlistSerializer(serializers.ModelSerializer):

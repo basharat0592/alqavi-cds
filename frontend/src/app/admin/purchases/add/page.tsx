@@ -39,7 +39,7 @@ const selectCls = `${inputCls} cursor-pointer`;
 const EMPTY_FORM = {
     purchase_number: '', supplier: '', supplier_name: '',
     order_date: new Date().toISOString().slice(0, 10),
-    status: 'ordered', payment_method: 'cash', notes: '',
+    status: 'PENDING', payment_method: 'CASH', notes: '',
 };
 
 type LineItem = { 
@@ -156,6 +156,78 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     );
 };
 
+/* ─── Rich Supplier Selector ─── */
+const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const filtered = suppliers.filter((s: any) =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.company && s.company.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const selected = suppliers.find((s: any) => String(s.id) === String(selectedId));
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className={inputCls + " h-[31px] flex items-center justify-between text-left px-3 bg-white hover:bg-[#f3f7f7] transition-all group"}
+            >
+                {selected ? (
+                    <span className="text-[13px] font-bold text-[#0f1111] truncate">{selected.name}</span>
+                ) : <span className="text-[#565959]">Select supplier...</span>}
+                <ChevronDown size={14} className={`text-slate-400 shrink-0 ml-2 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+                <div className="absolute top-[calc(100%+4px)] left-0 w-full min-w-[250px] bg-white border border-slate-300 rounded-[4px] shadow-2xl z-[1000] overflow-hidden">
+                    <div className="p-2 border-b bg-[#fcfdff]">
+                        <div className="relative">
+                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                autoFocus
+                                placeholder="Search suppliers..."
+                                className="w-full h-[30px] pl-8 pr-3 border border-slate-300 rounded-[3px] text-[12px] outline-none focus:border-[#e77600]"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {filtered.length === 0 ? (
+                            <div className="p-4 text-center text-[12px] text-slate-500">No matching suppliers</div>
+                        ) : (
+                            filtered.map((s: any) => (
+                                <div
+                                    key={s.id}
+                                    onClick={() => { onSelect(s.id); setOpen(false); }}
+                                    className="px-3 py-2 hover:bg-[#f3f7f7] cursor-pointer transition-colors border-b last:border-0 border-slate-100"
+                                >
+                                    <p className="text-[13px] font-bold text-[#111]">{s.name}</p>
+                                    {s.company && <p className="text-[10px] text-slate-500">{s.company}</p>}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function AddPurchasePage() {
     const router = useRouter();
     const [products, setProducts] = useState<any[]>([]);
@@ -187,7 +259,7 @@ export default function AddPurchasePage() {
             }));
             const fromCompanyRaw = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
             const fromCompMapped = fromCompanyRaw.map((s: any) => ({
-                id: s.id, name: s.company || s.name, phone: s.contact || '', city: s.address || '', isUser: false
+                id: s.id, name: s.company || s.name, phone: s.phone || '', city: s.address || '', isUser: false
             }));
 
             // Prioritize dashboad users over registry records on name overlap
@@ -332,22 +404,23 @@ export default function AddPurchasePage() {
                                         <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
                                     </Field>
                                     <Field label="Supplier" required>
-                                        <select className={selectCls} value={form.supplier} onChange={e => {
-                                            const val = e.target.value;
-                                            const matched = suppliers.find(c => String(c.id) === val);
-                                            setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
-                                        }}>
-                                            <option value="">Select supplier...</option>
-                                            {suppliers.map(c => <option key={c.id} value={String(c.id)}>{c.name} {c.isUser ? '(Dashboard User)' : '(Manual Entry)'}</option>)}
-                                        </select>
+                                        <SupplierSelector
+                                            selectedId={form.supplier}
+                                            suppliers={suppliers}
+                                            inputCls={selectCls}
+                                            onSelect={(val: any) => {
+                                                const matched = suppliers.find(c => String(c.id) === String(val));
+                                                setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
+                                            }}
+                                        />
                                     </Field>
                                     <Field label="Order Date" required>
                                         <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
                                     </Field>
                                     <Field label="Status">
                                         <select className={selectCls} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                                            <option value="ordered">Ordered</option>
-                                            <option value="received">Received</option>
+                                            <option value="PENDING">Ordered</option>
+                                            <option value="RECEIVED">Received</option>
                                         </select>
                                     </Field>
                                 </div>
@@ -474,9 +547,9 @@ export default function AddPurchasePage() {
                                 <div className="p-5 space-y-4">
                                     <Field label="Payment Method">
                                         <select className={selectCls} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
-                                            <option value="cash">Cash</option>
-                                            <option value="bank_transfer">Bank Transfer</option>
-                                            <option value="online_payment">Online Payment</option>
+                                            <option value="CASH">Cash</option>
+                                            <option value="BANK_TRANSFER">Bank Transfer</option>
+                                            <option value="ONLINE_PAYMENT">Online Payment</option>
                                         </select>
                                     </Field>
 

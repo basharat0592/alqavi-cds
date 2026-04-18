@@ -32,8 +32,12 @@ api.interceptors.response.use(
         }
 
         const isInvalidToken = error.response?.data?.code === 'token_not_valid';
+        const status = error.response?.status;
 
-        if ((error.response?.status === 401 || isInvalidToken) && !originalRequest._retry) {
+        if ((status === 401 || status === 403 || isInvalidToken) && !originalRequest._retry) {
+            if (originalRequest.url?.includes('/v1/users/token/refresh/')) {
+                return Promise.reject(error);
+            }
             originalRequest._retry = true;
 
             if (isInvalidToken) {

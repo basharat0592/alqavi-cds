@@ -1,23 +1,23 @@
 import api from '@/lib/axios';
 
-export const mainCategoryService = {
+export const sectionService = {
     getAll: async (): Promise<any[]> => {
-        const { data } = await api.get('v1/products/main-categories/');
+        const { data } = await api.get('v1/products/sections/');
         return Array.isArray(data) ? data : data.results || [];
     },
     getById: async (id: string | number): Promise<any> => {
-        const { data } = await api.get(`v1/products/main-categories/${id}/`);
+        const { data } = await api.get(`v1/products/sections/${id}/`);
         return data;
     },
     create: async (payload: any): Promise<any> => {
-        const { data } = await api.post('v1/products/main-categories/', payload);
+        const { data } = await api.post('v1/products/sections/', payload);
         return data;
     },
     update: async (id: string | number, payload: any): Promise<any> => {
-        const { data } = await api.patch(`v1/products/main-categories/${id}/`, payload);
+        const { data } = await api.patch(`v1/products/sections/${id}/`, payload);
         return data;
     },
     delete: async (id: string | number): Promise<void> => {
-        await api.delete(`v1/products/main-categories/${id}/`);
+        await api.delete(`v1/products/sections/${id}/`);
     }
 };

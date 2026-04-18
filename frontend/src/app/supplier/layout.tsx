@@ -7,37 +7,45 @@ import {
     Bell,
     Search,
     User,
-    Building2,
     LayoutDashboard,
     Package,
-    Boxes,
     TrendingUp,
     ShoppingCart,
     HelpCircle,
-    Settings,
     LogOut,
     ChevronDown,
     ChevronRight,
-    Home
+    Home,
+    Menu,
+    X,
+    Settings,
+    Mail,
+    History
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import AuthGuard from '@/components/auth/AuthGuard';
 import api from '@/lib/axios';
 import { getImageUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 const SIDEBAR_LINKS = [
-    { href: '/supplier/dashboard', label: 'Dashboard', icon: Home },
-    { href: '/supplier/orders', label: 'Recent Orders', icon: ShoppingCart },
-    { href: '/supplier/products', label: 'Your Catalog', icon: Package },
-    { href: '/supplier/inventory', label: 'Warehouse Status', icon: Boxes },
-    { href: '/supplier/sales', label: 'Sale Registry', icon: TrendingUp },
-    { href: '/supplier/profile', label: 'Login & Security', icon: User },
-    { href: '/supplier/support', label: 'Partner Support', icon: HelpCircle },
+    { href: '/supplier/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { href: '/supplier/orders', label: 'Orders', icon: ShoppingCart },
+    { href: '/supplier/products', label: 'Inventory', icon: Package },
+    { href: '/supplier/activity', label: 'Recent Activity', icon: History },
+    { href: '/supplier/sales', label: 'Finance & Sales', icon: TrendingUp },
+];
+
+const ACCOUNT_LINKS = [
+    { href: '/supplier/profile', label: 'My Profile', icon: User },
+    { href: '/supplier/support', label: 'Partner Help', icon: HelpCircle },
 ];
 
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -55,23 +63,22 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
         fetchLatestProfile();
     }, []);
 
-    // Helper for profile image (Avatar)
-    const renderAvatar = () => {
+    const renderAvatar = (size = "w-8 h-8") => {
         const name = profile?.first_name || user?.name || 'P';
         const initial = name.charAt(0).toUpperCase();
 
         if (profile?.avatar) {
             return (
-                <img 
-                    src={getImageUrl(profile.avatar)} 
-                    alt="" 
-                    className="w-8 h-8 rounded-full border border-white/20 object-cover shadow-sm group-hover:border-[#F59E0B] transition-colors"
+                <img
+                    src={getImageUrl(profile.avatar)}
+                    alt=""
+                    className={cn(size, "rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-100")}
                 />
             );
         }
 
         return (
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-xs border border-white/10 group-hover:border-[#F59E0B] transition-colors">
+            <div className={cn(size, "rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-xs border-2 border-white shadow-sm")}>
                 {initial}
             </div>
         );
@@ -79,96 +86,151 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
 
     return (
         <AuthGuard allowedRoles={['supplier']}>
-            <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col">
-                {/* Global Brand Navbar - High End Amazon Style */}
-                <header className="bg-[#131921] h-14 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-50 shadow-md shrink-0">
-                    {/* Left: Logo */}
-                    <Link href="/supplier/dashboard" className="flex items-center gap-3 group">
-                        <div className="w-8 h-8 bg-[#F59E0B] rounded-lg flex items-center justify-center font-black text-slate-900 group-hover:scale-105 transition-transform shadow-[0_0_15px_rgba(247,202,0,0.3)]">A</div>
-                        <div className="flex flex-col">
-                            <span className="font-extrabold text-[13px] tracking-tight text-white uppercase leading-none">Al-Qavi</span>
-                            <span className="text-[9px] text-[#F59E0B] font-black uppercase tracking-[0.2em] leading-none mt-1">Supplier Hub</span>
+            <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
+                
+                {/* ── MODERN SIDEBAR ── */}
+                <aside className={cn(
+                    "fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out lg:static lg:block print:hidden",
+                    isSidebarOpen ? "w-64" : "w-20",
+                    isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                )}>
+                    <div className="h-full flex flex-col">
+                        {/* Logo Area */}
+                        <div className={cn("p-6 flex items-center gap-3", !isSidebarOpen && "justify-center")}>
+                            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-white shadow-lg shadow-indigo-200 shrink-0">A</div>
+                            {isSidebarOpen && (
+                                <div className="flex flex-col overflow-hidden">
+                                    <span className="font-black text-slate-900 text-[14px] leading-tight truncate">AL-QAVI Hub</span>
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">Partner Portal</span>
+                                </div>
+                            )}
                         </div>
-                    </Link>
 
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-6">
-                        <Link href="/supplier/profile" className="flex items-center gap-3 cursor-pointer group pr-2 border-r border-white/10">
-                            <div className="flex flex-col text-right">
-                                <span className="text-[10px] text-gray-300 font-medium leading-none">Hello, {profile?.first_name || user?.name || 'Partner'}</span>
-                                <div className="flex items-center justify-end gap-1 mt-0.5">
-                                    <span className="text-xs font-black text-white group-hover:text-[#F59E0B] transition-colors uppercase tracking-tight">Account</span>
-                                    <ChevronDown size={12} className="text-gray-400" />
+                        {/* Navigation Section */}
+                        <nav className="flex-1 px-4 space-y-6 overflow-y-auto no-scrollbar py-4">
+                            <div>
+                                {isSidebarOpen && <span className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-4">Core Management</span>}
+                                <div className="space-y-1">
+                                    {SIDEBAR_LINKS.map(link => {
+                                        const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
+                                        return (
+                                            <Link
+                                                key={link.href}
+                                                href={link.href}
+                                                className={cn(
+                                                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                                                    isActive 
+                                                        ? "bg-indigo-50 text-indigo-700 font-bold shadow-sm" 
+                                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                                                )}
+                                            >
+                                                <link.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600")} />
+                                                {isSidebarOpen && <span className="text-sm">{link.label}</span>}
+                                                {isActive && isSidebarOpen && <div className="ml-auto w-1 h-4 bg-indigo-600 rounded-full" />}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                            {renderAvatar()}
-                        </Link>
 
-                        <button
-                            onClick={() => {
-                                authService.logout();
-                                window.location.href = '/login';
-                            }}
-                            className="bg-[#F59E0B] hover:bg-[#e6be00] text-slate-900 px-4 py-1.5 rounded font-black text-[11px] uppercase tracking-wider shadow-sm transition-all active:scale-95"
-                        >
-                            Sign Out
-                        </button>
-                    </div>
-                </header>
-
-                {/* Main Content Area: Responsive Split with Sidebar */}
-                <div className="flex-1 flex flex-col lg:flex-row max-w-[1250px] mx-auto w-full px-4 lg:px-8 py-6 gap-8 overflow-hidden">
-
-                    {/* Minimalist Amazon Sidebar */}
-                    <aside className="w-full lg:w-64 shrink-0 space-y-6 animate-in slide-in-from-left duration-500">
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900 mb-6">Menu Settings</h2>
-                            <nav className="space-y-1">
-                                {SIDEBAR_LINKS.map(link => {
-                                    const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
-                                    return (
+                            <div>
+                                {isSidebarOpen && <span className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-4">Account & Help</span>}
+                                <div className="space-y-1">
+                                    {ACCOUNT_LINKS.map(link => (
                                         <Link
                                             key={link.href}
                                             href={link.href}
-                                            className={`
-                                                flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
-                                                ${isActive
-                                                    ? 'bg-blue-50 text-[#F59E0B] font-bold border border-blue-100'
-                                                    : 'text-slate-600 hover:bg-gray-50 hover:text-[#F59E0B]'
-                                                }
-                                            `}
+                                            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <link.icon className={`h-4 w-4 ${isActive ? 'text-[#F59E0B]' : 'text-slate-400'}`} />
-                                                <span>{link.label}</span>
-                                            </div>
-                                            <ChevronRight className={`h-3 w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                                            <link.icon className="h-5 w-5 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                                            {isSidebarOpen && <span className="text-sm">{link.label}</span>}
                                         </Link>
-                                    );
-                                })}
-                            </nav>
-                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </nav>
 
-                        <div className="pt-6 border-t font-bold">
+                        {/* Logout Area */}
+                        <div className="p-4 border-t border-slate-100">
                             <button
-                                onClick={() => { authService.logout(); window.location.href = '/'; }}
-                                className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:underline"
+                                onClick={() => { authService.logout(); window.location.href = '/login'; }}
+                                className={cn(
+                                    "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 group",
+                                    !isSidebarOpen && "justify-center"
+                                )}
                             >
-                                <LogOut className="h-4 w-4" />
-                                <span>Logout Session</span>
+                                <LogOut className="h-5 w-5 text-slate-400 group-hover:text-rose-500 shrink-0" />
+                                {isSidebarOpen && <span className="text-sm font-medium">Sign Out</span>}
                             </button>
                         </div>
-                    </aside>
+                    </div>
+                </aside>
 
-                    {/* Content Area */}
-                    <main className="flex-1 lg:border-l lg:pl-8 overflow-y-auto no-scrollbar">
-                        {/* Breadcrumb Style Navigation */}
-                        <div className="flex items-center gap-2 text-xs mb-8 text-slate-500 font-medium uppercase tracking-wider">
-                            <Link href="/supplier/dashboard" className="hover:text-[#F59E0B] hover:underline">Supplier Portal</Link>
-                            <ChevronRight className="h-3 w-3" />
-                            <span className="text-slate-900 font-bold">
-                                {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Overview'}
-                            </span>
+                {/* ── MAIN AREA ── */}
+                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+                    
+                    {/* Modern Top Navbar */}
+                    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 shrink-0 print:hidden">
+                        <div className="flex items-center gap-4 flex-1">
+                            <button 
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+                            >
+                                <Menu size={20} />
+                            </button>
+                            <button 
+                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+                            >
+                                <Menu size={20} />
+                            </button>
+                            
+                            {/* Modern Search */}
+                            <div className="relative max-w-md w-full hidden sm:block">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Global search orders, tracking, units..."
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[13px] focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-500 transition-all relative group">
+                                <Bell size={20} />
+                                <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-indigo-600 rounded-full ring-2 ring-white"></span>
+                            </button>
+                            <button className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-500 transition-all">
+                                <Mail size={20} />
+                            </button>
+                            
+                            <div className="h-8 w-px bg-slate-200 mx-2"></div>
+                            
+                            <Link href="/supplier/profile" className="flex items-center gap-3 p-1 rounded-xl hover:bg-slate-50 transition-all group max-w-[180px]">
+                                {renderAvatar("w-9 h-9")}
+                                <div className="hidden md:flex flex-col text-left overflow-hidden">
+                                    <span className="text-[12px] font-bold text-slate-900 leading-none truncate">{profile?.first_name || user?.name?.split(' ')[0] || 'Partner'}</span>
+                                    <span className="text-[10px] text-slate-500 font-medium mt-1 uppercase tracking-tighter">Verified Hub</span>
+                                </div>
+                                <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 transition-colors hidden md:block" />
+                            </Link>
+                        </div>
+                    </header>
+
+                    {/* Content Scroll Container */}
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-6 py-6 pb-0 print:p-0">
+                        {/* Page Header Section (Dynamic Breadcrumb) */}
+                        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+                           <div className="flex items-center gap-2 text-xs font-bold text-indigo-600/60 uppercase tracking-widest mb-1 group cursor-pointer" onClick={() => router.push('/supplier/dashboard')}>
+                                <Home size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                                <span>Supplier Portal</span>
+                                <ChevronRight size={10} />
+                                <span className="text-slate-900">{SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Account'}</span>
+                           </div>
+                           <h2 className="text-[28px] font-black translate-x-[-1px] text-slate-900 tracking-tight">
+                                {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Account Overview'}
+                           </h2>
                         </div>
 
                         {children}
@@ -176,14 +238,13 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
 
                 </div>
 
-                {/* Footer Brand */}
-                <div className="mt-auto py-10 bg-white border-t border-gray-200 text-center shrink-0">
-                    <div className="flex items-center justify-center gap-2 mb-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                        <div className="w-6 h-6 bg-slate-900 rounded flex items-center justify-center font-bold text-white text-[10px]">A</div>
-                        <span className="font-black text-xs tracking-tighter uppercase text-slate-900">Al-Qavi Distributor Network</span>
-                    </div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">© 2026 Partner Enterprise Portal</p>
-                </div>
+                {/* Mobile Menu Backdrop */}
+                {isMobileMenuOpen && (
+                    <div 
+                        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden transition-opacity" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                )}
             </div>
         </AuthGuard>
     );

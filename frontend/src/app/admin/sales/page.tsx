@@ -140,7 +140,7 @@ export default function SalesPage() {
                                 filtered.map(o => (
                                     <tr key={o.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
                                         <td className="px-6 py-4">
-                                            <Link href={`/admin/sales/${o.id}`} className="font-bold text-[#007185] hover:underline">
+                                            <Link href={`/admin/sales/${o.id}/invoice`} className="font-bold text-[#007185] hover:underline">
                                                 {o.order_number || `#${o.id}`}
                                             </Link>
                                         </td>
@@ -169,13 +169,10 @@ export default function SalesPage() {
                                             {formatCurrency(o.total_amount)}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Btn variant="secondary" onClick={() => router.push(`/admin/sales/${o.id}`)} className="h-[26px] px-2 text-[11px]">
-                                                    <Eye size={12} /> View
+                                            <div className="flex justify-end gap-2 transition-all">
+                                                <Btn variant="secondary" onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="h-[26px] px-3 font-bold text-[11px]">
+                                                    <Eye size={12} /> View Invoice
                                                 </Btn>
-                                                <Link href={`/admin/sales/${o.id}/invoice`} className="h-[26px] px-2 border border-[#ddd] rounded-[3px] bg-white text-[#565959] hover:bg-[#f7f8fa] flex items-center justify-center transition-all">
-                                                    <Printer size={12} />
-                                                </Link>
                                             </div>
                                         </td>
                                     </tr>

@@ -9,6 +9,8 @@ import { useSearchParams } from 'next/navigation';
 import { inventoryService } from '@/services/inventory.service';
 import { companyService } from '@/services/company.service';
 import { categoryService } from '@/services/category.service';
+import { productService } from '@/services/product.service';
+import { userService } from '@/services/user.service';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
@@ -56,11 +58,13 @@ export default function InventoryListPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string|number|null>(null);
+    const [allProducts, setAllProducts] = useState<any[]>([]);
 
     const [form, setForm] = useState({
         product_name: '', category: '', supplier: '', warehouse: '', purchase_type: 'single',
         cartons: 0, items_per_carton: 0, total_quantity: 0, price_per_carton: 0, price_per_item: 0,
         date: new Date().toISOString().slice(0, 10),
+        supplier_product_id: ''
     });
 
     useEffect(() => {
@@ -76,16 +80,30 @@ export default function InventoryListPage() {
     const loadData = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            const [stockData, whData, supData, catData] = await Promise.all([
+            const [stockData, whData, supRes, catData, prodData, userRes] = await Promise.allSettled([
                 inventoryService.getInventory({ warehouse: selectedWarehouse }),
                 inventoryService.getWarehouses(),
                 companyService.getSuppliers(),
-                categoryService.getAll()
+                categoryService.getAll(),
+                productService.getAllSupplier({ no_pagination: 'true' }),
+                userService.getAll()
             ]);
-            setStocks(stockData || []);
-            setWarehouses(whData || []);
-            setSuppliers(supData || []);
-            setCategories(catData || []);
+
+            if (stockData.status === 'fulfilled') setStocks(stockData.value || []);
+            if (whData.status === 'fulfilled') setWarehouses(whData.value || []);
+            
+            // Merge labels/suppliers
+            const fromUsers = userRes.status === 'fulfilled' ? (Array.isArray(userRes.value) ? userRes.value : []).filter((u: any) => (u.role_name || '').toLowerCase().includes('supplier')).map((u: any) => ({
+                id: u.id, name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username
+            })) : [];
+            const fromCompany = supRes.status === 'fulfilled' ? (Array.isArray(supRes.value) ? supRes.value : []).map((s: any) => ({
+                id: s.id, name: s.company || s.name
+            })) : [];
+            const mergedSuppliers = Array.from(new Map([...fromCompany, ...fromUsers].map(s => [s.name, s])).values());
+            setSuppliers(mergedSuppliers);
+
+            if (catData.status === 'fulfilled') setCategories(catData.value || []);
+            if (prodData.status === 'fulfilled') setAllProducts((prodData.value as any).results || prodData.value || []);
         } catch { 
             if (!silent) toast.error("Failed to load data"); 
         } finally { 
@@ -267,7 +285,32 @@ export default function InventoryListPage() {
                                 <div className="p-6 space-y-5">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                         <div className="col-span-full">
-                                            <Field label="Product Name" required>
+                                            <Field label="Select Product" required>
+                                                <select 
+                                                    className={selectCls} 
+                                                    value={form.supplier_product_id} 
+                                                    onChange={(e) => {
+                                                        const pId = e.target.value;
+                                                        const p = allProducts.find(item => String(item.id) === pId);
+                                                        setForm(f => ({ 
+                                                            ...f, 
+                                                            supplier_product_id: pId,
+                                                            product_name: p ? p.name : f.product_name,
+                                                            supplier: p ? p.supplier : f.supplier,
+                                                            category: p ? p.category : f.category,
+                                                            price_per_item: p ? p.cost_price || p.price : f.price_per_item
+                                                        }));
+                                                    }}
+                                                >
+                                                    <option value="">-- Choose Product --</option>
+                                                    {allProducts.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name} ({p.sku || 'No SKU'})</option>
+                                                    ))}
+                                                </select>
+                                            </Field>
+                                        </div>
+                                        <div className="col-span-full">
+                                            <Field label="Product Name (Manual Override)" required>
                                                 <input className={inputCls} value={form.product_name} onChange={(e) => setForm(f => ({ ...f, product_name: e.target.value }))} placeholder="e.g. Skin Serum" />
                                             </Field>
                                         </div>

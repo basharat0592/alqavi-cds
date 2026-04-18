@@ -84,8 +84,8 @@ export function truncate(str: string, maxLength: number): string {
  * Handle media URLs, prepending the API base URL if relative.
  * Robust against varied path formats (leading slashes, full URLs, etc.)
  */
-export function getImageUrl(url: string | null | undefined): string | null {
-    if (!url || typeof url !== 'string') return null;
+export function getImageUrl(url: string | null | undefined): string | undefined {
+    if (!url || typeof url !== 'string') return undefined;
 
     // If it's already a full URL or base64, return as is
     if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -116,9 +116,9 @@ export function exportToCSV(data: any[], filename = 'export.csv') {
 
     // 1. Get unique headers from all objects
     const headers = Array.from(new Set(data.flatMap(obj => Object.keys(obj))));
-    
+
     // 2. Build CSV rows
-    const rows = data.map(obj => 
+    const rows = data.map(obj =>
         headers.map(header => {
             const val = obj[header] === null || obj[header] === undefined ? '' : obj[header];
             // Escape double quotes and wrap in double quotes to handle commas
@@ -129,12 +129,12 @@ export function exportToCSV(data: any[], filename = 'export.csv') {
 
     // 3. Assemble full content
     const csvContent = [headers.join(','), ...rows].join('\n');
-    
+
     // 4. Trigger download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';

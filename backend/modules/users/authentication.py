@@ -10,22 +10,32 @@ User = get_user_model()
 class MultiTableJWTAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
+        if not auth_header:
+            # print("DEBUG: No Authorization header")
             return None
-
+            
+        if not auth_header.startswith('Bearer '):
+            print(f"DEBUG: Invalid Auth format: {auth_header[:20]}")
+            return None
+        
         token = auth_header.split(' ')[1]
         try:
             payload = jwt.decode(token, settings.SIMPLE_JWT['SIGNING_KEY'], algorithms=[settings.SIMPLE_JWT['ALGORITHM']])
             user_id_str = str(payload.get('user_id'))
+            print(f"DEBUG: Token decoded for user_id: {user_id_str}")
             user = self.get_user(user_id_str)
             if user:
                 return (user, token)
+            print(f"DEBUG: User not found for ID: {user_id_str}")
             return None
         except jwt.ExpiredSignatureError:
+            print("DEBUG: Token Expired")
             raise exceptions.AuthenticationFailed('Token has expired')
         except jwt.InvalidTokenError:
+            print("DEBUG: Invalid Token")
             raise exceptions.AuthenticationFailed('Invalid token')
         except Exception as e:
+            print(f"DEBUG: Auth Error: {str(e)}")
             raise exceptions.AuthenticationFailed(str(e))
 
     def get_user(self, user_id_str):

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { productService } from '@/lib/api';
-import { Search, X, LayoutGrid, List, Sliders, ChevronRight, CheckCircle } from 'lucide-react';
+import { Search, X, LayoutGrid, List, Sliders, ChevronRight, CheckCircle, Star } from 'lucide-react';
 
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -34,7 +34,7 @@ function ShopContent() {
         productService.getAll()
             .then(d => {
                 const api = Array.isArray(d) ? d : (d as any).results || [];
-                setProducts(api.filter((p: any) => p.status === 'active'));
+                setProducts(api);
             })
             .finally(() => setLoading(false));
     }, []);
@@ -58,7 +58,15 @@ function ShopContent() {
     const cats = Array.from(new Set(products.map(p => p.category_name).filter(Boolean))) as string[];
 
     const handleAddToCart = (p: any, qty: number = 1) => {
-        addToCart({ id: p.id, name: p.name, price: p.price, quantity: qty, image: p.image_url || p.image || '', category: p.category_name || 'Beauty', stock: p.quantity_in_stock });
+        addToCart({ 
+            id: p.id, 
+            name: p.name, 
+            price: p.price, 
+            quantity: qty, 
+            image: p.image_url || p.image || '', 
+            category: p.category_name || 'Beauty', 
+            stock: p.quantity_in_stock 
+        });
         setToastMsg(`${qty} x ${p.name} added to cart!`);
         setTimeout(() => setToastMsg(''), 3000);
     };
@@ -66,47 +74,57 @@ function ShopContent() {
     if (loading) return <PageLoader />;
 
     return (
-        <div className="min-h-screen bg-white dark:bg-background">
+        <div className="min-h-screen bg-white">
             <Navbar />
 
-            {/* Breadcrumb / Top Bar */}
-            <div className="border-b border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
-                <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-                    <div className="text-sm font-medium dark:text-gray-300">
-                        <span className="text-gray-500">Shop</span>
-                        <ChevronRight className="h-4 w-4 inline text-gray-400" />
-                        <span className="font-bold text-[#0F1111] dark:text-white uppercase tracking-tighter">
-                            {selectedCat || mcatQuery || searchQuery || 'All Departments'}
+            {/* ── TOP RESULTS SUMMARY (AMAZON STYLE) ── */}
+            <div className="border-b border-gray-200 bg-white shadow-sm sticky top-[64px] z-30">
+                <div className="container mx-auto px-4 py-2.5 flex items-center justify-between">
+                    <div className="text-[14px]">
+                        <span className="text-[#565959] font-medium">
+                            {filtered.length > 0 ? `1-${filtered.length}` : '0'} of over {products.length} results for 
+                        </span>
+                        <span className="text-[#c45500] font-black ml-1.5 uppercase tracking-tight">
+                            "{selectedCat || mcatQuery || searchQuery || 'All Departments'}"
                         </span>
                     </div>
-                    <div className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-none">
-                        Showing {filtered.length} Results
+                    <div className="flex items-center gap-3">
+                        <select className="text-[12px] font-bold bg-[#F0F2F2] border border-[#D5D9D9] rounded-md px-3 py-1.5 outline-none focus:border-[#e77600] shadow-sm cursor-pointer">
+                            <option>Sort by: Featured</option>
+                            <option>Price: Low to High</option>
+                            <option>Price: High to Low</option>
+                            <option>Avg. Customer Review</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
             <main className="container mx-auto px-4 py-8">
-                <div className="flex flex-col lg:flex-row gap-8">
+                <div className="flex flex-col lg:flex-row gap-10">
 
-                    {/* Simplified Amazon Sidebar */}
-                    <aside className="w-full lg:w-64 flex-shrink-0 animate-in fade-in slide-in-from-left duration-500">
-                        <div className="space-y-8 sticky top-24">
+                    {/* ── Amazon Filter Sidebar ── */}
+                    <aside className="w-full lg:w-60 flex-shrink-0 animate-in fade-in slide-in-from-left duration-500">
+                        <div className="space-y-8 sticky top-[130px]">
+                            
+                            {/* Department Selection */}
                             <div>
-                                <h3 className="text-sm font-bold border-b border-gray-100 dark:border-slate-800 pb-2 mb-4 uppercase tracking-tighter">Related Department</h3>
-                                <ul className="space-y-2">
+                                <h3 className="text-[14px] font-black text-[#111] mb-2 uppercase tracking-tight">Department</h3>
+                                <ul className="space-y-1.5 ml-1">
                                     <li>
                                         <button
                                             onClick={() => setSelectedCat('')}
-                                            className={`text-sm tracking-tight ${!selectedCat ? 'font-bold text-[#F59E0B]' : 'text-[#F59E0B] hover:text-[#F59E0B] hover:underline'}`}
+                                            className={`text-[13px] block transition-all hover:text-[#c45500] hover:underline
+                                                ${!selectedCat ? 'font-black text-[#111]' : 'text-[#444]'}`}
                                         >
-                                            Every Item
+                                            Every Category
                                         </button>
                                     </li>
                                     {cats.map(c => (
                                         <li key={c}>
                                             <button
                                                 onClick={() => setSelectedCat(c)}
-                                                className={`text-sm tracking-tight ${selectedCat === c ? 'font-bold text-[#F59E0B]' : 'text-[#F59E0B] hover:text-[#F59E0B] hover:underline'}`}
+                                                className={`text-[13px] block transition-all hover:text-[#c45500] hover:underline
+                                                    ${selectedCat === c ? 'font-black text-[#111]' : 'text-[#444]'}`}
                                             >
                                                 {c}
                                             </button>
@@ -115,12 +133,30 @@ function ShopContent() {
                                 </ul>
                             </div>
 
+                            {/* Customer Review */}
                             <div>
-                                <h3 className="text-sm font-bold border-b border-gray-100 dark:border-slate-800 pb-2 mb-4 uppercase tracking-tighter">Pricing Overview</h3>
-                                <ul className="space-y-2">
-                                    {['Under 2,500', '2,500 – 7,500', '7,500 – 15,000', 'Above 15,000'].map(p => (
+                                <h3 className="text-[14px] font-black text-[#111] mb-2 uppercase tracking-tight">Customer Review</h3>
+                                <div className="space-y-1.5 ml-1">
+                                    {[4, 3, 2, 1].map(stars => (
+                                        <div key={stars} className="flex items-center gap-1 cursor-pointer group">
+                                            <div className="flex text-[#F59E0B]">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <Star key={i} size={14} className={i < stars ? 'fill-[#F59E0B]' : 'text-gray-300'} />
+                                                ))}
+                                            </div>
+                                            <span className="text-[13px] text-[#444] group-hover:text-[#c45500]">& Up</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Price Filter */}
+                            <div>
+                                <h3 className="text-[14px] font-black text-[#111] mb-2 uppercase tracking-tight">Price</h3>
+                                <ul className="space-y-1.5 ml-1">
+                                    {['Under PKR 1,000', 'PKR 1,000 to PKR 5,000', 'PKR 5,000 to PKR 10,000', 'Above PKR 10,000'].map(p => (
                                         <li key={p}>
-                                            <button className="text-sm text-[#F59E0B] hover:text-[#F59E0B] hover:underline tracking-tight">
+                                            <button className="text-[13px] text-[#444] hover:text-[#c45500] hover:underline transition-all">
                                                 {p}
                                             </button>
                                         </li>
@@ -128,47 +164,53 @@ function ShopContent() {
                                 </ul>
                             </div>
 
-                            <div className="p-4 bg-[#F8F8F8] dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-sm">
-                                <p className="text-[11px] font-bold text-gray-500 uppercase flex items-center gap-1 mb-2 tracking-tighter">
-                                    <CheckCircle className="h-3 w-3 text-emerald-500" /> Qavi Authenticity Certified
+                            {/* Certifications Card */}
+                            <div className="p-4 bg-[#F8F8F8] border border-[#D5D9D9] rounded-lg shadow-inner-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="p-1 bg-emerald-500 rounded-full">
+                                        <CheckCircle size={12} className="text-white" />
+                                    </div>
+                                    <p className="text-[12px] font-black text-[#111] uppercase tracking-tight">Certified Authentic</p>
+                                </div>
+                                <p className="text-[10px] text-[#565959] leading-relaxed font-medium">
+                                    Every product in our shop is strictly verified for chemical standards and purity compliance by our quality control laboratory.
                                 </p>
-                                <p className="text-[10px] text-gray-400 italic">Every piece is verified for purity and chemical standard compliance before dispatch.</p>
                             </div>
                         </div>
                     </aside>
 
-                    {/* Simple Product Grid */}
+                    {/* ── Product Grid ── */}
                     <div className="flex-1">
-                        {loading ? (
-                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500">
-                                {Array.from({ length: 8 }).map((_, i) => (
-                                    <div key={i} className="aspect-[1/1.5] bg-gray-50 dark:bg-slate-800 animate-pulse rounded-sm" />
-                                ))}
-                            </div>
-                        ) : filtered.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {filtered.length > 0 ? (
+                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
                                 {filtered.map(p => (
-                                    <ProductCard
-                                        key={p.id}
-                                        id={String(p.id)}
-                                        title={p.name}
-                                        image={getImageUrl(p.image_url || p.image || '') || undefined}
-                                        price={typeof p.price === 'string' ? parseFloat(p.price) : (p.price || 0)}
-                                        category={p.category_name || 'Beauty'}
-                                        stock={p.quantity_in_stock}
-                                        rating={4.5}
-                                        reviews={p.reviews_count || 12}
-                                        onAddToCart={(qty) => handleAddToCart(p, qty)}
-                                    />
+                                    <div key={p.id} className="animate-in fade-in duration-500">
+                                        <ProductCard
+                                            id={String(p.id)}
+                                            title={p.name}
+                                            image={getImageUrl(p.image_url || p.image || '') || undefined}
+                                            price={typeof p.price === 'string' ? parseFloat(p.price) : (p.price || 0)}
+                                            category={p.category_name || 'Beauty'}
+                                            stock={p.quantity_in_stock}
+                                            rating={4.5}
+                                            reviews={p.reviews_count || 12}
+                                            onAddToCart={(qty) => handleAddToCart(p, qty)}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-24 bg-gray-50 dark:bg-slate-900 rounded border border-gray-200 dark:border-slate-800 animate-in zoom-in-95 duration-500">
-                                <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                <h2 className="text-xl font-bold dark:text-white">Empty Selection</h2>
-                                <p className="text-sm text-gray-500 max-w-sm mx-auto mt-2">The curated search axis is zero. Broaden your search parameters or explore the main collection.</p>
-                                <button onClick={() => { setSelectedCat(''); }} className="mt-8 px-8 py-2 bg-[#F59E0B] hover:bg-[#F59E0B] text-white font-bold rounded text-xs uppercase shadow-sm">
-                                    Reload Inventory
+                            <div className="flex flex-col items-center justify-center py-32 bg-[#F8F8F8] border border-[#D5D9D9] border-dashed rounded-xl animate-in zoom-in-95 duration-500">
+                                <Search size={48} className="text-gray-300 mb-6" />
+                                <h2 className="text-[20px] font-black text-[#111] uppercase tracking-wider mb-2">No Matching Results</h2>
+                                <p className="text-[13px] text-[#565959] max-w-sm text-center mb-8 px-6">
+                                    We couldn't find any products matching your current search parameters. Try broadening your keywords or clearing filters.
+                                </p>
+                                <button 
+                                    onClick={() => { setSelectedCat(''); }} 
+                                    className="px-10 py-3 bg-[#F59E0B] text-white font-black text-[11px] uppercase tracking-widest rounded-lg shadow-xl shadow-[#F59E0B]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                                >
+                                    Clear All Filters
                                 </button>
                             </div>
                         )}

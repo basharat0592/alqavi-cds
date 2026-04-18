@@ -10,11 +10,20 @@ class Supplier(BaseModel):
     password = models.CharField(max_length=128, null=True, blank=True)
     email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     
-    name = models.CharField(max_length=255, help_text="Name of the supplier")
-    company = models.CharField(max_length=255, blank=True, null=True, help_text="Name of the company")
-    contact_person = models.CharField(max_length=255, blank=True, null=True, help_text="Person to contact")
-    contact = models.CharField(max_length=255, blank=True, null=True, help_text="Contact phone number")
-    address = models.TextField(blank=True, null=True, help_text="Physical address of the supplier")
+    first_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    
+    name = models.CharField(max_length=255, help_text="Business Name")
+    company = models.CharField(max_length=255, blank=True, null=True, help_text="Company Legal Name")
+    contact_person = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=255, blank=True, null=True, help_text="Primary Phone")
+    
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
+    
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     
     status = models.CharField(max_length=20, default='active')
     is_active = models.BooleanField(default=True)

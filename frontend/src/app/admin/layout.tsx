@@ -7,7 +7,8 @@ import NotificationPanel, { type ActivityItem } from '@/components/admin/Notific
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
-    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, RefreshCw, Shield
+    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, RefreshCw, Shield,
+    ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -198,74 +199,82 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 />
 
                 <div className="flex flex-1 min-h-0 print:block">
-                    <div className="hidden md:flex flex-col flex-shrink-0 z-[60]">
+                    <div className="hidden md:flex flex-col flex-shrink-0 z-[60] print:hidden">
                         <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
                     </div>
 
-                    <div className="flex-1 flex flex-col min-w-0 min-h-0">
-                        {/* ═══ PREMIUM COMMAND NAVBAR (Clean Light Theme) ═══ */}
-                        <div className="hidden md:flex bg-[#F8F9FA] dark:bg-[#232F3E] border-b border-[#DDDDDD] dark:border-white/5 px-8 py-3 items-center justify-between gap-6 flex-shrink-0 z-[50] shadow-sm sticky top-0 transition-all duration-300">
+                    <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0">
+                        {/* ═══ PURE AMAZON RETAIL COMMAND NAVBAR ═══ */}
+                        <div className="hidden md:flex bg-[#F8F9FA] dark:bg-[#232F3E] border-b border-[#DDDDDD] dark:border-white/5 px-8 py-2.5 items-center justify-between gap-6 flex-shrink-0 z-[50] shadow-sm sticky top-0 transition-all duration-300 print:hidden">
 
-                            {/* Search */}
-                            <div className="relative flex-1 max-w-lg group">
-                                <div className="flex items-center gap-3.5 bg-[#F3F3F3] dark:bg-white/5 rounded-2xl border border-transparent px-5 py-2 w-full focus-within:bg-white dark:focus-within:bg-[#232F3E] focus-within:border-[#F59E0B] focus-within:ring-4 focus-within:ring-[#F59E0B]/10 transition-all duration-500 shadow-inner group-hover:shadow-md">
-                                    <Search className="h-4 w-4 text-[#565959] dark:text-zinc-500 group-focus-within:text-[#F59E0B]" />
-                                    <input type="text" placeholder="Search components, products, orders..."
-                                        className="bg-transparent text-[11px] outline-none w-full text-[#111] dark:text-white font-bold uppercase tracking-wider placeholder:text-zinc-500"
+                            {/* Amazon Style Search Bar */}
+                            <div className="relative flex-1 max-w-2xl group">
+                                <form 
+                                    onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+                                    className="flex items-center bg-white dark:bg-white/5 rounded-[4px] border border-[#888c8e] overflow-hidden focus-within:ring-[2px] focus-within:ring-[#e77600] focus-within:border-[#e77600] transition-all"
+                                >
+                                    <button type="button" className="px-3 h-9 bg-[#f3f3f3] dark:bg-zinc-800 border-r border-[#bbb] text-[12px] text-[#565959] hover:bg-[#e7e7e7] dark:hover:bg-zinc-700 font-medium flex items-center gap-1">
+                                        All <ChevronDown size={14} />
+                                    </button>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search orders, products, or suppliers..."
+                                        className="flex-1 h-9 px-3 bg-transparent text-[14px] text-[#111] dark:text-white outline-none placeholder:text-[#aaa] font-medium"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
                                     />
-                                    {isSearching && <RefreshCw className="h-4 w-4 animate-spin text-[#F59E0B]" />}
-                                </div>
+                                    <button type="submit" className="w-12 h-9 bg-[#febd69] hover:bg-[#f3a847] flex items-center justify-center text-[#111] transition-colors">
+                                        {isSearching ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5 stroke-[2.5]" />}
+                                    </button>
+                                </form>
                             </div>
 
                             {/* Actions */}
                             <div className="flex items-center gap-3">
-                                <Link href="/" className="hidden lg:flex items-center gap-2 text-[10px] font-black text-white bg-[#F59E0B] px-5 py-2.5 rounded-xl shadow-md hover:scale-105 transition-all uppercase tracking-widest">
-                                    Storefront <ExternalLink className="h-3.5 w-3.5" />
+                                <Link href="/" className="hidden lg:flex items-center gap-2 text-[11px] font-bold text-[#0f1111] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border border-[#adb1b8] px-4 py-[7px] rounded-[3px] shadow-sm hover:from-[#eef1f3] hover:to-[#dce0e4] transition-all uppercase tracking-wide">
+                                    <ExternalLink className="h-3.5 w-3.5" /> View Store
                                 </Link>
 
-                                <div className="h-8 w-[1px] bg-[#F3F3F3] mx-2" />
+                                <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
 
                                 {/* Notifications */}
                                 <div className="relative" ref={notifRef}>
                                     <button onClick={() => setNotifOpen(!notifOpen)}
-                                        className={`p-2.5 rounded-2xl transition-all border ${notifOpen ? 'bg-[#F59E0B] text-white shadow-[0_0_15px_rgba(23EE,175,28,0.3)]' : 'bg-white dark:bg-white/5 hover:bg-[#F3F3F3] dark:hover:bg-white/10 text-[#565959] dark:text-zinc-400 border-[#DDDDDD] dark:border-white/5 shadow-sm'}`}>
+                                        className={`p-2 rounded-[3px] transition-all border ${notifOpen ? 'bg-[#f7dfa5] border-[#c45500] text-[#c45500]' : 'bg-white dark:bg-white/5 hover:bg-[#F3F3F3] dark:hover:bg-white/10 text-[#565959] dark:text-zinc-400 border-[#DDDDDD] dark:border-white/5'}`}>
                                         <Bell className="h-5 w-5" />
-                                        {unreadCount > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
+                                        {unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#c45500] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
                                     </button>
                                     {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={() => { }} onMarkRead={() => { }} onRefresh={fetchActivity} />}
                                 </div>
-                                {/* Dynamic Theme Integration */}
+
+                                {/* Dynamic Theme */}
                                 <button onClick={toggleTheme}
-                                    className="relative p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-[#DDDDDD] dark:border-white/5 text-[#565959] dark:text-zinc-400 hover:text-[#F59E0B] transition-all duration-500 hover:-translate-y-1 w-10 h-10 flex items-center justify-center group overflow-hidden shadow-sm">
-                                    <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'dark' ? 'opacity-0 translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100'}`}>
-                                        <Moon className="h-5 w-5" strokeWidth={2.5} />
+                                    className="relative p-2 rounded-[3px] bg-white dark:bg-white/5 border border-[#DDDDDD] dark:border-white/5 text-[#565959] dark:text-zinc-400 hover:border-[#c45500] transition-all w-10 h-10 flex items-center justify-center">
+                                    <div className={`absolute transition-all duration-500 ${theme === 'dark' ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
+                                        <Moon className="h-5 w-5" />
                                     </div>
-                                    <div className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${theme === 'light' ? 'opacity-0 -translate-y-8 scale-50' : 'opacity-100 translate-y-0 scale-100 rotate-0'}`}>
-                                        <Sun className="h-5 w-5 text-[#F59E0B]" strokeWidth={2.5} />
+                                    <div className={`absolute transition-all duration-500 ${theme === 'light' ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
+                                        <Sun className="h-5 w-5 text-[#c45500]" />
                                     </div>
                                 </button>
 
-                                <div className="h-8 w-[1px] bg-[#F3F3F3] mx-1" />
+                                <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
 
                                 {/* Profile */}
                                 <div className="relative" ref={profileRef}>
                                     <button onClick={() => setProfileOpen(!profileOpen)}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-2xl transition-all border ${profileOpen ? 'bg-[#FFF8E7] dark:bg-[#F59E0B]/10 border-[#F59E0B]/30' : 'bg-[#F8F9FA] dark:bg-transparent border-transparent hover:bg-[#F3F3F3] dark:hover:bg-white/5'}`}>
+                                        className={`flex items-center gap-3 px-3 py-1.5 rounded-[3px] transition-all border ${profileOpen ? 'bg-amber-50 border-amber-300' : 'border-transparent hover:bg-zinc-100'}`}>
                                         <div className="relative">
-                                            <div className="w-9 h-9 bg-[#F59E0B] rounded-2xl flex items-center justify-center overflow-hidden border-2 border-white dark:border-[#232F3E] shadow-sm">
-                                                {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-black text-white">{adminName[0]}</span>}
+                                            <div className="w-8 h-8 bg-zinc-200 rounded-[2px] flex items-center justify-center overflow-hidden border border-zinc-300">
+                                                {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-zinc-600">{adminName[0]}</span>}
                                             </div>
-                                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#232F3E] rounded-full" />
+                                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
                                         </div>
                                         <div className="hidden xl:block text-left">
-                                            <p className="text-[#111] dark:text-white font-black text-[12px] leading-tight uppercase truncate max-w-[120px]">{adminName}</p>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-                                                <p className="text-[9px] text-[#565959] dark:text-zinc-400 font-bold uppercase tracking-widest">{adminRole}</p>
-                                            </div>
+                                            <p className="text-[#111] dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
+                                                {adminName} <ChevronDown size={12} className="text-[#565959]" />
+                                            </p>
+                                            <p className="text-[10px] text-[#c45500] font-bold uppercase tracking-widest mt-0.5">{adminRole}</p>
                                         </div>
                                     </button>
                                     {profileOpen && <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />}
@@ -273,7 +282,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
 
-                        <main className="flex-1 overflow-y-auto p-4 lg:p-10 relative bg-[#F8F9FA] dark:bg-[#232F3E]">
+                        <main className="flex-1 overflow-y-auto p-4 lg:p-10 relative bg-[#F8F9FA] dark:bg-[#232F3E] print:p-0 print:m-0 print:bg-white">
                             {isNavigating && <PageLoader />}
                             {children}
                         </main>

@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Warehouse, Stock
@@ -5,7 +6,7 @@ from .serializers import WarehouseSerializer, StockSerializer
 
 
 class WarehouseViewSet(viewsets.ModelViewSet):
-    queryset = Warehouse.objects.all().order_by('name')
+    queryset = Warehouse.objects.annotate(stock_count=Count('stocks')).all().order_by('name')
     serializer_class = WarehouseSerializer
     permission_classes = [IsAuthenticated]
 

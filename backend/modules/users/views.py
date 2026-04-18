@@ -21,16 +21,55 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_profile(request):
-    """Get current authenticated user profile."""
+    """Get current authenticated user profile (Registry Aware)."""
     user = request.user
-    if not user.is_authenticated:
-        user = User.objects.filter(is_superuser=True).first() or User.objects.first()
     
-    if not user:
-        return Response({'detail': 'No users found in database'}, status=404)
-        
+    # 1. Handle Shadow Supplier
+    if getattr(user, 'is_supplier', False):
+        from modules.supplier.models import Supplier
+        supplier = Supplier.objects.filter(id=user.real_id).first()
+        if not supplier:
+            return Response({'error': 'Supplier profile not found'}, status=404)
+        return Response({
+            'id': supplier.id,
+            'username': supplier.username,
+            'email': supplier.email,
+            'first_name': supplier.first_name,
+            'last_name': supplier.last_name,
+            'phone': supplier.phone,
+            'address': supplier.address,
+            'city': supplier.city,
+            'country': supplier.country,
+            'postal_code': supplier.postal_code,
+            'avatar': supplier.avatar.url if supplier.avatar else None,
+            'role_name': 'Supplier',
+            'is_supplier': True
+        })
+
+    # 2. Handle Shadow Customer
+    if getattr(user, 'is_customer', False):
+        from modules.customer.models import Customer
+        customer = Customer.objects.filter(id=user.real_id).first()
+        if not customer:
+            return Response({'error': 'Customer profile not found'}, status=404)
+        return Response({
+            'id': customer.id,
+            'username': customer.username,
+            'email': customer.email,
+            'first_name': customer.first_name,
+            'last_name': customer.last_name,
+            'phone': customer.phone,
+            'address': customer.address,
+            'city': customer.city,
+            'country': customer.country,
+            'postal_code': customer.postal_code,
+            'role_name': 'Customer',
+            'is_customer': True
+        })
+
+    # 3. Standard User
     serializer = UserDetailSerializer(user)
     return Response(serializer.data)
 
@@ -134,25 +173,36 @@ def create_user(request):
 
 
 @api_view(['PATCH'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def update_user(request, user_id):
-    """Update user information."""
-    user, err = get_or_404_response(User, id=user_id)
-    if err:
-        return err
-
-    if request.user.is_authenticated and request.user.id != user_id and not request.user.is_staff:
+    """Update user information (Registry Aware)."""
+    curr_user = request.user
+    is_self = False
+    if getattr(curr_user, 'is_supplier', False) or getattr(curr_user, 'is_customer', False):
+        is_self = (curr_user.real_id == user_id)
+    else:
+        is_self = (curr_user.id == user_id)
+    if not is_self and not curr_user.is_staff:
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-
+    if getattr(curr_user, 'is_supplier', False) and is_self:
+        from modules.supplier.models import Supplier
+        obj = Supplier.objects.filter(id=user_id).first()
+        for attr, value in request.data.items():
+            if hasattr(obj, attr): setattr(obj, attr, value)
+        obj.save()
+        return Response({'message': 'Supplier profile updated'})
+    if getattr(curr_user, 'is_customer', False) and is_self:
+        from modules.customer.models import Customer
+        obj = Customer.objects.filter(id=user_id).first()
+        for attr, value in request.data.items():
+            if hasattr(obj, attr): setattr(obj, attr, value)
+        obj.save()
+        return Response({'message': 'Customer profile updated'})
+    user, err = get_or_404_response(User, id=user_id)
+    if err: return err
     serializer = UserUpdateSerializer(user, data=request.data, partial=True)
     if serializer.is_valid():
         user = serializer.save()
-        if request.user.is_authenticated:
-            UserActivityLog.objects.create(
-                user=request.user,
-                action='update',
-                description=f'Updated user: {user.username}'
-            )
         return Response(UserDetailSerializer(user).data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -248,31 +298,45 @@ def suspend_user(request, user_id):
 # ==================== PASSWORD MANAGEMENT ====================
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def change_password(request, user_id):
-    """Change user password."""
-    user, err = get_or_404_response(User, id=user_id)
-    if err:
-        return err
-
-    if request.user.id != user_id and not request.user.is_staff:
+    """Change user password (Registry Aware)."""
+    curr_user = request.user
+    from django.contrib.auth.hashers import check_password, make_password
+    is_self = False
+    if getattr(curr_user, 'is_supplier', False) or getattr(curr_user, 'is_customer', False):
+        is_self = (curr_user.real_id == user_id)
+    else:
+        is_self = (curr_user.id == user_id)
+    if not is_self and not curr_user.is_staff:
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-
     serializer = UserPasswordChangeSerializer(data=request.data)
-    if serializer.is_valid():
-        if not check_password(serializer.validated_data['old_password'], user.password):
-            return Response({'error': 'Old password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(serializer.validated_data['new_password'])
-        user.plain_password = serializer.validated_data['new_password']
-        user.save()
-        UserActivityLog.objects.create(
-            user=request.user,
-            action='password_change',
-            description=f'Changed password for user: {user.username}'
-        )
-        return Response({'message': 'Password changed successfully'})
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if not serializer.is_valid(): return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if getattr(curr_user, 'is_supplier', False):
+        from modules.supplier.models import Supplier
+        obj = Supplier.objects.filter(id=user_id).first()
+        if not check_password(serializer.validated_data['old_password'], obj.password):
+            return Response({'error': 'Old password incorrect'}, status=400)
+        obj.password = make_password(serializer.validated_data['new_password'])
+        obj.plain_password = serializer.validated_data['new_password']
+        obj.save()
+        return Response({'message': 'Password changed'})
+    if getattr(curr_user, 'is_customer', False):
+        from modules.customer.models import Customer
+        obj = Customer.objects.filter(id=user_id).first()
+        if not check_password(serializer.validated_data['old_password'], obj.password):
+            return Response({'error': 'Old password incorrect'}, status=400)
+        obj.password = make_password(serializer.validated_data['new_password'])
+        obj.plain_password = serializer.validated_data['new_password']
+        obj.save()
+        return Response({'message': 'Password changed'})
+    user = User.objects.filter(id=user_id).first()
+    if not check_password(serializer.validated_data['old_password'], user.password):
+        return Response({'error': 'Old password incorrect'}, status=400)
+    user.set_password(serializer.validated_data['new_password'])
+    user.plain_password = serializer.validated_data['new_password']
+    user.save()
+    return Response({'message': 'Password changed'})
 
 
 @api_view(['POST'])

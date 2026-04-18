@@ -6,9 +6,11 @@ import {
     ShoppingCart, Plus, Search, RefreshCw, Trash2, Eye, Edit2,
     X, CheckCircle, AlertTriangle, Package, Loader2, Filter,
     Users, Clock, CreditCard, FileText, Lock, Calendar, FileSpreadsheet, Printer,
-    ChevronRight, ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone
+    ChevronRight, ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone,
+    Upload, CheckCircle2, Info
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
+import { companyService } from '@/services/company.service';
 import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import Link from 'next/link';
@@ -53,12 +55,12 @@ export default function PurchasesPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
     const [paymentFilter, setPaymentFilter] = useState('All');
+    const [supplierFilter, setSupplierFilter] = useState('All');
+    const [suppliers, setSuppliers] = useState<any[]>([]);
 
     const [viewRow, setViewRow] = useState<any | null>(null);
-    const [editRow, setEditRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
-    const [isUpdating, setIsUpdating] = useState(false);
 
     const load = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -72,9 +74,14 @@ export default function PurchasesPage() {
                 }
             }
             if (paymentFilter && paymentFilter !== 'All') params.payment_status = paymentFilter;
+            if (supplierFilter && supplierFilter !== 'All') params.supplier = supplierFilter;
             if (searchTerm) params.search = searchTerm;
-            const data = await purchaseService.getAll(params);
+            const [data, supData] = await Promise.all([
+                purchaseService.getAll(params),
+                !silent && suppliers.length === 0 ? companyService.getSuppliers() : Promise.resolve(suppliers)
+            ]);
             setPurchases(data || []);
+            if (supData && supData.length > 0) setSuppliers(supData);
         } catch (err: any) {
             console.error(err);
             if (!silent) {
@@ -84,19 +91,19 @@ export default function PurchasesPage() {
         } finally {
             if (!silent) setLoading(false);
         }
-    }, [statusFilter, paymentFilter, searchTerm]);
+    }, [statusFilter, paymentFilter, supplierFilter, searchTerm]);
 
     useEffect(() => { load(); }, [load]);
 
     // REAL-TIME AUTO-SYNC: Refresh list every 2s
     useEffect(() => {
         const interval = setInterval(() => {
-            if (!loading && !isUpdating && !editRow && !viewRow) {
+            if (!loading && !viewRow) {
                 load(true);
             }
         }, 2000); // 2 seconds
         return () => clearInterval(interval);
-    }, [load, loading, isUpdating, editRow, viewRow]);
+    }, [load, loading, viewRow]);
 
     const handleViewDetails = async (id: string) => {
         try {
@@ -105,27 +112,7 @@ export default function PurchasesPage() {
         } catch { toast.error('Failed to load details'); }
     };
 
-    const handleUpdateStatus = async () => {
-        if (!editRow) return;
-        setIsUpdating(true);
-        try {
-            const payload: any = { status: editRow.status };
-            if (editRow.status !== 'cancelled') {
-                if (editRow.payment_status) payload.payment_status = editRow.payment_status;
-                if (editRow.payment_method) payload.payment_method = editRow.payment_method;
-            }
-            await purchaseService.update(editRow.id, payload);
-            setEditRow(null);
-            load();
-            toast.success('Status updated');
-        } catch (err: any) {
-            console.error(err);
-            const msg = err.response?.data?.error || err.response?.data?.message || 'Update failed';
-            toast.error(msg);
-        } finally {
-            setIsUpdating(false);
-        }
-    };
+
 
     const handleDelete = async () => {
         if (!deleteRow) return;
@@ -136,7 +123,7 @@ export default function PurchasesPage() {
         } catch { toast.error('Delete failed'); } finally { setDeleting(false); }
     };
 
-    const purchasesList = Array.isArray(purchases) ? purchases : (purchases && purchases.results) ? purchases.results : [];
+    const purchasesList: any[] = Array.isArray(purchases) ? purchases : (purchases as any)?.results ? (purchases as any).results : [];
     const filtered = purchasesList;
 
     return (
@@ -190,6 +177,24 @@ export default function PurchasesPage() {
                             <option value="paid">Paid</option>
                         </select>
                     </div>
+                    <div className="w-[180px]">
+                        <label className="block text-[13px] font-bold text-[#111] mb-1.5">Supplier</label>
+                        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer"}>
+                            <option value="All">All Suppliers</option>
+                            {suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.company ? `${s.company} - ` : ''}{s.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="w-[150px]">
+                        <label className="block text-[13px] font-bold text-[#111] mb-1.5">Payment</label>
+                        <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer"}>
+                            <option value="All">All Payments</option>
+                            <option value="unpaid">Unpaid</option>
+                            <option value="partial">Partial</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </div>
                     <Btn variant="secondary" onClick={load} loading={loading} className="h-[35px]">
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </Btn>
@@ -235,7 +240,7 @@ export default function PurchasesPage() {
                             {loading && filtered.length === 0 ? <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">Loading purchases...</td></tr> : filtered.length === 0 ? (
                                 <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No purchases found.</td></tr>
                             ) : (
-                                filtered.map(p => (
+                                filtered.map((p: any) => (
                                     <tr key={p.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
                                         <td className="px-6 py-4">
                                             <div className="font-bold text-[#007185] hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>#{p.purchase_number}</div>
@@ -264,13 +269,23 @@ export default function PurchasesPage() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right font-bold text-[#111]">
-                                            {formatCurrency(p.total_amount)}
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="font-bold text-[#111]">{formatCurrency(p.total_amount)}</div>
+                                            {(p.remaining_amount > 0) && (
+                                                <div className="flex items-center justify-end gap-1.5 mt-1">
+                                                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">
+                                                        Bal: {formatCurrency(p.remaining_amount)}
+                                                    </div>
+                                                    {p.payment_confirmed && (
+                                                        <CheckCircle2 size={12} className="text-emerald-500" title="Supplier Verified" />
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2 transition-opacity">
                                                 <button onClick={() => handleViewDetails(p.id)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
-                                                <button onClick={() => setEditRow(p)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-amber-50 text-amber-600"><Edit2 size={14} /></button>
+                                                <button onClick={() => router.push(`/admin/purchases/${p.id}/edit`)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-amber-50 text-amber-600"><Edit2 size={14} /></button>
                                                 <button onClick={() => setDeleteRow(p)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
                                             </div>
                                         </td>
@@ -286,7 +301,7 @@ export default function PurchasesPage() {
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-4xl bg-[#fcfdff] rounded-[4px] shadow-2xl overflow-hidden text-left border border-[#ddd]">
-                        <div className="bg-white border-b border-[#ddd] p-6 flex justify-between items-center bg-[#f7f8fa]">
+                        <div className="border-b border-[#ddd] p-6 flex justify-between items-center bg-[#f7f8fa]">
                             <h2 className="text-[16px] font-bold text-[#111]">Purchase Order Details <span className="text-[#565959] font-normal ml-2">#{viewRow.purchase_number}</span></h2>
                             <button onClick={() => setViewRow(null)} className="text-[#aaa] hover:text-[#111]"><X size={24} /></button>
                         </div>
@@ -335,60 +350,18 @@ export default function PurchasesPage() {
                 </div>
             )}
 
-            {/* Edit Modal */}
-            {editRow && (
+            {/* Delete Modal */}
+            {deleteRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] w-full max-w-lg shadow-2xl overflow-hidden text-left">
-                        <div className="p-6 border-b border-[#ddd] flex justify-between items-center bg-[#f7f8fa]">
-                            <h3 className="text-[15px] font-bold text-[#111]">Update Status</h3>
-                            <button onClick={() => setEditRow(null)} className="text-[#aaa] hover:text-[#111]"><X size={20} /></button>
-                        </div>
-                        <div className="p-8 space-y-8">
-                            <div>
-                                <label className="block text-[13px] font-bold text-[#111] mb-2">Order Status</label>
-                                <select 
-                                    disabled={editRow.status === 'RECEIVED' && editRow.is_inventory_synced}
-                                    value={editRow.status} 
-                                    onChange={(e: any) => setEditRow({ ...editRow, status: e.target.value })} 
-                                    className={inputCls + " h-[35px] cursor-pointer" + (editRow.status === 'RECEIVED' && editRow.is_inventory_synced ? ' bg-gray-50 opacity-70' : '')}
-                                >
-                                    <option value="PENDING">Ordered</option>
-                                    <option value="PROCESSING">Confirmed</option>
-                                    <option value="SHIPPED">In Transit</option>
-                                    <option value="DELIVERED">Delivered</option>
-                                    <option value="RECEIVED">Received</option>
-                                    <option value="CANCELLED">Cancelled</option>
-                                </select>
-                                {editRow.status === 'RECEIVED' && (
-                                    <p className={`text-[11px] mt-1 italic ${editRow.is_inventory_synced ? 'text-[#565959]' : 'text-amber-600 font-bold'}`}>
-                                        {editRow.is_inventory_synced 
-                                            ? "Order is fulfilled and inventory reflects these quantities." 
-                                            : "Inventory sync pending. Save to retry sync."}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-[13px] font-bold text-[#111] mb-2">Payment Status</label>
-                                    <select value={editRow.payment_status || 'unpaid'} onChange={(e: any) => setEditRow({ ...editRow, payment_status: e.target.value })} className={inputCls + " h-[35px] cursor-pointer"}>
-                                        <option value="unpaid">Unpaid</option>
-                                        <option value="partial">Partial</option>
-                                        <option value="paid">Paid</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[13px] font-bold text-[#111] mb-2">Payment Mode</label>
-                                    <select value={editRow.payment_method || ''} onChange={(e: any) => setEditRow({ ...editRow, payment_method: e.target.value })} className={inputCls + " h-[35px] cursor-pointer"}>
-                                        <option value="cash">Cash</option>
-                                        <option value="bank_transfer">Bank Transfer</option>
-                                        <option value="online_payment">Online Payment</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6 bg-[#f7f8fa] border-t border-[#ddd] flex justify-end gap-3">
-                            <button onClick={() => setEditRow(null)} className="text-[13px] font-bold text-[#565959] hover:underline mr-4">Cancel</button>
-                            <Btn onClick={handleUpdateStatus} loading={isUpdating} className="h-[35px] w-[120px]">Save</Btn>
+                    <div className="bg-white rounded-[4px] border border-[#ddd] w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in-95">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 border border-red-100 font-bold"><Trash2 size={32} /></div>
+                        <h3 className="text-[18px] font-bold text-[#111]">Delete Purchase?</h3>
+                        <p className="text-[13px] text-[#565959] mt-3">Delete record <span className="font-bold">#{deleteRow.purchase_number}</span>? This cannot be undone.</p>
+                        <div className="flex gap-4 mt-8">
+                            <button onClick={() => setDeleteRow(null)} className="flex-1 py-2 text-[13px] font-bold text-[#565959] hover:underline">Cancel</button>
+                            <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 bg-red-600 text-white rounded-[3px] text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm">
+                                {deleting ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
+                            </button>
                         </div>
                     </div>
                 </div>

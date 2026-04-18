@@ -1,16 +1,38 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Search, Package, MapPin, Clock, CheckCircle2, AlertCircle, Globe, RefreshCw } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Search, Package, Truck, CheckCircle2, AlertCircle, MapPin, ShoppingBag, Clock, ArrowLeft, RefreshCw, Loader2, ChevronRight, ChevronLeft, ShieldCheck, Box, MoreVertical, ExternalLink, Globe } from 'lucide-react';
 import axios from 'axios';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - PUBLIC TRACKING VERSION 2.0
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-[#FFD814] hover:bg-[#F7CA00] border-[#FCD200] text-[#0f1111] shadow-[0_2px_5px_0_rgba(213,217,217,0.5)]',
+        secondary: 'bg-white hover:bg-[#f7f8fa] border-[#D5D9D9] text-[#0f1111] shadow-[0_2px_5px_0_rgba(213,217,217,0.5)]',
+        danger: 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700 shadow-sm'
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[31px] px-4 rounded-[8px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const inputCls = "w-full h-[45px] px-12 border border-[#D5D9D9] rounded-[8px] text-[16px] outline-none focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.3)] placeholder:text-[#888] bg-white transition-all font-medium";
+
 export default function TrackingPage() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const [trackingId, setTrackingId] = useState('');
     const [order, setOrder] = useState<any>(null);
@@ -89,164 +111,204 @@ export default function TrackingPage() {
     const currentStepIndex = steps.findIndex(s => s.status === order?.status);
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A]">
+        <div className="bg-white min-h-screen font-sans text-[#0f1111]">
             <Navbar />
             
-            <main className="container mx-auto px-6 py-12">
-                <div className="max-w-3xl mx-auto">
-                    {/* Header */}
-                    <div className="text-center mb-10 space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F59E0B]/10 rounded-full border border-[#F59E0B]/20">
-                            <Globe className="h-4 w-4 text-[#F59E0B]" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#F59E0B]">Real-time Tracking</span>
-                        </div>
-                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase">Track Your Order</h1>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">Enter your tracking ID to see the current status of your order.</p>
-                    </div>
+            <div className="bg-white border-b border-[#D5D9D9] py-4 mb-10">
+                <div className="max-w-[1240px] mx-auto px-6">
+                     <h1 className="text-[24px] font-bold tracking-tight">Track Your Shipment</h1>
+                     <p className="text-[14px] text-[#565959] mt-1">Real-time status updates for your cosmetic order</p>
+                </div>
+            </div>
 
-                    {/* Search Box */}
-                    <form onSubmit={handleTrack} className="relative mb-12">
+            <main className="max-w-[1100px] mx-auto px-6 pb-24">
+                {/* Search Bar */}
+                <div className="mb-12 group">
+                    <form onSubmit={handleTrack} className="relative max-w-2xl mx-auto drop-shadow-sm hover:drop-shadow-md transition-all">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#888] group-focus-within:text-[#e77600]" />
                         <input
                             type="text"
                             value={trackingId}
                             onChange={(e) => setTrackingId(e.target.value)}
                             placeholder="Enter Tracking ID (e.g. ALQ-123456)"
-                            className="w-full h-16 pl-6 pr-32 bg-white dark:bg-[#1a252f] border-2 border-slate-200 dark:border-white/10 rounded-2xl text-lg font-bold text-slate-900 dark:text-white outline-none focus:border-[#F59E0B] transition-all shadow-xl shadow-slate-200/50 dark:shadow-none"
+                            className={inputCls}
                         />
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="absolute right-2 top-2 bottom-2 px-6 bg-[#F59E0B] hover:bg-amber-500 text-white font-black rounded-xl transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
-                        >
-                            {loading ? 'Searching...' : <><Search className="h-5 w-5" /> Track</>}
+                        <button type="submit" disabled={loading} className="absolute right-1.5 top-1.5 bottom-1.5 px-8 rounded-[7px] bg-[#FFD814] hover:bg-[#F7CA00] text-[14px] font-bold transition-colors">
+                            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Track'}
                         </button>
                     </form>
-
-                    {error && (
-                        <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex items-center gap-3 text-red-600 dark:text-red-400 animate-in fade-in zoom-in duration-300">
-                            <AlertCircle className="h-5 w-5" />
-                            <span className="font-bold text-sm tracking-tight">{error}</span>
-                        </div>
-                    )}
-
-                    {order && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-500">
-                            {/* Live Update Indicator */}
-                            <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                Live — Auto-refreshing every 1s
-                            </div>
-
-                            {/* Tracking Timeline */}
-                            <div className="bg-white dark:bg-[#1a252f] p-8 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm relative overflow-hidden">
-                                <div className="relative z-10">
-                                    <div className="flex justify-between mb-12 relative">
-                                        {/* Line Background */}
-                                        <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100 dark:bg-white/5 z-0" />
-                                        {/* Progressive Line */}
-                                        <div 
-                                            className="absolute top-5 left-0 h-0.5 bg-[#F59E0B] transition-all duration-1000 ease-out z-0" 
-                                            style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
-                                        />
-
-                                        {steps.map((step, i) => {
-                                            const Icon = step.icon;
-                                            const isActive = i <= currentStepIndex;
-                                            const isCurrent = i === currentStepIndex;
-
-                                            return (
-                                                <div key={step.status} className="relative z-10 flex flex-col items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-[#F59E0B] border-[#F59E0B] text-white' : 'bg-white dark:bg-[#1a252f] border-slate-200 dark:border-white/10 text-slate-300'} ${isCurrent ? 'ring-4 ring-[#F59E0B]/20 scale-110' : ''}`}>
-                                                        <Icon className="h-5 w-5" />
-                                                    </div>
-                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-[#F59E0B]' : 'text-slate-400'}`}>
-                                                        {step.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-slate-50 dark:border-white/5">
-                                        <div className="text-center md:text-left">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer Name</p>
-                                            <p className="text-xl font-black text-slate-900 dark:text-white uppercase">{order.customer_name}</p>
-                                        </div>
-                                        <div className="text-center md:text-right">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Status</p>
-                                            <div className="px-4 py-2 bg-[#F59E0B]/10 rounded-xl border border-[#F59E0B]/20">
-                                                <span className="text-sm font-black text-[#F59E0B] uppercase">{order.status_display}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Order Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white dark:bg-[#1a252f] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
-                                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4">Delivery Info</h3>
-                                    <div className="space-y-4">
-                                        <div className="flex gap-3">
-                                            <MapPin className="h-5 w-5 text-[#F59E0B] shrink-0" />
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Address</p>
-                                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-tight">{order.shipping_address}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <Clock className="h-5 w-5 text-[#F59E0B] shrink-0" />
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Ordered On</p>
-                                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatDate(order.created_at)}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-[#131921] p-6 rounded-3xl shadow-xl">
-                                    <h3 className="text-sm font-black text-white/50 uppercase tracking-widest mb-4">Total Amount</h3>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-black text-[#F59E0B] tracking-tighter">Rs. {parseFloat(order.total_amount).toLocaleString()}</span>
-                                    </div>
-                                    <p className="text-[10px] text-white/30 font-medium mt-4 leading-relaxed uppercase tracking-widest">
-                                        Inclusive of all taxes and delivery charges.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Items List */}
-                            <div className="bg-white dark:bg-[#1a252f] rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden">
-                                <div className="px-6 py-4 border-b border-slate-50 dark:border-white/5 bg-slate-50/30 dark:bg-white/[0.02]">
-                                    <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Items Detail</h3>
-                                </div>
-                                <div className="divide-y divide-slate-50 dark:divide-white/5">
-                                    {order.items.map((item: any) => (
-                                        <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-white/5 p-1 border border-slate-200 dark:border-white/10">
-                                                    <img 
-                                                        src={item.image ? (API_URL.replace('/api', '') + item.image) : '/images/logo.png'} 
-                                                        alt="" 
-                                                        className="w-full h-full object-contain"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{item.product_name}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.quantity} unit(s) @ Rs. {parseFloat(item.price).toLocaleString()}</p>
-                                                </div>
-                                            </div>
-                                            <p className="text-sm font-black text-slate-900 dark:text-white">Rs. {(item.quantity * parseFloat(item.price)).toLocaleString()}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {error && <div className="mt-4 flex items-center gap-2 justify-center text-red-600 animate-in slide-in-from-top-2 duration-300"><AlertCircle size={14} /> <span className="text-[13px] font-medium">{error}</span></div>}
                 </div>
+
+                {order ? (
+                    <div className="animate-in fade-in duration-700 space-y-8">
+                        
+                        {/* Summary Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#D5D9D9] pb-6">
+                            <div>
+                                <h2 className="text-[28px] font-bold text-[#111] mb-1 leading-tight tracking-tight uppercase italic">
+                                    {order.status === 'DELIVERED' ? 'Arrived' : 
+                                     order.status === 'CANCELLED' ? 'Cancelled' : 
+                                     order.status === 'SHIPPED' ? 'In Transit' : 'In Preparation'}
+                                </h2>
+                                <div className="flex items-center gap-2 text-[14px] text-[#565959]">
+                                    <span className="font-medium">Tracking ID: <b className="text-[#111]">{order.tracking_id}</b></span>
+                                    <span className="w-1 h-1 bg-[#D5D9D9] rounded-full" />
+                                    <span>Placed on {formatDate(order.created_at)}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Btn variant="secondary" className="font-bold">Share Link</Btn>
+                                <Btn variant="secondary" className="font-bold">Contact Support</Btn>
+                            </div>
+                        </div>
+
+                        {/* Tracking Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            
+                            {/* Left: Progress & Items */}
+                            <div className="lg:col-span-2 space-y-6">
+                                
+                                <div className="bg-white border border-[#D5D9D9] rounded-[8px] p-8 shadow-sm">
+                                    {/* Amazon Progress Tracker */}
+                                    <div className="relative mb-20 px-4">
+                                        <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-[#F0F2F2] -translate-y-1/2 rounded-full" />
+                                        {currentStepIndex >= 0 && order.status !== 'CANCELLED' && (
+                                            <div 
+                                                className="absolute top-1/2 left-0 h-1.5 bg-[#007600] -translate-y-1/2 rounded-full transition-all duration-1000 ease-out" 
+                                                style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
+                                            />
+                                        )}
+                                        
+                                        <div className="relative flex justify-between items-center">
+                                            {steps.map((step, idx) => {
+                                                const isCompleted = order.status !== 'CANCELLED' && idx <= currentStepIndex;
+                                                const isCurrent = order.status !== 'CANCELLED' && idx === currentStepIndex;
+                                                const Icon = step.icon;
+
+                                                return (
+                                                    <div key={idx} className="flex flex-col items-center relative group">
+                                                        <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center bg-white z-10 transition-all duration-500
+                                                            ${isCompleted ? 'border-[#007600] text-[#007600] scale-110 shadow-sm' : 'border-[#D5D9D9] text-[#888]'}`}>
+                                                            {isCompleted ? <CheckCircle2 size={20} fill="currentColor" className="text-white bg-[#007600] rounded-full" /> : <Icon size={18} />}
+                                                        </div>
+                                                        <div className="absolute top-14 flex flex-col items-center min-w-[100px] text-center">
+                                                            <p className={`text-[11px] font-bold uppercase tracking-tight leading-tight ${isCompleted ? 'text-[#007600]' : 'text-[#888]'}`}>{step.label}</p>
+                                                            {isCurrent && <span className="text-[9px] text-[#c45500] font-black animate-pulse mt-1">CURRENT STATUS</span>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Latest Update Status */}
+                                    <div className="flex items-center gap-4 pt-6 border-t border-[#F0F2F2]">
+                                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
+                                            <RefreshCw size={20} className="animate-spin duration-[4s]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[15px] font-bold text-[#111]">Auto-Refreshing Status</p>
+                                            <p className="text-[13px] text-[#565959]">We are monitoring your shipment in real-time. Last checked just now.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Items Visualization */}
+                                <div className="bg-white border border-[#D5D9D9] rounded-[8px] p-6 shadow-sm">
+                                    <h3 className="text-[17px] font-bold text-[#111] mb-5">Order Content</h3>
+                                    <div className="space-y-4">
+                                        {order.items?.map((item: any) => (
+                                            <div key={item.id} className="flex gap-4 p-4 border border-[#F0F2F2] rounded-[8px] hover:bg-[#F7F8FA] transition-colors group">
+                                                <div className="w-20 h-20 bg-white border border-[#F0F2F2] rounded-[8px] p-2 flex items-center justify-center shrink-0 overflow-hidden">
+                                                    <img 
+                                                       src={item.image ? (API_URL.replace('/api', '') + item.image) : '/images/logo.png'} 
+                                                       alt="" 
+                                                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                                                   />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <p className="text-[15px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer leading-tight">{item.product_name}</p>
+                                                        <p className="text-[15px] font-bold text-[#111]">{formatCurrency(item.price * item.quantity)}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-2 text-[12px] text-[#565959] font-medium uppercase tracking-wider">
+                                                        <span>Quantity: <b className="text-[#111]">{item.quantity}</b></span>
+                                                        <span className="w-1 h-1 bg-[#D5D9D9] rounded-full" />
+                                                        <span>Price: {formatCurrency(item.price)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right: Sidebar Info */}
+                            <div className="space-y-6">
+                                
+                                {/* Shipment Summary Box */}
+                                <div className="bg-white border border-[#D5D9D9] rounded-[8px] shadow-sm overflow-hidden">
+                                     <div className="bg-[#F0F2F2] px-5 py-3 border-b border-[#D5D9D9]">
+                                        <h3 className="text-[14px] font-bold text-[#111]">Shipment Summary</h3>
+                                     </div>
+                                     <div className="p-5 space-y-6">
+                                        <div className="space-y-2">
+                                            <p className="text-[11px] text-[#565959] font-bold uppercase tracking-wider">Customer Name</p>
+                                            <p className="text-[16px] font-black text-[#111] uppercase tracking-tighter">{order.customer_name}</p>
+                                        </div>
+                                        <div className="space-y-2 border-t border-[#F0F2F2] pt-4">
+                                            <p className="text-[11px] text-[#565959] font-bold uppercase tracking-wider">Delivery Destination</p>
+                                            <p className="text-[14px] font-medium text-[#111] leading-relaxed">
+                                                <MapPin size={14} className="inline mr-1 text-[#565959]" /> {order.shipping_address}<br />
+                                                <span className="text-[12px] text-[#007185] cursor-pointer hover:underline flex items-center gap-1 mt-2 font-bold tracking-tight">VIEW ON MAP <ExternalLink size={12} /></span>
+                                            </p>
+                                        </div>
+                                        <div className="space-y-2 border-t border-[#F0F2F2] pt-4">
+                                            <p className="text-[11px] text-[#565959] font-bold uppercase tracking-wider">Payment Details</p>
+                                            <p className="text-[14px] font-bold text-[#111] mb-1">Method: {order.payment_method || 'COD'}</p>
+                                            <div className="bg-[#111] text-[#F59E0B] p-3 rounded-[4px] mt-2">
+                                                <p className="text-[10px] uppercase font-bold text-white/50 mb-1">Total Bill</p>
+                                                <p className="text-[20px] font-black tracking-tighter">Rs. {parseFloat(order.total_amount).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                     </div>
+                                </div>
+
+                                {/* Security Banner */}
+                                <div className="bg-[#FDF8E1] border border-[#F5D8A4] rounded-[8px] p-5 flex gap-3">
+                                    <ShieldCheck className="shrink-0 text-[#c45500]" size={20} />
+                                    <div>
+                                        <p className="text-[13px] font-bold text-[#111]">Secured Tracking</p>
+                                        <p className="text-[12px] text-[#565959] mt-1 leading-normal italic">Your order data is encrypted. Log in to your account for more control over your deliveries.</p>
+                                    </div>
+                                </div>
+
+                                {/* Support Card */}
+                                <div className="border border-[#D5D9D9] rounded-[8px] p-5 bg-[#F7F8FA]">
+                                    <p className="text-[13px] font-bold text-[#111]">Need assistance?</p>
+                                    <p className="text-[12px] text-[#565959] mt-1 mb-4">Contact our priority support line for any shipment queries.</p>
+                                    <Btn variant="secondary" className="w-full font-bold">Call Helpline</Btn>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                ) : !loading && (
+                    <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-[#D5D9D9] rounded-[16px] bg-[#F7F8FA] animate-in zoom-in duration-500">
+                        <div className="relative mb-6">
+                            <Box size={80} className="text-[#D5D9D9]" />
+                            <Search size={32} className="absolute -bottom-2 -right-2 text-[#e77600] bg-white rounded-full p-1.5 shadow-md" />
+                        </div>
+                        <h2 className="text-[22px] font-bold text-[#111]">Track your parcel</h2>
+                        <p className="text-[14px] text-[#565959] mt-2 mb-10 text-center max-w-sm">Enter the Tracking ID provided in your SMS or email to see its journey.</p>
+                        <div className="flex gap-4">
+                            <Btn onClick={() => router.push('/')}>Return to Store</Btn>
+                            <Btn variant="secondary">View My Orders</Btn>
+                        </div>
+                    </div>
+                )}
             </main>
 
             <Footer />

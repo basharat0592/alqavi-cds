@@ -1,13 +1,23 @@
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, permissions
 from django.db.models import F, ExpressionWrapper, DecimalField, Q
-from .models import Product, Wishlist, Category, SupplierProduct
-from .serializers import ProductSerializer, WishlistSerializer, CategorySerializer, SupplierProductSerializer
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory
+from .serializers import (
+    ProductSerializer, WishlistSerializer, CategorySerializer, 
+    SupplierProductSerializer, MainCategorySerializer
+)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = None
+
+
+class MainCategoryViewSet(viewsets.ModelViewSet):
+    queryset = MainCategory.objects.all().order_by('name')
+    serializer_class = MainCategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     pagination_class = None
 
@@ -68,6 +78,11 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.order_by('-created_at')
 
         return queryset
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
 
 class WishlistViewSet(viewsets.ModelViewSet):

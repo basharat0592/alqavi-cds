@@ -22,7 +22,7 @@ export default function Logo({ className = '', size = 'md' }: LogoProps) {
             <img 
                 src="/images/logo.png" 
                 alt="Al-Qavi Traders Logo" 
-                className={`${d} object-contain transition-all duration-300 group-hover:scale-105`}
+                className={`${d} object-contain transition-all duration-300 group-hover:scale-105 mix-blend-multiply brightness-110 contrast-125`}
             />
         </div>
     );

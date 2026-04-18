@@ -137,6 +137,8 @@ export interface Order {
     tags?: string[];
     items: OrderItem[];
     notes?: string;
+    shipping_address?: string;
+    phone_number?: string;
     created_at: string;
     updated_at?: string;
 }
@@ -290,6 +292,7 @@ export interface DashboardStats {
     ordersChange?: number;
     productsChange?: number;
     customersChange?: number;
+    totalPayable?: number;
 }
 
 // ─── Inventory ────────────────────────────────────────────────────────────────

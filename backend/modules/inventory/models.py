@@ -25,6 +25,7 @@ class Stock(BaseModel):
     ]
 
     product_name = models.CharField(max_length=255)
+    product = models.ForeignKey('products.SupplierProduct', on_delete=models.SET_NULL, null=True, blank=True, related_name='stocks')
     category = models.ForeignKey('products.Category', on_delete=models.CASCADE, related_name='stocks', null=True, blank=True)
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='stocks')
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stocks')

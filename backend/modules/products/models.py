@@ -11,11 +11,15 @@ class MainCategory(BaseModel):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, default='active')
+    position = models.IntegerField(default=0)
+    is_visible = models.BooleanField(default=True)
+    products = models.ManyToManyField('Product', related_name='sections', blank=True)
     
     class Meta:
         db_table = 'main_categories'
-        verbose_name = 'Main Category'
-        verbose_name_plural = 'Main Categories'
+        verbose_name = 'Section'
+        verbose_name_plural = 'Sections'
 
     def save(self, *args, **kwargs):
         if not self.slug:
