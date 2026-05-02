@@ -62,7 +62,7 @@ export default function SecuritySetup() {
         return (
             <div className="flex h-screen items-center justify-center bg-slate-50/30">
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-[#F7CA00]" />
+                    <Loader2 className="h-8 w-8 animate-spin text-[#F59E0B]" />
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verifying Encrypted Channel...</p>
                 </div>
             </div>
@@ -86,21 +86,21 @@ export default function SecuritySetup() {
                     disabled={saving}
                     className="px-8 py-2.5 bg-slate-900 text-white rounded font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2"
                 >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin text-[#F7CA00]" /> : <Lock size={16} className="text-[#F7CA00]" />}
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin text-[#F59E0B]" /> : <Lock size={16} className="text-[#F59E0B]" />}
                     {saving ? 'Encrypting...' : 'Update Access Keys'}
                 </button>
             </div>
 
             <div className="space-y-10">
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Login & Security Protocol</h1>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Manage access keys and credential rotation</p>
+                    <h1 className="text-3xl font-medium text-slate-900 mb-1">Login & Security</h1>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Manage access keys and credential rotation</p>
                 </div>
 
                 <div className="bg-white border border-slate-300 rounded overflow-hidden divide-y divide-slate-100 shadow-sm">
                     {/* Current Pass */}
                     <div className="p-6 focus-within:bg-slate-50 transition-colors group">
-                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00]">Existing Access Token</label>
+                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B]">Existing Access Token</label>
                         <div className="flex items-center gap-3">
                             <Key size={16} className="text-slate-300 group-focus-within:text-slate-900" />
                             <input
@@ -118,7 +118,7 @@ export default function SecuritySetup() {
 
                     {/* New Pass */}
                     <div className="p-6 focus-within:bg-slate-50 transition-colors group">
-                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00]">New Security String</label>
+                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B]">New Security String</label>
                         <div className="flex items-center gap-3">
                             <ShieldCheck size={16} className="text-slate-300 group-focus-within:text-slate-900" />
                             <input
@@ -133,7 +133,7 @@ export default function SecuritySetup() {
 
                     {/* Confirm Pass */}
                     <div className="p-6 focus-within:bg-slate-50 transition-colors group">
-                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00]">Re-Enter String</label>
+                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B]">Re-Enter String</label>
                         <div className="flex items-center gap-3">
                             <ShieldCheck size={16} className="text-slate-300 group-focus-within:text-slate-900" />
                             <input

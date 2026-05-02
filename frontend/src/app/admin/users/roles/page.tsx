@@ -22,7 +22,7 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
 const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
     <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-[#EEAF1C]" />
+            <Icon className="h-4 w-4 text-[#F59E0B]" />
             <div>
                 <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
                 {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
@@ -31,7 +31,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: a
     </div>
 );
 
-const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
+const PRIMARY_BTN = "bg-[#F59E0B] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
 const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
 
 export default function UserRolesPage() {
@@ -83,7 +83,7 @@ export default function UserRolesPage() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Shield className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -105,12 +105,12 @@ export default function UserRolesPage() {
                 {/* Search & Header */}
                 <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3">
                     <div className="relative group max-w-xl">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F59E0B] transition-colors" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search security tiers by name or description..."
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 transition-all font-medium"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all font-medium"
                         />
                     </div>
                 </div>
@@ -149,7 +149,7 @@ export default function UserRolesPage() {
                                         <tr key={role.id} className="group hover:bg-white group hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-9 w-9 bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center font-bold text-[#EEAF1C] text-sm group-hover:bg-[#EEAF1C] group-hover:text-white group-hover:border-[#EEAF1C] transition-all">
+                                                    <div className="h-9 w-9 bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center font-bold text-[#F59E0B] text-sm group-hover:bg-[#F59E0B] group-hover:text-white group-hover:border-[#F59E0B] transition-all">
                                                         {(role.name?.[0] || 'R').toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">
@@ -162,7 +162,7 @@ export default function UserRolesPage() {
                                             </td>
                                             <td className="px-4 py-3 text-left">
                                                 {role.is_default ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#EEAF1C] text-[10px] font-bold uppercase tracking-tight">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#F59E0B] text-[10px] font-bold uppercase tracking-tight">
                                                         Core Default
                                                     </span>
                                                 ) : (
@@ -173,7 +173,7 @@ export default function UserRolesPage() {
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="p-1.5 text-slate-400 hover:text-[#EEAF1C] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
+                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="p-1.5 text-slate-400 hover:text-[#F59E0B] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
                                                         <Edit2 className="h-4 w-4" />
                                                     </Link>
                                                     {!role.is_default && role.name?.toLowerCase() !== 'super admin' && (
@@ -208,7 +208,7 @@ export default function UserRolesPage() {
                         </div>
                         <div className="p-8">
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                                Confirm permanent removal of the security tier <span className="text-[#EEAF1C] font-bold">"{deleteRole.name}"</span>?
+                                Confirm permanent removal of the security tier <span className="text-[#F59E0B] font-bold">"{deleteRole.name}"</span>?
                             </p>
                         </div>
                         <div className="px-6 py-4 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3 bg-slate-50/50 dark:bg-white/5">

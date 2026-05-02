@@ -1,38 +1,11 @@
 import api from '@/lib/axios';
 
+/**
+ * Service for managing Warehouse and Stock (Inventory) records.
+ * Optimized for the new Warehouse and Stock model structure.
+ */
 export const inventoryService = {
-    getInventory: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/records/', { params });
-        return data.results || data || [];
-    },
-    getInventorySummary: async (): Promise<any> => {
-        try {
-            const { data } = await api.get('v1/inventory/records/summary/');
-            return data;
-        } catch {
-            return { total_items: 0, low_stock_count: 0, expired_batches: 0 };
-        }
-    },
-    getMovements: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/movements/', { params });
-        return data.results || data || [];
-    },
-    getBatches: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/batches/', { params });
-        return data.results || data || [];
-    },
-    getAdjustments: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/adjustments/', { params });
-        return data.results || data || [];
-    },
-    createAdjustment: async (payload: any): Promise<any> => {
-        const { data } = await api.post('v1/inventory/adjustments/', payload);
-        return data;
-    },
-    getAlerts: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/alerts/', { params });
-        return data.results || data || [];
-    },
+    // ── Warehouses ───────────────────────────────────────────────────────────
     getWarehouses: async (params?: any): Promise<any[]> => {
         const { data } = await api.get('v1/inventory/warehouses/', { params });
         return data.results || data || [];
@@ -48,20 +21,53 @@ export const inventoryService = {
     deleteWarehouse: async (id: string | number): Promise<void> => {
         await api.delete(`v1/inventory/warehouses/${id}/`);
     },
-    deleteInventory: async (id: string | number): Promise<void> => {
-        if (!id) return;
-        await api.delete(`v1/inventory/records/${id}/`);
+
+    // ── Stock Records (Inventory) ─────────────────────────────────────────────
+    // Note: 'records/' is an alias for 'stocks/' in the backend for compatibility
+    getInventory: async (params?: any): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/stocks/', { params });
+        return data.results || data || [];
     },
-    createInventory: async (payload: any): Promise<any> => {
-        const { data } = await api.post('v1/inventory/records/', payload);
-        return data;
-    },
-    addStock: async (inventoryId: string | number, quantity: number, notes?: string): Promise<any> => {
-        const { data } = await api.post(`v1/inventory/records/${inventoryId}/add_stock/`, { quantity, notes });
+    createStock: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/inventory/stocks/', payload);
         return data;
     },
     updateInventory: async (id: string | number, payload: any): Promise<any> => {
-        const { data } = await api.patch(`v1/inventory/records/${id}/`, payload);
+        const { data } = await api.patch(`v1/inventory/stocks/${id}/`, payload);
         return data;
+    },
+    deleteInventory: async (id: string | number): Promise<void> => {
+        if (!id) return;
+        await api.delete(`v1/inventory/stocks/${id}/`);
+    },
+    transferStock: async (id: string | number, payload: { destination_warehouse: string | number; quantity: number; date?: string }): Promise<any> => {
+        const { data } = await api.post(`v1/inventory/stocks/${id}/transfer/`, payload);
+        return data;
+    },
+    getStockMovements: async (stockId: string | number): Promise<any[]> => {
+        const { data } = await api.get(`v1/inventory/stocks/${stockId}/movements/`);
+        return data;
+    },
+
+    // Legacy or placeholder methods - keeping for safety but may be removed if not used
+    getInventorySummary: async (): Promise<any> => {
+        try {
+            const { data } = await api.get('v1/inventory/stocks/summary/');
+            return data;
+        } catch {
+            return { total_items: 0, low_stock_count: 0, expired_batches: 0 };
+        }
+    },
+    createInventory: async (payload: any): Promise<any> => {
+        // Alias for createStock for existing components
+        return inventoryService.createStock(payload);
+    },
+
+    // ── Movements Aliases ───────────────────────────────────────────────────
+    getMovements: async (params?: any): Promise<any[]> => {
+        return inventoryService.getInventory(params);
+    },
+    getMovementsSummary: async (): Promise<any> => {
+        return inventoryService.getInventorySummary();
     },
 };

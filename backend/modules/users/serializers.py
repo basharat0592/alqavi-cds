@@ -155,19 +155,85 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         username = attrs.get('username')
+        password = attrs.get('password')
         
-        # If the provided username is an email, resolve it to the actual username
+        # 1. Try to find in standard User table (Employees/Admins/Customers)
+        user = None
         if '@' in username:
             user = User.objects.filter(email=username).first()
-            if user:
-                attrs['username'] = user.username
+        else:
+            user = User.objects.filter(username=username).first()
+
+        # 2. If not in User table, try Supplier table (Physical separation requested)
+        if not user:
+            from django.contrib.auth.hashers import check_password
+            from rest_framework_simplejwt.tokens import RefreshToken
+            from django.utils import timezone
+
+            # Try Supplier
+            from modules.supplier.models import Supplier
+            supplier = None
+            if '@' in username:
+                supplier = Supplier.objects.filter(email=username, is_active=True).first()
+            else:
+                supplier = Supplier.objects.filter(username=username, is_active=True).first()
+                
+            if supplier and check_password(password, supplier.password):
+                supplier.last_login = timezone.now()
+                supplier.save()
+                refresh = RefreshToken()
+                refresh['user_id'] = f"sup_{supplier.id}"
+                refresh['role'] = 'supplier'
+                return {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'user': {
+                        'id': supplier.id,
+                        'name': supplier.name,
+                        'email': supplier.email,
+                        'role': 'supplier',
+                        'is_staff': False,
+                        'is_superuser': False,
+                    }
+                }
+
+            # Try Customer
+            from modules.customer.models import Customer
+            customer = None
+            if '@' in username:
+                customer = Customer.objects.filter(email=username, is_active=True).first()
+            else:
+                customer = Customer.objects.filter(username=username, is_active=True).first()
+
+            if customer and check_password(password, customer.password):
+                customer.last_login = timezone.now()
+                customer.save()
+                refresh = RefreshToken()
+                refresh['user_id'] = f"cus_{customer.id}"
+                refresh['role'] = 'customer'
+                return {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'user': {
+                        'id': customer.id,
+                        'name': customer.name,
+                        'email': customer.email,
+                        'role': 'customer',
+                        'is_staff': False,
+                        'is_superuser': False,
+                    }
+                }
+            
+            # If still nothing, let super().validate handle the standard failure
+            return super().validate(attrs)
+
+        # 3. Standard User Auth logic
+        if user and '@' in username:
+            attrs['username'] = user.username
                 
         data = super().validate(attrs)
-        
-        # Add user data to the response
         user = self.user
 
-        # Determine role string: superusers and staff are always 'admin'
         if user.is_superuser or user.is_staff:
             role = 'admin'
         elif user.role:

@@ -42,4 +42,22 @@ export const purchaseService = {
     deleteReturn: async (id: string): Promise<void> => {
         await api.delete(`v1/sales/purchase-returns/${id}/`);
     },
+    acceptReturn: async (id: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchase-returns/${id}/accept/`);
+        return data;
+    },
+    rejectReturn: async (id: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchase-returns/${id}/reject/`);
+        return data;
+    },
+
+    // ── Payment Verification ──────────────────────────────────────────────────
+    acceptPayment: async (id: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchases/${id}/accept_payment/`);
+        return data;
+    },
+    rejectPayment: async (id: string, reason: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchases/${id}/reject_payment/`, { reason });
+        return data;
+    },
 };

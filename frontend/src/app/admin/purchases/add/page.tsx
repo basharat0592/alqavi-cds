@@ -1,659 +1,561 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import {
-    ShoppingCart, Plus, Trash2, X, CheckCircle, AlertTriangle,
-    Package, Loader2, ArrowLeft, Save, DollarSign, Clipboard, ShieldCheck,
-    Hash
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShoppingCart, Plus, Trash2, CheckCircle, Package, ArrowLeft, ChevronRight, RefreshCw, Search, ChevronDown } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { userService } from '@/services/user.service';
-import { formatCurrency } from '@/lib/utils';
+import { inventoryService } from '@/services/inventory.service';
+import { formatCurrency, getImageUrl } from '@/lib/utils';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
+import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
+
+/* ─── Shared Components ─── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+    <div className="w-full">
+        <label className="block text-[13px] font-bold text-[#0f1111] mb-1">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        {children}
+    </div>
+);
+
+const inputCls = "w-full h-[38px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const selectCls = `${inputCls} cursor-pointer`;
 
 const EMPTY_FORM = {
-    purchase_number: '', supplier: '', supplier_name: '', supplier_phone: '',
+    purchase_number: '', supplier: '', supplier_name: '',
     order_date: new Date().toISOString().slice(0, 10),
-    expected_delivery_date: '', tax_amount: '0', shipping_cost: '0',
-    status: 'ordered', payment_status: 'unpaid', payment_method: 'cash', notes: '',
+    status: 'PENDING', payment_method: 'CASH', notes: '',
+    shipping_cost: 0,
+    tax_rate: 0,
+    warehouse: '',
 };
 
 type LineItem = {
     product: string;
     product_name: string;
+    packaging_type: 'SINGLE' | 'CARTON';
+    items_per_carton: number;
     quantity: number;
     unit_price: number;
-    packaging_type: 'piece' | 'pack' | 'carton';
-    pieces_per_unit: number;
 };
 
-// ── Reusable form field wrappers ──────────────────────────────────────────────
-const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
-    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-        {children}{required && <span className="text-red-500 ml-0.5">*</span>}
-    </label>
-);
+/* ─── Pure Amazon Style Product Selector ─── */
+const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
 
-const fieldCls = (err?: boolean) =>
-    `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
+    const filtered = products.filter((p: any) =>
+        (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
+    );
 
-const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#EEAF1C] focus:ring-2 focus:ring-[#EEAF1C]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
+    const selected = products.find((p: any) => String(p.id) === String(selectedId));
 
-// ── Section panel wrapper ─────────────────────────────────────────────────────
-const Panel = ({ title, icon: Icon, action, children }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
-            <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-[#EEAF1C]" />}
-                <span className="text-sm font-semibold text-slate-800 dark:text-white">{title}</span>
-            </div>
-            {action}
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className={inputCls + " flex items-center justify-between text-left bg-white hover:bg-[#f3f7f7] group transition-all duration-200 shadow-sm border-[#888c8e]"}
+            >
+                {selected ? (
+                    <div className="flex items-center gap-2 overflow-hidden py-1">
+                        <div className="w-8 h-8 rounded border border-gray-100 overflow-hidden shrink-0 bg-white">
+                            {selected.image ? (
+                                <img src={getImageUrl(selected.image) || ''} className="w-full h-full object-contain p-0.5" alt="" />
+                            ) : (
+                                <Package size={14} className="text-gray-300 m-auto mt-2" />
+                            )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <div className="flex items-baseline gap-1 truncate leading-tight">
+                                <span className="text-[12px] font-bold text-[#111]">{selected.name}</span>
+                                {(selected.weight || selected.size) && (
+                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                        - {selected.weight}{selected.weight && selected.size ? ' • ' : ''}{selected.size}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-[10px] text-[#565959] uppercase font-bold tracking-tighter shrink-0 mt-0.5">SKU: {selected.sku || 'N/A'}</span>
+                        </div>
+                    </div>
+                ) : <span className="text-[#565959] italic">Search Amazon products...</span>}
+                <ChevronDown size={14} className={`text-[#888c8e] transition-transform duration-300 ${open ? 'rotate-180 text-[#e77600]' : ''}`} />
+            </button>
+
+            {open && (
+                <div className="absolute z-[100] w-[180%] left-0 mt-1 bg-white border border-[#cdcdcd] rounded-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    {/* Search Header */}
+                    <div className="p-2.5 bg-[#f3f3f3] border-b border-[#ddd]">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                            <input
+                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#888c8e] rounded-[3px] focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] outline-none bg-white"
+                                placeholder="Type to filter products..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    {/* Results Area */}
+                    <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
+                        {filtered.length > 0 ? (
+                            filtered.map((p: any) => (
+                                <div 
+                                    key={p.id} 
+                                    className="p-3.5 hover:bg-[#f3f7f7] cursor-pointer border-b border-[#eee] last:border-0 transition-all flex items-start gap-4 group"
+                                    onClick={() => { onSelect(p.id); setOpen(false); }}
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="w-12 h-12 bg-white rounded border border-[#ddd] overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#e77600] transition-colors">
+                                        {p.image ? (
+                                            <img src={getImageUrl(p.image) || ''} className="w-full h-full object-contain p-1" alt="" />
+                                        ) : (
+                                            <Package size={20} className="text-gray-200" />
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 flex justify-between gap-4 min-w-0">
+                                        <div className="flex flex-col min-w-0">
+                                            <div className="flex items-baseline gap-1 leading-[1.2] group-hover:text-[#e77600]">
+                                                <span className="text-[13px] font-bold text-[#111] group-hover:underline line-clamp-1">{p.name}</span>
+                                                {(p.weight || p.size) && (
+                                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                        - {p.weight}{p.weight && p.size ? ' • ' : ''}{p.size}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-y-0.5 gap-x-2 mt-1">
+                                                <span className="text-[10px] font-black text-[#565959] uppercase tracking-wider">SKU: {p.sku || 'N/A'}</span>
+                                                <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                                                <span className={`text-[10px] font-bold ${p.quantity < 10 ? 'text-[#b12704]' : 'text-green-700'}`}>
+                                                    {p.quantity} in stock
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Price Section */}
+                                        <div className="flex flex-col items-end shrink-0">
+                                            <span className="text-[15px] font-black text-[#b12704]">{formatCurrency(p.retail_price || 0)}</span>
+                                            <span className="text-[9px] text-gray-400 font-medium">Retail Price</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-12 text-center flex flex-col items-center gap-2">
+                                <Search size={24} className="text-gray-300" />
+                                <span className="text-gray-400 text-[13px]">No results found for "{search}"</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer View */}
+                    <div className="px-4 py-2 bg-[#f8f8f8] border-t border-[#ddd] text-center">
+                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Inventory Management Console</span>
+                    </div>
+                </div>
+            )}
         </div>
-        <div className="p-5">{children}</div>
-    </div>
-);
+    );
+};
+
+/* ─── Supplier Selector ─── */
+const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const filtered = suppliers.filter((s: any) => s.name.toLowerCase().includes(search.toLowerCase()));
+    const selected = suppliers.find((s: any) => String(s.id) === String(selectedId));
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button type="button" onClick={() => setOpen(!open)} className={inputCls + " flex items-center justify-between text-left"}>
+                <span className={selected ? 'text-[#0f1111]' : 'text-[#565959]'}>{selected ? selected.name : 'Select Supplier...'}</span>
+                <ChevronDown size={14} className="text-gray-400" />
+            </button>
+            {open && (
+                <div className="absolute z-[50] w-full mt-1 bg-white border border-[#ddd] rounded-md shadow-xl overflow-hidden">
+                    <div className="p-2 border-b"><input className="w-full px-3 py-1.5 text-[13px] border rounded outline-none" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                    <div className="max-h-[200px] overflow-y-auto">
+                        {filtered.map((s: any) => (
+                            <div key={s.id} className="px-4 py-2 hover:bg-[#f3f7f7] cursor-pointer text-[13px] border-b border-gray-50 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function AddPurchasePage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const hasPrefilled = useRef(false);
-
     const [products, setProducts] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [items, setItems] = useState<LineItem[]>([{
         product: '',
         product_name: '',
+        packaging_type: 'SINGLE',
+        items_per_carton: 1,
         quantity: 1,
         unit_price: 0,
-        packaging_type: 'piece',
-        pieces_per_unit: 1
     }]);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'alert' } | null>(null);
-
-    const showToast = (msg: string, type: 'success' | 'alert' = 'success') => {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
-    };
+    const [successOrder, setSuccessOrder] = useState<any | null>(null);
+    const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
+    const [tempPayload, setTempPayload] = useState<any>(null);
 
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [prodsRes, usersRes, suppRes] = await Promise.allSettled([
-                productService.getAll?.({ all_items: 'true', include_pending: 'true', include_supplier_only: 'true' } as any) ?? Promise.resolve([]),
+            const [usersRes, suppRes] = await Promise.allSettled([
                 userService.getAll(),
                 (companyService as any).getSuppliers?.() ?? Promise.resolve([])
             ]);
 
-            if (prodsRes.status === 'fulfilled') {
-                const prods = prodsRes.value;
-                setProducts(Array.isArray(prods) ? prods : (prods as any)?.results || []);
-            }
-
-            // Registered Suppliers from Supplier Page (Users with Supplier role)
-            const users = usersRes.status === 'fulfilled' ? (Array.isArray(usersRes.value) ? usersRes.value : []) : [];
-            const registeredSuppliers = users.filter((u: any) =>
-                (u.role_name || '').toLowerCase().includes('supplier')
-            ).map((u: any) => ({
-                id: u.id,
-                name: u.business_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
-                phone: u.phone_number || u.phone || '',
-                city: u.address || ''
+            const usersArr = usersRes.status === 'fulfilled' ? (Array.isArray(usersRes.value) ? usersRes.value : []) : [];
+            const fromUsers = usersArr.filter((u: any) => (u.role_name || '').toLowerCase().includes('supplier')).map((u: any) => ({
+                id: u.id, name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username, phone: u.phone || '', city: u.address || '', isUser: true
+            }));
+            const fromCompanyRaw = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
+            const fromCompMapped = fromCompanyRaw.map((s: any) => ({
+                id: s.id, name: s.company || s.name, phone: s.phone || '', city: s.address || '', isUser: false
             }));
 
-            // Also include official Supplier model records
-            const suppliersList = suppRes.status === 'fulfilled' ? (Array.isArray(suppRes.value) ? suppRes.value : []) : [];
+            const merged = Array.from(new Map([...fromCompMapped, ...fromUsers].map(s => [s.name, s])).values());
+            setSuppliers(merged);
 
-            // Merge both for complete registry
-            const merged = [...registeredSuppliers, ...suppliersList];
-            const unique = Array.from(new Map(merged.map(item => [item.name, item])).values());
+            try {
+                const whRes = await inventoryService.getWarehouses();
+                setWarehouses(whRes || []);
+            } catch (e) {
+                console.error("Failed to fetch warehouses", e);
+            }
 
-            setSuppliers(unique);
-
-            const num = `PO-${Date.now().toString().slice(-6)}`;
-            setForm(prev => ({ ...prev, purchase_number: num }));
-        } catch {
-            showToast('Failed to load data', 'alert');
-        } finally {
-            setLoading(false);
-        }
+            setForm(prev => ({ ...prev, purchase_number: `PO-${Date.now().toString().slice(-6)}` }));
+        } catch { toast.error('Failed to load data'); } finally { setLoading(false); }
     }, []);
 
     useEffect(() => { loadData(); }, [loadData]);
 
     useEffect(() => {
-        if (!loading && searchParams && !hasPrefilled.current) {
-            const sn = searchParams.get('supplier_name');
-            const pid = searchParams.get('product_id');
-            const qty = parseInt(searchParams.get('quantity') || '1');
+        if (!form.supplier) { setProducts([]); return; }
+        const fetchSupplierProducts = async () => {
+            try {
+                const res = await productService.getAllSupplier({ supplier: form.supplier });
+                const raw = res as any;
+                setProducts(Array.isArray(raw) ? raw : raw?.results || []);
+            } catch (error) { setProducts([]); }
+        };
+        fetchSupplierProducts();
+    }, [form.supplier]);
 
-            if (pid && products.length > 0) {
-                const foundProduct = products.find(prod => String(prod.id) === pid);
-                if (foundProduct) {
-                    hasPrefilled.current = true;
-                    setItems([{
-                        product: foundProduct.id.toString(),
-                        product_name: foundProduct.name,
-                        quantity: qty,
-                        unit_price: parseFloat(foundProduct.price || 0),
-                        packaging_type: foundProduct.unit_type || 'piece',
-                        pieces_per_unit: foundProduct.pieces_per_unit || 1
-                    }]);
-                    const vendor = foundProduct.supplier_name || foundProduct.company_name || sn || '';
-                    if (vendor) {
-                        const matchedSupplier = suppliers.find(c => c.name.toLowerCase().trim() === vendor.toLowerCase().trim());
-                        setForm(f => ({
-                            ...f,
-                            supplier: matchedSupplier ? matchedSupplier.id : f.supplier,
-                            supplier_name: matchedSupplier ? matchedSupplier.name : vendor,
-                            supplier_phone: matchedSupplier ? (matchedSupplier.phone || matchedSupplier.whatsapp || '') : f.supplier_phone
-                        }));
-                    }
-                }
-            } else if (sn && products.length > 0) {
-                hasPrefilled.current = true;
-                const matched = suppliers.find(c => c.name.toLowerCase().trim() === sn.toLowerCase().trim());
-                const currentSn = matched ? matched.name : sn;
-                setForm(f => ({
-                    ...f,
-                    supplier: matched ? matched.id : f.supplier,
-                    supplier_name: currentSn,
-                    supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone
-                }));
-                const supplierProds = products.filter(p => p.company_name === currentSn || p.supplier_name === currentSn);
-                if (supplierProds.length > 0) {
-                    setItems(supplierProds.map(p => ({
-                        product: p.id.toString(),
-                        product_name: p.name,
-                        quantity: 1,
-                        unit_price: parseFloat(p.price || 0),
-                        packaging_type: p.unit_type || 'piece',
-                        pieces_per_unit: p.pieces_per_unit || 1
-                    })));
-                }
+    const handleSave = async (warehouseIdOrEvent?: any) => {
+        const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
+        if (!form.supplier || items.some(i => !i.product)) return toast.error('Please fill all required fields');
+
+        if (form.status === 'RECEIVED' && !warehouseId && !form.warehouse) {
+            setTempPayload({ ...form, items });
+            setIsWarehouseModalOpen(true);
+            return;
+        }
+
+        const finalWarehouseId = warehouseId || form.warehouse;
+
+        for (const item of items) {
+            const p = products.find(prod => String(prod.id) === String(item.product));
+            if (!p) continue;
+            const totalUnitsNeeded = item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity;
+            if (totalUnitsNeeded > p.quantity) {
+                return toast.error(`Cannot purchase more than ${p.quantity} units of ${p.name}`);
             }
         }
-    }, [loading, suppliers, products, searchParams]);
 
-    const validate = () => {
-        const e: Record<string, string> = {};
-        if (!form.purchase_number) e.purchase_number = 'Required';
-        if (!form.supplier) e.supplier_name = 'Supplier not found in registry';
-        if (!form.supplier_name) e.supplier_name = 'Required';
-        if (!form.order_date) e.order_date = 'Required';
-        if (items.some(i => !i.product || i.quantity < 1 || i.unit_price <= 0))
-            e.items = 'All items require a product, quantity ≥ 1, and unit price > 0';
-        setErrors(e);
-        return Object.keys(e).length === 0;
-    };
-
-    const [successOrder, setSuccessOrder] = useState<any | null>(null);
-
-    const handleSave = async () => {
-        if (!validate()) return;
         setSaving(true);
         try {
-            const res = await purchaseService.create({ ...form, items });
-            setSuccessOrder(res);
-            showToast('Purchase order created successfully!');
-        } catch (e: any) {
-            showToast(e?.response?.data?.error || 'Failed to create purchase order', 'alert');
-        } finally {
-            setSaving(false);
-        }
+            const payload: any = { ...form, items };
+            if (finalWarehouseId) payload.warehouse = finalWarehouseId;
+            const data = await purchaseService.create(payload);
+            setSuccessOrder(data);
+            setIsWarehouseModalOpen(false);
+            toast.success('Purchase order created!');
+        } catch (err: any) {
+            const msg = err.response?.data?.error || err.response?.data?.message || 'Failed to create purchase';
+            toast.error(msg);
+        } finally { setSaving(false); }
     };
 
     const addItem = () => setItems(prev => [...prev, {
         product: '',
         product_name: '',
+        packaging_type: 'SINGLE',
+        items_per_carton: 1,
         quantity: 1,
         unit_price: 0,
-        packaging_type: 'piece',
-        pieces_per_unit: 1
     }]);
+
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
+
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
-                const p = products.find(p => p.id === val || p.id === Number(val));
-                return {
-                    ...item,
-                    product: val,
-                    product_name: p?.name || '',
-                    unit_price: p?.price ? parseFloat(p.price) : item.unit_price,
-                    packaging_type: p?.unit_type || 'piece',
-                    pieces_per_unit: p?.pieces_per_unit || 1
-                };
+                const p = products.find(p => String(p.id) === String(val));
+                return { ...item, product: val, product_name: p?.name || '', unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price };
             }
             return { ...item, [field]: val };
         }));
     };
 
-    const lineTotal = items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_price || 0), 0);
-    const grandTotal = lineTotal + parseFloat(form.tax_amount || '0') + parseFloat(form.shipping_cost || '0');
-
-    if (loading) {
-        return (
-            <div className="flex flex-col h-[60vh] items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 text-[#EEAF1C] animate-spin" />
-                <p className="text-sm text-slate-500">Loading product and supplier data...</p>
-            </div>
-        );
-    }
+    const calculateSubtotal = (item: LineItem) => (item.quantity || 0) * (item.unit_price || 0);
+    const totalAmount = items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
-
-            {/* ── Page Header ── */}
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">New Purchase Order</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Create a new inbound procurement record</p>
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+            <div className="max-w-[1100px] mx-auto px-6 pt-5">
+                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
+                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                    <ChevronRight size={10} />
+                    <Link href="/admin/purchases" className="hover:text-[#c45500] hover:underline">Purchases</Link>
+                    <ChevronRight size={10} />
+                    <span className="text-[#c45500]">New Purchase</span>
                 </div>
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                </button>
-            </div>
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-[22px] font-normal">Create Purchase Order</h1>
+                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                        <ArrowLeft size={14} /> Back
+                    </button>
+                </div>
+                <div className="border-b border-[#ddd] mb-6" />
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-                {/* ── Left column ── */}
-                <div className="lg:col-span-8 space-y-5">
-
-                    {/* Order Details */}
-                    <Panel title="Order Details" icon={Clipboard}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <FieldLabel required>PO Number</FieldLabel>
-                                <input
-                                    value={form.purchase_number}
-                                    onChange={(e) => setForm(f => ({ ...f, purchase_number: e.target.value }))}
-                                    className={fieldCls(!!errors.purchase_number)}
-                                />
-                                {errors.purchase_number && <p className="text-red-500 text-xs mt-1">{errors.purchase_number}</p>}
+                {loading ? (
+                    <div className="text-center py-20 text-[13px] text-[#565959]">Loading data...</div>
+                ) : (
+                    <div className="flex flex-col lg:flex-row gap-6 items-start">
+                        <div className="flex-1 min-w-0 space-y-5">
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h2 className="text-[14px] font-bold">Order Information</h2>
+                                    <p className="text-[12px] text-[#565959]">Enter order number, supplier, and date.</p>
+                                </div>
+                                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <Field label="Order Number" required>
+                                        <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
+                                    </Field>
+                                    <Field label="Supplier" required>
+                                        <SupplierSelector selectedId={form.supplier} suppliers={suppliers} inputCls={selectCls} onSelect={(val: any) => {
+                                            const matched = suppliers.find(c => String(c.id) === String(val));
+                                            setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
+                                        }} />
+                                    </Field>
+                                    <Field label="Order Date" required>
+                                        <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
+                                    </Field>
+                                    <Field label="Payment Method">
+                                        <select className={selectCls} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
+                                            <option value="CASH">Cash</option>
+                                            <option value="BANK_TRANSFER">Bank Transfer</option>
+                                            <option value="CHEQUE">Cheque</option>
+                                            <option value="ONLINE">Online / UPI</option>
+                                            <option value="CREDIT">Credit</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Shipping Cost">
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[13px]">$</span>
+                                            <input 
+                                                className={inputCls + " pl-6"} 
+                                                type="number" 
+                                                value={(form as any).shipping_cost || ''} 
+                                                onChange={e => setForm(f => ({ ...f, shipping_cost: parseFloat(e.target.value) || 0 }))} 
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </Field>
+                                    <Field label="Tax Rate (%)">
+                                        <div className="relative">
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-[13px]">%</span>
+                                            <input 
+                                                className={inputCls + " pr-8"} 
+                                                type="number" 
+                                                value={(form as any).tax_rate || ''} 
+                                                onChange={e => setForm(f => ({ ...f, tax_rate: parseFloat(e.target.value) || 0 }))} 
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </Field>
+                                    <Field label="Target Warehouse" required={form.status === 'RECEIVED'}>
+                                        <select className={selectCls} value={form.warehouse} onChange={e => setForm(f => ({ ...f, warehouse: e.target.value }))}>
+                                            <option value="">Select Warehouse...</option>
+                                            {warehouses.map(w => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </Field>
+                                </div>
                             </div>
-                            <div>
-                                <FieldLabel required>Supplier Entity</FieldLabel>
-                                <select
-                                    value={form.supplier}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        const matched = suppliers.find(c => String(c.id) === val);
-                                        const currentName = matched ? matched.name : '';
 
-                                        // Filter products specifically for this supplier ID
-                                        const supplierProds = products.filter(p =>
-                                            p.supplier === Number(val) ||
-                                            (currentName && String(p.supplier_name || '').toLowerCase() === currentName.toLowerCase())
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm relative z-[10]">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-[14px] font-bold">Order Items</h2>
+                                        <p className="text-[12px] text-[#565959]">Select products and quantities.</p>
+                                    </div>
+                                    <Btn variant="secondary" onClick={addItem}><Plus size={14} /> Add Item</Btn>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {items.map((item, i) => {
+                                        const p = products.find(prod => String(prod.id) === String(item.product));
+                                        const maxQty = p ? (item.packaging_type === 'CARTON' ? Math.floor(p.quantity / (item.items_per_carton || 1)) : p.quantity) : 9999;
+                                        const isMax = p && item.quantity >= maxQty;
+
+                                        return (
+                                            <div key={i} className="bg-white border border-[#e3e6e6] rounded-[8px] p-4 transition-all hover:border-[#e77600] hover:shadow-md group">
+                                                <div className="grid grid-cols-12 gap-4 items-center">
+                                                    <div className="col-span-12 lg:col-span-5">
+                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Product</label>
+                                                        <ProductSelector selectedId={item.product} products={products} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'product', val)} />
+                                                    </div>
+                                                    <div className="col-span-4 lg:col-span-2 text-center">
+                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Type</label>
+                                                        <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
+                                                            <option value="SINGLE">Single</option>
+                                                            <option value="CARTON">Carton</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-span-4 lg:col-span-2 relative text-center">
+                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Qty</label>
+                                                        <input className={inputCls + " text-center font-bold " + (isMax ? 'text-red-600 border-red-400' : 'text-[#c45500]')} type="number" min="1" value={item.quantity || ''} onChange={e => {
+                                                            let val = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                                            const p = products.find(prod => String(prod.id) === String(item.product));
+                                                            if (p) {
+                                                                const maxQty = item.packaging_type === 'CARTON' ? Math.floor(p.quantity / (item.items_per_carton || 1)) : p.quantity;
+                                                                if (val > maxQty) val = maxQty;
+                                                            }
+                                                            updateItem(i, 'quantity', val);
+                                                        }} />
+                                                        {isMax && <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[7px] font-black text-red-600 uppercase">MAX</span>}
+                                                    </div>
+                                                    <div className="col-span-3 lg:col-span-2 text-center">
+                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pcs/Ctn</label>
+                                                        <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-gray-50' : '') + " text-center"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
+                                                    </div>
+                                                    <div className="col-span-1 flex justify-center pt-5"><button onClick={() => removeItem(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={18} /></button></div>
+                                                </div>
+                                                {item.product && (
+                                                    <div className="mt-3 pt-3 border-t border-gray-50 flex justify-between items-center text-[11px]">
+                                                        <div className="flex gap-4 text-gray-500">
+                                                            <span>Cost: <b className="text-gray-800">{formatCurrency(item.unit_price)}</b></span>
+                                                            <span className="w-[1px] h-3 bg-gray-200" />
+                                                            <span>Total: <b className="text-gray-800">{item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity} Pcs</b></span>
+                                                        </div>
+                                                        <div className="text-[14px] font-black text-[#b12704]">{formatCurrency(calculateSubtotal(item))}</div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
-
-                                        if (supplierProds.length > 0) {
-                                            setItems(supplierProds.slice(0, 1).map(p => ({
-                                                product: p.id.toString(),
-                                                product_name: p.name,
-                                                quantity: 1,
-                                                unit_price: parseFloat(p.price || 0),
-                                                packaging_type: p.unit_type || 'piece',
-                                                pieces_per_unit: p.pieces_per_unit || 1
-                                            })));
-                                        } else {
-                                            setItems([{
-                                                product: '',
-                                                product_name: '',
-                                                quantity: 1,
-                                                unit_price: 0,
-                                                packaging_type: 'piece',
-                                                pieces_per_unit: 1
-                                            }]);
-                                        }
-
-                                        setForm(f => ({
-                                            ...f,
-                                            supplier: val,
-                                            supplier_name: currentName,
-                                            supplier_phone: matched ? (matched.phone || matched.whatsapp || '') : f.supplier_phone
-                                        }));
-                                    }}
-                                    className={`${selectCls} ${errors.supplier_name ? 'border-red-400' : ''}`}
-                                >
-                                    <option value="">Locate registered supplier...</option>
-                                    {suppliers.map(c => (
-                                        <option key={`${c.id}-${c.name}`} value={String(c.id)}>{c.name}{c.city ? ` — ${c.city}` : ''}</option>
-                                    ))}
-                                </select>
-                                {errors.supplier_name && <p className="text-red-500 text-xs mt-1">{errors.supplier_name}</p>}
+                                    })}
+                                </div>
                             </div>
-                            <div>
-                                <FieldLabel>Supplier Phone</FieldLabel>
-                                <input
-                                    value={form.supplier_phone}
-                                    onChange={(e) => setForm(f => ({ ...f, supplier_phone: e.target.value }))}
-                                    placeholder="+92-XXX-XXXXXXX"
-                                    className={fieldCls()}
-                                />
-                            </div>
-                            <div>
-                                <FieldLabel required>Order Date</FieldLabel>
-                                <input
-                                    type="date"
-                                    value={form.order_date}
-                                    onChange={(e) => setForm(f => ({ ...f, order_date: e.target.value }))}
-                                    className={fieldCls(!!errors.order_date)}
-                                />
-                                {errors.order_date && <p className="text-red-500 text-xs mt-1">{errors.order_date}</p>}
+
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm">
+                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]"><h2 className="text-[14px] font-bold">Notes (Optional)</h2></div>
+                                <div className="p-6"><textarea className="w-full p-3 border rounded text-[13px] outline-none focus:border-[#e77600]" rows={3} placeholder="Any notes for this purchase..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
                             </div>
                         </div>
-                    </Panel>
 
-                    {/* Order Items - Simplified Card Design */}
-                    <Panel
-                        title="Order Items"
-                        icon={Package}
-                        action={
-                            <button
-                                onClick={addItem}
-                                className="flex items-center gap-2 px-4 py-2 text-[12px] font-bold text-white bg-[#EEAF1C] rounded-xl hover:bg-amber-600 transition-all shadow-sm"
-                            >
-                                <Plus className="h-4 w-4" strokeWidth={2.5} /> Add Item
-                            </button>
-                        }
-                    >
-                        {errors.items && (
-                            <div className="mb-6 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-center gap-3">
-                                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-                                <p className="text-red-600 text-xs font-medium">{errors.items}</p>
-                            </div>
-                        )}
-
-                        <div className="space-y-4">
-                            {items.map((item, i) => (
-                                <div key={i} className="relative group bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-xl p-5 hover:border-[#EEAF1C]/40 transition-all">
-
-                                    {/* Item Header */}
-                                    <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-                                        <div className="flex-1 min-w-[280px]">
-                                            <FieldLabel required>Product</FieldLabel>
-                                            <select
-                                                value={String(item.product)}
-                                                onChange={e => updateItem(i, 'product', e.target.value)}
-                                                className={selectCls + " font-medium text-slate-800 dark:text-white"}
-                                            >
-                                                <option value="">Select a product...</option>
-                                                {products
-                                                    .filter(p => {
-                                                        if (!form.supplier) return true;
-                                                        const pSupplierId = p.supplier && typeof p.supplier === 'object' ? p.supplier.id : p.supplier;
-                                                        return String(pSupplierId) === String(form.supplier) ||
-                                                            String(p.supplier_name || '').toLowerCase() === String(form.supplier_name).toLowerCase();
-                                                    })
-                                                    .map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)
-                                                }
-                                            </select>
-                                        </div>
-
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Subtotal</p>
-                                            <p className="text-lg font-bold text-[#EEAF1C]">{formatCurrency((item.quantity || 0) * (item.unit_price || 0))}</p>
-                                        </div>
+                        <div className="w-full lg:w-[300px] space-y-4">
+                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-5">
+                                <h3 className="text-[14px] font-bold mb-4">Order Summary</h3>
+                                <div className="space-y-3 border-b pb-4 mb-4">
+                                    <div className="flex justify-between text-[13px]">
+                                        <span className="text-[#565959]">Items Total:</span>
+                                        <span className="font-medium">{formatCurrency(totalAmount)}</span>
                                     </div>
-
-                                    {/* Item Details */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                                        <div>
-                                            <FieldLabel>Pack or Carton?</FieldLabel>
-                                            <select
-                                                value={item.packaging_type}
-                                                onChange={e => updateItem(i, 'packaging_type', e.target.value)}
-                                                className="w-full px-3 py-2 text-xs font-bold text-[#EEAF1C] bg-[#EEAF1C]/5 border border-[#EEAF1C]/20 rounded-lg outline-none"
-                                            >
-                                                <option value="piece">Piece (Single)</option>
-                                                <option value="pack">Pack</option>
-                                                <option value="carton">Carton</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel>Pieces in 1 Pack</FieldLabel>
-                                            <div className="relative">
-                                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                <input
-                                                    type="number" min="1"
-                                                    value={item.pieces_per_unit}
-                                                    onChange={(e) => updateItem(i, 'pieces_per_unit', parseInt(e.target.value) || 1)}
-                                                    className={fieldCls() + " pl-9 border-dashed text-slate-600 dark:text-slate-300 font-bold"}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel required>Quantity</FieldLabel>
-                                            <div className="relative">
-                                                <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                <input
-                                                    type="number" min="1"
-                                                    value={item.quantity}
-                                                    onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                                                    className={fieldCls() + " pl-9 font-bold text-slate-900 dark:text-white"}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel required>Price (Each)</FieldLabel>
-                                            <div className="relative">
-                                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                <input
-                                                    type="number" min="0" step="0.01"
-                                                    value={item.unit_price}
-                                                    onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                    className={fieldCls() + " pl-9 text-right font-bold text-slate-900 dark:text-white"}
-                                                />
-                                            </div>
-                                        </div>
+                                    <div className="flex justify-between text-[13px]">
+                                        <span className="text-[#565959]">Shipping:</span>
+                                        <span className={((form as any).shipping_cost > 0) ? "font-medium" : "text-green-700 font-bold"}>
+                                            {(form as any).shipping_cost > 0 ? formatCurrency((form as any).shipping_cost) : 'FREE'}
+                                        </span>
                                     </div>
-
-                                    {/* Item Summary */}
-                                    <div className="mt-4 pt-3 flex items-center justify-between border-t border-slate-50 dark:border-white/5 border-dashed">
-                                        <p className="text-[11px] font-medium text-slate-500">
-                                            Total: <span className="font-bold text-slate-700 dark:text-slate-300">{(item.quantity || 0) * (item.pieces_per_unit || 1)} pieces</span> will be added to stock.
-                                        </p>
-
-                                        <button
-                                            onClick={() => removeItem(i)}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" /> REMOVE
-                                        </button>
+                                    <div className="flex justify-between text-[13px]">
+                                        <span className="text-[#565959]">Estimated Tax ({(form as any).tax_rate}%):</span>
+                                        <span className="font-medium">{formatCurrency((totalAmount * ((form as any).tax_rate || 0)) / 100)}</span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </Panel>
-                </div>
-
-                {/* ── Right column ── */}
-                <div className="lg:col-span-4 space-y-5">
-
-                    {/* Status */}
-                    <Panel title="Order Status" icon={ShieldCheck}>
-                        <div className="space-y-4">
-                            <div>
-                                <FieldLabel>Order Status</FieldLabel>
-                                <select
-                                    value={form.status}
-                                    onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                                    className={selectCls}
-                                >
-                                    <option value="draft">Draft</option>
-                                    <option value="ordered">Ordered</option>
-                                    <option value="received">Received</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                            <div>
-                                <FieldLabel>Expected Delivery</FieldLabel>
-                                <input
-                                    type="date"
-                                    value={form.expected_delivery_date}
-                                    onChange={(e) => setForm(f => ({ ...f, expected_delivery_date: e.target.value }))}
-                                    className={fieldCls()}
-                                />
+                                <div className="flex justify-between items-center mb-6">
+                                    <span className="text-[16px] font-bold">Order Total:</span>
+                                    <span className="text-[18px] font-black text-[#b12704]">
+                                        {formatCurrency(totalAmount + ((form as any).shipping_cost || 0) + (totalAmount * ((form as any).tax_rate || 0)) / 100)}
+                                    </span>
+                                </div>
+                                <Btn className="w-full h-[35px] text-[14px] justify-center" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>Place Order</Btn>
                             </div>
                         </div>
-                    </Panel>
+                    </div>
+                )}
 
-                    {/* Order Summary */}
-                    <Panel title="Order Summary" icon={DollarSign}>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <FieldLabel>Shipping Cost</FieldLabel>
-                                    <input
-                                        type="number" min="0" step="0.01"
-                                        value={form.shipping_cost}
-                                        onChange={(e) => setForm(f => ({ ...f, shipping_cost: e.target.value }))}
-                                        className={fieldCls()}
-                                    />
-                                </div>
-                                <div>
-                                    <FieldLabel>Tax Amount</FieldLabel>
-                                    <input
-                                        type="number" min="0" step="0.01"
-                                        value={form.tax_amount}
-                                        onChange={(e) => setForm(f => ({ ...f, tax_amount: e.target.value }))}
-                                        className={fieldCls()}
-                                    />
+                {successOrder && (
+                    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white w-full max-w-[450px] rounded-[8px] overflow-hidden shadow-2xl scale-in-center">
+                            <div className="p-8 text-center">
+                                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
+                                <h2 className="text-[20px] font-bold mb-2 text-[#0f1111]">Order Placed Successfully!</h2>
+                                <p className="text-[13px] text-[#565959] mb-6">Your purchase order <b className="text-[#0f1111]">{successOrder.purchase_number}</b> has been recorded.</p>
+                                <div className="flex flex-col gap-2">
+                                    <Btn className="w-full h-[35px] justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
+                                    <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#007185] hover:underline">Create Another Order</button>
                                 </div>
                             </div>
-                            <div>
-                                <FieldLabel>Payment Status</FieldLabel>
-                                <select
-                                    value={form.payment_status}
-                                    onChange={e => setForm(f => ({ ...f, payment_status: e.target.value }))}
-                                    className={selectCls}
-                                >
-                                    <option value="unpaid">Unpaid</option>
-                                    <option value="partial">Partial</option>
-                                    <option value="paid">Paid</option>
-                                </select>
-                            </div>
-                            <div>
-                                <FieldLabel>Payment Method</FieldLabel>
-                                <select
-                                    value={form.payment_method}
-                                    onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
-                                    className={selectCls}
-                                >
-                                    <option value="cash">Cash</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="online_payment">Online Payment</option>
-                                </select>
-                            </div>
-
-                            {/* Grand total */}
-                            <div className="pt-4 border-t border-slate-100 dark:border-white/10">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-xs text-slate-500">Subtotal</span>
-                                    <span className="text-sm text-slate-700 dark:text-slate-300">{formatCurrency(lineTotal)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-xs text-slate-500">Shipping</span>
-                                    <span className="text-sm text-slate-700 dark:text-slate-300">{formatCurrency(parseFloat(form.shipping_cost || '0'))}</span>
-                                </div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-xs text-slate-500">Tax</span>
-                                    <span className="text-sm text-slate-700 dark:text-slate-300">{formatCurrency(parseFloat(form.tax_amount || '0'))}</span>
-                                </div>
-                                <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-white/10">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total</span>
-                                    <span className="text-xl font-bold text-[#EEAF1C]">{formatCurrency(grandTotal)}</span>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="w-full py-2.5 bg-[#EEAF1C] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 shadow-sm mt-2"
-                            >
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                {saving ? 'Creating...' : 'Create Purchase Order'}
-                            </button>
                         </div>
-                    </Panel>
-                </div>
+                    </div>
+                )}
             </div>
 
-            {/* ── Amazon-Style Success Modal ── */}
-            {successOrder && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col border border-gray-200">
-                        <div className="p-8 text-center flex flex-col items-center">
-                            <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border border-emerald-100">
-                                <CheckCircle className="h-6 w-6 text-emerald-600" />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">Purchase Confirmed</h3>
-                            <p className="text-sm text-gray-500 mb-6 font-medium">Order #{successOrder.purchase_number} has been created.</p>
-
-                            <div className="w-full space-y-4 mb-2">
-                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 text-left relative group/copy">
-                                    <p className="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest leading-none">Tracking Identifier</p>
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-lg font-black text-gray-900 tracking-tight leading-none uppercase">{successOrder.tracking_id || 'N/A'}</p>
-                                        {successOrder.tracking_id && (
-                                            <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(successOrder.tracking_id);
-                                                    showToast('Tracking ID Copied!');
-                                                }}
-                                                className="p-1 text-gray-400 hover:text-[#EEAF1C] transition-colors"
-                                                title="Copy Tracking ID"
-                                            >
-                                                <Clipboard className="h-4 w-4" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <button
-                                        onClick={() => router.push('/admin/purchases')}
-                                        className="w-full py-2 bg-[#F7CA00] hover:bg-[#f0c14b] border border-[#a88734] rounded text-sm font-bold shadow-sm active:shadow-inner"
-                                    >
-                                        View Orders
-                                    </button>
-                                    <button
-                                        onClick={() => router.push(`/admin/tracking?q=${successOrder.tracking_id}`)}
-                                        className="w-full py-2 text-xs font-bold text-[#007185] hover:text-[#c7511f] hover:underline transition-colors"
-                                    >
-                                        Track this shipment
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ── Toast ── */}
-            {toast && (
-                <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === 'success' ? 'bg-[#EEAF1C]' : 'bg-red-600'}`}>
-                        {toast.type === 'success'
-                            ? <CheckCircle className="h-4 w-4 shrink-0" />
-                            : <AlertTriangle className="h-4 w-4 shrink-0" />}
-                        {toast.msg}
-                    </div>
-                </div>
-            )}
+            <WarehouseSelectionModal isOpen={isWarehouseModalOpen} onClose={() => setIsWarehouseModalOpen(false)} onConfirm={(whId) => handleSave(whId)} loading={saving} />
         </div>
     );
 }

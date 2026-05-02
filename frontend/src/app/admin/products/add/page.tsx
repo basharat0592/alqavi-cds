@@ -1,401 +1,631 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
-    Package, Tag, Image as ImageIcon, Plus, Trash2,
-    Save, Loader2, ArrowLeft, DollarSign, Database,
-    X, AlertTriangle, CheckCircle, Barcode, Hash, Building2, Layers, ChevronLeft
+    Package, RefreshCw, ChevronRight, ChevronLeft, Image as ImageIcon,
+    Activity, ShieldCheck, Save, DollarSign, Percent, ArrowRight,
+    Search, Info, CheckCircle, Plus, X, ChevronDown, MapPin
 } from 'lucide-react';
-import { productService, companyCategoryService, companyService, CompanyInfo, mainCategoryService, userService } from '@/lib/api';
+import { productService, inventoryService } from '@/lib/api';
+import { companyService } from '@/services/company.service';
 import { getImageUrl } from '@/lib/utils';
-import { authService } from '@/lib/auth';
 import toast from 'react-hot-toast';
-import PageLoader from '@/components/ui/PageLoader';
+import Link from 'next/link';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#EEAF1C] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
-const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - PRODUCT SKU HUB
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const Field = ({ label, required = false, children, className = "" }: { label: string; required?: boolean; children: React.ReactNode; className?: string }) => (
+    <div className={`w-full ${className}`}>
+        <label className="block text-[13px] font-bold text-[#0f1111] mb-1 uppercase tracking-tighter">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        {children}
+    </div>
+);
+
+const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all disabled:bg-[#f3f3f3] disabled:text-[#565959]";
+const selectCls = `${inputCls} cursor-pointer`;
+
+/* ─── Searchable Stock Selector ─── */
+const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Group stocks by name and price (merge across warehouses if price is same)
+    const groupedStocks = useMemo(() => {
+        const groups: Record<string, any> = {};
+        stocks.forEach((s: any) => {
+            const key = `${(s.product_name || '').toLowerCase().trim()}_${s.price_per_item}`;
+            if (!groups[key]) {
+                groups[key] = { ...s, total_quantity: 0 };
+            }
+            groups[key].total_quantity += Number(s.total_quantity || 0);
+            
+            // If warehouses are different, mark as 'Multiple'
+            if (groups[key].warehouse_name !== s.warehouse_name) {
+                groups[key].warehouse_name = 'Multiple';
+            }
+        });
+        return Object.values(groups);
+    }, [stocks]);
+
+    const filtered = groupedStocks.filter((s: any) =>
+        (s.product_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.sku && s.sku.toLowerCase().includes(search.toLowerCase())) ||
+        (s.barcode && s.barcode.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const selected = stocks.find((s: any) => s.id.toString() === selectedId.toString());
+    const selectedGrouped = selected ? groupedStocks.find(g => (g.product_name || '').toLowerCase() === (selected.product_name || '').toLowerCase() && g.price_per_item === selected.price_per_item) : null;
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const getCatalogImg = (name: string) => {
+        return catalogProducts.find((p: any) => p.name?.toLowerCase().trim() === name?.toLowerCase().trim())?.image;
+    };
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className={inputCls + " flex items-center justify-between text-left h-[42px] px-2"}
+            >
+                {selectedGrouped ? (
+                    <div className="flex items-center gap-2 overflow-hidden py-1">
+                        <div className="w-8 h-8 rounded border border-gray-100 overflow-hidden shrink-0 bg-white">
+                            {getCatalogImg(selectedGrouped.product_name) ? (
+                                <img src={getImageUrl(getCatalogImg(selectedGrouped.product_name)) || ''} className="w-full h-full object-contain p-0.5" alt="" />
+                            ) : (
+                                <Package size={14} className="text-gray-300 m-auto mt-2" />
+                            )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-[13px] font-bold text-[#111]">{selectedGrouped.product_name}</span>
+                                {(selectedGrouped.weight || selectedGrouped.size) && (
+                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                        — {selectedGrouped.weight}{selectedGrouped.weight && selectedGrouped.size ? ' • ' : ''}{selectedGrouped.size}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-[10px] text-[#565959] uppercase font-bold tracking-tighter leading-none">
+                                Rs. {Number(selectedGrouped.price_per_item).toLocaleString()} • {selectedGrouped.total_quantity} In Total Stock
+                            </span>
+                        </div>
+                    </div>
+                ) : <span className="text-[#565959] italic">Search Stock Registry...</span>}
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+                <div className="absolute z-[100] w-[120%] mt-1 bg-white border border-[#cdcdcd] rounded-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden">
+                    <div className="p-2 bg-[#f3f3f3] border-b border-[#ddd]">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                            <input
+                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#888c8e] rounded-[3px] outline-none bg-white focus:border-[#e77600]"
+                                placeholder="Type product name, SKU or barcode..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto">
+                        {filtered.length > 0 ? (
+                            filtered.map((s: any, idx: number) => (
+                                <div 
+                                    key={s.id || idx} 
+                                    className="p-3 hover:bg-[#f3f7f7] cursor-pointer border-b border-[#eee] last:border-0 transition-all group flex items-start gap-3"
+                                    onClick={() => { onSelect(s.id.toString()); setOpen(false); }}
+                                >
+                                    <div className="w-10 h-10 bg-white rounded border border-[#ddd] overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#e77600] transition-colors">
+                                        {getCatalogImg(s.product_name) ? (
+                                            <img src={getImageUrl(getCatalogImg(s.product_name)) || ''} className="w-full h-full object-contain p-1" alt="" />
+                                        ) : (
+                                            <Package size={20} className="text-gray-200" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[13px] font-bold text-[#111] group-hover:text-[#e77600] group-hover:underline">{s.product_name}</span>
+                                                {(s.weight || s.size) && (
+                                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                        — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-[10px] text-emerald-600 font-bold">{s.total_quantity} Units</span>
+                                                <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                                                <span className="text-[10px] text-[#007185] font-bold uppercase tracking-tighter flex items-center gap-0.5">
+                                                    <MapPin size={10} /> {s.warehouse_name || 'Unassigned'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[12px] font-bold text-[#b12704]">Rs. {Number(s.price_per_item).toLocaleString()}</span>
+                                            <p className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">Shared Cost</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-8 text-center text-gray-400 text-[13px]">No matching stock signatures</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function AddEditProductPage() {
     const router = useRouter();
     const { id } = useParams();
     const isEdit = !!id;
 
-    const [loading, setLoading] = useState(isEdit);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Data State
-    const [productCategories, setProductCategories] = useState<any[]>([]);
-    const [companyCategories, setCompanyCategories] = useState<any[]>([]);
-    const [companies, setCompanies] = useState<CompanyInfo[]>([]);
-    const [mainCategories, setMainCategories] = useState<any[]>([]);
-    const [suppliers, setSuppliers] = useState<any[]>([]);
-    const [user, setUser] = useState<any>(null);
+    const [allStocks, setAllStocks] = useState<any[]>([]);
+    const [allSuppliers, setAllSuppliers] = useState<any[]>([]);
+    const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
+    const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
+    const [filteredStocks, setFilteredStocks] = useState<any[]>([]);
+    const [selectedStock, setSelectedStock] = useState<any | null>(null);
+
+    const [pricingMode, setPricingMode] = useState<'percent' | 'manual'>('percent');
+    const [profitPercent, setProfitPercent] = useState('');
+    const [sellingPrice, setSellingPrice] = useState('');
 
     const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        category: '',
-        company: '',
-        company_category: '',
-        supplier: '',
+        stock: '',
+        selling_price: '',
         sku: '',
         barcode: '',
-        price: '',
-        cost: '',
-        retail_price: '',
-        status: 'active',
-        batch_number: '',
-        main_category: '',
-        is_supplier_only: 'false', // Admins create public products by default
+        badge: '',
+        batch: '',
+        status: 'ACTIVE',
+        description: '',
     });
 
-    const [mainImage, setMainImage] = useState<File | null>(null);
-    const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
-    const [additionalImages, setAdditionalImages] = useState<File[]>([]);
-    const [existingGallery, setExistingGallery] = useState<any[]>([]);
-
+    const [image, setImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [gallery, setGallery] = useState<File[]>([]);
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
     const galleryInputRef = useRef<HTMLInputElement>(null);
 
+    const [isDraggingMain, setIsDraggingMain] = useState(false);
+    const [isDraggingGallery, setIsDraggingGallery] = useState(false);
+
     useEffect(() => {
-        const fetchInitial = async () => {
+        const fetchResources = async () => {
             try {
-                const [pCats, cCats, comps, mCats, usersRes, supsRes] = await Promise.allSettled([
-                    productService.getCategories(),
-                    companyCategoryService.getAll(),
-                    companyService.getAll(),
-                    mainCategoryService.getAll(),
-                    userService.getAll(),
-                    (companyService as any).getSuppliers?.() ?? Promise.resolve([])
+                const [stockData, supData, catProdData] = await Promise.all([
+                    inventoryService.getInventory(),
+                    companyService.getSuppliers(),
+                    productService.getAllSupplier({ no_pagination: 'true' })
                 ]);
-
-                if (pCats.status === 'fulfilled') setProductCategories((pCats.value || []).filter((c: any) => c.status === 'active'));
-                if (cCats.status === 'fulfilled') setCompanyCategories((cCats.value || []).filter((c: any) => c.is_active !== false));
-                if (comps.status === 'fulfilled') setCompanies((comps.value || []).filter((c: any) => c.is_active !== false));
-                if (mCats.status === 'fulfilled') setMainCategories(mCats.value || []);
-
-                const sList = supsRes.status === 'fulfilled' ? (Array.isArray(supsRes.value) ? supsRes.value : []) : [];
-
-                // Exclusively use validated Supplier profiles for the product-supplier mapping
-                // This ensures IDs match the backend Product model foreign key expectation
-                setSuppliers(sList);
-
-                const currentUser = authService.getUser();
-                setUser(currentUser);
+                setAllStocks(stockData || []);
+                setFilteredStocks(stockData || []);
+                setAllSuppliers(supData || []);
+                setCatalogProducts(Array.isArray(catProdData) ? catProdData : catProdData?.results || []);
 
                 if (isEdit) {
-                    const product = await productService.getById(id as string);
+                    const prod = await productService.getById(id as string);
                     setFormData({
-                        name: product.name || '',
-                        description: product.description || '',
-                        category: (product.category && typeof product.category === 'object') ? product.category.id : product.category || '',
-                        company: (product.company && typeof product.company === 'object') ? product.company.id : product.company || '',
-                        company_category: (product.company_category && typeof product.company_category === 'object') ? product.company_category.id : product.company_category || '',
-                        supplier: (product.supplier && typeof product.supplier === 'object') ? product.supplier.id : product.supplier || '',
-                        sku: product.sku || '',
-                        barcode: product.barcode || '',
-                        price: product.price || '',
-                        cost: product.cost || '',
-                        retail_price: product.retail_price || '',
-                        status: (product.status?.toLowerCase()) || 'active',
-                        batch_number: '',
-                        main_category: (product.main_categories && product.main_categories.length > 0) ? (product.main_categories[0].id || product.main_categories[0]) : '',
-                        is_supplier_only: String(product.is_supplier_only || false),
+                        stock: prod.stock || '',
+                        selling_price: prod.selling_price || '',
+                        sku: prod.sku || '',
+                        barcode: prod.barcode || '',
+                        badge: prod.badge || '',
+                        batch: prod.batch || '',
+                        status: prod.status || 'ACTIVE',
+                        description: prod.description || '',
                     });
-                    if (product.image_url || product.image) {
-                        setMainImagePreview(getImageUrl(product.image_url || product.image));
+                    setSellingPrice(prod.selling_price || '');
+                    if (prod.image) setImagePreview(prod.image);
+                    if (prod.stock) {
+                        const s = (stockData || []).find((st: any) => st.id === prod.stock);
+                        if (s) setSelectedStock(s);
                     }
-                    setExistingGallery(product.gallery || []);
                 }
-            } catch (error: any) {
-                console.error('Fetch Initial Error:', error);
-            } finally {
-                setLoading(false);
-            }
+            } catch { toast.error("Resource sync failure"); } finally { setLoading(false); }
         };
-        fetchInitial();
+        fetchResources();
     }, [id, isEdit]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    useEffect(() => {
+        if (!isEdit) { // Only clear if not in edit mode
+            if (selectedSupplier === 'all') {
+                setFilteredStocks(allStocks);
+            } else {
+                setFilteredStocks(allStocks.filter(s => s.supplier?.toString() === selectedSupplier || s.supplier_name?.toLowerCase() === allSuppliers.find(sup => sup.id?.toString() === selectedSupplier)?.name?.toLowerCase()));
+            }
+            setSelectedStock(null);
+            setSellingPrice('');
+            setProfitPercent('');
+            setFormData(prev => ({ ...prev, stock: '', selling_price: '', sku: '', barcode: '' }));
+        }
+    }, [selectedSupplier, allStocks]);
+ 
+    const selectedGrouped = useMemo(() => {
+        if (!selectedStock) return null;
+        const matching = allStocks.filter(s => 
+            (s.product_name || '').toLowerCase() === (selectedStock.product_name || '').toLowerCase() &&
+            Number(s.price_per_item) === Number(selectedStock.price_per_item)
+        );
+        return {
+            ...selectedStock,
+            total_quantity: matching.reduce((sum, s) => sum + (s.total_quantity || 0), 0)
+        };
+    }, [selectedStock, allStocks]);
+
+    const costPrice = selectedStock ? Number(selectedStock.price_per_item) : 0;
+
+    const handleProfitChange = (val: string) => {
+        setProfitPercent(val);
+        if (val && costPrice > 0) {
+            const pct = parseFloat(val);
+            if (!isNaN(pct)) {
+                const calculatedPrice = (costPrice * (1 + pct / 100)).toFixed(2);
+                setSellingPrice(calculatedPrice);
+                setFormData(prev => ({ ...prev, selling_price: calculatedPrice }));
+            }
+        }
     };
 
-    const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setMainImage(file);
-            setMainImagePreview(URL.createObjectURL(file));
+    const handleSellingPriceChange = (val: string) => {
+        setSellingPrice(val);
+        setFormData(prev => ({ ...prev, selling_price: val }));
+        if (val && costPrice > 0) {
+            const sp = parseFloat(val);
+            if (!isNaN(sp) && sp > 0) {
+                const calculatedPct = (((sp - costPrice) / costPrice) * 100).toFixed(1);
+                setProfitPercent(calculatedPct);
+            }
         }
+    };
+
+    const handleStockSelect = (stockId: string) => {
+        const s = allStocks.find(st => st.id.toString() === stockId.toString());
+        setSelectedStock(s || null);
+        
+        // Find image from catalog if exists
+        const catalogMatch = catalogProducts.find(p => p.name?.toLowerCase().trim() === s?.product_name?.toLowerCase().trim());
+        if (catalogMatch?.image) {
+            setImagePreview(getImageUrl(catalogMatch.image) || null);
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            stock: stockId,
+            selling_price: '',
+            sku: s?.sku || prev.sku,       // Sync SKU from stock if available
+            barcode: s?.barcode || prev.barcode // Sync Barcode from stock if available
+        }));
+        setSellingPrice('');
+        setProfitPercent('');
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) { setImage(file); setImagePreview(URL.createObjectURL(file)); }
     };
 
     const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const files = Array.from(e.target.files);
-            setAdditionalImages(prev => [...prev, ...files]);
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setGallery(prev => [...prev, ...files]);
+            const newPreviews = files.map(f => URL.createObjectURL(f));
+            setGalleryPreviews(prev => [...prev, ...newPreviews]);
         }
     };
 
-    const removeNewGalleryImage = (index: number) => {
-        setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+    const removeGalleryImage = (index: number) => {
+        setGallery(prev => prev.filter((_, i) => i !== index));
+        setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleDrop = (e: React.DragEvent, type: 'main' | 'gallery') => {
+        e.preventDefault();
+        setIsDraggingMain(false);
+        setIsDraggingGallery(false);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        if (type === 'main') {
+            const file = files[0];
+            setImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        } else {
+            setGallery(prev => [...prev, ...files]);
+            const newPreviews = files.map(f => URL.createObjectURL(f));
+            setGalleryPreviews(prev => [...prev, ...newPreviews]);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.stock) return toast.error("Please select a stock entry");
+        if (!formData.selling_price) return toast.error("Please set the selling price");
+
         setSaving(true);
         try {
             const data = new FormData();
-            Object.keys(formData).forEach(key => {
-                const val = (formData as any)[key];
-                if (val !== null && val !== undefined && val !== '') {
-                    data.append(key, val);
-                }
+            Object.keys(formData).forEach(key => { data.append(key, (formData as any)[key]); });
+            if (image) data.append('image', image);
+            gallery.forEach(file => {
+                data.append('additional_images', file);
             });
 
-            if (mainImage) data.append('image', mainImage);
-            additionalImages.forEach(file => { data.append('upload_images', file); });
-
-            if (formData.main_category) {
-                data.append('main_categories', formData.main_category);
-            }
-
-            if (isEdit) {
-                await productService.update(id as string, data);
-                toast.success('Product updated successfully.');
-            } else {
-                await productService.create(data);
-                toast.success('Product registered successfully.');
-            }
+            if (isEdit) { await productService.update(id as string, data); toast.success('SKU updated'); }
+            else { await productService.create(data); toast.success('SKU registered'); }
             router.push('/admin/products');
         } catch (err: any) {
             console.error(err);
-            toast.error(`Error saving asset record.`);
+            let msg = 'Sync failure';
+            if (err.response?.data) {
+                const data = err.response.data;
+                if (typeof data === 'string') msg = data;
+                else if (data.error) msg = data.error;
+                else if (data.message) msg = data.message;
+                else if (data.detail) msg = data.detail;
+                else {
+                    msg = Object.values(data).flat().join(', ');
+                }
+            }
+            toast.error(msg);
         } finally {
             setSaving(false);
         }
     };
 
-    if (loading) return <PageLoader />;
+    const profitAmount = sellingPrice && costPrice ? (parseFloat(sellingPrice) - costPrice).toFixed(2) : null;
+
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-screen bg-[#F8F9FA]">
+            <RefreshCw className="w-10 h-10 animate-spin text-[#c45500] opacity-20" />
+        </div>
+    );
 
     return (
-        <div className="max-w-6xl mx-auto py-8 px-6 font-sans pb-20">
-            <div className="mb-8">
-                <button
-                    onClick={() => router.push('/admin/products')}
-                    className="text-sm font-bold text-slate-500 hover:text-[#EEAF1C] transition-colors mb-4 flex items-center gap-1"
-                >
-                    <ChevronLeft className="h-4 w-4" /> Back to List
-                </button>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-1 uppercase tracking-tight">
-                    {isEdit ? 'Edit Product' : 'Add New Product'}
-                </h1>
-                <p className="text-sm text-slate-500">Enter product details and stock information</p>
-            </div>
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+            <div className="max-w-[1100px] mx-auto px-6 pt-5">
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column: Data Arrays */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                <Tag className="h-4 w-4 text-[#EEAF1C]" />
-                                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Product Information</h2>
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
+                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                    <ChevronRight size={10} />
+                    <Link href="/admin/products" className="hover:text-[#c45500] hover:underline">Product Registry</Link>
+                    <ChevronRight size={10} />
+                    <span className="text-[#c45500]">{isEdit ? 'Edit SKU' : 'New SKU'}</span>
+                </div>
+
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-[22px] font-normal">{isEdit ? 'Edit Product SKU' : 'Register New SKU'}</h1>
+                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                        <ChevronLeft size={14} /> Back to registry
+                    </button>
+                </div>
+                <div className="border-b border-[#ddd] mb-8" />
+
+                <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-6 items-start">
+                    <div className="flex-1 space-y-6">
+
+                        {/* 1. STOCK LINKAGE */}
+                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm relative z-[50]">
+                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] rounded-t-[4px]">
+                                <h2 className="text-[14px] font-bold">1. Catalog & Stock Linkage</h2>
+                                <p className="text-[12px] text-[#565959]">Bridge physical stock entries to retail signatures.</p>
+                            </div>
+                            <div className="p-6 space-y-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <Field label="Registry Partner">
+                                        <select className={selectCls} value={selectedSupplier} onChange={e => setSelectedSupplier(e.target.value)}>
+                                            <option value="all">Global Mesh ({allStocks.length} signatures)</option>
+                                            {allSuppliers.map(sup => <option key={sup.id} value={sup.id}>{sup.name}</option>)}
+                                        </select>
+                                    </Field>
+                                    <Field label="Signature Source" required>
+                                        <StockSelector selectedId={formData.stock} stocks={filteredStocks} catalogProducts={catalogProducts} onSelect={handleStockSelect} />
+                                    </Field>
+                                </div>
+
+                                {selectedStock && (
+                                    <div className="bg-[#fcfdff] border border-blue-100 rounded-[3px] p-4 animate-in zoom-in-95 mt-2 space-y-4">
+                                        <div className="flex gap-4">
+                                            <Info className="text-[#007185] shrink-0" size={18} />
+                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cost Base</p><p className="text-[14px] font-bold">Rs. {Number(selectedGrouped?.price_per_item).toLocaleString()}</p></div>
+                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</p><p className="text-[14px] font-bold">{selectedGrouped?.category_name || 'Generic'}</p></div>
+                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Supplier</p><p className="text-[14px] font-bold truncate">{selectedGrouped?.supplier_name}</p></div>
+                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Density</p><p className="text-[14px] font-bold text-emerald-600">{selectedGrouped?.total_quantity} Units</p></div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Warehouse distribution */}
+                                        <div className="pt-3 border-t border-blue-50">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><MapPin size={12} /> Stock Distribution</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {allStocks.filter(s => (s.product_name || '').toLowerCase() === (selectedStock?.product_name || '').toLowerCase() && Number(s.price_per_item) === Number(selectedStock?.price_per_item)).map((s, idx) => (
+                                                    <div key={idx} className="px-2 py-1 bg-white border border-blue-100 rounded text-[11px] font-medium text-[#007185] shadow-sm">
+                                                        {s.warehouse_name || 'Unassigned'}: <span className="font-bold text-[#111]">{s.total_quantity}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 2. PRICING STRATEGY */}
+                        <div className={`bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                <h2 className="text-[14px] font-bold">2. Pricing Strategy</h2>
                             </div>
                             <div className="p-6 space-y-6">
-                                <div>
-                                    <label className={labelCls}>Product Name <span className="text-red-500">*</span></label>
-                                    <input required name="name" value={formData.name} onChange={handleChange} className={inputCls()} placeholder="e.g. Premium Lavender Moisturizer" />
+                                <div className="flex bg-[#f3f3f3] border border-[#d5d9d9] rounded-[3px] p-[2px] w-[180px]">
+                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-[2px] transition-all ${pricingMode === 'percent' ? 'bg-white text-[#111] shadow-sm' : 'text-[#565959]'}`}>Yield %</button>
+                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-[2px] transition-all ${pricingMode === 'manual' ? 'bg-white text-[#111] shadow-sm' : 'text-[#565959]'}`}>Manual</button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className={labelCls}>Navbar Pages</label>
-                                        <select name="main_category" value={formData.main_category} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Navbar Page</option>
-                                            {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Products Category</label>
-                                        <select name="category" value={formData.category} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Products Category</option>
-                                            {productCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Manufacturer Node</label>
-                                        <select name="company" value={formData.company} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Manufacturer</option>
-                                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className={user?.role_name?.toLowerCase().includes('supplier') ? 'hidden' : 'block'}>
-                                        <label className={labelCls}>Supplier</label>
-                                        <select name="supplier" value={formData.supplier} onChange={handleChange} className={selectCls}>
-                                            <option value="">Select Supplier (Optional)</option>
-                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="md:col-span-2 pt-2">
-                                        <div className="flex items-start gap-3 p-3 bg-[#EEAF1C]/5 border border-[#EEAF1C]/10 rounded-xl">
-                                            <input 
-                                                type="checkbox" 
-                                                id="is_supplier_only"
-                                                checked={formData.is_supplier_only === 'true'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, is_supplier_only: e.target.checked ? 'true' : 'false' }))}
-                                                className="mt-1 h-4 w-4 text-[#EEAF1C] border-slate-300 rounded focus:ring-[#EEAF1C]"
-                                            />
-                                            <label htmlFor="is_supplier_only" className="cursor-pointer">
-                                                <span className="text-[12px] font-bold text-slate-800 dark:text-white block uppercase tracking-tight">Mark as Supplier-Only Product</span>
-                                                <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
-                                                    If checked, this product will be hidden from the main catalog and only visible to suppliers and purchase order modules.
-                                                </span>
-                                            </label>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <Field label="Yield Margin (%)">
+                                        <input type="number" step="0.1" value={profitPercent} onChange={e => handleProfitChange(e.target.value)} className={inputCls} disabled={pricingMode === 'manual'} />
+                                    </Field>
+                                    <Field label="Merchant Price (Rs.)">
+                                        <input type="number" step="0.01" value={sellingPrice} onChange={e => handleSellingPriceChange(e.target.value)} className={inputCls} disabled={pricingMode === 'percent'} />
+                                    </Field>
+                                </div>
+
+                                {sellingPrice && costPrice > 0 && (
+                                    <div className={`p-5 rounded-[3px] border flex items-center justify-between ${parseFloat(sellingPrice) >= costPrice ? 'bg-green-50/30 border-green-100' : 'bg-red-50 border-red-100 animate-pulse'}`}>
+                                        <div className="flex items-center gap-4">
+                                            <Activity className={parseFloat(sellingPrice) >= costPrice ? 'text-green-600' : 'text-red-600'} size={20} />
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#565959]">Net Profit</p>
+                                                <p className={`text-[18px] font-bold ${parseFloat(sellingPrice) >= costPrice ? 'text-green-700' : 'text-red-600'}`}>Rs. {profitAmount}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#565959]">Final Customer Price</p>
+                                            <p className="text-[24px] font-bold text-[#c45500]">Rs. {parseFloat(sellingPrice).toLocaleString()}</p>
                                         </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Description</label>
-                                    <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className={inputCls() + " resize-none"} placeholder="Detailed product description..." />
-                                </div>
+                                )}
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                <DollarSign className="h-4 w-4 text-[#EEAF1C]" />
-                                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Pricing & Logistics</h2>
+                        {/* 3. DESCRIPTORS */}
+                        <div className={`bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                <h2 className="text-[14px] font-bold">3. Visuals & Metadata</h2>
                             </div>
-                            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
-                                    <label className={labelCls}>TP (Cost Basis)</label>
-                                    <input type="number" step="0.01" name="cost" value={formData.cost} onChange={handleChange} className={inputCls()} placeholder="0.00" />
+                            <div className="p-6 space-y-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <Field label="Identity SKU">
+                                        <input type="text" value={formData.sku} onChange={e => setFormData(p => ({ ...p, sku: e.target.value }))} className={inputCls} placeholder="e.g. PRD-10293" />
+                                    </Field>
+                                    <Field label="UPC / Barcode">
+                                        <input type="text" value={formData.barcode} onChange={e => setFormData(p => ({ ...p, barcode: e.target.value }))} className={inputCls} placeholder="e.g. 500123456789" />
+                                    </Field>
                                 </div>
-                                <div>
-                                    <label className={labelCls}>Selling Valuation</label>
-                                    <input type="number" step="0.01" name="price" value={formData.price} onChange={handleChange} className={inputCls()} placeholder="0.00" />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <Field label="Registry Badge">
+                                        <select className={selectCls} value={formData.badge} onChange={e => setFormData(p => ({ ...p, badge: e.target.value }))}>
+                                            <option value="">No Badge</option>
+                                            <option value="NEW">New Entry</option>
+                                            <option value="HOT">Trending</option>
+                                            <option value="SALE">Flash Sync</option>
+                                        </select>
+                                    </Field>
+                                    <Field label="Signature Status">
+                                        <select className={selectCls} value={formData.status} onChange={e => setFormData(p => ({ ...p, status: e.target.value }))}>
+                                            <option value="ACTIVE">Visible on Mesh</option>
+                                            <option value="INACTIVE">Hidden</option>
+                                        </select>
+                                    </Field>
                                 </div>
-                                <div>
-                                    <label className={labelCls}>MRP (Retail Cap)</label>
-                                    <input type="number" step="0.01" name="retail_price" value={formData.retail_price} onChange={handleChange} className={inputCls()} placeholder="0.00" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Batch Assignment</label>
-                                    <input name="batch_number" value={formData.batch_number} onChange={handleChange} className={inputCls()} placeholder="e.g. BATCH-2024" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>SKU Unique ID</label>
-                                    <input name="sku" value={formData.sku} onChange={handleChange} className={inputCls()} placeholder="SKU-XXXX" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Global Barcode</label>
-                                    <input name="barcode" value={formData.barcode} onChange={handleChange} className={inputCls()} placeholder="UPC / EAN" />
-                                </div>
-                                <div className="md:col-span-3 pt-4 border-t border-slate-100 dark:border-white/5">
-                                    <label className={labelCls}>Operational Status</label>
-                                    <div className="flex items-center gap-6">
-                                        {['active', 'inactive', 'archived'].map(s => (
-                                            <label key={s} className="flex items-center gap-2 cursor-pointer group">
-                                                <input
-                                                    type="radio"
-                                                    name="status"
-                                                    value={s}
-                                                    checked={formData.status === s}
-                                                    onChange={handleChange}
-                                                    className="w-4 h-4 text-[#EEAF1C]"
-                                                />
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase tracking-tight text-slate-400 border border-slate-200 dark:border-white/10 font-bold group-hover:text-[#EEAF1C] transition-colors">{s}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
+                                <Field label="Technical Overview">
+                                    <textarea rows={4} className={`${inputCls} h-auto py-2`} value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="Enter SKU metadata..." />
+                                </Field>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Column: Visual Assets */}
-                    <div className="space-y-6">
-                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                                <ImageIcon className="h-4 w-4 text-[#EEAF1C]" />
-                                <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Primary Visual</h2>
+                    <aside className="w-full lg:w-[320px] shrink-0 space-y-4 lg:sticky lg:top-4">
+                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
+                            <div className="px-5 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                <h3 className="text-[14px] font-bold text-center">SKU Visual</h3>
                             </div>
-                            <div className="p-6">
-                                <div className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center overflow-hidden relative group">
-                                    {mainImagePreview ? (
-                                        <img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105" />
+                            <div className="p-6 text-center">
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={(e) => { e.preventDefault(); setIsDraggingMain(true); }}
+                                    onDragLeave={() => setIsDraggingMain(false)}
+                                    onDrop={(e) => handleDrop(e, 'main')}
+                                    className={`aspect-square bg-[#fcfcfc] border-2 border-dashed rounded-[3px] flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#e77600] bg-orange-50' : 'border-[#adb1b8] hover:border-[#e77600]'}`}
+                                >
+                                    {imagePreview ? (
+                                        <img src={imagePreview} className="w-full h-full object-contain p-2" alt="Preview" />
                                     ) : (
-                                        <div className="text-center">
-                                            <ImageIcon className="h-10 w-10 text-slate-200 mx-auto mb-2" />
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Awaiting Manifest</p>
+                                        <div className="flex flex-col items-center opacity-30 group-hover:opacity-100">
+                                            <ImageIcon size={32} />
+                                            <p className="text-[11px] font-bold mt-2 uppercase">Main Banner</p>
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-tight shadow-lg hover:scale-105 transition-all text-slate-900 border">
-                                            Modify Asset
+                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+                                </div>
+
+                                {/* Gallery Section */}
+                                <div className="mt-6 text-left">
+                                    <h4 className="text-[11px] font-bold text-[#565959] uppercase tracking-widest mb-3">Gallery Pictures</h4>
+                                    <div
+                                        onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
+                                        onDragLeave={() => setIsDraggingGallery(false)}
+                                        onDrop={(e) => handleDrop(e, 'gallery')}
+                                        className={`grid grid-cols-4 gap-2 p-2 rounded-[4px] transition-colors ${isDraggingGallery ? 'bg-orange-50 border border-dashed border-[#e77600]' : ''}`}
+                                    >
+                                        {galleryPreviews.map((src, i) => (
+                                            <div key={i} className="aspect-square bg-white border border-[#ddd] rounded-[2px] relative group overflow-hidden">
+                                                <img src={src} className="w-full h-full object-cover" />
+                                                <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-0 right-0 bg-black/50 text-white p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button type="button" onClick={() => galleryInputRef.current?.click()} className="aspect-square border border-dashed border-[#adb1b8] rounded-[2px] flex items-center justify-center hover:bg-[#f7f8fa] transition-colors">
+                                            <Plus size={16} className="text-[#565959]" />
                                         </button>
                                     </div>
+                                    <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
                                 </div>
-                                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleMainImageChange} />
-                            </div>
-                        </div>
 
-                        <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-white/5">
-                                <div className="flex items-center gap-3">
-                                    <Layers className="h-4 w-4 text-[#EEAF1C]" />
-                                    <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Gallery Manifest</h2>
+                                <div className="mt-8 space-y-3 pt-6 border-t border-[#eee]">
+                                    <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
+                                        <Save size={14} /> {isEdit ? 'Update SKU' : 'Register SKU'}
+                                    </Btn>
+                                    <button onClick={() => router.push('/admin/products')} className="w-full text-[12px] text-[#565959] hover:text-[#c45500] hover:underline text-center">
+                                        Discard
+                                    </button>
                                 </div>
-                                <button type="button" onClick={() => galleryInputRef.current?.click()} className="p-1.5 bg-[#EEAF1C]/10 text-[#EEAF1C] rounded-lg hover:bg-blue-600 hover:text-white transition-all">
-                                    <Plus className="h-4 w-4" />
-                                </button>
-                            </div>
-                            <div className="p-4 grid grid-cols-3 gap-3">
-                                {existingGallery.map((img, i) => (
-                                    <div key={i} className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden">
-                                        <img src={getImageUrl(img.image_url || img.image) || ""} className="w-full h-full object-cover" alt="" />
-                                    </div>
-                                ))}
-                                {additionalImages.map((file, i) => (
-                                    <div key={i} className="aspect-square bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg overflow-hidden relative group">
-                                        <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="" />
-                                        <button onClick={() => removeNewGalleryImage(i)} className="absolute inset-0 bg-red-600/60 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <X className="h-4 w-4 font-bold" />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button
-                                    type="button"
-                                    onClick={() => galleryInputRef.current?.click()}
-                                    className="aspect-square border border-dashed border-slate-200 dark:border-white/10 rounded-lg flex items-center justify-center hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
-                                >
-                                    <Plus className="h-5 w-5 text-slate-300 group-hover:text-[#EEAF1C] transition-colors" />
-                                </button>
-                                <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
                             </div>
                         </div>
-
-                        <div className="pt-4 space-y-3">
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="w-full py-3.5 bg-[#EEAF1C] text-white rounded-xl text-sm font-bold uppercase tracking-tight shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                                {isEdit ? 'Save Changes' : 'Add Product'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/admin/products')}
-                                className="w-full py-3 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 transition-all uppercase tracking-tight"
-                            >
-                                Discard Protocol
-                            </button>
+                        <div className="bg-[#fff9e6] border border-[#ffebcc] rounded-[4px] p-4 flex gap-3 shadow-inner">
+                            <ShieldCheck className="text-[#e47911] shrink-0" size={20} />
+                            <p className="text-[12px] text-[#565959] leading-relaxed italic">SKUs are cryptographically linked to their source stock signatures for data integrity.</p>
                         </div>
-                    </div>
-                </div>
-            </form>
+                    </aside>
+                </form>
+            </div>
         </div>
     );
 }

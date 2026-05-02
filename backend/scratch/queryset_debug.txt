@@ -1,0 +1,46 @@
+TS: 2026-04-21 16:58:30.197165+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+TS: 2026-04-21 16:58:30.206395+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+Query Result Count: 7
+TS: 2026-04-21 16:58:30.308458+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:30.341639+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:39.319685+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:40.257410+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:41.458580+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:42.746722+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:50.085700+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:50.225717+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:50.334656+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:50.702515+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:53.973701+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:58:54.224241+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:59:24.872638+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 16:59:54.794982+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 17:00:24.765910+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 17:00:55.954920+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 17:01:24.774217+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 17:01:46.815655+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+TS: 2026-04-21 17:01:46.953757+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+TS: 2026-04-21 17:01:46.980601+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7
+Query Result Count: 7
+TS: 2026-04-21 17:01:47.185403+00:00 | User: customer | Type: <class 'modules.users.models.User'> | Auth: True | Staff: False
+Query Result Count: 7

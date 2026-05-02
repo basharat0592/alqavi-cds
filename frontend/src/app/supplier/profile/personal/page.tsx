@@ -62,7 +62,7 @@ export default function EditPersonalDetails() {
         return (
             <div className="flex h-screen items-center justify-center bg-slate-50/30">
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-[#F7CA00]" />
+                    <Loader2 className="h-8 w-8 animate-spin text-[#F59E0B]" />
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Accessing Mainframe...</p>
                 </div>
             </div>
@@ -84,7 +84,7 @@ export default function EditPersonalDetails() {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-8 py-2.5 bg-[#F7CA00] text-slate-900 rounded font-black text-xs uppercase tracking-widest shadow-lg shadow-[#F7CA00]/20 hover:bg-[#e6be00] active:scale-95 transition-all flex items-center gap-2"
+                    className="px-8 py-2.5 bg-[#F59E0B] text-slate-900 rounded font-black text-xs uppercase tracking-widest shadow-lg shadow-[#F59E0B]/20 hover:bg-[#e6be00] active:scale-95 transition-all flex items-center gap-2"
                 >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save size={16} />}
                     {saving ? 'Synchronizing...' : 'Update Database'}
@@ -94,8 +94,8 @@ export default function EditPersonalDetails() {
             <div className="space-y-12">
                 {/* Title Segment */}
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Personal Identity Protocol</h1>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Modify core distributing member credentials</p>
+                    <h1 className="text-3xl font-medium text-slate-900 mb-1">Personal Identity</h1>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Modify core distributing member credentials</p>
                 </div>
 
                 {/* Tactical Form Fieldsets */}
@@ -104,7 +104,7 @@ export default function EditPersonalDetails() {
                     {/* Name Pair */}
                     <div className="grid grid-cols-1 md:grid-cols-2">
                         <div className="p-6 border-r border-slate-100 group focus-within:bg-slate-50 transition-colors">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00] transition-colors">First Identity Name</label>
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B] transition-colors">First Identity Name</label>
                             <div className="flex items-center gap-3">
                                 <User size={16} className="text-slate-300 group-focus-within:text-slate-900 transition-colors" />
                                 <input
@@ -117,7 +117,7 @@ export default function EditPersonalDetails() {
                             </div>
                         </div>
                         <div className="p-6 group focus-within:bg-slate-50 transition-colors">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00] transition-colors">Surname / Family Label</label>
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B] transition-colors">Surname / Family Label</label>
                             <div className="flex items-center gap-3">
                                 <User size={16} className="text-slate-300 group-focus-within:text-slate-900 transition-colors" />
                                 <input
@@ -134,7 +134,7 @@ export default function EditPersonalDetails() {
                     {/* Contact Pair */}
                     <div className="grid grid-cols-1 md:grid-cols-2">
                         <div className="p-6 border-r border-slate-100 group focus-within:bg-slate-50 transition-colors">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00] transition-colors">Telemetry Phone</label>
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B] transition-colors">Telemetry Phone</label>
                             <div className="flex items-center gap-3">
                                 <Phone size={16} className="text-slate-300 group-focus-within:text-slate-900 transition-colors" />
                                 <input
@@ -147,7 +147,7 @@ export default function EditPersonalDetails() {
                             </div>
                         </div>
                         <div className="p-6 group focus-within:bg-slate-50 transition-colors">
-                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00] transition-colors">Regional Hub (City)</label>
+                            <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B] transition-colors">Regional Hub (City)</label>
                             <div className="flex items-center gap-3">
                                 <MapPin size={16} className="text-slate-300 group-focus-within:text-slate-900 transition-colors" />
                                 <input
@@ -163,7 +163,7 @@ export default function EditPersonalDetails() {
 
                     {/* Full Address Block */}
                     <div className="p-6 group focus-within:bg-slate-50 transition-colors">
-                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F7CA00] transition-colors">Full Geographic Warehouse Address</label>
+                        <label className="text-[9px] font-black text-slate-300 uppercase tracking-[0.25em] block mb-2 group-focus-within:text-[#F59E0B] transition-colors">Full Geographic Warehouse Address</label>
                         <div className="flex items-start gap-3">
                             <MapPin size={16} className="text-slate-300 pt-1 group-focus-within:text-slate-900 transition-colors" />
                             <textarea

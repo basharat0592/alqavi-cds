@@ -19,21 +19,21 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
     </div>
 );
 
-const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
+const PRIMARY_BTN = "bg-[#F59E0B] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
 
 function MetricCard({ label, value, icon: Icon, color, link }: { label: string; value: string | number; icon: any; color: string; link: string }) {
     return (
-        <Link href={link} className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 p-5 rounded-xl shadow-sm hover:border-[#EEAF1C]/30 transition-all group flex flex-col justify-between h-full">
+        <Link href={link} className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 p-5 rounded-xl shadow-sm hover:border-[#F59E0B]/30 transition-all group flex flex-col justify-between h-full">
             <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-xl bg-slate-50 dark:bg-white/5 group-hover:bg-[#EEAF1C] group-hover:text-white transition-all`}>
+                <div className={`p-2 rounded-xl bg-slate-50 dark:bg-white/5 group-hover:bg-[#F59E0B] group-hover:text-white transition-all`}>
                     <Icon className={`h-5 w-5 transition-colors ${color} group-hover:text-white`} />
                 </div>
                 <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</div>
             </div>
             <div>
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-[#EEAF1C] transition-colors">{label}</p>
-                <div className="flex items-center gap-1 text-[9px] text-[#EEAF1C] font-black mt-1 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest group-hover:text-[#F59E0B] transition-colors">{label}</p>
+                <div className="flex items-center gap-1 text-[9px] text-[#F59E0B] font-black mt-1 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
                     Access Grid <ChevronRight className="h-3 w-3" />
                 </div>
             </div>
@@ -48,17 +48,25 @@ export default function StockManagementOverview() {
         expired_batches: 0,
         total_movements: 0
     });
+    const [recentMovements, setRecentMovements] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const summary = await inventoryService.getInventorySummary();
             const movements = await inventoryService.getMovements();
+            
             setStats({
                 ...summary,
                 total_movements: movements.length
             });
+
+            // Sort by latest created_at or date and pick top 5
+            const sorted = [...movements].sort((a: any, b: any) => 
+                new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+            );
+            setRecentMovements(sorted.slice(0, 5));
         } catch (error) {
             console.error(error);
         } finally {
@@ -84,7 +92,7 @@ export default function StockManagementOverview() {
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Activity className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -93,7 +101,7 @@ export default function StockManagementOverview() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadData} className={SECONDARY_BTN}>
+                    <button onClick={() => loadData()} className={SECONDARY_BTN}>
                         <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <Link href="/admin/inventory/adjustments/add" className={PRIMARY_BTN}>
@@ -117,19 +125,19 @@ export default function StockManagementOverview() {
                     <SectionCard>
                         <div className="px-6 py-4 bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
                             <h2 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Logistics Framework</h2>
-                            <ShieldCheck className="h-4 w-4 text-[#EEAF1C]" />
+                            <ShieldCheck className="h-4 w-4 text-[#F59E0B]" />
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-white/5">
                             {tools.map((tool, idx) => (
                                 <Link key={idx} href={tool.link} className="flex items-center p-6 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
-                                    <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl flex items-center justify-center mr-5 group-hover:bg-[#EEAF1C] group-hover:text-white transition-all transform group-hover:rotate-12">
+                                    <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-xl flex items-center justify-center mr-5 group-hover:bg-[#F59E0B] group-hover:text-white transition-all transform group-hover:rotate-12">
                                         <tool.icon className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-[#EEAF1C] transition-colors">{tool.name}</h3>
+                                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-[#F59E0B] transition-colors">{tool.name}</h3>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 opacity-60">{tool.desc}</p>
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#EEAF1C] transition-all transform group-hover:translate-x-1" />
+                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#F59E0B] transition-all transform group-hover:translate-x-1" />
                                 </Link>
                             ))}
                         </div>
@@ -168,16 +176,52 @@ export default function StockManagementOverview() {
                         </div>
                     </SectionCard>
 
-                    <SectionCard className="p-6 bg-[#EEAF1C]/5 border-[#EEAF1C]/10 shadow-none">
-                        <div className="flex items-center gap-2 mb-4">
-                            <ShieldCheck className="h-4 w-4 text-[#EEAF1C]" />
-                            <h3 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-widest">Network Health</h3>
+                    <SectionCard className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2 border-l-4 border-[#F59E0B] pl-4 py-0.5">
+                                <Activity className="h-4 w-4 text-[#F59E0B]" />
+                                <h2 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Live Stock Stream</h2>
+                            </div>
+                            <Link href="/admin/inventory/movements" className="text-[10px] font-black text-[#F59E0B] uppercase hover:underline">View All</Link>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase leading-relaxed mb-6 tracking-tight">
-                            Matrix heartbeat is nominal. Logistics nodes are synchronized across the global fulfillment mesh.
-                        </p>
-                        <div className="flex items-center gap-2 text-[9px] font-black text-[#EEAF1C] uppercase tracking-[0.2em] animate-pulse">
-                            <RefreshCw className="h-3 w-3 animate-spin" /> Live Telemetry Linked
+                        
+                        <div className="space-y-4">
+                            {recentMovements.length === 0 ? (
+                                <p className="text-[11px] text-slate-400 italic text-center py-4 uppercase font-bold tracking-tighter">No recent arrivals recorded.</p>
+                            ) : (
+                                recentMovements.slice(0, 5).map((m, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 hover:border-[#F59E0B]/20 transition-all group">
+                                        <div className="w-8 h-8 rounded bg-white dark:bg-white/10 border border-slate-100 dark:border-white/20 flex items-center justify-center shrink-0">
+                                            <ShoppingBag size={14} className="text-emerald-500" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#F59E0B] transition-colors">{m.product_name}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1 mt-0.5">
+                                                <MapPin size={10} /> {m.warehouse_name || 'Central Hub'}
+                                            </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-[12px] font-black text-emerald-600">+{m.total_quantity || m.quantity}</p>
+                                            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">
+                                                {new Date(m.created_at || m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-2 mb-4">
+                                <ShieldCheck className="h-4 w-4 text-[#F59E0B]" />
+                                <h3 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-widest">Network Health</h3>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed mb-4 tracking-tight">
+                                Matrix heartbeat is nominal. Logistics nodes are synchronized across the global fulfillment mesh.
+                            </p>
+                            <div className="flex items-center gap-2 text-[9px] font-black text-[#F59E0B] uppercase tracking-[0.2em] animate-pulse">
+                                <RefreshCw className="h-3 w-3 animate-spin" /> Live Telemetry Linked
+                            </div>
                         </div>
                     </SectionCard>
                 </div>

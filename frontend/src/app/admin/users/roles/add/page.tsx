@@ -41,7 +41,7 @@ export default function AddRolePage() {
                     </Link>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-[#EEAF1C]" />
+                            <Shield className="h-5 w-5 text-[#F59E0B]" />
                             Create New Role
                         </h1>
                         <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Define platform access privileges</p>
@@ -65,7 +65,7 @@ export default function AddRolePage() {
                             value={formData.name}
                             onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                             placeholder="e.g. Content Manager"
-                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all text-sm dark:text-white"
+                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all text-sm dark:text-white"
                             required
                         />
                     </div>
@@ -77,7 +77,7 @@ export default function AddRolePage() {
                             onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Provide a brief description of what this role entails..."
                             rows={4}
-                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#EEAF1C] focus:ring-1 focus:ring-[#EEAF1C] transition-all text-sm dark:text-white resize-none"
+                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all text-sm dark:text-white resize-none"
                         />
                     </div>
                 </div>
@@ -89,7 +89,7 @@ export default function AddRolePage() {
                     <button
                         type="submit"
                         disabled={loading || !formData.name.trim()}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-[#EEAF1C] hover:bg-[#EEAF1C] disabled:bg-[#EEAF1C]/50 disabled:cursor-not-allowed text-[#131921] text-xs font-bold uppercase tracking-wider rounded transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] hover:bg-[#F59E0B] disabled:bg-[#F59E0B]/50 disabled:cursor-not-allowed text-[#131921] text-xs font-bold uppercase tracking-wider rounded transition-colors shadow-sm"
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Role

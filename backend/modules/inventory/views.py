@@ -1,247 +1,238 @@
-from rest_framework import viewsets, status, filters
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from .models import Warehouse, Inventory, InventoryMovement, Batch, StockAdjustment, LowStockAlert
-from .serializers import (
-    WarehouseSerializer, InventorySerializer, InventoryMovementSerializer,
-    BatchSerializer, StockAdjustmentSerializer, LowStockAlertSerializer
-)
+from django.db.models import Count
 from django.db import transaction
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Warehouse, Stock, StockMovement
+from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
+
 
 class WarehouseViewSet(viewsets.ModelViewSet):
-    queryset = Warehouse.objects.all()
+    queryset = Warehouse.objects.all().order_by('name')
     serializer_class = WarehouseSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['status', 'warehouse_type']
-    search_fields = ['name', 'warehouse_code', 'location']
+    permission_classes = [IsAuthenticated]
 
-class InventoryViewSet(viewsets.ModelViewSet):
-    queryset = Inventory.objects.all()
-    serializer_class = InventorySerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['warehouse', 'product']
-    search_fields = ['product__sku', 'product__barcode', 'batch_number', 'product__name']
+
+class StockViewSet(viewsets.ModelViewSet):
+    queryset = Stock.objects.all()
+    serializer_class = StockSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        stock = serializer.save()
+        # Record initial purchase movement
+        StockMovement.objects.create(
+            stock=stock,
+            movement_type='PURCHASE',
+            quantity=stock.total_quantity,
+            to_warehouse=stock.warehouse,
+            date=stock.date,
+            description="Initial stock purchase"
+        )
 
     def get_queryset(self):
-        qs = Inventory.objects.all()
-        include_supplier_only = self.request.query_params.get('include_supplier_only') == 'true'
-
-        # By default exclude inventory records for supplier-only products.
-        if not include_supplier_only:
-            qs = qs.filter(product__is_supplier_only=False)
-
-        if self.request.user.is_authenticated and not self.request.user.is_superuser:
-            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
-                return qs.filter(product__supplier=self.request.user.supplier_profile)
-        return qs
-
-    def create(self, request, *args, **kwargs):
-        """
-        Custom create to support 'Add to Existing' logic.
-        If a record for this product/warehouse/batch already exists, 
-        we increment the quantity instead of failing.
-        """
-        product_id = request.data.get('product')
-        warehouse_id = request.data.get('warehouse')
-        batch_number = request.data.get('batch_number')
-        quantity_to_add = float(request.data.get('quantity_available', 0))
-
-        with transaction.atomic():
-            # Try to find existing record
-            existing_record = Inventory.objects.filter(
-                product_id=product_id,
-                warehouse_id=warehouse_id,
-                batch_number=batch_number
-            ).first()
-
-            if existing_record:
-                # Increment existing quantity
-                existing_record.quantity_available = float(existing_record.quantity_available) + quantity_to_add
-                existing_record.save()
-                
-                # Log movement for tracking
-                InventoryMovement.objects.create(
-                    product_id=product_id,
-                    warehouse_id=warehouse_id,
-                    movement_type='Adjustment', # Or 'Purchase' as default for Log New Stock
-                    quantity=quantity_to_add,
-                    previous_quantity=float(existing_record.quantity_available) - quantity_to_add,
-                    new_quantity=existing_record.quantity_available,
-                    notes=f"Additive stock update via Log New Stock form",
-                    created_by=request.user
-                )
-                
-                serializer = self.get_serializer(existing_record)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            
-            # If no existing, default to standard creation (which will trigger signal)
-            return super().create(request, *args, **kwargs)
-
-    @action(detail=False, methods=['get'])
-    def summary(self, request):
-        # Implementation for stock summary analytics
-        # Use filtered queryset to exclude supplier-only products by default
-        qs = self.get_queryset()
-        total_items = qs.count()
+        queryset = Stock.objects.exclude(product__status='ARCHIVED')
         
-        # Filter low stock alerts to only show for admin inventory (non-supplier-only)
-        low_stock_qs = LowStockAlert.objects.filter(alert_status='Pending')
-        include_supplier_only = request.query_params.get('include_supplier_only') == 'true'
-        if not include_supplier_only:
-            low_stock_qs = low_stock_qs.filter(product__is_supplier_only=False)
-            
-        return Response({
-            'total_items': total_items,
-            'low_stock_count': low_stock_qs.count(),
-            'expired_batches': Batch.objects.filter(status='Expired').count(),
-        })
+        # 1. Base Filters
+        warehouse_id = self.request.query_params.get('warehouse')
+        product_name = self.request.query_params.get('product') # From dropdown
+        search = self.request.query_params.get('search') # Manual search
+        status_param = self.request.query_params.get('status') # LOW or OUT
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
 
-    @action(detail=True, methods=['post'], url_path='add_stock')
-    def add_stock(self, request, pk=None):
-        """Directly add units to an existing inventory record by its PK."""
-        inventory = self.get_object()
-        qty = request.data.get('quantity', 0)
-        try:
-            qty = float(qty)
-        except (TypeError, ValueError):
-            return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
-        if qty <= 0:
-            return Response({'error': 'Quantity must be greater than 0'}, status=status.HTTP_400_BAD_REQUEST)
-
-        import traceback
-        try:
-            with transaction.atomic():
-                prev_qty = float(inventory.quantity_available)
-                inventory.quantity_available = prev_qty + qty
-                inventory.save()
-
-                InventoryMovement.objects.create(
-                    product=inventory.product,
-                    warehouse=inventory.warehouse,
-                    movement_type='Adjustment',
-                    quantity=qty,
-                    previous_quantity=prev_qty,
-                    new_quantity=inventory.quantity_available,
-                    notes=request.data.get('notes', 'Stock added via Stock Management'),
-                    created_by=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
-                )
-
-                # Resolve any pending low-stock alerts if stock is now healthy
-                if inventory.reorder_level and inventory.quantity_available > inventory.reorder_level:
-                    LowStockAlert.objects.filter(
-                        product=inventory.product,
-                        warehouse=inventory.warehouse,
-                        alert_status='Pending'
-                    ).update(alert_status='Resolved')
-        except Exception as e:
-            tb = traceback.format_exc()
-            print("ERROR IN ADD_STOCK:", tb)
-            return Response({'error': str(e), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        serializer = self.get_serializer(inventory)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-class InventoryMovementViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = InventoryMovement.objects.all().order_by('-created_at')
-    serializer_class = InventoryMovementSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['warehouse', 'product', 'movement_type']
-
-    def get_queryset(self):
-        qs = InventoryMovement.objects.all().order_by('-created_at')
-        if self.request.user.is_authenticated and not self.request.user.is_superuser:
-            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
-                return qs.filter(product__supplier=self.request.user.supplier_profile)
-        return qs
-
-class BatchViewSet(viewsets.ModelViewSet):
-    queryset = Batch.objects.all()
-    serializer_class = BatchSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['status', 'warehouse', 'product']
-    search_fields = ['batch_number']
-
-    def get_queryset(self):
-        qs = Batch.objects.all()
-        if self.request.user.is_authenticated and not self.request.user.is_superuser:
-            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
-                return qs.filter(product__supplier=self.request.user.supplier_profile)
-        return qs
-
-class StockAdjustmentViewSet(viewsets.ModelViewSet):
-    queryset = StockAdjustment.objects.all()
-    serializer_class = StockAdjustmentSerializer
-
-    def create(self, request, *args, **kwargs):
-        with transaction.atomic():
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            adjustment = serializer.save(adjusted_by=request.user)
-            
-            # Real-time stock update logic
-            # Use filter().first() instead of get_or_create() to safely handle
-            # cases where multiple inventory records exist for the same
-            # product/warehouse (different batch_numbers → unique_together).
-            inventory = Inventory.objects.filter(
-                product=adjustment.product,
-                warehouse=adjustment.warehouse,
-            ).order_by('id').first()
-
-            if inventory is None:
-                # No record exists yet — create a base one
-                inventory = Inventory.objects.create(
-                    product=adjustment.product,
-                    warehouse=adjustment.warehouse,
-                    sku=getattr(adjustment.product, 'sku', None) or '',
-                    quantity_available=0,
-                )
-            
-            prev_qty = inventory.quantity_available
-            if adjustment.adjustment_type == 'Add':
-                inventory.quantity_available += adjustment.quantity
-            else:
-                inventory.quantity_available = max(0, inventory.quantity_available - adjustment.quantity)
-            inventory.save()
-            
-            # Create Movement Record
-            InventoryMovement.objects.create(
-                product=adjustment.product,
-                warehouse=adjustment.warehouse,
-                movement_type='Adjustment',
-                quantity=adjustment.quantity if adjustment.adjustment_type == 'Add' else -adjustment.quantity,
-                previous_quantity=prev_qty,
-                new_quantity=inventory.quantity_available,
-                reference_id=str(adjustment.id),
-                notes=adjustment.reason,
-                created_by=request.user
+        if warehouse_id:
+            queryset = queryset.filter(warehouse_id=warehouse_id)
+        
+        if product_name:
+            queryset = queryset.filter(product_name__icontains=product_name)
+        
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(product_name__icontains=search) | 
+                Q(supplier__name__icontains=search) |
+                Q(supplier__company__icontains=search)
             )
-            
-            # Check for Low Stock Alert
-            if inventory.quantity_available <= inventory.reorder_level and inventory.reorder_level > 0:
-                LowStockAlert.objects.update_or_create(
-                    product=inventory.product,
-                    warehouse=inventory.warehouse,
-                    defaults={
-                        'current_quantity': inventory.quantity_available,
-                        'reorder_level': inventory.reorder_level,
-                        'alert_status': 'Pending'
-                    }
+
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+
+        # 2. Critical Stock Status Filters
+        if status_param == 'LOW':
+            # Assuming low stock threshold is < 100 for this system
+            queryset = queryset.filter(total_quantity__lt=100, total_quantity__gt=0)
+        elif status_param == 'OUT':
+            queryset = queryset.filter(total_quantity__lte=0)
+
+        # 3. Financial Range Filters
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        if min_price:
+            queryset = queryset.filter(price_per_item__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price_per_item__lte=max_price)
+
+        return queryset.order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        if request.query_params.get('no_pagination') == 'true':
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return super().list(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'])
+    def transfer(self, request, pk=None):
+        primary_stock = self.get_object()
+        destination_warehouse_id = request.data.get('destination_warehouse')
+        quantity_to_transfer = request.data.get('quantity')
+        transfer_date = request.data.get('date', primary_stock.date)
+
+        if not destination_warehouse_id or not quantity_to_transfer:
+            return Response({"error": "Destination warehouse and quantity are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            total_requested = int(quantity_to_transfer)
+            if total_requested <= 0:
+                return Response({"error": "Quantity must be greater than zero"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response({"error": "Invalid quantity format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            destination_warehouse = Warehouse.objects.get(id=destination_warehouse_id)
+        except Warehouse.DoesNotExist:
+            return Response({"error": "Destination warehouse does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Find all matching stock records in the source warehouse to deplete from
+        # matching the "Global Price-Point Truth" (Product + Price + Warehouse)
+        matching_stocks = Stock.objects.filter(
+            warehouse=primary_stock.warehouse,
+            product=primary_stock.product,
+            product_name=primary_stock.product_name,
+            price_per_item=primary_stock.price_per_item,
+            purchase_type=primary_stock.purchase_type,
+            supplier=primary_stock.supplier,
+            weight=primary_stock.weight,
+            size=primary_stock.size
+        ).order_by('-total_quantity')
+
+        total_available = sum(s.total_quantity for s in matching_stocks)
+        if total_requested > total_available:
+            return Response({
+                "error": f"Insufficient stock. Total available: {total_available}, Requested: {total_requested}"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        remaining_to_transfer = total_requested
+        
+        with transaction.atomic():
+            for stock in matching_stocks:
+                if remaining_to_transfer <= 0:
+                    break
+                
+                transfer_from_this = min(stock.total_quantity, remaining_to_transfer)
+                if transfer_from_this <= 0:
+                    continue
+                
+                # 1. Update source stock
+                stock.total_quantity -= transfer_from_this
+                if stock.purchase_type == 'carton' and stock.items_per_carton:
+                    stock.cartons = stock.total_quantity // stock.items_per_carton
+                stock.save()
+
+                # Record Transfer Out
+                StockMovement.objects.create(
+                    stock=stock,
+                    movement_type='TRANSFER_OUT',
+                    quantity=-transfer_from_this,
+                    from_warehouse=stock.warehouse,
+                    to_warehouse=destination_warehouse,
+                    date=transfer_date,
+                    description=f"Transfer to {destination_warehouse.name}"
                 )
+
+                # 2. Add to destination stock (Merge if product/price matches)
+                dest_stock = Stock.objects.filter(
+                    warehouse=destination_warehouse,
+                    product=stock.product,
+                    product_name=stock.product_name,
+                    price_per_item=stock.price_per_item,
+                    purchase_type=stock.purchase_type,
+                    supplier=stock.supplier,
+                    category=stock.category,
+                    weight=stock.weight,
+                    size=stock.size
+                ).first()
+
+                if dest_stock:
+                    dest_stock.total_quantity += transfer_from_this
+                    if dest_stock.purchase_type == 'carton' and dest_stock.items_per_carton:
+                        dest_stock.cartons = dest_stock.total_quantity // dest_stock.items_per_carton
+                    dest_stock.save()
+                    
+                    StockMovement.objects.create(
+                        stock=dest_stock,
+                        movement_type='TRANSFER_IN',
+                        quantity=transfer_from_this,
+                        from_warehouse=stock.warehouse,
+                        to_warehouse=destination_warehouse,
+                        date=transfer_date,
+                        description=f"Transfer from {stock.warehouse.name}"
+                    )
+                else:
+                    new_stock = Stock.objects.create(
+                        product=stock.product,
+                        product_name=stock.product_name,
+                        category=stock.category,
+                        supplier=stock.supplier,
+                        warehouse=destination_warehouse,
+                        purchase_type=stock.purchase_type,
+                        total_quantity=transfer_from_this,
+                        items_per_carton=stock.items_per_carton,
+                        cartons=transfer_from_this // stock.items_per_carton if stock.purchase_type == 'carton' and stock.items_per_carton else None,
+                        price_per_item=stock.price_per_item,
+                        price_per_carton=stock.price_per_carton,
+                        weight=stock.weight,
+                        size=stock.size,
+                        date=transfer_date
+                    )
+                    
+                    StockMovement.objects.create(
+                        stock=new_stock,
+                        movement_type='TRANSFER_IN',
+                        quantity=transfer_from_this,
+                        from_warehouse=stock.warehouse,
+                        to_warehouse=destination_warehouse,
+                        date=transfer_date,
+                        description=f"Transfer from {stock.warehouse.name}"
+                    )
+                
+                remaining_to_transfer -= transfer_from_this
             
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"message": f"Successfully transferred {total_requested} units to {destination_warehouse.name}"})
 
-class LowStockAlertViewSet(viewsets.ModelViewSet):
-    permission_classes = [AllowAny]
-    queryset = LowStockAlert.objects.all().order_by('-created_at')
-    serializer_class = LowStockAlertSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['alert_status', 'warehouse', 'product']
+    @action(detail=True, methods=['get'])
+    def movements(self, request, pk=None):
+        primary_stock = self.get_object()
+        
+        # Find all matching stock records ONLY in the CURRENT warehouse
+        # matching by Product Name, Price, and Supplier
+        matching_stock_ids = Stock.objects.filter(
+            warehouse=primary_stock.warehouse,
+            product=primary_stock.product,
+            product_name=primary_stock.product_name,
+            price_per_item=primary_stock.price_per_item,
+            supplier=primary_stock.supplier,
+            weight=primary_stock.weight,
+            size=primary_stock.size
+        ).values_list('id', flat=True)
 
-    def get_queryset(self):
-        qs = LowStockAlert.objects.all().order_by('-created_at')
-        if self.request.user.is_authenticated and not self.request.user.is_superuser:
-            if hasattr(self.request.user, 'supplier_profile') and self.request.user.supplier_profile:
-                return qs.filter(product__supplier=self.request.user.supplier_profile)
-        return qs
+        movements = StockMovement.objects.filter(
+            stock_id__in=matching_stock_ids
+        ).order_by('-created_at')
+
+        serializer = StockMovementSerializer(movements, many=True)
+        return Response(serializer.data)

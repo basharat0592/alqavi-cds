@@ -1,193 +1,300 @@
-"""
-Sales module serializers for API responses.
-"""
 from rest_framework import serializers
-from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, PurchaseReturn, PurchaseReturnItem
-from modules.products.serializers import ProductSerializer
-
-
-
-
+from django.utils import timezone
+from .models import (
+    Order, OrderItem, PurchaseOrder, PurchaseOrderItem, 
+    PurchaseReturn, PurchaseReturnItem, CustomerBoughtProduct,
+    SaleReturn, SaleReturnItem
+)
+from modules.products.models import Product
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    """Serializer for order items."""
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    product = ProductSerializer(read_only=True)
-    subtotal = serializers.SerializerMethodField()
-    
+    product_name = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    weight = serializers.ReadOnlyField(source='product.weight')
+    size = serializers.ReadOnlyField(source='product.size')
+
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'price', 'subtotal']
-    
-    def get_subtotal(self, obj):
-        """Calculate subtotal."""
-        return float(obj.get_subtotal())
+        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'price', 'cost_price', 'weight', 'size']
 
+    def get_product_name(self, obj):
+        return obj.product.product_name if obj.product else 'Deleted Product'
+
+    def get_image(self, obj):
+        if obj.product and obj.product.image:
+            return obj.product.image.url
+        return None
 
 class OrderSerializer(serializers.ModelSerializer):
-    """Serializer for order details."""
     items = OrderItemSerializer(many=True, read_only=True)
-    customer_name = serializers.SerializerMethodField()
-    customer_email = serializers.CharField(source='customer.email', read_only=True)
-    
-    def get_customer_name(self, obj):
-        if obj.customer:
-            return obj.customer.get_full_name() or obj.customer.username or obj.customer.email
-        return obj.guest_name or 'Guest'
-    
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    order_number = serializers.CharField(source='tracking_id', read_only=True)
+
     class Meta:
         model = Order
         fields = [
-            'id', 'order_number', 'customer', 'customer_name', 'customer_email',
-            'guest_name', 'total_amount', 'status', 'payment_status', 'items', 'notes',
-            'market', 'currency', 'discount_amount', 'shipping_cost', 'tax_amount', 'tags',
-            'payment_method', 'shipping_method',
-            'created_at', 'updated_at'
+            'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
+            'shipping_address', 'phone_number', 'customer_name', 'notes',
+            'items', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['id', 'tracking_id', 'order_number', 'created_at', 'updated_at']
 
+class CreateOrderSerializer(serializers.ModelSerializer):
+    items = serializers.JSONField()
 
-class OrderCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating orders with nested items."""
-    items = serializers.JSONField(write_only=True, required=False)
-    
     class Meta:
         model = Order
-        fields = [
-            'order_number', 'customer', 'guest_name', 'total_amount', 'status',
-            'payment_status', 'notes', 'market', 'currency', 'discount_amount',
-            'shipping_cost', 'tax_amount', 'tags', 'items', 'payment_method', 'shipping_method'
-        ]
-        extra_kwargs = {
-            'order_number': {'required': False, 'allow_blank': True}
-        }
-    
-    def validate_order_number(self, value):
-        """Validate unique order number."""
-        if not value:
-            return value
-        if self.instance is None and Order.objects.filter(order_number=value).exists():
-            raise serializers.ValidationError("Order number already exists.")
-        return value
+        fields = ['customer_name', 'shipping_address', 'phone_number', 'notes', 'items', 'payment_method', 'status']
 
     def create(self, validated_data):
-        if not validated_data.get('order_number'):
-            import time
-            validated_data['order_number'] = f"ORD-{int(time.time())}"
+        from django.db import transaction, IntegrityError
+        from rest_framework import serializers as drf_serializers
         
-        items_data = validated_data.pop('items', [])
-        order = Order.objects.create(**validated_data)
+        items_data = validated_data.pop('items')
+        status_val = validated_data.get('status', 'PENDING').upper()
         
-        for item in items_data:
-            OrderItem.objects.create(
-                order=order,
-                product_id=item.get('product_id'),
-                quantity=item.get('quantity', 1),
-                price=item.get('price', 0)
-            )
-        return order
+        request = self.context.get('request')
+        user_obj = None
+        customer_obj = None
+        
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            # Audit log for debugging
+            with open('scratch/user_log.txt', 'a') as f:
+                f.write(f"User: {request.user} | Class: {request.user.__class__.__name__} | ID: {getattr(request.user, 'id', 'NO_ID')} | Type: {type(request.user)}\n")
+            
+            # Identify the real identity of the user
+            from modules.customer.models import Customer
+            
+            # Try to find if this user is actually a Customer (standalone model)
+            # Many systems use the same ID or a matching username for both.
+            user_id = getattr(request.user, 'id', None)
+            
+            # Case 1: Standalone Customer object
+            if request.user.__class__.__name__ == 'Customer':
+                customer_obj = request.user
+                user_obj = None
+            else:
+                # Case 2: User object acting as a customer
+                # Try to find a Customer entry that matches this User
+                customer_obj = Customer.objects.filter(id=user_id).first()
+                if not customer_obj:
+                     customer_obj = Customer.objects.filter(email=getattr(request.user, 'email', '')).first()
+                
+                if customer_obj:
+                    user_obj = None # Prefer Customer model for dashboard sync
+                else:
+                    user_obj = request.user
+                    customer_obj = None
+        else:
+            # Guest order logging
+            with open('scratch/guest_order_log.txt', 'a') as f:
+                f.write(f"Guest order attempt at {timezone.now()}\n")
+            
+        try:
+            with transaction.atomic():
+                # Build params dynamically to avoid passing None to a field that 
+                # might have a flawed NOT NULL constraint in the underlying DB
+                params = {
+                    'customer_name': validated_data.get('customer_name', ''),
+                    'shipping_address': validated_data.get('shipping_address', ''),
+                    'phone_number': validated_data.get('phone_number', ''),
+                    'notes': validated_data.get('notes', ''),
+                    'payment_method': validated_data.get('payment_method', 'COD'),
+                    'status': validated_data.get('status', 'PENDING')
+                }
+                
+                if customer_obj:
+                    params['customer'] = customer_obj
+                    # We EXCLUDE 'user' to bypass the failing FK constraint
+                elif user_obj:
+                    params['user'] = user_obj
+                
+                order = Order.objects.create(**params)
+                
+                total_amount = 0
+                from django.db.models import F
+                
+                for item in items_data:
+                    try:
+                        product = Product.objects.get(id=item.get('id'))
+                        price = float(item.get('price', product.selling_price))
+                        quantity = int(item.get('quantity', 1))
+                        
+                        OrderItem.objects.create(
+                            order=order,
+                            product=product,
+                            quantity=quantity,
+                            price=price,
+                            cost_price=product.cost_price or 0
+                        )
+                        total_amount += (price * quantity)
+                        
+                        if status_val == 'DELIVERED':
+                            if product.stock:
+                                stock = product.stock
+                                stock.total_quantity = F('total_quantity') - quantity
+                                stock.save()
+                                
+                                if hasattr(stock, 'product') and stock.product:
+                                    sp_prod = stock.product
+                                    sp_prod.quantity = F('quantity') - quantity
+                                    sp_prod.save()
+                                    
+                            product.total_quantity = F('total_quantity') - quantity
+                            product.save()
 
+                            # 4. Sync to CustomerBoughtProduct Table
+                            from .models import CustomerBoughtProduct
+                            CustomerBoughtProduct.objects.get_or_create(
+                                order=order,
+                                product=product,
+                                defaults={
+                                    'customer': customer_obj,
+                                    'user': user_obj,
+                                    'quantity': quantity,
+                                    'price': price
+                                }
+                            )
+                            
+                    except (Product.DoesNotExist, ValueError, TypeError, KeyError):
+                        continue
+                
+                order.total_amount = total_amount
+                order.save()
+                return order
+                
+        except IntegrityError as e:
+            raise drf_serializers.ValidationError({"detail": f"Database Integrity Error: {str(e)}"})
+        except Exception as e:
+            raise drf_serializers.ValidationError({"detail": f"Order Processing Error: {str(e)}"})
 
-class OrderListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for order listings."""
-    customer_name = serializers.SerializerMethodField()
-    item_count = serializers.SerializerMethodField()
-    
-    def get_customer_name(self, obj):
-        if obj.customer:
-            return obj.customer.get_full_name() or obj.customer.username or obj.customer.email
-        return obj.guest_name or 'Guest'
-    
-    customer_email = serializers.CharField(source='customer.email', read_only=True)
+    def to_representation(self, instance):
+        return OrderSerializer(instance, context=self.context).data
 
-    class Meta:
-        model = Order
-        fields = [
-            'id', 'order_number', 'customer_name', 'customer_email', 'guest_name', 'total_amount',
-            'status', 'payment_status', 'item_count', 'created_at'
-        ]
-    
-    def get_item_count(self, obj):
-        """Get total items in order."""
-        return obj.items.count()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PURCHASE ORDER SERIALIZERS
-# ─────────────────────────────────────────────────────────────────────────────
 
 class PurchaseOrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_name = serializers.ReadOnlyField(source='product.name')
+    product_image = serializers.SerializerMethodField()
+    subtotal = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'received_quantity', 'unit_price', 'subtotal', 'packaging_type', 'pieces_per_unit']
+        fields = ['id', 'product', 'product_name', 'product_image', 'packaging_type', 'items_per_carton', 'quantity', 'price', 'selling_price', 'total_units', 'subtotal']
+
+    def get_product_image(self, obj):
+        if obj.product and obj.product.image:
+            return obj.product.image.url
+        return None
+
+    def get_subtotal(self, obj):
+        return float(obj.quantity * obj.price)
 
 
-class PurchaseOrderListSerializer(serializers.ModelSerializer):
-    purchased_items = serializers.SerializerMethodField()
-
-    class Meta:
-        model = PurchaseOrder
-        fields = [
-            'id', 'purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'order_date', 
-            'total_amount', 'status', 'payment_status', 'payment_method', 'created_at',
-            'purchased_items'
-        ]
-
-    def get_purchased_items(self, obj):
-        items = obj.items.all()
-        count = items.count()
-        if count == 0: return "—"
-        names = ", ".join([item.product.name for item in items[:5]])
-        return names + ("..." if count > 5 else "")
-
-
-class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
+class PurchaseOrderSerializer(serializers.ModelSerializer):
     items = PurchaseOrderItemSerializer(many=True, read_only=True)
+    supplier_name = serializers.SerializerMethodField()
+    supplier_phone = serializers.ReadOnlyField(source='supplier.phone')
+    supplier_email = serializers.ReadOnlyField(source='supplier.email')
+    warehouse_name = serializers.SerializerMethodField()
+    order_number = serializers.CharField(source='purchase_number', read_only=True)
+    remaining_amount = serializers.ReadOnlyField()
 
     class Meta:
         model = PurchaseOrder
         fields = [
-            'id', 'purchase_number', 'tracking_id', 'supplier', 'supplier_name', 'supplier_phone', 'order_date',
-            'expected_delivery_date', 'total_amount', 'tax_amount', 'shipping_cost',
-            'status', 'payment_status', 'payment_method', 'notes', 'items', 'created_at'
+            'id', 'order_number', 'purchase_number', 'supplier', 'supplier_name', 'reference_number',
+            'warehouse', 'warehouse_name', 'total_amount', 'shipping_cost', 'tax_amount',
+            'status', 'payment_status', 'payment_method', 'order_date', 'expected_delivery_date', 'notes', 'items',
+            'supplier_phone', 'supplier_email', 'paid_amount', 'remaining_amount', 'payment_date', 
+            'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed'
         ]
 
+    def get_supplier_name(self, obj):
+        return obj.supplier.username if obj.supplier else 'Internal'
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PURCHASE RETURN SERIALIZERS
-# ─────────────────────────────────────────────────────────────────────────────
+    def get_warehouse_name(self, obj):
+        return obj.warehouse.name if obj.warehouse else 'Default Warehouse'
+
+
+class OrderStatsSerializer(serializers.Serializer):
+    total_products = serializers.IntegerField()
+    pending_orders = serializers.IntegerField()
+    received_orders = serializers.IntegerField()
+    total_order_value = serializers.DecimalField(max_digits=15, decimal_places=2)
+    supplier_name = serializers.CharField()
+
 
 class PurchaseReturnItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_name = serializers.ReadOnlyField(source='product.name')
+    total_refund = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseReturnItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'refund_price', 'subtotal']
+        fields = ['id', 'product', 'product_name', 'quantity', 'refund_price', 'total_refund']
+
+    def get_total_refund(self, obj):
+        return float(obj.quantity * obj.refund_price)
 
 
-class PurchaseReturnListSerializer(serializers.ModelSerializer):
-    purchase_number = serializers.SerializerMethodField()
-
-    def get_purchase_number(self, obj):
-        return obj.purchase_order.purchase_number if obj.purchase_order else None
-
-    class Meta:
-        model = PurchaseReturn
-        fields = ['id', 'return_number', 'purchase_number', 'supplier_name', 'return_date', 'total_refund_amount', 'status', 'created_at']
-
-
-class PurchaseReturnDetailSerializer(serializers.ModelSerializer):
+class PurchaseReturnSerializer(serializers.ModelSerializer):
     items = PurchaseReturnItemSerializer(many=True, read_only=True)
-    purchase_number = serializers.SerializerMethodField()
-
-    def get_purchase_number(self, obj):
-        return obj.purchase_order.purchase_number if obj.purchase_order else None
+    supplier_name = serializers.SerializerMethodField()
+    purchase_number = serializers.ReadOnlyField(source='purchase_order.purchase_number')
 
     class Meta:
         model = PurchaseReturn
         fields = [
-            'id', 'return_number', 'purchase_order', 'purchase_number', 'supplier_name',
-            'return_date', 'total_refund_amount', 'status', 'reason', 'items', 'created_at'
+            'id', 'return_number', 'supplier', 'supplier_name', 'purchase_order', 'purchase_number',
+            'status', 'reason', 'return_date', 'total_refund_amount', 'items', 'created_at'
         ]
+
+    def get_supplier_name(self, obj):
+        return obj.supplier.username if obj.supplier else 'Unknown'
+
+class CustomerBoughtProductSerializer(serializers.ModelSerializer):
+    product_name = serializers.ReadOnlyField(source='product.product_name')
+    image = serializers.SerializerMethodField()
+    order_number = serializers.ReadOnlyField(source='order.tracking_id')
+
+    class Meta:
+        model = CustomerBoughtProduct
+        fields = ['id', 'product', 'product_name', 'image', 'order', 'order_number', 'quantity', 'price', 'purchased_at']
+
+    def get_image(self, obj):
+        if obj.product and obj.product.image:
+            return obj.product.image.url
+        return None
+
+
+class SaleReturnItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.ReadOnlyField(source='product.product_name')
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SaleReturnItem
+        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'price']
+
+    def get_image(self, obj):
+        if obj.product and obj.product.image:
+            return obj.product.image.url
+        return None
+
+
+class SaleReturnSerializer(serializers.ModelSerializer):
+    items = SaleReturnItemSerializer(many=True, read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    order_tracking_id = serializers.ReadOnlyField(source='order.tracking_id')
+
+    class Meta:
+        model = SaleReturn
+        fields = [
+            'id', 'return_number', 'order', 'order_tracking_id', 'customer', 'customer_name',
+            'status', 'reason', 'notes', 'items', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'return_number', 'created_at', 'updated_at']
+
+    def get_customer_name(self, obj):
+        if obj.customer: return obj.customer.name
+        if obj.user: return obj.user.username
+        return "N/A"

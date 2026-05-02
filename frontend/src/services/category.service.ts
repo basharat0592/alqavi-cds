@@ -5,9 +5,9 @@ import { ProductCategory } from '@/types';
 const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
 export const categoryService = {
-    getAll: async (): Promise<ProductCategory[]> => {
+    getAll: async (params?: any): Promise<ProductCategory[]> => {
         // Categories are public — no auth token needed
-        const { data } = await axios.get(`${PUBLIC_API}/v1/products/categories/`);
+        const { data } = await axios.get(`${PUBLIC_API}/v1/products/categories/`, { params });
         return Array.isArray(data) ? data : data.results || [];
     },
     create: async (payload: Partial<ProductCategory>): Promise<ProductCategory> => {

@@ -16,7 +16,7 @@ export function formatCurrency(amount: number | string, currency = 'PKR'): strin
         USD: '$',
         EUR: '\u20ac',
         GBP: '\u00a3',
-        PKR: 'PKR ',
+        PKR: 'Rs. ',
     };
     const symbol = symbols[currency] ?? currency;
     const value = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -34,8 +34,6 @@ export function parseNumber(value: unknown): number {
 
 /**
  * Format an ISO date string into a human-readable date.
- * @param dateStr - ISO date string or timestamp
- * @param options - Intl.DateTimeFormatOptions
  */
 export function formatDate(
     dateStr: string | number | undefined | null,
@@ -44,6 +42,27 @@ export function formatDate(
     if (!dateStr) return '—';
     try {
         return new Date(dateStr).toLocaleDateString('en-US', options);
+    } catch {
+        return String(dateStr);
+    }
+}
+
+/**
+ * Format an ISO date string into a human-readable date and time.
+ */
+export function formatDateTime(
+    dateStr: string | number | undefined | null,
+    options: Intl.DateTimeFormatOptions = { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit'
+    }
+): string {
+    if (!dateStr) return '—';
+    try {
+        return new Date(dateStr).toLocaleString('en-US', options);
     } catch {
         return String(dateStr);
     }
@@ -84,8 +103,8 @@ export function truncate(str: string, maxLength: number): string {
  * Handle media URLs, prepending the API base URL if relative.
  * Robust against varied path formats (leading slashes, full URLs, etc.)
  */
-export function getImageUrl(url: string | null | undefined): string | null {
-    if (!url || typeof url !== 'string') return null;
+export function getImageUrl(url: string | null | undefined): string | undefined {
+    if (!url || typeof url !== 'string') return undefined;
 
     // If it's already a full URL or base64, return as is
     if (url.startsWith('http') || url.startsWith('data:')) return url;
@@ -116,9 +135,9 @@ export function exportToCSV(data: any[], filename = 'export.csv') {
 
     // 1. Get unique headers from all objects
     const headers = Array.from(new Set(data.flatMap(obj => Object.keys(obj))));
-    
+
     // 2. Build CSV rows
-    const rows = data.map(obj => 
+    const rows = data.map(obj =>
         headers.map(header => {
             const val = obj[header] === null || obj[header] === undefined ? '' : obj[header];
             // Escape double quotes and wrap in double quotes to handle commas
@@ -129,12 +148,12 @@ export function exportToCSV(data: any[], filename = 'export.csv') {
 
     // 3. Assemble full content
     const csvContent = [headers.join(','), ...rows].join('\n');
-    
+
     // 4. Trigger download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';

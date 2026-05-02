@@ -1,198 +1,102 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-
-  /* Light mode base */
   :root {
-    --background: 248, 250, 252;
-    --foreground: 21, 60, 85;
+    --background: 255, 255, 255;
+    --foreground: 15, 23, 42;
     --card: 255, 255, 255;
-    --card-foreground: 21, 60, 85;
+    --card-foreground: 15, 23, 42;
     --popover: 255, 255, 255;
-    --popover-foreground: 21, 60, 85;
-    --primary: 21, 60, 85;
-    --primary-foreground: 238, 175, 28;
-    --secondary: 238, 175, 28;
-    --secondary-foreground: 21, 60, 85;
+    --popover-foreground: 15, 23, 42;
+    --primary: 15, 23, 42;
+    --primary-foreground: 255, 255, 255;
+    --secondary: 248, 250, 252;
+    --secondary-foreground: 15, 23, 42;
     --muted: 241, 245, 249;
     --muted-foreground: 100, 116, 139;
-    --accent: 238, 175, 28;
-    /* Corporate Orange #EEAF1C */
-    --accent-foreground: 21, 60, 85;
-    --border: 21, 60, 85, 0.1;
-    --input: 21, 60, 85, 0.1;
-    --ring: 238, 175, 28;
-    --radius: 0.75rem;
-    /* Card color token */
-    --card-bg: #ffffff;
-    --card-border: rgba(21, 60, 85, 0.08);
+    --accent: 212, 175, 55;
+    /* Gold Accent */
+    --accent-foreground: 255, 255, 255;
+    --border: 226, 232, 240;
+    --input: 226, 232, 240;
+    --ring: 212, 175, 55;
+    --radius: 1.5rem;
+
+    --gold-primary: #D4AF37;
+    --gold-soft: #F4EBD0;
+    --charcoal: #121212;
+    --cream: #FDFCFB;
   }
 
-  /* Dark mode — refined executive theme */
   .dark {
-    --background: 35, 47, 62; /* #232F3E */
+    --background: 10, 10, 10;
     --foreground: 248, 250, 252;
-    --card: 26, 37, 47;
+    --card: 20, 20, 20;
     --card-foreground: 248, 250, 252;
-    --popover: 17, 29, 41;
+    --popover: 15, 15, 15;
     --popover-foreground: 248, 250, 252;
-    --primary: 238, 175, 28;
-    --primary-foreground: 17, 29, 41;
-    --secondary: 17, 29, 41;
-    --secondary-foreground: 238, 175, 28;
-    --muted: 17, 29, 41;
-    --muted-foreground: 148, 163, 184;
-    --accent: 238, 175, 28;
-    --accent-dark: 212, 149, 16; /* Darker hover for buttons */
-    --accent-foreground: 17, 29, 41;
-    --border: 255, 255, 255, 0.08;
-    --input: 255, 255, 255, 0.08;
-    --ring: 238, 175, 28;
-    /* Card color token */
-    --card-bg: #232F3E;
-    --card-border: rgba(238, 175, 28, 0.1);
+    --primary: 248, 250, 252;
+    --primary-foreground: 10, 10, 10;
+    --border: 38, 38, 38;
+    --input: 38, 38, 38;
+    --accent: 212, 175, 55;
   }
 
-  /* ─── Remap Tailwind slate greys to the design system card color ─── */
-  .dark .dark\:bg-slate-800 {
-    background-color: #232F3E !important;
-  }
-
-  .dark .dark\:bg-slate-900 {
-    background-color: #232F3E !important;
-  }
-
-  .dark .dark\:bg-slate-800\/50 {
-    background-color: rgba(35, 47, 62, 0.5) !important;
-  }
-
-  .dark .dark\:bg-slate-800\/20 {
-    background-color: rgba(35, 47, 62, 0.2) !important;
-  }
-
-  .dark .dark\:border-slate-800 {
-    border-color: rgba(255, 255, 255, 0.07) !important;
-  }
-
-  .dark .dark\:border-slate-700 {
-    border-color: rgba(255, 255, 255, 0.07) !important;
-  }
-}
-
-@layer base {
   * {
     @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: 'Montserrat', sans-serif;
   }
 }
 
 @layer components {
+  .premium-card {
+    @apply bg-white dark:bg-[#121212] rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-[0_8px_30px_rgba(0, 0, 0, 0.04)] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0, 0, 0, 0.08)];
+  }
 
-  /* ─── Admin Card (Recent Orders Design System) ─── */
+  .glass-panel {
+    @apply bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/5;
+  }
+
+  .premium-input {
+    @apply w-full px-6 py-4 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all duration-300 outline-none;
+  }
+
+  .btn-premium {
+    @apply relative overflow-hidden px-10 py-4 bg-charcoal dark:bg-white text-white dark:text-charcoal rounded-full font-bold uppercase tracking-[0.2em] text-[10px] transition-all duration-500 hover:scale-[1.05] active:scale-[0.98] shadow-2xl;
+  }
+
+  .gold-gradient {
+    background: linear-gradient(135deg, #D4AF37 0%, #F4EBD0 50%, #D4AF37 100%);
+  }
+
+  /* Compatibility with existing admin classes but modernized */
   .admin-card {
-    @apply bg-white dark:bg-[#232F3E] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all duration-200;
+    @apply bg-white dark:bg-[#1a1a1a] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all duration-300;
   }
 
-  /* ─── Glass Effect (Solid Navbar Style) ─── */
   .glass-effect {
-    @apply bg-white dark:bg-[#232F3E];
-  }
-
-  /* ─── Page Heading System ─── */
-  .page-header {
-    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-white/10;
-  }
-  
-  .page-title {
-    @apply text-xl font-bold text-slate-900 dark:text-white;
-  }
-  
-  .page-subtitle {
-    @apply text-sm text-slate-500 dark:text-slate-400 mt-0.5;
-  }
-
-  /* ─── Global Table System ─── */
-  .table-container {
-    @apply bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm;
-  }
-  
-  .table-head-row {
-    @apply bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10;
-  }
-  
-  .table-head-th {
-    @apply px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap;
-  }
-  
-  .table-body-row {
-    @apply hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors border-b border-slate-100 dark:border-white/5;
-  }
-  
-  .table-td {
-    @apply px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-left;
-  }
-
-  .admin-table {
-    @apply w-full text-sm border-collapse text-left;
-  }
-  
-  .admin-table tbody tr:nth-child(even) {
-     @apply bg-slate-50/50 dark:bg-white/[0.01];
-  }
-
-  /* ─── Global Status Badges ─── */
-  .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider whitespace-nowrap;
-  }
-  .badge-slate { @apply bg-slate-50 text-slate-600 border-slate-200 dark:bg-white/5 dark:text-slate-400 dark:border-white/10; }
-  .badge-blue { @apply bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20; }
-  .badge-emerald { @apply bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20; }
-  .badge-amber { @apply bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20; }
-  .badge-red { @apply bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20; }
-  .badge-indigo { @apply bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20; }
-
-  .glass {
-    @apply bg-white/70 dark:bg-[#232F3E]/70 backdrop-blur-md border border-white/20 dark:border-white/5;
-  }
-
-  .nav-link {
-    @apply relative py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground;
-  }
-
-  .nav-link::after {
-    content: '';
-    @apply absolute bottom-0 left-0 h-0.5 w-0 bg-accent transition-all duration-300;
-  }
-
-  .nav-link:hover::after {
-    @apply w-full;
+    @apply bg-white/95 dark:bg-black/80 backdrop-blur-md;
   }
 }
 
 @layer utilities {
-  .premium-shadow {
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.04),
-      0 4px 20px -5px rgba(0, 0, 0, 0.02);
-  }
-
-  .premium-shadow-hover {
-    @apply transition-shadow duration-500;
-  }
-
-  .premium-shadow-hover:hover {
-    box-shadow: 0 30px 60px -12px rgba(15, 23, 42, 0.12);
-  }
-
-  .text-balance {
-    text-wrap: balance;
+  .text-luxury {
+    @apply bg-gradient-to-r from-accent via-[#F4EBD0] to-accent bg-clip-text text-transparent;
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -204,32 +108,24 @@
     scrollbar-width: none;
   }
 
-  .luxury-gradient {
-    background: radial-gradient(circle at top right, rgba(255, 153, 0, 0.02), transparent 40%),
-      radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.01), transparent 40%);
-  }
-
-  /* Global Button Hover for Brand Primary */
-  .bg-\[\#EEAF1C\] {
-    transition: background-color 0.3s ease;
-  }
-  .bg-\[\#EEAF1C\]:hover {
-    background-color: #D49510 !important;
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
 
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Luxury Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-.animate-slide-up {
-  animation: slide-up 0.4s ease-out forwards;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-white/10 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-accent/50;
 }

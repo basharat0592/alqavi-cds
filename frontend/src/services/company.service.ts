@@ -87,6 +87,27 @@ export const companyService = {
     },
     deleteSupplier: async (id: number | string): Promise<void> => {
         await api.delete(`/v1/company/suppliers/${id}/`);
+    },
+
+    // ── Customers ───────────────────────────────────────────────────────────
+    getCustomers: async (): Promise<any[]> => {
+        const { data } = await api.get('/v1/company/customers/');
+        return Array.isArray(data) ? data : data.results || [];
+    },
+    getCustomerById: async (id: number | string): Promise<any> => {
+        const { data } = await api.get(`/v1/company/customers/${id}/`);
+        return data;
+    },
+    createCustomer: async (payload: any): Promise<any> => {
+        const { data } = await api.post('/v1/company/customers/', payload);
+        return data;
+    },
+    updateCustomer: async (id: number | string, payload: any): Promise<any> => {
+        const { data } = await api.patch(`/v1/company/customers/${id}/`, payload);
+        return data;
+    },
+    deleteCustomer: async (id: number | string): Promise<void> => {
+        await api.delete(`/v1/company/customers/${id}/`);
     }
 };
 

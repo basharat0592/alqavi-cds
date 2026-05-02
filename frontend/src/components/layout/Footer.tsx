@@ -10,22 +10,16 @@ import Logo from '@/components/ui/Logo';
 export default function Footer() {
     return (
         <footer className="bg-slate-900 text-white font-sans border-t border-white/5">
-            {/* Back to Top */}
-            <button
-                className="w-full bg-slate-800 py-3 hover:bg-slate-700 transition-colors text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-                Back to Top
-            </button>
 
-            <div className="container px-6 md:px-12 mx-auto pt-16 pb-8">
+
+            <div className="w-full px-4 md:px-8 lg:px-10 pt-16 pb-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 pb-16 border-b border-white/5">
                     <div className="space-y-6">
-                        <Link href="/" className="flex items-center gap-2 group transition-all hover:opacity-80">
+                        <Link href="/customer" className="flex items-center gap-2 group transition-all hover:opacity-80">
                             <Logo size="sm" className="scale-[1.1] grayscale brightness-[5] hover:grayscale-0 hover:brightness-100 transition-all duration-500" />
                         </Link>
                         <p className="text-sm text-slate-400 leading-relaxed font-medium">
-                            Pakistan's premier distributor of authentic clinical grade skincare and luxury beauty formulations. Directly imported, verified for quality.
+                            Experience the authentic taste of Gilgit-Baltistan inspired Chinese cuisine. Freshly prepared, traditional recipes, delivered to your doorstep.
                         </p>
                         <div className="flex gap-4">
                             <Link href="#" className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center hover:bg-accent hover:text-white transition-all"><Facebook className="h-4 w-4" /></Link>
@@ -37,10 +31,10 @@ export default function Footer() {
                     <div>
                         <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">Explore</h3>
                         <ul className="space-y-3 text-sm font-medium text-slate-400">
-                            <li><Link href="/shop" className="hover:text-white transition-colors">Catalog</Link></li>
-                            <li><Link href="/shop?cat=New Arrivals" className="hover:text-white transition-colors">New Arrivals</Link></li>
-                            <li><Link href="/shop?cat=Skincare" className="hover:text-white transition-colors">Skincare Registry</Link></li>
-                            <li><Link href="/shop?cat=Makeup" className="hover:text-white transition-colors">Makeup Collection</Link></li>
+                            <li><Link href="/customer/shop" className="hover:text-white transition-colors">Catalog</Link></li>
+                            <li><Link href="/customer/shop?cat=New Arrivals" className="hover:text-white transition-colors">New Arrivals</Link></li>
+                            <li><Link href="/customer/shop?cat=Skincare" className="hover:text-white transition-colors">Skincare Registry</Link></li>
+                            <li><Link href="/customer/shop?cat=Makeup" className="hover:text-white transition-colors">Makeup Collection</Link></li>
                         </ul>
                     </div>
 

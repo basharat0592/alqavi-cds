@@ -1,28 +1,23 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard, Package, ShoppingCart, Users,
-    Settings, Warehouse, Clock,
-    Building2, TrendingUp, RotateCcw, ArrowLeftRight, Tag,
-    BarChart3, Boxes, FolderTree, Bell, FileText, Database, Truck,
-    Layers, CreditCard, Banknote, Shield, RefreshCw, ChevronsLeft, ChevronsRight, Lock, UserCheck,
-    ChevronDown, ShoppingBag
+    LayoutDashboard, Package, TrendingUp, Tag,
+    Boxes, ChevronLeft, ChevronRight, Settings, UserCheck, ShoppingBag,
+    Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
+    ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
+    ChevronDown, Truck, Book, FileText, AlertTriangle
 } from 'lucide-react';
-import { authService } from '@/lib/auth';
-import { productService, orderService } from '@/lib/api';
 
-/* ═══════════════════════════════════════════════
-   TYPES
-   ═══════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON ADMINISTRATIVE SIDEBAR
+   ───────────────────────────────────────────────────────────────────────────── */
 interface NavItem {
     name: string;
     href: string;
     icon: any;
-    badge?: number;
-    alert?: boolean;
 }
 
 interface NavGroup {
@@ -30,147 +25,174 @@ interface NavGroup {
     items: NavItem[];
 }
 
-/* ═══════════════════════════════════════════════
-   ADMIN SIDEBAR COMPONENT (CLEAN LIGHT THEME)
-   ═══════════════════════════════════════════════ */
 export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
     const pathname = usePathname();
-    const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
-
-    useEffect(() => {
-        const checkVisibility = () => {
-            const saved = localStorage.getItem('admin_sidebar_visibility');
-            if (saved) setSidebarVisibility(JSON.parse(saved));
-        };
-        checkVisibility();
-        window.addEventListener('sidebarVisibilityChanged', checkVisibility);
-        return () => window.removeEventListener('sidebarVisibilityChanged', checkVisibility);
-    }, []);
 
     const menuGroups: NavGroup[] = [
         {
             label: 'Main Dashboard',
             items: [
-                { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'POS / Sales', href: '/admin/sale', icon: ShoppingCart },
-                { name: 'Recent History', href: '/admin/sales/recent', icon: Clock },
-                { name: 'Notifications', href: '/admin/alerts', icon: Bell },
+                { name: 'Overview', href: '/admin/dashboard', icon: LayoutDashboard },
+                { name: 'Recent Activity', href: '/admin/sales/recent', icon: Activity },
+                { name: 'Order List', href: '/admin/orders', icon: ShoppingBag },
+                { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
             ],
         },
         {
-            label: 'Products',
+            label: 'Inventory & Stock',
             items: [
-                { name: 'All Products', href: '/admin/products', icon: Package },
-                { name: 'Navbar Pages', href: '/admin/products/main-categories', icon: FolderTree },
-                { name: 'Products Category', href: '/admin/products/categories', icon: Tag },
+                { name: 'Categories', href: '/admin/products/categories', icon: Tag },
+                { name: 'Add Product', href: '/admin/products', icon: Package },
+                { name: 'Sections', href: '/admin/products/sections', icon: ListFilter },
+                { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
+                { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
             ],
         },
         {
-            label: 'Inventory',
+            label: 'Procurement',
             items: [
-                { name: 'Current Stock', href: '/admin/inventory/list', icon: Boxes },
-                { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Warehouse },
-                { name: 'Stock History', href: '/admin/inventory/movements', icon: ArrowLeftRight },
-                { name: 'Adjustments', href: '/admin/inventory/adjustments', icon: RefreshCw },
+                { name: 'Supplier List', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'New Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
+                { name: 'Purchase History', href: '/admin/purchases', icon: History },
+                { name: 'Supplier Catalog', href: '/admin/supplier-products', icon: Book },
+                { name: 'Returns / Refunds', href: '/admin/purchases/returns', icon: RefreshCcw },
             ],
         },
         {
-            label: 'Purchasing',
+            label: 'Sales Console',
             items: [
-                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
-                { name: 'All Purchases', href: '/admin/purchases', icon: ShoppingBag },
-                { name: 'Returns', href: '/admin/purchases/returns', icon: RotateCcw },
-                { name: 'Companies', href: '/admin/company', icon: Building2 },
-            ],
-        },
-        {
-            label: 'Accounts',
-            items: [
-                { name: 'Sales List', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Payments', href: '/admin/payments', icon: Banknote },
-                { name: 'Customer Credit', href: '/admin/payments/customer', icon: CreditCard },
+                { name: 'Point of Sale', href: '/admin/sale', icon: Monitor },
+                { name: 'Invoices', href: '/admin/invoices', icon: FileText },
+                { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
+                { name: 'Account Holders', href: '/admin/company/customers', icon: Users },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
         },
         {
-            label: 'Administration',
+            label: 'Security & Logs',
             items: [
-                { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-                { name: 'Audit Logs', href: '/admin/reports?type=accounting', icon: Database },
-                { name: 'Users List', href: '/admin/users', icon: Users },
-                { name: 'User Roles', href: '/admin/users/roles', icon: Shield },
+                { name: 'User Registry', href: '/admin/users', icon: User },
+                { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
                 { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },
+                { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
             ],
         },
-    ].map(group => ({
-        ...group,
-        items: group.items.filter(item => sidebarVisibility[item.href] !== false)
-    })).filter(g => g.items.length > 0);
+        {
+            label: 'Detailed Reports',
+            items: [
+                { name: 'Reports Center', href: '/admin/reports', icon: BarChart3 },
+                { name: 'Sales Reports', href: '/admin/reports/sales', icon: TrendingUp },
+                { name: 'Purchase Reports', href: '/admin/reports/purchases', icon: ShoppingCart },
+                { name: 'Inventory Reports', href: '/admin/reports/inventory', icon: Boxes },
+                { name: 'Customer Reports', href: '/admin/reports/customers', icon: Users },
+                { name: 'Accounting Reports', href: '/admin/reports/accounting', icon: CreditCard },
+                { name: 'Returns Reports', href: '/admin/reports/sales-returns', icon: RotateCcw },
+                { name: 'Data Hub', href: '/admin/reports/data-hub', icon: BarChart3 },
+            ],
+        },
+    ];
+
+    const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        const loadVisibility = () => {
+            const stored = localStorage.getItem('sidebar_visibility');
+            if (stored) {
+                setVisibility(JSON.parse(stored));
+            } else {
+                const defaults: Record<string, boolean> = {};
+                menuGroups.forEach(g => g.items.forEach(i => defaults[i.href] = true));
+                defaults['/admin/settings'] = true;
+                // Ensure all new reports are visible by default
+                defaults['/admin/reports/sales'] = true;
+                defaults['/admin/reports/purchases'] = true;
+                defaults['/admin/reports/inventory'] = true;
+                defaults['/admin/reports/customers'] = true;
+                defaults['/admin/reports/accounting'] = true;
+                defaults['/admin/reports/sales-returns'] = true;
+                defaults['/admin/reports/data-hub'] = true;
+                setVisibility(defaults);
+            }
+        };
+        loadVisibility();
+        window.addEventListener('sidebar_visibility_change', loadVisibility);
+        return () => window.removeEventListener('sidebar_visibility_change', loadVisibility);
+    }, [pathname]);
 
     const isActive = (href: string) => {
         if (typeof window === 'undefined') return pathname === href;
         const fullPath = window.location.pathname + window.location.search;
-        if (href === '/admin/dashboard') return pathname === href;
-        if (href.includes('?')) return fullPath === href;
-        return pathname === href;
+        return pathname === href || (href !== '/admin/dashboard' && fullPath === href);
     };
 
-    return (
-        <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-[#232F3E] h-screen flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-xl border-r border-[#1a2b3c]`}>
+    const filteredGroups = menuGroups.map(group => ({
+        ...group,
+        items: group.items.filter(item => visibility[item.href] !== false)
+    })).filter(group => group.items.length > 0);
 
-            {/* ── Amazon Header Area ── */}
-            <div className={`px-4 py-6 flex items-center ${isCollapsed ? 'flex-col gap-4' : 'justify-between'} border-b border-[#37475a]`}>
+    return (
+        <div className={`h-screen flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-2xl overflow-hidden font-sans antialiased
+            ${isCollapsed ? 'w-16 bg-[#232F3E]' : 'w-[250px] bg-[#232F3E]'}`}>
+
+            {/* ── BRANDING AREA ── */}
+            <div className={`h-16 flex items-center px-6 border-b border-white/10 bg-[#1a252f] ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
                 {!isCollapsed && (
                     <Link href="/admin/dashboard" className="flex flex-col group">
-                        <span className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-widest leading-none mb-1">Administrative</span>
-                        <h1 className="text-white font-black text-sm tracking-tight flex items-center gap-1.5 uppercase leading-none">
-                            AL-QAVI <span className="text-[#FF9900]">CONSOLE</span>
+                        <span className="text-[10px] text-[#F3A847] font-bold uppercase tracking-[0.2em] leading-none mb-1">Central Console</span>
+                        <h1 className="text-white font-bold text-[16px] tracking-tight flex items-center gap-1.5 uppercase">
+                            AL-QAVI <span className="text-[#F3A847]">HUB</span>
                         </h1>
                     </Link>
                 )}
                 {isCollapsed && (
-                    <div className="w-8 h-8 bg-[#FF9900] rounded flex items-center justify-center font-black text-[#111] text-xs">
+                    <div className="w-8 h-8 border-2 border-[#F3A847] rounded-[2px] flex items-center justify-center font-bold text-[#F3A847] text-[15px]">
                         A
                     </div>
                 )}
-                <button
-                    onClick={onToggle}
-                    className="text-[#A1A1AA] hover:text-white transition-colors p-1"
-                    title={isCollapsed ? 'Expand' : 'Collapse'}
-                >
-                    {isCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
-                </button>
+                {!isCollapsed && (
+                    <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 rounded-[2px] transition-all">
+                        <ChevronLeft size={18} />
+                    </button>
+                )}
             </div>
 
-            {/* ── Amazon Vertical Navigation ── */}
-            <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
-                {menuGroups.map((group, gIdx) => (
-                    <div key={group.label} className={gIdx !== 0 ? "mt-4" : ""}>
+            {/* ── NAVIGATION ── */}
+            <nav className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar py-4">
+                {isCollapsed && (
+                    <div className="px-4 mb-6">
+                        <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-[2px] transition-all mx-auto">
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                )}
+                {filteredGroups.map((group, gIdx) => (
+                    <div key={group.label} className={gIdx !== 0 ? "mt-6" : ""}>
                         {!isCollapsed && (
-                            <h3 className="px-6 text-[11px] font-bold text-[#A1A1AA] uppercase tracking-widest mb-2 opacity-60">
+                            <h3 className="px-6 text-[11px] font-bold text-[#F3A847] mb-3 uppercase tracking-widest border-b border-white/5 pb-1 mx-2">
                                 {group.label}
                             </h3>
                         )}
-                        <div className="space-y-0.5">
+                        <div className="space-y-[1px]">
                             {group.items.map((item) => {
                                 const active = isActive(item.href);
                                 return (
                                     <Link key={item.href} href={item.href}
-                                        className={`group relative flex items-center gap-3 px-6 py-2 transition-all
+                                        className={`group relative flex items-center gap-3.5 px-6 py-2.5 transition-all
                                             ${active
-                                                ? 'bg-[#37475a] text-white font-bold border-l-4 border-[#FF9900]'
-                                                : 'text-[#E8E8E8] hover:bg-[#37475a] hover:text-white'}`}>
+                                                ? 'bg-[#1a252f] text-white font-bold border-l-[3px] border-[#F3A847]'
+                                                : 'text-zinc-100 hover:bg-white/5 hover:text-white font-medium'}`}>
 
-                                        <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#FF9900]' : 'text-[#A1A1AA] group-hover:text-white'}`} />
+                                        <item.icon className={`h-[16px] w-[16px] shrink-0 transition-colors ${active ? 'text-[#F3A847]' : 'text-zinc-400 group-hover:text-zinc-200'}`} />
 
                                         {!isCollapsed && (
-                                            <span className="text-[13px] tracking-tight whitespace-nowrap overflow-hidden">
+                                            <span className="text-[14px] tracking-tight whitespace-nowrap overflow-hidden">
                                                 {item.name}
                                             </span>
                                         )}
 
                                         {isCollapsed && (
-                                            <div className="absolute left-full ml-4 px-3 py-1 bg-[#232F3E] text-white text-[12px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl border border-[#37475a]">
+                                            <div className="absolute left-full ml-2 px-3 py-1.5 bg-[#1a252f] border border-white/10 text-white text-[11px] font-bold rounded-[2px] opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl uppercase tracking-wider">
                                                 {item.name}
                                             </div>
                                         )}
@@ -182,15 +204,19 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 ))}
             </nav>
 
-            {/* ── Amazon Footer Controls ── */}
-            <div className="mt-auto border-t border-[#37475a] bg-[#1a2b3c] p-3">
-                <Link href="/admin/settings"
-                    className={`flex items-center gap-3 px-4 py-2 text-[12px] transition-all
-                        ${isActive('/admin/settings') ? 'text-white font-bold' : 'text-[#A1A1AA] hover:text-white'}`}>
-                    <Settings size={18} />
-                    {!isCollapsed && <span>Settings</span>}
-                </Link>
-            </div>
+            {/* ── FOOTER ── */}
+            {visibility['/admin/settings'] !== false && (
+                <div className="mt-auto border-t border-white/10 bg-[#1a252f] p-2">
+                    <Link href="/admin/settings"
+                        className={`flex items-center gap-3.5 px-4 py-2.5 rounded-[2px] transition-all
+                            ${isActive('/admin/settings')
+                                ? 'bg-white/5 text-white font-bold border border-[#F3A847]/30'
+                                : 'text-zinc-100 hover:text-white hover:bg-white/5 font-medium'}`}>
+                        <Settings size={16} className={isActive('/admin/settings') ? 'text-[#F3A847]' : 'text-zinc-400 group-hover:text-zinc-200'} />
+                        {!isCollapsed && <span className="text-[14px] font-medium tracking-tight">System Settings</span>}
+                    </Link>
+                </div>
+            )}
         </div>
     );
 }

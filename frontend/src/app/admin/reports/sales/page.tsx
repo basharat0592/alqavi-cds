@@ -1,17 +1,38 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
     FileText, TrendingUp, Search, Calendar, Download, Filter, 
-    Printer, ArrowRight, CheckCircle, Clock, Users, DollarSign
+    Printer, ArrowRight, CheckCircle, Clock, Users, DollarSign,
+    ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Eye, ShoppingBag, CreditCard, Info
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { SectionCard } from '@/components/ui/AmazonStyles';
+import toast from 'react-hot-toast';
 
-/* ── Sales Statements Matrix ── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - SALES REPORTS
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] ${styles[variant as keyof typeof styles]} ${className}`}>
+            {children}
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+        </button>
+    );
+};
+
+const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all font-medium";
+
 export default function SalesStatementsPage() {
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         setTimeout(() => setLoading(false), 800);
@@ -19,99 +40,132 @@ export default function SalesStatementsPage() {
 
     if (loading) return <PageLoader />;
 
+    const mockData = [
+        { id: 'ST-0042', date: '2026-04-02', name: 'Al-Madina Traders', count: 12, d: 150000, c: 145000, b: 5000 },
+        { id: 'ST-0041', date: '2026-04-01', name: 'Zeeshan Cosmetics', count: 5, d: 85000, c: 85000, b: 0 },
+        { id: 'ST-0040', date: '2026-04-01', name: 'Metro Mart Retail', count: 3, d: 12000, c: 10000, b: 2000 },
+        { id: 'ST-0039', date: '2026-03-31', name: 'The Glow Hub', count: 22, d: 450000, c: 400000, b: 50000 },
+        { id: 'ST-0038', date: '2026-03-31', name: 'Luxury Scents Pak', count: 8, d: 110000, c: 110000, b: 0 },
+    ];
+
     return (
-        <div className="max-w-[1600px] mx-auto px-6 py-8 bg-slate-50 dark:bg-[#070F14] min-h-screen font-sans">
-            
-            {/* ── Header ── */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
-                <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/5">
-                        <FileText className="h-8 w-8 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">Sales Ledger</h1>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Official Sales Statements & Ledger Manifests</p>
-                    </div>
-                </div>
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+            <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
                 
-                <div className="flex flex-wrap items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#EEAF1C] text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
-                        <Download className="h-4 w-4" /> Export All Statements
-                    </button>
+                {/* ── Breadcrumb ── */}
+                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2 no-print">
+                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                    <ChevronRight size={10} />
+                    <Link href="/admin/reports" className="hover:text-[#c45500] hover:underline">Reports Center</Link>
+                    <ChevronRight size={10} />
+                    <span className="text-[#c45500] font-bold">Sales Analysis</span>
                 </div>
-            </div>
 
-            {/* ── Analytical Ledger Strip ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                {[
-                    { label: 'Total Sales Manifest', value: 'Rs. 4.2M' },
-                    { label: 'Statements Issued', value: '142 Files' },
-                    { label: 'Avg Sale Value', value: 'Rs. 28,400' },
-                    { label: 'Reconciliation', value: '100.0%', color: 'text-emerald-500' },
-                ].map((stat, i) => (
-                    <SectionCard key={i} className="p-6">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{stat.label}</p>
-                        <p className={`text-2xl font-black text-slate-900 dark:text-white tracking-tighter ${stat.color || ''}`}>{stat.value}</p>
-                    </SectionCard>
-                ))}
-            </div>
+                <div className="flex items-center justify-between mb-4 no-print">
+                    <div>
+                        <h1 className="text-[22px] font-normal text-[#111]">Sales Ledger & Statements</h1>
+                    </div>
+                    <div className="flex gap-2">
+                        <Btn variant="secondary" onClick={() => toast.success('Manifest Exported')}>
+                            <Download size={14} /> Export All
+                        </Btn>
+                        <Btn variant="secondary" onClick={() => window.print()}>
+                            <Printer size={14} /> Print
+                        </Btn>
+                    </div>
+                </div>
+                <div className="border-b border-[#ddd] mb-6 no-print" />
 
-            {/* ── Main Ledger Table ── */}
-            <SectionCard className="p-0 overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50">
-                    <div className="relative max-w-sm w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Search Statement ID, Customer Name..." 
-                            className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold outline-none focus:border-[#EEAF1C] transition-all"
+                {/* Tactical Sensors */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {[
+                        { label: 'Total Sales Manifest', value: 'Rs. 4.2M', icon: TrendingUp },
+                        { label: 'Statements Issued', value: '142 Files', icon: FileText },
+                        { label: 'Avg Sale Value', value: 'Rs. 28,400', icon: ShoppingBag },
+                        { label: 'Reconciliation', value: '100.0%', icon: CheckCircle, color: 'text-[#007600]' },
+                    ].map((stat, i) => (
+                        <div key={i} className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
+                            <div className="flex items-center gap-3 mb-2">
+                                <stat.icon size={16} className="text-[#565959]" />
+                                <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">{stat.label}</p>
+                            </div>
+                            <p className={`text-[20px] font-normal text-[#111] tracking-tight ${stat.color || ''}`}>{stat.value}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Control Matrix */}
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-wrap items-center gap-5 no-print animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="relative flex-1 min-w-[300px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                        <input
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            placeholder="Search by statement ID or customer..."
+                            className={inputCls + " pl-10"}
                         />
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#EEAF1C] shadow-sm"><Filter className="h-4.5 w-4.5" /></button>
-                        <button className="p-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-[#EEAF1C] shadow-sm"><Printer className="h-4.5 w-4.5" /></button>
+                    <div className="flex items-center gap-2">
+                        <Btn variant="secondary"><Filter size={14} /> Filter</Btn>
                     </div>
                 </div>
-                
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50/30 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/10 uppercase text-[9px] font-black text-slate-400 tracking-widest">
-                            <tr>
-                                <th className="px-6 py-4">Statement ID</th>
-                                <th className="px-6 py-4 text-center">Date Manifest</th>
-                                <th className="px-6 py-4">Identity</th>
-                                <th className="px-6 py-4">Transactions</th>
-                                <th className="px-6 py-4 text-right">Debit</th>
-                                <th className="px-6 py-4 text-right">Credit</th>
-                                <th className="px-6 py-4 text-right">Balance</th>
-                                <th className="px-6 py-4">Action</th>
+
+                {/* Main Ledger Table */}
+                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
+                                <th className="px-6 py-3">Statement ID</th>
+                                <th className="px-6 py-3">Date Manifest</th>
+                                <th className="px-6 py-3">Customer Identity</th>
+                                <th className="px-6 py-3 text-right">Debit (Sale)</th>
+                                <th className="px-6 py-3 text-right">Credit (Paid)</th>
+                                <th className="px-6 py-3 text-right">Balance</th>
+                                <th className="px-6 py-3 text-center">Control</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                            {[
-                                { id: 'ST-0042', date: '2026-04-02', name: 'Al-Madina Traders', count: 12, d: 'Rs. 150,000', c: 'Rs. 145,000', b: 'Rs. 5,000' },
-                                { id: 'ST-0041', date: '2026-04-01', name: 'Zeeshan Cosmetics', count: 5, d: 'Rs. 85,000', c: 'Rs. 85,000', b: 'Rs. 0' },
-                                { id: 'ST-0040', date: '2026-04-01', name: 'Metro Mart Retail', count: 3, d: 'Rs. 12,000', c: 'Rs. 10,000', b: 'Rs. 2,000' },
-                                { id: 'ST-0039', date: '2026-03-31', name: 'The Glow Hub', count: 22, d: 'Rs. 450,000', c: 'Rs. 400,000', b: 'Rs. 50,000' },
-                                { id: 'ST-0038', date: '2026-03-31', name: 'Luxury Scents Pak', count: 8, d: 'Rs. 110,000', c: 'Rs. 110,000', b: 'Rs. 0' },
-                            ].map((st, i) => (
-                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors text-[11px] font-bold">
-                                    <td className="px-6 py-4 text-[#EEAF1C] uppercase font-black">{st.id}</td>
-                                    <td className="px-6 py-4 text-center text-slate-400">{st.date}</td>
-                                    <td className="px-6 py-4 text-slate-900 dark:text-white uppercase tracking-tight">{st.name}</td>
-                                    <td className="px-6 py-4 text-slate-500 uppercase">{st.count} Items</td>
-                                    <td className="px-6 py-4 text-right text-rose-600">{st.d}</td>
-                                    <td className="px-6 py-4 text-right text-emerald-600">{st.c}</td>
-                                    <td className="px-6 py-4 text-right">{st.b}</td>
+                        <tbody className="divide-y divide-[#eee]">
+                            {mockData.map((st, i) => (
+                                <tr key={i} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
                                     <td className="px-6 py-4">
-                                        <button className="p-1.5 text-slate-400 hover:text-[#EEAF1C] transition-colors"><Download className="h-4 w-4" /></button>
+                                        <div className="text-[14px] font-bold text-[#007185] group-hover:underline cursor-pointer">
+                                            {st.id}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-[#565959] font-medium flex items-center gap-1.5">
+                                            <Calendar size={12} className="text-[#adb1b8]" /> {st.date}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-[#111] font-bold flex items-center gap-2">
+                                            <Users size={14} className="text-[#adb1b8]" /> {st.name}
+                                        </div>
+                                        <div className="text-[11px] text-[#565959] mt-1 font-medium italic">{st.count} Transactions</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right text-[#B12704] font-bold">{formatCurrency(st.d)}</td>
+                                    <td className="px-6 py-4 text-right text-[#007600] font-bold">{formatCurrency(st.c)}</td>
+                                    <td className="px-6 py-4 text-right font-black">{formatCurrency(st.b)}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm transition-colors">
+                                            <Download size={14} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-            </SectionCard>
+
+                {/* Summary Note */}
+                <div className="mt-8 bg-[#fff4e5] border border-[#ffb347]/30 rounded-[4px] p-4 flex gap-4 items-start animate-in fade-in duration-1000 no-print">
+                    <Info className="text-[#e47911] shrink-0 mt-0.5" size={18} />
+                    <div>
+                        <p className="text-[13px] font-bold text-[#111]">Ledger Integrity Note</p>
+                        <p className="text-[12px] text-[#565959] leading-relaxed">Statement balances are recalculated every 24 hours. For real-time reconciliation, please use the Individual Customer Ledger from the Accounts module.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 // -- Shared Utilities --------------------------------
 const INPUT = (err?: boolean) =>
     `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-lg text-sm outline-none transition-all
-    focus:border-[#EEAF1C] focus:ring-4 focus:ring-[#EEAF1C]/10 placeholder:text-gray-400
+    focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 placeholder:text-gray-400
     ${err ? 'border-red-500' : 'border-slate-200 dark:border-white/10'}`;
 
 const LABEL = 'block text-[10px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest';
@@ -27,7 +27,7 @@ const SectionCard = ({ children, className = "" }: { children: React.ReactNode; 
 const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon?: any; subtitle?: string }) => (
     <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-3">
-            {Icon && <Icon className="w-5 h-5 text-[#EEAF1C]" />}
+            {Icon && <Icon className="w-5 h-5 text-[#F59E0B]" />}
             <div>
                 <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
                 {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{subtitle}</p>}
@@ -108,7 +108,7 @@ export default function OnboardSupplier() {
         <div className="max-w-[1000px] mx-auto py-12 px-6 font-sans">
             <div className="flex items-center justify-between mb-10 pb-6 border-b border-slate-200 dark:border-white/10">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#EEAF1C] rounded-2xl flex items-center justify-center shadow-xl shadow-yellow-500/20">
+                    <div className="w-12 h-12 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-yellow-500/20">
                         <Building2 className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -119,7 +119,7 @@ export default function OnboardSupplier() {
                 </div>
                 <button
                     onClick={() => router.push('/admin/company/suppliers')}
-                    className="group text-sm text-slate-400 hover:text-[#EEAF1C] flex items-center gap-2 uppercase font-bold tracking-widest transition-all"
+                    className="group text-sm text-slate-400 hover:text-[#F59E0B] flex items-center gap-2 uppercase font-bold tracking-widest transition-all"
                 >
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back
                 </button>
@@ -206,7 +206,7 @@ export default function OnboardSupplier() {
                     <button
                         type="submit"
                         disabled={saving}
-                        className="group px-10 py-3.5 bg-[#EEAF1C] hover:bg-[#ebae1e] border border-[#EEAF1C] rounded-xl text-[11px] font-bold uppercase tracking-widest text-white shadow-xl shadow-yellow-500/20 flex items-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
+                        className="group px-10 py-3.5 bg-[#F59E0B] hover:bg-[#ebae1e] border border-[#F59E0B] rounded-xl text-[11px] font-bold uppercase tracking-widest text-white shadow-xl shadow-yellow-500/20 flex items-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
                     >
                         {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4 text-white group-hover:scale-110 transition-transform" />}
                         Save

@@ -1,1221 +1,1197 @@
-from modules.inventory.models import Inventory, InventoryMovement, Warehouse
-"""
-Sales module API views — Order management endpoints.
-"""
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.utils import timezone
 from django.db import models
-from django.db.models import Sum, Count, Q, F
-from django.db.models.functions import TruncDate
-from datetime import timedelta
-from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, PurchaseReturn, PurchaseReturnItem
-from .serializers import (
-    OrderSerializer, OrderListSerializer, OrderCreateUpdateSerializer,
-    PurchaseOrderListSerializer, PurchaseOrderDetailSerializer,
-    PurchaseReturnListSerializer, PurchaseReturnDetailSerializer
-)
-from core.utils import get_or_404_response
-from modules.products.models import Product
-from modules.users.models import UserActivityLog
-
-
-
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, PurchaseReturn, PurchaseReturnItem, CustomerBoughtProduct, SaleReturn, SaleReturnItem
+from .serializers import OrderSerializer, CreateOrderSerializer, PurchaseOrderSerializer, PurchaseReturnSerializer, OrderStatsSerializer, CustomerBoughtProductSerializer, SaleReturnSerializer
+from modules.products.models import SupplierProduct
+from modules.inventory.models import StockMovement
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def list_orders(request):
-    """List orders with proper isolation based on user role."""
-    from rest_framework.pagination import PageNumberPagination
-    
-    orders = Order.objects.all().order_by('-created_at')
-
-    # Security: Isolation based on role
-    is_admin = request.user.is_superuser or request.user.is_staff or (
-        request.user.role and request.user.role.name in ['Admin', 'admin']
-    )
-    
-    if not is_admin:
-        if hasattr(request.user, 'supplier_profile') and request.user.supplier_profile:
-            # Supplier case: See orders containing their items
-            orders = orders.filter(items__product__supplier=request.user.supplier_profile).distinct()
-        else:
-            # Customer case: Standard customers only see their specific orders
-            orders = orders.filter(customer=request.user)
-
-    # Search by fields
-    search = request.query_params.get('search')
-    if search:
-        orders = orders.filter(
-            Q(order_number__icontains=search) |
-            Q(customer__username__icontains=search) |
-            Q(customer__first_name__icontains=search) |
-            Q(customer__last_name__icontains=search) |
-            Q(guest_name__icontains=search)
-        )
-
-    # Status filter
-    status_filter = request.query_params.get('status')
-    if status_filter:
-        orders = orders.filter(status=status_filter)
-
-    # Exclude status filter
-    exclude_status = request.query_params.get('exclude_status')
-    if exclude_status:
-        status_list = exclude_status.split(',')
-        orders = orders.exclude(status__in=status_list)
-
-    # Payment status filter
-    payment_status = request.query_params.get('payment_status')
-    if payment_status:
-        orders = orders.filter(payment_status=payment_status)
-
-    # Date range filters
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    if start_date:
-        orders = orders.filter(created_at__date__gte=start_date)
-    if end_date:
-        orders = orders.filter(created_at__date__lte=end_date)
-
-    # Pagination
-    paginator = PageNumberPagination()
-    page = paginator.paginate_queryset(orders, request)
-    if page is not None:
-        serializer = OrderListSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
-
-    serializer = OrderListSerializer(orders, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def order_detail(request, order_id):
-    """Retrieve a specific order with items."""
-    order, err = get_or_404_response(Order, id=order_id)
-    if err:
-        return err
-    return Response(OrderSerializer(order).data)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def create_order(request):
-    """Create a new order, add items, and update stock/payments."""
-    from django.db import transaction
-    from modules.products.models import Product
-    from modules.inventory.models import Inventory, InventoryMovement, Warehouse
-    from modules.payments.models import Payment, PaymentCategory
-    import json
-    
-    # Extract items from request data if any
-    data = request.data.copy()
-    items_data = data.pop('items', [])
-    if isinstance(items_data, str):
-        try:
-            items_data = json.loads(items_data)
-        except:
-            items_data = []
-
-    serializer = OrderCreateUpdateSerializer(data=data)
-    if serializer.is_valid():
-        try:
-            with transaction.atomic():
-                # Automatically assign customer if user is logged in
-                save_kwargs = {}
-                if request.user.is_authenticated:
-                    save_kwargs['customer'] = request.user
-                
-                order = serializer.save(**save_kwargs)
-                
-                # Log Activity
-                UserActivityLog.objects.create(
-                    user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
-                    action='create',
-                    description=f'Created new sale order {order.order_number} for RS {order.total_amount}'
-                )
-                
-                # Default warehouse for stock deduction
-                warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-                
-                # Create OrderItems and adjust stock
-                for item_dt in items_data:
-                    product_id = item_dt.get('product_id')
-                    quantity = int(item_dt.get('quantity', 1))
-                    price = float(item_dt.get('price', 0))
-                    
-                    if product_id:
-                        product, _ = get_or_404_response(Product, id=product_id)
-                        if not _:
-                            OrderItem.objects.create(
-                                order=order,
-                                product=product,
-                                quantity=quantity,
-                                price=price
-                            )
-                            # Deduct Stock if created in a confirmed/delivered state (e.g. POS)
-                            deducted_states = ['confirmed', 'processing', 'shipped', 'delivered', 'completed']
-                            if order.status in deducted_states:
-                                # Reduce global product stock
-                                product.quantity_in_stock = max(0, product.quantity_in_stock - quantity)
-                                product.save()
-                                
-                                # Deduct from warehouse inventory
-                                if warehouse:
-                                    # Safely handle multiple inventory records (batches) - pick one or create default
-                                    inv = Inventory.objects.filter(
-                                        product=product, 
-                                        warehouse=warehouse
-                                    ).order_by('-quantity_available').first()
-                                    
-                                    if not inv:
-                                        inv = Inventory.objects.create(
-                                            product=product,
-                                            warehouse=warehouse,
-                                            quantity_available=0
-                                        )
-                                    
-                                    prev_qty = float(inv.quantity_available)
-                                    inv.quantity_available = max(0, prev_qty - quantity)
-                                    inv.save()
-                                    
-                                    InventoryMovement.objects.create(
-                                        product=product,
-                                        warehouse=warehouse,
-                                        movement_type='Sale',
-                                        quantity=-quantity,
-                                        previous_quantity=prev_qty,
-                                        new_quantity=inv.quantity_available,
-                                        reference_id=str(order.order_number),
-                                        notes=f"Stock automatically deducted for immediate order: {order.order_number}",
-                                        created_by=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-                                    )
-                
-                # Automatically create an inbound Payment for the Sale to increase company revenue/balance
-                if order.total_amount > 0:
-                    payment_category, _ = PaymentCategory.objects.get_or_create(
-                        name='Sales', 
-                        defaults={'description': 'Incoming payments from sales'}
-                    )
-                    payer_name = order.customer.get_full_name() if order.customer else (order.guest_name or 'Walk-in Customer')
-                    
-                    method_str = (order.payment_method or '').lower()
-                    if 'card' in method_str or 'bank' in method_str:
-                        pay_method = 'bank_transfer'
-                    elif 'wallet' in method_str or 'jazzcash' in method_str or 'easypaisa' in method_str:
-                        pay_method = 'mobile_wallet'
-                    elif 'check' in method_str:
-                        pay_method = 'check'
-                    elif 'cash' in method_str:
-                        pay_method = 'cash'
-                    else:
-                        pay_method = 'other'
-
-                    Payment.objects.create(
-                        amount=order.total_amount,
-                        payment_type='inbound',
-                        method=pay_method,
-                        category=payment_category,
-                        reference_number=str(order.order_number),
-                        payer_payee=payer_name,
-                        description=f"Revenue from Sale Order {order.order_number}",
-                        user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-                    )
-                            
-                return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    
-    print(f"DEBUG: Order validation errors: {serializer.errors}")
-    return Response({
-        "error": "Validation failed",
-        "errors": serializer.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['PATCH'])
-@permission_classes([AllowAny])
-def update_order(request, order_id):
-    """Update order status or payment information and handle stock return if cancelled."""
-    from django.db import transaction
-    order, err = get_or_404_response(Order, id=order_id)
-    if err:
-        return err
-
-    old_status = order.status
-    serializer = OrderCreateUpdateSerializer(order, data=request.data, partial=True)
-    
-    if serializer.is_valid():
-        with transaction.atomic():
-            updated_order = serializer.save()
-            new_status = updated_order.status
-            
-            # Inventory Management Logic
-            # 1. Deduct Stock: When status moves from a non-fulfilled state to 'confirmed'
-            deducted_states = ['confirmed', 'processing', 'shipped', 'delivered', 'completed']
-            undeducted_states = ['ordered', 'pending', 'cancelled', 'rejected']
-            
-            if old_status in undeducted_states and new_status in deducted_states:
-                warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-                for item in updated_order.items.all():
-                    if item.product:
-                        qty = item.quantity
-                        # Reduce global product stock
-                        item.product.quantity_in_stock = max(0, item.product.quantity_in_stock - qty)
-                        item.product.save()
-                        
-                        # Deduct from warehouse inventory
-                        if warehouse:
-                            # Safely handle multiple inventory records (batches)
-                            inv = Inventory.objects.filter(
-                                product=item.product, 
-                                warehouse=warehouse
-                            ).order_by('-quantity_available').first()
-                            
-                            if not inv:
-                                inv = Inventory.objects.create(
-                                    product=item.product,
-                                    warehouse=warehouse,
-                                    quantity_available=0
-                                )
-                            
-                            prev_qty = float(inv.quantity_available)
-                            inv.quantity_available = max(0, prev_qty - qty)
-                            inv.save()
-                            
-                            InventoryMovement.objects.create(
-                                product=item.product,
-                                warehouse=warehouse,
-                                movement_type='Sale',
-                                quantity=-qty,
-                                previous_quantity=prev_qty,
-                                new_quantity=inv.quantity_available,
-                                reference_id=str(updated_order.order_number),
-                                notes=f"Stock deducted via admin confirmation of Order {updated_order.order_number}",
-                                created_by=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-                            )
-            
-            # 2. Restore Stock: When status moves from a fulfilled state back to a non-fulfilled state (Cancellation/Rejection)
-            elif old_status in deducted_states and new_status in ['cancelled', 'rejected']:
-                warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-                for item in updated_order.items.all():
-                    if item.product:
-                        qty = item.quantity
-                        item.product.quantity_in_stock += qty
-                        item.product.save()
-                        
-                        if warehouse:
-                            # Safely handle multiple inventory records (batches)
-                            inv = Inventory.objects.filter(
-                                product=item.product, 
-                                warehouse=warehouse
-                            ).order_by('-quantity_available').first()
-                            
-                            if not inv:
-                                inv = Inventory.objects.create(
-                                    product=item.product,
-                                    warehouse=warehouse,
-                                    quantity_available=0
-                                )
-                                
-                            prev_qty = float(inv.quantity_available)
-                            inv.quantity_available += qty
-                            inv.save()
-                            
-                            InventoryMovement.objects.create(
-                                product=item.product,
-                                warehouse=warehouse,
-                                movement_type='Return',
-                                quantity=qty,
-                                previous_quantity=prev_qty,
-                                new_quantity=inv.quantity_available,
-                                reference_id=str(updated_order.order_number),
-                                notes=f"Stock restored due to order cancellation/rejection: {updated_order.order_number}",
-                                created_by=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-                            )
-            
-            return Response(OrderSerializer(updated_order).data)
-    
-    # Catch and print validation errors for debugging
-    print(f"DEBUG: Order update validation errors: {serializer.errors}")
-    return Response({
-        "error": "Record update failed validation",
-        "errors": serializer.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_order(request, order_id):
-    """Delete an order (owner or admin only). Customers can only delete cancelled/delivered orders."""
-    order, err = get_or_404_response(Order, id=order_id)
-    if err:
-        return err
-
-    is_admin = request.user.is_superuser or request.user.is_staff or (
-        request.user.role and request.user.role.name in ['Admin', 'admin']
-    )
-
-    if not is_admin:
-        if order.customer != request.user:
-            return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
-
-        # Customers can only delete closed orders (cancelled, rejected, delivered)
-        allowed_statuses = ['cancelled', 'rejected', 'delivered', 'completed']
-        if order.status.lower() not in allowed_statuses:
-            return Response({
-                'error': 'You can only delete orders that are cancelled or delivered.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    order.delete()
-    return Response({'message': 'Order deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def cancel_order(request, order_id):
-    """Cancel order — public cancel for UUID holder (pre-shipped only). Authentication optional."""
-    order, err = get_or_404_response(Order, id=order_id)
-    if err:
-        return err
-
-    # Identity check
-    is_admin = False
-    if request.user.is_authenticated:
-        is_admin = request.user.is_superuser or request.user.is_staff or (
-            request.user.role and request.user.role.name in ['Admin', 'admin']
-        )
-
-    # Permission check: If order is linked to a customer, restrict to that user or admin
-    if order.customer and not is_admin:
-        if not request.user.is_authenticated or order.customer != request.user:
-            return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
-
-    current_status = order.status.lower()
-
-    # Admins can always cancel
-    if not is_admin:
-        # Customers: block if already shipped or beyond
-        if current_status in ['shipped', 'delivered', 'completed', 'cancelled', 'rejected']:
-            return Response({
-                'error': f'Order cannot be cancelled. It has already been marked as "{order.status}".'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    # Perform cancellation with stock restoration
-    from django.db import transaction
-    with transaction.atomic():
-        old_status = current_status
-        order.status = 'cancelled'
-        order.save()
-
-        # Restore stock only if it was previously deducted
-        deducted_states = ['confirmed', 'processing', 'shipped', 'delivered', 'completed']
-        if old_status in deducted_states:
-            warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-            for item in order.items.all():
-                if item.product:
-                    qty = item.quantity
-                    item.product.quantity_in_stock += qty
-                    item.product.save()
-
-                    if warehouse:
-                        inv = Inventory.objects.filter(
-                            product=item.product,
-                            warehouse=warehouse
-                        ).order_by('-quantity_available').first()
-
-                        if not inv:
-                            inv = Inventory.objects.create(
-                                product=item.product,
-                                warehouse=warehouse,
-                                quantity_available=0
-                            )
-
-                        prev_qty = float(inv.quantity_available)
-                        inv.quantity_available += qty
-                        inv.save()
-
-                        InventoryMovement.objects.create(
-                            product=item.product,
-                            warehouse=warehouse,
-                            movement_type='Return',
-                            quantity=qty,
-                            previous_quantity=prev_qty,
-                            new_quantity=float(inv.quantity_available),
-                            reference_id=str(order.order_number),
-                            notes=f"Stock restored due to order cancellation: {order.order_number}",
-                            created_by=request.user
-                        )
-
-    actor_name = 'Public Guest'
-    log_user = None
-    if request.user.is_authenticated:
-        actor_name = 'Admin' if is_admin else 'Customer'
-        log_user = request.user
-
-    UserActivityLog.objects.create(
-        user=log_user,
-        action='update', # changed from 'cancel' to avoid choices error if 'cancel' isn't in ACTION_CHOICES
-        description=f'{actor_name} cancelled order {order.order_number}'
-    )
-
-    return Response({'message': 'Order successfully cancelled.', 'status': 'cancelled'}, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def confirm_order_received(request, order_id):
-    """Public confirmation of receipt by order UUID holder."""
-    order, err = get_or_404_response(Order, id=order_id)
-    if err:
-        return err
-
-    # Identity check
-    is_admin = False
-    if request.user.is_authenticated:
-        is_admin = request.user.is_superuser or request.user.is_staff or (
-            request.user.role and request.user.role.name in ['Admin', 'admin']
-        )
-
-    # Permission check: If order belongs to a customer, restrict to owner or admin
-    if order.customer and not is_admin:
-        if not request.user.is_authenticated or order.customer != request.user:
-            return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
-
+@permission_classes([permissions.AllowAny])
+def track_order_by_id(request, tracking_id):
     try:
-        from django.db import transaction
-        with transaction.atomic():
-            # Validate status
-            if order.status.lower() != 'shipped':
-                raise Exception(f'Only shipped orders can be marked as received. Current status is {order.status}.')
-
-            order.status = 'delivered'
-            order.save()
-
-            actor_name = 'Public Guest'
-            log_user = None
-            if request.user.is_authenticated:
-                actor_name = 'Admin' if is_admin else 'Customer'
-                log_user = request.user
-
-            UserActivityLog.objects.create(
-                user=log_user,
-                action='update',
-                description=f'{actor_name} confirmed receipt of order {order.order_number}'
-            )
-
-        return Response({
-            'message': 'Order marked as received. Thank you!',
-            'status': 'delivered'
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def dashboard_stats(request):
-    """Get comprehensive dashboard statistics for admin overview."""
-    today = timezone.now().date()
-    month_ago = today - timedelta(days=30)
-    
-    supplier = None
-    if request.user.is_authenticated and not request.user.is_superuser:
-        if hasattr(request.user, 'supplier_profile'):
-            supplier = request.user.supplier_profile
-
-    # Basic Counts
-    if supplier:
-        total_orders = Order.objects.filter(items__product__supplier=supplier).distinct().count()
-        orders_today = Order.objects.filter(items__product__supplier=supplier, created_at__date=today).distinct().count()
-    else:
-        total_orders = Order.objects.count()
-        orders_today = Order.objects.filter(created_at__date=today).count()
-    
-    # Revenue Calculations
-    # Gross Revenue from Sales (Filtered by supplier's items if it's a supplier)
-    valid_orders = Order.objects.filter(payment_status='completed')
-    if supplier:
-        # For suppliers, we calculate revenue based on THEIR items sold
-        supplier_items = OrderItem.objects.filter(order__payment_status='completed', product__supplier=supplier)
-        gross_revenue = supplier_items.aggregate(revenue=Sum(models.F('price') * models.F('quantity')))['revenue'] or 0
-        
-        # Supplier's expenses (COGS based on their product costs) is usually internal, 
-        # but here we might just show revenue. In this system POs are typically from distributor to manufacturer.
-        # If POs are also supplier-linked... but PO model doesn't have supplier field yet.
-        total_expenses = 0 
-    else:
-        gross_revenue = valid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        paid_purchases = PurchaseOrder.objects.filter(payment_status='paid')
-        total_expenses = paid_purchases.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    
-    # Net Revenue
-    total_net_revenue = float(gross_revenue) - float(total_expenses)
-
-    if supplier:
-        revenue_today = OrderItem.objects.filter(
-            order__payment_status='completed', 
-            order__created_at__date=today,
-            product__supplier=supplier
-        ).aggregate(revenue=Sum(models.F('price') * models.F('quantity')))['revenue'] or 0
-        expenses_today = 0
-    else:
-        revenue_today = (
-            valid_orders.filter(created_at__date=today)
-            .aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        )
-        expenses_today = (
-            paid_purchases.filter(created_at__date=today)
-            .aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        )
-    net_revenue_today = float(revenue_today) - float(expenses_today)
-
-    # 30-Day Revenue History
-    if supplier:
-        history_data = (
-            OrderItem.objects.filter(
-                order__payment_status='completed',
-                order__created_at__date__gte=month_ago,
-                product__supplier=supplier
-            )
-            .annotate(date=TruncDate('order__created_at'))
-            .values('date')
-            .annotate(
-                revenue=Sum(models.F('price') * models.F('quantity')),
-                orders=Count('order_id', distinct=True)
-            )
-            .order_by('date')
-        )
-        purchase_map = {}
-    else:
-        history_data = (
-            Order.objects.filter(created_at__date__gte=month_ago)
-            .annotate(date=TruncDate('created_at'))
-            .values('date')
-            .annotate(
-                revenue=Sum('total_amount', filter=Q(payment_status='completed')),
-                orders=Count('id')
-            )
-            .order_by('date')
-        )
-        # Purchase history for net calculation
-        purchase_history = (
-            PurchaseOrder.objects.filter(created_at__date__gte=month_ago, payment_status='paid')
-            .annotate(date=TruncDate('created_at'))
-            .values('date')
-            .annotate(expense=Sum('total_amount'))
-            .order_by('date')
-        )
-        purchase_map = {p['date'].strftime('%Y-%m-%d'): p['expense'] for p in purchase_history}
-    
-    # Format history for frontend: DUAL LINE SUPPORT (Sales vs Purchases)
-    history_map = {h['date'].strftime('%Y-%m-%d'): h for h in history_data}
-    formatted_history = []
-    for i in range(30):
-        d = today - timedelta(days=29-i)
-        d_str = d.strftime('%Y-%m-%d')
-        h = history_map.get(d_str, {'revenue': 0, 'orders': 0})
-        purch_val = float(purchase_map.get(d_str, 0) or 0)
-        sales_val = float(h['revenue'] or 0)
-        formatted_history.append({
-            'date': d.strftime('%b %d'),
-            'sales': sales_val,
-            'purchases': purch_val,
-            'net': sales_val - purch_val,
-            'orders': h['orders'] or 0
-        })
-
-    # Recent Orders
-    recent_qs = Order.objects.all()
-    if supplier:
-        recent_qs = recent_qs.filter(items__product__supplier=supplier).distinct()
-    recent = recent_qs.order_by('-created_at')[:5]
-    recent_serialized = OrderListSerializer(recent, many=True).data
-
-    # Recent Purchase Orders (Hide for suppliers as they are the ones usually being purchased from)
-    if supplier:
-        recent_purchases_serialized = []
-    else:
-        recent_purchases = PurchaseOrder.objects.all().order_by('-created_at')[:5]
-        recent_purchases_serialized = PurchaseOrderListSerializer(recent_purchases, many=True).data
-
-    # Top Products
-    top_products_qs = OrderItem.objects.values('product', 'product__name')
-    if supplier:
-        top_products_qs = top_products_qs.filter(product__supplier=supplier)
-    top_products_data = (
-        top_products_qs
-        .annotate(sales=Sum('quantity'))
-        .order_by('-sales')[:5]
-    )
-    formatted_top_products = [
-        {'id': p['product'], 'name': p['product__name'], 'sales': p['sales']}
-        for p in top_products_data
-    ]
-
-    return Response({
-        'total_orders': total_orders,
-        'orders_today': orders_today,
-        'total_revenue': total_net_revenue,
-        'revenue_today': net_revenue_today,
-        'revenue_history': formatted_history,
-        'recent_orders': recent_serialized,
-        'recent_purchases': recent_purchases_serialized,
-        'top_products': formatted_top_products,
-        'pending_orders': Order.objects.filter(status='pending').count() if not supplier else Order.objects.filter(status='pending', items__product__supplier=supplier).distinct().count(),
-        'delivered_orders': Order.objects.filter(status='delivered').count() if not supplier else Order.objects.filter(status='delivered', items__product__supplier=supplier).distinct().count(),
-    })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def recent_orders(request):
-    """Get recently created orders for the dashboard."""
-    limit = int(request.query_params.get('limit', 10))
-    orders = Order.objects.all()[:limit]
-    return Response(OrderListSerializer(orders, many=True).data)
-
-
-
-# ===========================================================================
-# SUPPLIER DASHBOARD STATS
-# ===========================================================================
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def supplier_dashboard_stats(request):
-    """Return real-time dashboard KPIs for the authenticated supplier."""
-    from modules.company.models import Supplier
-    from modules.products.models import Product
-
-    user = request.user
-
-    # Resolve supplier profile from the logged-in user
-    supplier_profile = None
-    if hasattr(user, 'supplier_profile') and user.supplier_profile:
-        supplier_profile = user.supplier_profile
-    else:
-        supplier_profile = Supplier.objects.filter(user=user).first()
-
-    if not supplier_profile:
-        return Response({
-            'total_purchase_orders': 0,
-            'pending_orders': 0,
-            'received_orders': 0,
-            'cancelled_orders': 0,
-            'total_order_value': 0,
-            'total_products': 0,
-            'recent_orders': [],
-            'supplier_name': user.get_full_name() or user.username,
-        })
-
-    # Purchase order aggregates
-    all_pos = PurchaseOrder.objects.filter(supplier=supplier_profile)
-    total_pos = all_pos.count()
-    pending_pos = all_pos.filter(status__in=['draft', 'pending', 'processing', 'shipped']).count()
-    received_pos = all_pos.filter(status='received').count()
-    cancelled_pos = all_pos.filter(status='cancelled').count()
-    total_value = all_pos.aggregate(v=Sum('total_amount'))['v'] or 0
-
-    # Products linked to this supplier's own catalog
-    total_products = Product.objects.filter(supplier=supplier_profile, is_supplier_only=True).count()
-
-    # 5 most recent POs
-    recent = all_pos.order_by('-created_at')[:5]
-    recent_data = []
-    for po in recent:
-        recent_data.append({
-            'id': str(po.id),
-            'purchase_number': po.purchase_number,
-            'status': po.status,
-            'payment_status': po.payment_status,
-            'total_amount': float(po.total_amount),
-            'order_date': str(po.order_date),
-            'created_at': po.created_at.isoformat() if po.created_at else None,
-            'items_count': po.items.count(),
-            'items_preview': ', '.join([item.product.name for item in po.items.all()[:3]]) or '—',
-        })
-
-    return Response({
-        'total_purchase_orders': total_pos,
-        'pending_orders': pending_pos,
-        'received_orders': received_pos,
-        'cancelled_orders': cancelled_pos,
-        'total_order_value': float(total_value),
-        'total_products': total_products,
-        'recent_orders': recent_data,
-        'supplier_name': supplier_profile.name,
-    })
-
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def list_purchases(request):
-    """List purchase orders with role-based filtering."""
-    purchases = PurchaseOrder.objects.all()
-
-    # RBAC: Suppliers only see their assigned orders
-    user = request.user
-    if user.is_authenticated and not user.is_staff and hasattr(user, 'role') and user.role and user.role.name.lower() == 'supplier':
-        # Resolve the supplier profile related to this user
-        from modules.company.models import Supplier
-        supplier_profile = Supplier.objects.filter(user=user).first()
-        if supplier_profile:
-            purchases = purchases.filter(supplier=supplier_profile)
-        else:
-            # If they are a supplier but have no profile link, show nothing
-            purchases = purchases.none()
-
-    search = request.query_params.get('search')
-    if search:
-        purchases = purchases.filter(
-            Q(purchase_number__icontains=search) | 
-            Q(supplier_name__icontains=search) |
-            Q(tracking_id__icontains=search)
-        )
-    status_filter = request.query_params.get('status')
-    if status_filter:
-        if ',' in status_filter:
-            status_list = status_filter.split(',')
-            purchases = purchases.filter(status__in=status_list)
-        else:
-            purchases = purchases.filter(status=status_filter)
-        
-    # Exclude status filter
-    exclude_status = request.query_params.get('exclude_status')
-    if exclude_status:
-        status_list = exclude_status.split(',')
-        purchases = purchases.exclude(status__in=status_list)
-        
-    payment_status_filter = request.query_params.get('payment_status')
-    if payment_status_filter:
-        purchases = purchases.filter(payment_status=payment_status_filter)
-
-    # Date range filters for reporting
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    if start_date: purchases = purchases.filter(created_at__date__gte=start_date)
-    if end_date: purchases = purchases.filter(created_at__date__lte=end_date)
-
-    purchases = purchases.order_by('-created_at')
-    return Response({'results': PurchaseOrderListSerializer(purchases, many=True).data, 'count': purchases.count()})
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def create_purchase(request):
-    """Create a purchase order with nested items."""
-    data = request.data.copy()
-    items_data = data.pop('items', [])
-    try:
-        from django.db import transaction
-        with transaction.atomic():
-            po = PurchaseOrder.objects.create(
-                purchase_number=data.get('purchase_number'),
-                supplier_id=data.get('supplier'), # Primary FK assignment
-                supplier_name=data.get('supplier_name', ''),
-                supplier_phone=data.get('supplier_phone', ''),
-                order_date=data.get('order_date'),
-                expected_delivery_date=data.get('expected_delivery_date') or None,
-                tax_amount=data.get('tax_amount', 0),
-                shipping_cost=data.get('shipping_cost', 0),
-                status=data.get('status', 'draft'),
-                payment_status=data.get('payment_status', 'pending'),
-                payment_method=data.get('payment_method') or None,
-                notes=data.get('notes', ''),
-                created_by=request.user if request.user.is_authenticated else None,
-            )
+        tid_str = str(tracking_id).strip()
+        # First try finding by tracking_id
+        order = Order.objects.filter(tracking_id=tid_str).first()
+        if not order:
+            # Fallback for full UUID lookup
+            from django.db.models import Q
+            order = Order.objects.filter(id=tid_str).first()
             
-            # Log Activity
-            UserActivityLog.objects.create(
-                user=request.user if request.user.is_authenticated else None,
-                action='create',
-                description=f'Created purchase order: {po.purchase_number} from {po.supplier_name}'
-            )
-            # Get default warehouse
-            warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
+        if not order:
+            return Response({'error': 'Order not found. Please check the order ID and try again.'}, status=404)
             
-            total = 0
-            for item in items_data:
-                qty = int(item.get('quantity', 1))
-                price = float(item.get('unit_price', 0))
-                subtotal = qty * price
-                
-                source_product_id = item.get('product')
-                source_product = Product.objects.filter(id=source_product_id).first()
-                if not source_product:
-                    continue
-
-                # ENTITY SEPARATION LOGIC: 
-                # We maintain two separate worlds:
-                # 1. Supplier Catalog (is_supplier_only = True)
-                # 2. Admin Inventory (is_supplier_only = False)
-                # This ensures edits/deletes in one don't affect the other.
-
-                target_product = None
-                if source_product.is_supplier_only:
-                    # Look for an existing internal version of this product in admin inventory
-                    # We match mainly by SKU and name (to avoid duplicates)
-                    target_product = Product.objects.filter(
-                        sku=source_product.sku, 
-                        is_supplier_only=False
-                    ).first()
-
-                    if not target_product:
-                        # Create a NEW separate record specifically for Admin's inventory
-                        target_product = Product.objects.create(
-                            name=source_product.name,
-                            description=source_product.description,
-                            sku=source_product.sku,
-                            price=source_product.price,
-                            cost=price,
-                            category=source_product.category,
-                            image=source_product.image,
-                            is_supplier_only=False, # This is our internal copy
-                            status='active',
-                            quantity_in_stock=0, # Start fresh, handled by Inventory system
-                            supplier=source_product.supplier # Maintain link for history
-                        )
-                    
-                    # Deduct from the ORIGINAL Supplier Catalog record
-                    total_pieces = qty * int(item.get('pieces_per_unit', 1))
-                    try:
-                        if po.supplier and source_product.supplier and source_product.supplier.id == po.supplier.id:
-                            source_product.quantity_in_stock = max(0, int(source_product.quantity_in_stock) - int(total_pieces))
-                            source_product.save(update_fields=['quantity_in_stock'])
-                    except Exception:
-                        pass
-                else:
-                    # Admin is purchasing more of a product that's already in their internal catalog
-                    target_product = source_product
-                    # If this product was already an admin product, we still deduct from its 
-                    # "supplier side" if applicable, but usually admin products are standalone.
-                    # However, to meet the requirement: "The quantity should be deducted from the supplier’s stock."
-                    total_pieces = qty * int(item.get('pieces_per_unit', 1))
-
-                # Create the PO item record linked to the TARGET product (Admin's version)
-                p_item = PurchaseOrderItem.objects.create(
-                    purchase_order=po,
-                    product=target_product,
-                    quantity=qty,
-                    unit_price=price,
-                    subtotal=subtotal,
-                    packaging_type=item.get('packaging_type', 'piece'),
-                    pieces_per_unit=int(item.get('pieces_per_unit', 1)),
-                )
-                
-                # Update Admin Inventory mesh
-                if target_product and warehouse:
-                    total_pieces = qty * p_item.pieces_per_unit
-                    
-                    # Update target product's own stock counter (for simplified admin views)
-                    target_product.quantity_in_stock = int(target_product.quantity_in_stock) + int(total_pieces)
-                    target_product.save(update_fields=['quantity_in_stock'])
-
-                    inv = Inventory.objects.filter(product=target_product, warehouse=warehouse).order_by('-quantity_available').first()
-                    if not inv:
-                        inv = Inventory.objects.create(product=target_product, warehouse=warehouse, quantity_available=0)
-                    
-                    prev_qty = inv.quantity_available
-                    inv.quantity_available = float(prev_qty) + float(total_pieces)
-                    inv.save()
-
-                    InventoryMovement.objects.create(
-                        product=target_product,
-                        warehouse=warehouse,
-                        movement_type='Purchase',
-                        quantity=total_pieces,
-                        previous_quantity=prev_qty,
-                        new_quantity=inv.quantity_available,
-                        reference_id=po.purchase_number,
-                        notes=f"Stock synchronized via Purchase Order {po.purchase_number} creation",
-                        created_by=request.user if request.user.is_authenticated else None
-                    )
-                
-                total += subtotal
-                
-            po.total_amount = total + float(data.get('shipping_cost', 0)) + float(data.get('tax_amount', 0))
-            po.save()
-
-            # PAYMENT TRIGGER: Only create outbound payment if status is 'paid'
-            from modules.payments.models import Payment, PaymentCategory
-            if po.payment_status == 'paid' and po.total_amount > 0:
-                payment_category, _ = PaymentCategory.objects.get_or_create(
-                    name='Purchases', 
-                    defaults={'description': 'Outgoing payments for stock purchases'}
-                )
-                Payment.objects.create(
-                    amount=po.total_amount,
-                    payment_type='outbound',
-                    method=(po.payment_method or 'cash'),
-                    category=payment_category,
-                    reference_number=str(po.purchase_number),
-                    payer_payee=po.supplier_name or 'Supplier',
-                    description=f"Payment for Purchase Order {po.purchase_number}",
-                    user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-                )
-
-        return Response(PurchaseOrderDetailSerializer(po).data, status=status.HTTP_201_CREATED)
+        return Response(OrderSerializer(order, context={'request': request}).data)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Invalid order ID format.'}, status=400)
 
 
-@api_view(['GET', 'PATCH', 'DELETE'])
-@permission_classes([AllowAny])
-def purchase_detail(request, pk):
-    """Retrieve, update, or delete a purchase order."""
-    po, err = get_or_404_response(PurchaseOrder, id=pk)
-    if err: return err
-    if request.method == 'GET':
-        return Response(PurchaseOrderDetailSerializer(po).data)
-    elif request.method == 'PATCH':
-        items_data = request.data.get('items')
-        
-        from django.db import transaction
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreateOrderSerializer
+        return OrderSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'track']:
+            return [permissions.AllowAny()]
+        if self.action in ['update', 'partial_update', 'stats']:
+            return [permissions.IsAdminUser()]
+        if self.action in ['destroy']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated()]
+
+    def destroy(self, request, *args, **kwargs):
         try:
-            with transaction.atomic():
-                # Handle Status Transition to 'received'
-                old_status = po.status
-                old_payment_status = po.payment_status
-                new_status = request.data.get('status', old_status)
-                new_payment_status = request.data.get('payment_status', old_payment_status)
-
-                # BUSINESS RULE: Block cancellation if already shipped/received
-                if new_status == 'cancelled' and old_status.lower() in ['shipped', 'delivered', 'received']:
-                    return Response({
-                        'error': f'Restricted Action: Cannot cancel an order that is already {old_status.upper()}.'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Update basic fields
-                for field in ['purchase_number', 'tracking_id', 'supplier_name', 'supplier_phone', 'status', 'payment_status', 'payment_method', 'notes', 'tax_amount', 'shipping_cost', 'order_date']:
-                    if field in request.data:
-                        setattr(po, field, request.data[field])
-                
-                # Special handling for supplier FK to avoid assignment errors with IDs
-                if 'supplier' in request.data:
-                    po.supplier_id = request.data['supplier']
-
-                po.save()
-
-                if items_data is not None:
-                    # Remove existing items
-                    po.items.all().delete()
-                    
-                    # Create new items
-                    for item in items_data:
-                        qty = int(item.get('quantity', 1))
-                        price = float(item.get('unit_price', 0))
-                        subtotal = qty * price
-                        
-                        PurchaseOrderItem.objects.create(
-                            purchase_order=po,
-                            product_id=item.get('product'),
-                            quantity=qty,
-                            unit_price=price,
-                            subtotal=subtotal,
-                            packaging_type=item.get('packaging_type', 'piece'),
-                            pieces_per_unit=int(item.get('pieces_per_unit', 1)),
-                        )
-
-                # TRIGGER CHECK: Status changed to received
-                if old_status != 'received' and new_status == 'received':
-                    # Get default warehouse for stock updates
-                    from modules.inventory.models import Warehouse, InventoryMovement
-                    warehouse = Warehouse.objects.filter(is_default=True).first() or Warehouse.objects.first()
-                    
-                    # Ensure we apply separation logic even if the order was created as 'draft'
-                    if not InventoryMovement.objects.filter(reference_id=po.purchase_number, movement_type='Purchase').exists():
-                        for item in po.items.all():
-                            source_product = item.product
-                            if not source_product:
-                                continue
-                            
-                            total_pieces = item.quantity * item.pieces_per_unit
-
-                            # Determine target (Internal) vs source (Catalog)
-                            target_product = source_product
-                            if source_product.is_supplier_only:
-                                # Find or create Admin's internal version
-                                target_product = Product.objects.filter(sku=source_product.sku, is_supplier_only=False).first()
-                                if not target_product:
-                                    target_product = Product.objects.create(
-                                        name=source_product.name,
-                                        description=source_product.description,
-                                        sku=source_product.sku,
-                                        price=source_product.price,
-                                        cost=item.unit_price,
-                                        category=source_product.category,
-                                        image=source_product.image,
-                                        is_supplier_only=False,
-                                        status='active',
-                                        quantity_in_stock=0,
-                                        supplier=source_product.supplier
-                                    )
-                                
-                                # Deduct from Supplier's stock
-                                try:
-                                    if po.supplier and source_product.supplier and source_product.supplier.id == po.supplier.id:
-                                        source_product.quantity_in_stock = max(0, int(source_product.quantity_in_stock) - int(total_pieces))
-                                        source_product.save(update_fields=['quantity_in_stock'])
-                                except Exception:
-                                    pass
-
-                            # Update Admin Inventory
-                            target_product.quantity_in_stock = int(target_product.quantity_in_stock) + int(total_pieces)
-                            target_product.save(update_fields=['quantity_in_stock'])
-
-                            if warehouse:
-                                inv = Inventory.objects.filter(product=target_product, warehouse=warehouse).order_by('-quantity_available').first()
-                                if not inv:
-                                    inv = Inventory.objects.create(product=target_product, warehouse=warehouse, quantity_available=0)
-                                prev_qty = inv.quantity_available
-                                inv.quantity_available = float(prev_qty) + float(total_pieces)
-                                inv.save()
-
-                                InventoryMovement.objects.create(
-                                    product=target_product,
-                                    warehouse=warehouse,
-                                    movement_type='Purchase',
-                                    quantity=total_pieces,
-                                    previous_quantity=prev_qty,
-                                    new_quantity=inv.quantity_available,
-                                    reference_id=po.purchase_number,
-                                    notes=f"Stock synchronized via Purchase Order {po.purchase_number} receipt",
-                                    created_by=request.user if request.user.is_authenticated else None
-                                )
-                                
-                            # Re-link the PO item to the internal product for consistency if it was catalog-based
-                            if item.product != target_product:
-                                item.product = target_product
-                                item.save(update_fields=['product'])
-                    else:
-                        # Logic already handled; no-op or just safety checks
-                        pass
-                
-                # TRIGGER CHECK: Payment changed to paid
-                if old_payment_status != 'paid' and new_payment_status == 'paid':
-                    from modules.payments.models import Payment, PaymentCategory
-                    if po.total_amount > 0:
-                        payment_category, _ = PaymentCategory.objects.get_or_create(
-                            name='Purchases', 
-                            defaults={'description': 'Outgoing payments for stock purchases'}
-                        )
-                        method_to_use = po.payment_method or request.data.get('payment_method') or 'cash'
-                        Payment.objects.create(
-                            amount=po.total_amount,
-                            payment_type='outbound',
-                            method=method_to_use,
-                            category=payment_category,
-                            reference_number=str(po.purchase_number),
-                            payer_payee=po.supplier_name or 'Supplier',
-                            description=f"Automated payment for PO {po.purchase_number} marked as PAID",
-                            user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-                        )
-            return Response(PurchaseOrderDetailSerializer(po).data)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response({'error': str(e)}, status=400)
-    elif request.method == 'DELETE':
-        try:
-            order_num = po.purchase_number
-            po.delete()
-            # Log Activity
-            UserActivityLog.objects.create(
-                user=request.user if hasattr(request, 'user') and request.user.is_authenticated else None,
-                action='delete',
-                description=f'Deleted purchase order: {order_num}'
-            )
+            instance = self.get_object()
+            self.perform_destroy(instance)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": f"Deletion failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
+    def get_queryset(self):
+        user = self.request.user
 
-# ===========================================================================
-# PURCHASE RETURNS
-# ===========================================================================
+        if not user.is_authenticated:
+            return Order.objects.none()
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def list_purchase_returns(request):
-    """List purchase returns."""
-    returns = PurchaseReturn.objects.all()
-    return Response({'results': PurchaseReturnListSerializer(returns, many=True).data, 'count': returns.count()})
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def create_purchase_return(request):
-    """Create a purchase return with nested items."""
-    data = request.data.copy()
-    items_data = data.pop('items', [])
-    try:
-        from django.db import transaction
-        with transaction.atomic():
-            ret = PurchaseReturn.objects.create(
-                return_number=data.get('return_number'),
-                purchase_order_id=data.get('purchase_order') or None,
-                supplier_name=data.get('supplier_name', ''),
-                return_date=data.get('return_date'),
-                status=data.get('status', 'pending'),
-                reason=data.get('reason', ''),
-                created_by=request.user if request.user.is_authenticated else None,
+        if getattr(user, "is_staff", False):
+            queryset = Order.objects.all()
+        else:
+            from modules.customer.models import Customer
+            from django.db.models import Q
+            is_customer_identity = (
+                isinstance(user, Customer) or 
+                getattr(user, "is_customer", False) or 
+                user.__class__.__name__ == "Customer"
             )
-            total = 0
-            for item in items_data:
-                subtotal = float(item.get('quantity', 1)) * float(item.get('refund_price', 0))
-                PurchaseReturnItem.objects.create(
-                    purchase_return=ret,
-                    product_id=item.get('product'),
-                    quantity=item.get('quantity', 1),
-                    refund_price=item.get('refund_price', 0),
-                    subtotal=subtotal,
+            is_supplier_identity = (
+                getattr(user, "is_supplier", False) or 
+                user.__class__.__name__ == "Supplier"
+            )
+            if is_customer_identity:
+                queryset = Order.objects.filter(Q(customer_id=user.id) | Q(user_id=user.id))
+            elif is_supplier_identity:
+                supplier_id = getattr(user, "real_id", None)
+                if supplier_id:
+                    queryset = Order.objects.filter(items__product__supplier_id=supplier_id).distinct()
+                else:
+                    queryset = Order.objects.none()
+            else:
+                queryset = Order.objects.filter(user=user)
+
+        status_filter = self.request.query_params.get('status')
+        date_filter = self.request.query_params.get('date')
+        exclude_status = self.request.query_params.get('exclude_status')
+        search = self.request.query_params.get('search')
+        
+        if status_filter and status_filter != 'All':
+            statuses = [s.strip().upper() for s in status_filter.split(',')]
+            queryset = queryset.filter(status__in=statuses)
+        if date_filter:
+            queryset = queryset.filter(created_at__date=date_filter)
+        if exclude_status:
+            statuses = [s.upper() for s in exclude_status.split(',')]
+            queryset = queryset.exclude(status__in=statuses)
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(tracking_id__icontains=search) | 
+                Q(customer_name__icontains=search) | 
+                Q(phone_number__icontains=search)
+            )
+
+        # 3. Market/Channel Filter (POS vs Online)
+        market = self.request.query_params.get('market')
+        if market == 'POS':
+            queryset = queryset.filter(payment_method='SHOP')
+        elif market == 'Online':
+            queryset = queryset.filter(payment_method__in=['COD', 'ONLINE'])
+
+        return queryset.order_by('-created_at')
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def track(self, request):
+        tracking_id = request.query_params.get('tid')
+        if not tracking_id:
+            return Response({"error": "Tracking ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            order = Order.objects.get(tracking_id=tracking_id)
+            serializer = OrderSerializer(order)
+            return Response(serializer.data)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def bought_products(self, request):
+        user = request.user
+        from modules.customer.models import Customer
+        from django.db.models import Q
+
+        is_customer_identity = (
+            isinstance(user, Customer) or 
+            getattr(user, "is_customer", False) or 
+            user.__class__.__name__ == "Customer"
+        )
+        is_supplier_identity = (
+            getattr(user, "is_supplier", False) or 
+            user.__class__.__name__ == "Supplier"
+        )
+        if is_customer_identity:
+            queryset = Order.objects.filter(Q(customer_id=user.id) | Q(user_id=user.id))
+        elif is_supplier_identity:
+            supplier_id = getattr(user, "real_id", None)
+            if supplier_id:
+                queryset = Order.objects.filter(items__product__supplier_id=supplier_id).distinct()
+            else:
+                queryset = Order.objects.none()
+        else:
+            queryset = Order.objects.filter(user=user)
+
+        items = OrderItem.objects.filter(
+            order__in=queryset,
+            order__status="DELIVERED"
+        ).select_related("order", "product")
+        # Return a clean list, excluding items with deleted products
+        results = []
+        for item in items:
+            if not item.product:
+                continue
+                
+            results.append({
+                'id': f"{item.order.id}-{item.product.id}",
+                'product': item.product.id,
+                'product_name': item.product.product_name,
+                'weight': item.product.weight,
+                'size': item.product.size,
+                'image': item.product.image.url if item.product.image else None,
+                'order': item.order.id,
+                'order_number': item.order.tracking_id,
+                'quantity': item.quantity,
+                'price': float(item.price),
+                'purchased_at': item.order.created_at
+            })
+            
+        return Response(results)
+
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+        if order.status == 'DELIVERED':
+            return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def stats(self, request):
+        date_filter = request.query_params.get('date')
+        payment_method = request.query_params.get('payment_method')
+        
+        if date_filter:
+            try:
+                from datetime import datetime
+                today = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            except ValueError:
+                today = timezone.now().date()
+        else:
+            today = timezone.now().date()
+            
+        # Base queryset WITH date/payment filters (for revenue/profit metrics)
+        filtered_qs = Order.objects.all()
+        if date_filter:
+            filtered_qs = filtered_qs.filter(created_at__date=today)
+        if payment_method and payment_method != 'ALL':
+            filtered_qs = filtered_qs.filter(payment_method=payment_method.upper())
+
+        # Metrics for the specific filtered view
+        total_orders_filtered = filtered_qs.count()
+        delivered_orders_qs = filtered_qs.filter(status='DELIVERED')
+        delivered_count_filtered = delivered_orders_qs.count()
+        
+        # System-Wide Totals (Ignoring Date Filter for visibility)
+        total_pending = Order.objects.filter(status='PENDING').count()
+        total_active_all = Order.objects.exclude(status__in=['DELIVERED', 'CANCELLED']).count()
+        system_total_orders = Order.objects.count()
+        
+        # Revenue Logic: Only Delivered orders count as revenue
+        total_revenue = delivered_orders_qs.aggregate(tot=Sum('total_amount'))['tot'] or 0
+        
+        # Profit Logic
+        from .models import OrderItem
+        total_profit = OrderItem.objects.filter(order__in=delivered_orders_qs).aggregate(
+            tot=Sum(ExpressionWrapper(F('price') - F('cost_price'), output_field=DecimalField()) * F('quantity'))
+        )['tot'] or 0
+
+        # Payable Logic (COD orders that are delivered but maybe money not collected? Simplified here)
+        total_payable = 0 # Placeholder for specific finance logic if needed
+
+        # Recent Orders for Dashboard (Use all orders to ensure visibility across date filters)
+        recent_orders_qs = Order.objects.all().order_by('-created_at')[:50]
+        recent_orders = OrderSerializer(recent_orders_qs, many=True, context={'request': request}).data
+
+        # Revenue history for graph (last 7 days)
+        history = []
+        for i in range(6, -1, -1):
+            day = timezone.now().date() - timezone.timedelta(days=i)
+            day_rev = Order.objects.filter(status='DELIVERED', created_at__date=day).aggregate(tot=Sum('total_amount'))['tot'] or 0
+            history.append({
+                "date": day.strftime('%Y-%m-%d'),
+                "revenue": float(day_rev)
+            })
+
+        return Response({
+            "total_orders": total_orders_filtered,
+            "system_total": system_total_orders,
+            "total_revenue": float(total_revenue),
+            "total_profit": float(total_profit),
+            "total_payable": float(total_payable),
+            "orders_today": Order.objects.filter(created_at__date=timezone.now().date()).count(),
+            "pending_orders": total_pending,
+            "total_active": total_active_all,
+            "delivered_orders": delivered_count_filtered,
+            "recent_orders": recent_orders,
+            "revenue_history": history,
+            "top_products": [],
+            "recent_purchases": []
+        })
+
+    def partial_update(self, request, *args, **kwargs):
+        order = self.get_object()
+        if order.status == 'DELIVERED':
+            return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        new_status = request.data.get('status', '').upper()
+        warehouse_id = request.data.get('warehouse_id')
+        
+        # Trigger inventory deduction if moving to DELIVERED
+        if new_status == 'DELIVERED' and order.status != 'DELIVERED':
+            if not warehouse_id:
+                return Response({"error": "Warehouse selection is required for delivery."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                from django.db import transaction
+                from modules.inventory.models import Stock
+                with transaction.atomic():
+                    for item in order.items.all():
+                        if item.product:
+                            # 1. Deduct from specific Stock entry in the SELECTED warehouse
+                            # We match by product name (case-insensitive)
+                            stock = Stock.objects.filter(
+                                product_name__iexact=item.product.product_name,
+                                weight=item.product.weight,
+                                size=item.product.size,
+                                warehouse_id=warehouse_id
+                            ).first()
+                            
+                            if stock:
+                                stock.total_quantity = F('total_quantity') - item.quantity
+                                stock.save()
+                                
+                                # 3. Deduct from associated Supplier Product (Catalog)
+                                if hasattr(stock, 'product') and stock.product:
+                                    sp_prod = stock.product
+                                    sp_prod.quantity = F('quantity') - item.quantity
+                                    sp_prod.save()
+                            
+                            # 2. Trigger Product re-aggregation
+                            # Saving the product will trigger the save() override that sums all warehouses
+                            product = item.product
+                            product.save()
+
+                            # 4. Sync to CustomerBoughtProduct Table
+                            from .models import CustomerBoughtProduct
+                            CustomerBoughtProduct.objects.get_or_create(
+                                order=order,
+                                product=product,
+                                defaults={
+                                    'customer': order.customer,
+                                    'user': order.user,
+                                    'quantity': item.quantity,
+                                    'price': item.price
+                                }
+                            )
+            except Exception as e:
+                return Response({"error": f"Inventory sync failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return super().partial_update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def request_cancel(self, request, pk=None):
+        """Customer requests cancellation — only allowed before order is shipped."""
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found.'}, status=404)
+
+        if not request.user.is_staff and order.customer_id != request.user.id and getattr(order.user, 'id', None) != request.user.id:
+            return Response({'error': 'Not authorized to modify this order.'}, status=403)
+
+        blocking = {'SHIPPED', 'DELIVERED', 'CANCELLED', 'CANCEL_REQUESTED'}
+        if order.status.upper() in blocking:
+            return Response(
+                {"error": f"Cannot cancel order with status: {order.status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order.status = 'CANCEL_REQUESTED'
+        order.save()
+        return Response({'message': 'Cancellation request submitted.'})
+
+
+class SaleReturnViewSet(viewsets.ModelViewSet):
+    queryset = SaleReturn.objects.all()
+    serializer_class = SaleReturnSerializer
+    
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'is_staff', False):
+            return SaleReturn.objects.all()
+        
+        from modules.customer.models import Customer
+        from django.db.models import Q
+        is_customer = (
+            isinstance(user, Customer) or 
+            getattr(user, 'is_customer', False) or 
+            user.__class__.__name__ == 'Customer'
+        )
+        if is_customer:
+            return SaleReturn.objects.filter(Q(customer_id=user.id) | Q(user_id=user.id))
+        return SaleReturn.objects.filter(user=user)
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        request_data = self.request.data
+        
+        from modules.customer.models import Customer
+        customer_obj = None
+        user_obj = None
+        
+        is_customer = (
+            isinstance(user, Customer) or 
+            getattr(user, 'is_customer', False) or 
+            user.__class__.__name__ == 'Customer'
+        )
+        
+        if is_customer:
+            customer_obj = Customer.objects.filter(id=user.id).first()
+        else:
+            user_obj = user
+
+        sale_return = serializer.save(customer=customer_obj, user=user_obj)
+        
+        # Add items if provided in request
+        items_data = request_data.get('items', [])
+        for item in items_data:
+            from modules.products.models import Product
+            try:
+                product = Product.objects.get(id=item.get('product_id'))
+                SaleReturnItem.objects.create(
+                    sale_return=sale_return,
+                    product=product,
+                    quantity=int(item.get('quantity', 1)),
+                    price=float(item.get('price', product.selling_price))
                 )
-                total += subtotal
+            except Exception: continue
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.get('partial', False)
+        instance = self.get_object()
+        old_status = instance.status
+        new_status = request.data.get('status', old_status)
+
+        # Pass partial=True to super().update to allow status-only updates
+        response = super().update(request, *args, **kwargs)
+
+        # Only proceed with inventory logic if the update was successful
+        if response.status_code < 400 and new_status == 'ACCEPTED' and old_status != 'ACCEPTED':
+            try:
+                from django.db import transaction
+                from django.db.models import F
+                with transaction.atomic():
+                    for item in instance.items.all():
+                        if item.product:
+                            # 1. Add back to master Stock (Inventory)
+                            if hasattr(item.product, 'stock') and item.product.stock:
+                                stock = item.product.stock
+                                stock.total_quantity = F('total_quantity') + item.quantity
+                                stock.save()
+                                
+                                # 2. Add back to Supplier Product (All Products catalog)
+                                if hasattr(stock, 'product') and stock.product:
+                                    sp_prod = stock.product
+                                    sp_prod.quantity = F('quantity') + item.quantity
+                                    sp_prod.save()
+                            
+                            # 3. Add back to Admin Product record
+                            product = item.product
+                            product.total_quantity = F('total_quantity') + item.quantity
+                            product.save()
+            except Exception as e:
+                print(f"Inventory Restock Error: {str(e)}")
+
+        return response
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def mark_received(self, request, pk=None):
+        """Customer confirms they have received the order — only when SHIPPED."""
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found.'}, status=404)
+
+        if not request.user.is_staff and order.customer_id != request.user.id and getattr(order.user, 'id', None) != request.user.id:
+            return Response({'error': 'Not authorized to modify this order.'}, status=403)
+
+        if order.status.upper() != 'SHIPPED':
+            return Response(
+                {'error': 'Order can only be marked as received after it has been shipped.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order.status = 'DELIVERED'
+        order.save()
+
+        # Trigger inventory deduction (same logic as admin delivering)
+        try:
+            from django.db import transaction
+            from django.db.models import F
+            with transaction.atomic():
+                for item in order.items.all():
+                    if item.product:
+                        if hasattr(item.product, 'stock') and item.product.stock:
+                            stock = item.product.stock
+                            stock.total_quantity = F('total_quantity') - item.quantity
+                            stock.save()
+                            
+                            if hasattr(stock, 'product') and stock.product:
+                                sp_prod = stock.product
+                                sp_prod.quantity = F('quantity') - item.quantity
+                                sp_prod.save()
+                                
+                        item.product.total_quantity = F('total_quantity') - item.quantity
+                        item.product.save()
+
+                        # Sync to CustomerBoughtProduct Table
+                        from .models import CustomerBoughtProduct
+                        CustomerBoughtProduct.objects.get_or_create(
+                            order=order,
+                            product=item.product,
+                            defaults={
+                                'customer': order.customer,
+                                'user': order.user,
+                                'quantity': item.quantity,
+                                'price': item.price
+                            }
+                        )
+        except Exception:
+            pass  # Non-blocking — order is already marked delivered
+
+        return Response(OrderSerializer(order, context={'request': request}).data)
+
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
+    def update_status(self, request, pk=None):
+        order = self.get_object()
+        
+        # 1. Check if already delivered (Lock)
+        if order.status == 'DELIVERED':
+            return Response({"error": "Order is already delivered and locked."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        new_status = request.data.get('status', '').upper()
+        warehouse_id = request.data.get('warehouse_id')
+        if not new_status:
+            return Response({"error": "Status is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Inventory Deduction Logic
+        if new_status == 'DELIVERED':
+            if not warehouse_id:
+                return Response({"error": "Warehouse selection is required for delivery."}, status=status.HTTP_400_BAD_REQUEST)
+                
+            try:
+                from django.db import transaction
+                from modules.inventory.models import Stock
+                with transaction.atomic():
+                    for item in order.items.all():
+                        if item.product:
+                            # Deduct from Stock entry in SELECTED warehouse (Matching ALL specs)
+                            stock = Stock.objects.filter(
+                                product_name__iexact=item.product.product_name,
+                                weight=item.product.weight,
+                                size=item.product.size,
+                                warehouse_id=warehouse_id
+                            ).first()
+                            
+                            if stock:
+                                stock.total_quantity = F('total_quantity') - item.quantity
+                                stock.save()
+                                
+                                # Deduct from Supplier Product
+                                if hasattr(stock, 'product') and stock.product:
+                                    sp_prod = stock.product
+                                    sp_prod.quantity = F('quantity') - item.quantity
+                                    sp_prod.save()
+                            
+                            # Trigger Product re-aggregation
+                            product = item.product
+                            product.save()
+
+                            # 4. Sync to CustomerBoughtProduct Table
+                            from .models import CustomerBoughtProduct
+                            CustomerBoughtProduct.objects.get_or_create(
+                                order=order,
+                                product=product,
+                                defaults={
+                                    'customer': order.customer,
+                                    'user': order.user,
+                                    'quantity': item.quantity,
+                                    'price': item.price
+                                }
+                            )
+            except Exception as e:
+                return Response({"error": f"Inventory deduction failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 3. Save new status
+        order.status = new_status
+        order.save()
+        return Response(OrderSerializer(order).data)
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def stats(self, request):
+        date_filter = request.query_params.get('date')
+        payment_method = request.query_params.get('payment_method')
+        
+        if date_filter:
+            try:
+                from datetime import datetime
+                today = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            except ValueError:
+                today = timezone.now().date()
+        else:
+            today = timezone.now().date()
+            
+        # Base queryset WITH date/payment filters (for revenue/profit metrics)
+        filtered_qs = Order.objects.all()
+        if date_filter:
+            filtered_qs = filtered_qs.filter(created_at__date=today)
+        if payment_method and payment_method != 'ALL':
+            filtered_qs = filtered_qs.filter(payment_method=payment_method.upper())
+
+        # Metrics for the specific filtered view
+        total_orders_filtered = filtered_qs.count()
+        delivered_orders_qs = filtered_qs.filter(status='DELIVERED')
+        delivered_count_filtered = delivered_orders_qs.count()
+        
+        # System-Wide Totals (Ignoring Date Filter for visibility)
+        total_pending = Order.objects.filter(status='PENDING').count()
+        total_active_all = Order.objects.exclude(status__in=['DELIVERED', 'CANCELLED']).count()
+        system_total_orders = Order.objects.count()
+        
+        # Revenue Logic: Only Delivered orders count as revenue
+        total_revenue = delivered_orders_qs.aggregate(tot=Sum('total_amount'))['tot'] or 0
+
+        # Profit Logic: (Item Price - Item Cost) * Quantity for delivered orders
+        items = OrderItem.objects.filter(order__in=delivered_orders_qs)
+        total_profit = items.annotate(
+            item_profit=ExpressionWrapper(
+                (F('price') - F('cost_price')) * F('quantity'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        ).aggregate(tot=Sum('item_profit'))['tot'] or 0
+        
+        # Accounts Payable: Sum of remaining balance on all active Purchase Orders
+        # Condition: PO is not Cancelled
+        total_payable = PurchaseOrder.objects.exclude(status='CANCELLED').annotate(
+            balance=ExpressionWrapper(
+                F('total_amount') - F('paid_amount'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        ).aggregate(tot=Sum('balance'))['tot'] or 0
+
+        # Recent Orders for Dashboard (Use all orders to ensure visibility across date filters)
+        recent_orders_qs = Order.objects.all().order_by('-created_at')[:50]
+        recent_orders = OrderSerializer(recent_orders_qs, many=True, context={'request': request}).data
+
+        # Revenue history for graph (last 7 days)
+        history = []
+        for i in range(6, -1, -1):
+            d = today - timezone.timedelta(days=i)
+            day_qs = Order.objects.filter(created_at__date=d, status='DELIVERED')
+            if payment_method and payment_method != 'ALL':
+                day_qs = day_qs.filter(payment_method=payment_method.upper())
+            sales = day_qs.aggregate(t=Sum('total_amount'))['t'] or 0
+            history.append({
+                "date": d.strftime("%b %d"),
+                "sales": float(sales),
+                "purchases": 0
+            })
+
+        return Response({
+            "total_orders": total_orders_filtered,
+            "system_total": system_total_orders,
+            "total_revenue": float(total_revenue),
+            "total_profit": float(total_profit),
+            "total_payable": float(total_payable),
+            "orders_today": Order.objects.filter(created_at__date=timezone.now().date()).count(),
+            "pending_orders": total_pending,
+            "total_active": total_active_all,
+            "delivered_orders": delivered_count_filtered,
+            "recent_orders": recent_orders,
+            "revenue_history": history,
+            "top_products": [],
+            "recent_purchases": []
+        })
+
+
+class PurchaseViewSet(viewsets.ModelViewSet):
+    """ViewSet for wholesale purchase orders from distributor to supplier"""
+    serializer_class = PurchaseOrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = PurchaseOrder.objects.all()
+        
+        # 1. Base Filter (Staff vs Supplier)
+        if user.is_staff:
+            pass # Keep all
+        elif hasattr(user, 'is_supplier') and user.is_supplier:
+            qs = qs.filter(supplier_id=user.real_id)
+        else:
+            return PurchaseOrder.objects.none()
+
+        # 2. Query Param Filters
+        status_param = self.request.query_params.get('status')
+        exclude_received = self.request.query_params.get('exclude_received')
+        payment_status = self.request.query_params.get('payment_status')
+        search = self.request.query_params.get('search')
+        supplier_id = self.request.query_params.get('supplier')
+
+        if exclude_received == 'true':
+            qs = qs.exclude(status__in=['RECEIVED', 'CANCELLED'])
+        
+        if status_param and status_param != 'All':
+            qs = qs.filter(status=status_param.upper())
+        
+        if payment_status and payment_status != 'All':
+            qs = qs.filter(payment_status=payment_status.upper())
+
+        if user.is_staff and supplier_id and supplier_id != 'All':
+            qs = qs.filter(supplier_id=supplier_id)
+            
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(purchase_number__icontains=search) | 
+                Q(supplier__username__icontains=search) |
+                Q(supplier__company__icontains=search) |
+                Q(items__product__name__icontains=search)
+            ).distinct()
+
+        return qs.order_by('-order_date')
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
+    def _sync_to_inventory(self, purchase):
+        """Helper to sync PO items to Admin inventory and deduct from Supplier"""
+        from django.db import transaction
+        from django.db.models import F
+        from modules.products.models import Product, SupplierProduct
+        from modules.inventory.models import Stock, Warehouse
+        from django.utils import timezone
+        from decimal import Decimal
+
+        try:
+            warehouse = purchase.warehouse
+
+            with transaction.atomic():
+                for item in purchase.items.all():
+                    sp = item.product
+                    if not sp: continue
+                    
+                    units = item.total_units
+                    
+                    # 1. Deduct from Supplier available units
+                    sp.quantity = F('quantity') - units
+                    sp.save()
+                    
+                    # 2. Always create a NEW Stock entry for every purchase (Batch Tracking)
+                    # This fulfills the requirement to keep every purchase entry separate
+                    stock = Stock.objects.create(
+                        product_name=sp.name,
+                        product=sp,
+                        category=sp.category,
+                        supplier=purchase.supplier,
+                        warehouse=warehouse,
+                        purchase_type='single',
+                        total_quantity=units,
+                        price_per_item=item.price,
+                        weight=item.weight,
+                        size=item.size,
+                        date=timezone.now().date()
+                    )
+
+                    # 3. Record the movement history
+                    StockMovement.objects.create(
+                        stock=stock,
+                        movement_type='PURCHASE',
+                        quantity=units,
+                        to_warehouse=warehouse,
+                        date=timezone.now().date(),
+                        description=f"Purchase Order #{purchase.purchase_number} received"
+                    )
+            
+            purchase.is_inventory_synced = True
+            purchase.save()
+            return True, ""
+        except Exception as e:
+            import traceback
+            print(f"CRITICAL SYNC ERROR: {str(e)}")
+            return False, str(e)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        
+        # Mapping 'ORDERED' -> 'PENDING' for external/legacy compatibility
+        if instance.status == 'ORDERED':
+            instance.status = 'PENDING'
+            instance.save()
+
+        # Fulfillment logic: If newly RECEIVED and not yet synced
+        # We check the instance status directly (DRF handles case-insensitivity on save usually)
+        status_val = str(instance.status).upper()
+        if status_val == 'RECEIVED' and not instance.is_inventory_synced:
+            success, msg = self._sync_to_inventory(instance)
+            if not success:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(f"Inventory sync failed: {msg}")
+
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
+    def update_status(self, request, pk=None):
+        purchase = self.get_object()
+        data = request.data
+        new_status = data.get('status', '').upper()
+        warehouse_id = data.get('warehouse')
+        
+        if not new_status:
+            return Response({"error": "Status is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update warehouse if provided
+        if warehouse_id:
+            from modules.inventory.models import Warehouse
+            try:
+                purchase.warehouse = Warehouse.objects.get(id=warehouse_id)
+            except Warehouse.DoesNotExist:
+                return Response({"error": "Selected warehouse does not exist"}, status=400)
+
+        # Sync if newly received
+        if new_status == 'RECEIVED' and not purchase.is_inventory_synced:
+            # We must save the warehouse change BEFORE sync
+            purchase.status = new_status
+            purchase.save()
+            
+            success, msg = self._sync_to_inventory(purchase)
+            if not success:
+                return Response({"error": f"Internal fulfillment error: {msg}"}, status=500)
+        else:
+            purchase.status = new_status
+            purchase.save()
+
+        return Response(PurchaseOrderSerializer(purchase).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def accept_payment(self, request, pk=None):
+        purchase = self.get_object()
+        user = request.user
+        if not user.is_staff:
+            supplier_id = getattr(user, 'real_id', None)
+            if not supplier_id or purchase.supplier_id != supplier_id:
+                return Response({"error": "Not authorized to confirm this payment"}, status=status.HTTP_403_FORBIDDEN)
+        
+        purchase.payment_confirmed = True
+        if purchase.payment_status == 'UNPAID':
+            purchase.payment_status = 'PAID'
+        purchase.save()
+        return Response({"message": "Payment verified and accepted", "status": purchase.payment_status})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def reject_payment(self, request, pk=None):
+        purchase = self.get_object()
+        user = request.user
+        if not user.is_staff:
+            supplier_id = getattr(user, 'real_id', None)
+            if not supplier_id or purchase.supplier_id != supplier_id:
+                return Response({"error": "Not authorized to reject this payment"}, status=status.HTTP_403_FORBIDDEN)
+        
+        reason = request.data.get('reason', 'Payment evidence rejected by supplier')
+        purchase.payment_confirmed = False
+        purchase.payment_notes = (purchase.payment_notes or "") + f"\n[SUPPLIER REJECTION]: {reason}"
+        purchase.save()
+        return Response({"message": "Payment rejected", "payment_confirmed": False})
+
+    @action(detail=False, methods=['post'], url_path='create')
+    def create_purchase(self, request):
+        from decimal import Decimal
+        from django.db import IntegrityError, transaction
+        from django.utils import timezone
+        
+        try:
+            data = request.data.copy()
+            items_data = data.pop('items', [])
+            
+            # 1. Validation: Ensure we have a supplier and items
+            supplier_id = data.get('supplier') or data.get('supplier_id')
+            if not supplier_id:
+                return Response({"error": "Supplier is required"}, status=400)
+            
+            if not items_data:
+                return Response({"error": "At least one item is required"}, status=400)
+            
+            # 2. Normalize Header Data
+            # Remove helper fields from frontend that shouldn't go to model
+            for helper_field in ['supplier_name', 'order_date']:
+                data.pop(helper_field, None)
+            
+            # Normalize Enums
+            if 'status' in data and data['status']:
+                s = str(data['status']).upper()
+                if s == 'ORDERED': s = 'PENDING'
+                data['status'] = s
+            else:
+                data['status'] = 'PENDING'
+            
+            if 'payment_status' in data and data['payment_status']:
+                data['payment_status'] = str(data['payment_status']).upper()
+            
+            if 'payment_method' in data and data['payment_method']:
+                data['payment_method'] = str(data['payment_method']).upper()
+            
+            # Map IDs and sanitize empty strings
+            if supplier_id and str(supplier_id).strip():
+                data['supplier_id'] = supplier_id
+            
+            warehouse_id = data.get('warehouse') or data.get('warehouse_id')
+            if warehouse_id and str(warehouse_id).strip():
+                data['warehouse_id'] = warehouse_id
+            else:
+                data.pop('warehouse_id', None) 
+                data.pop('warehouse', None)
+
+            # Date Sanitization
+            for date_field in ['expected_delivery_date', 'payment_date']:
+                if date_field in data:
+                    val = str(data[date_field]).strip()
+                    data[date_field] = val if val else None
+
+            # Numeric Sanitization
+            for num_field in ['paid_amount', 'shipping_cost', 'tax_amount', 'total_amount']:
+                if num_field in data:
+                    try:
+                        val = str(data[num_field]).strip()
+                        data[num_field] = Decimal(val) if val else Decimal('0.00')
+                    except (ValueError, TypeError, Exception):
+                        data[num_field] = Decimal('0.00')
+
+            # 3. Field Filtering
+            allowed_fields = [
+                'purchase_number', 'supplier_id', 'reference_number', 'warehouse_id',
+                'total_amount', 'shipping_cost', 'tax_amount', 'status', 
+                'payment_status', 'payment_method', 'expected_delivery_date', 'notes',
+                'paid_amount', 'payment_date', 'payment_notes', 'transaction_id', 
+                'payment_confirmed', 'is_inventory_synced'
+            ]
+            final_data = {k: v for k, v in data.items() if k in allowed_fields}
+
+            # 4. Atomic Creation
+            with transaction.atomic():
+                # Check for purchase_number collision
+                p_num = final_data.get('purchase_number')
+                if p_num and PurchaseOrder.objects.filter(purchase_number=p_num).exists():
+                    # Generate a unique one if collision happens
+                    import time
+                    final_data['purchase_number'] = f"PO-{int(time.time())}"
+
+                purchase = PurchaseOrder.objects.create(**final_data)
+                
+                calculated_total = Decimal('0.00')
+                for item in items_data:
+                    p_id = item.get('product')
+                    if not p_id: continue
+                    
+                    try:
+                        price = Decimal(str(item.get('unit_price', '0')))
+                        qty = int(item.get('quantity', 1))
+                        items_per = int(item.get('items_per_carton', 1))
+                        
+                        # Fetch weight/size from SupplierProduct if not provided
+                        sp_obj = SupplierProduct.objects.filter(id=p_id).first()
+                        weight = item.get('weight') or (sp_obj.weight if sp_obj else '')
+                        size = item.get('size') or (sp_obj.size if sp_obj else '')
+
+                        PurchaseOrderItem.objects.create(
+                            purchase_order=purchase,
+                            product_id=p_id,
+                            packaging_type=item.get('packaging_type', 'SINGLE'),
+                            items_per_carton=items_per,
+                            quantity=qty,
+                            price=price,
+                            weight=weight,
+                            size=size,
+                            selling_price=Decimal('0.00')
+                        )
+                        calculated_total += (Decimal(str(qty)) * price)
+                    except (ValueError, TypeError):
+                        continue
+                    
+                purchase.total_amount = calculated_total
+                purchase.save()
+
+                if str(purchase.status).upper() == 'RECEIVED':
+                    success, msg = self._sync_to_inventory(purchase)
+                    if not success:
+                        raise Exception(f"Inventory sync failed: {msg}")
+            
+            return Response(PurchaseOrderSerializer(purchase).data, status=status.HTTP_201_CREATED)
+            
+        except IntegrityError as e:
+            return Response({"error": f"Database error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SupplierDashboardViewSet(viewsets.ViewSet):
+    """Dedicated ViewSet for supplier dashboard metrics"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        user = request.user
+        
+        # 1. Total products uploaded by this supplier
+        total_products = SupplierProduct.objects.filter(supplier=user).count()
+        
+        # 2. Orders from PurchaseOrder (Wholesale)
+        pos = PurchaseOrder.objects.filter(supplier=user)
+        pending_orders = pos.filter(status='PENDING').count()
+        received_orders = pos.filter(status='RECEIVED').count()
+        
+        # 3. Total order value (Sum of successfully delivered/received POs)
+        total_value = pos.filter(status__in=['RECEIVED', 'DELIVERED']).aggregate(total=Sum('total_amount'))['total'] or 0
+
+        data = {
+            "total_products": total_products,
+            "pending_orders": pending_orders,
+            "received_orders": received_orders,
+            "total_order_value": total_value,
+            "supplier_name": user.username
+        }
+
+        serializer = OrderStatsSerializer(data)
+        return Response(serializer.data)
+
+
+class PurchaseReturnViewSet(viewsets.ModelViewSet):
+    """ViewSet for purchase returns with supplier response workflow"""
+    serializer_class = PurchaseReturnSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = PurchaseReturn.objects.all()
+        
+        # 1. Base Filter (Staff vs Supplier)
+        if user.is_staff:
+            pass
+        elif hasattr(user, 'is_supplier') and user.is_supplier:
+            qs = qs.filter(supplier_id=user.real_id)
+        else:
+            return PurchaseReturn.objects.none()
+
+        # 2. Query Param Filters
+        status_param = self.request.query_params.get('status')
+        search_param = self.request.query_params.get('search')
+
+        if status_param and status_param.lower() != 'all':
+            qs = qs.filter(status=status_param.upper())
+        
+        if search_param:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(return_number__icontains=search_param) |
+                Q(reason__icontains=search_param) |
+                Q(purchase_order__purchase_number__icontains=search_param)
+            ).distinct()
+
+        return qs.order_by('-created_at')
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
+    @action(detail=False, methods=['post'], url_path='create')
+    def create_return(self, request):
+        from decimal import Decimal
+        from modules.users.models import UserActivityLog
+        try:
+            data = request.data.copy()
+            items_data = data.pop('items', [])
+            
+            # Map supplier name to ID if needed (for frontend compatibility)
+            supplier_id = data.pop('supplier_id', data.pop('supplier', None))
+            if not supplier_id and data.get('supplier_name'):
+                from modules.supplier.models import Supplier
+                s = Supplier.objects.filter(models.Q(name=data['supplier_name']) | models.Q(company=data['supplier_name'])).first()
+                if s: supplier_id = s.id
+
+            po_id = data.pop('purchase_order', None)
+            
+            # Remove non-model fields
+            data.pop('supplier_name', None)
+            
+            allowed_fields = ['status', 'reason', 'return_date', 'total_refund_amount']
+            final_data = {k: v for k, v in data.items() if k in allowed_fields}
+            
+            # Explicitly set Foreign Keys and Handle Empty Strings
+            final_data['supplier_id'] = supplier_id if supplier_id and str(supplier_id).strip() else None
+            final_data['purchase_order_id'] = po_id if po_id and str(po_id).strip() else None
+            
+            ret = PurchaseReturn.objects.create(**final_data)
+            
+            total = Decimal('0.00')
+            for it in items_data:
+                if not it.get('product'): continue
+                
+                p_item = PurchaseReturnItem.objects.create(
+                    purchase_return=ret,
+                    product_id=it.get('product'),
+                    quantity=int(it.get('quantity', 1)),
+                    refund_price=Decimal(str(it.get('refund_price', '0')))
+                )
+                total += (Decimal(str(p_item.quantity)) * p_item.refund_price)
+            
             ret.total_refund_amount = total
             ret.save()
-        return Response(PurchaseReturnDetailSerializer(ret).data, status=status.HTTP_201_CREATED)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Log Activity for Supplier notification
+            try:
+                from modules.users.models import User
+                # Find the user account linked to this supplier
+                sup_user = User.objects.filter(role__name__icontains='supplier', username=ret.supplier.username).first()
+                if sup_user:
+                    UserActivityLog.objects.create(
+                        user=sup_user,
+                        action='other',
+                        description=f"New Return Request RECEIVED: {ret.return_number} from Admin. [ID: {ret.id}] Reason: {ret.reason or 'Not specified'}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+            except: pass
 
+            return Response(PurchaseReturnSerializer(ret).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'PATCH', 'DELETE'])
-@permission_classes([AllowAny])
-def purchase_return_detail(request, pk):
-    """Retrieve, update or delete a purchase return."""
-    ret, err = get_or_404_response(PurchaseReturn, id=pk)
-    if err: return err
-    if request.method == 'GET':
-        return Response(PurchaseReturnDetailSerializer(ret).data)
-    elif request.method == 'PATCH':
-        for field in ['status', 'reason', 'supplier_name']:
-            if field in request.data:
-                setattr(ret, field, request.data[field])
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept_return(self, request, pk=None):
+        """Supplier accepts the return -> Adjust stocks"""
+        ret = self.get_object()
+        if ret.status.upper() not in ['WAITING_FOR_SUPPLIER', 'PENDING']:
+            return Response({"error": "Only pending returns can be accepted"}, status=400)
+            
+        from django.db import transaction
+        from django.db.models import F
+        from modules.inventory.models import Stock
+        from modules.products.models import SupplierProduct, Product
+        from modules.users.models import UserActivityLog
+        from modules.users.models import UserActivityLog
+        
+        try:
+            with transaction.atomic():
+                for item in ret.items.all():
+                    sp = item.product
+                    if not sp: continue
+                    
+                    # 1. Deduct from Admin Stock (Matching by product name)
+                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier).update(
+                        total_quantity=F('total_quantity') - item.quantity
+                    )
+                    
+                    # 1b. Deduct from Admin Product Catalog to sync Admin UI
+                    Product.objects.filter(product_name=sp.name, supplier=ret.supplier).update(
+                        total_quantity=F('total_quantity') - item.quantity
+                    )
+                    
+                    # 2. Add back to Supplier Product stock
+                    sp.quantity = F('quantity') + item.quantity
+                    sp.save()
+                
+                ret.status = 'ACCEPTED'
+                
+                ret.save()
+                
+                from modules.users.models import UserActivityLog
+                
+                # Check for shadow user (suppliers usually don't exist in User table)
+                log_user = request.user
+                if getattr(log_user, 'is_supplier', False):
+                    log_user = None
+                    
+                # Log Success Activity
+                UserActivityLog.objects.create(
+                    user=log_user,
+                    action='update',
+                    description=f"Supplier {ret.supplier.name} ACCEPTED Return {ret.return_number}. Stocks adjusted.",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+            return Response(PurchaseReturnSerializer(ret).data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    @action(detail=True, methods=['post'], url_path='reject')
+    def reject_return(self, request, pk=None):
+        ret = self.get_object()
+        if ret.status.upper() not in ['WAITING_FOR_SUPPLIER', 'PENDING']:
+            return Response({"error": "Only pending returns can be rejected"}, status=400)
+            
+        ret.status = 'REJECTED'
         ret.save()
-        return Response(PurchaseReturnDetailSerializer(ret).data)
-    elif request.method == 'DELETE':
-        ret.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        
+        # Check for shadow user
+        from modules.users.models import UserActivityLog
+        log_user = request.user
+        if getattr(log_user, 'is_supplier', False):
+            log_user = None
 
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def track_order(request, order_number):
-    """Public order tracking by human-readable number (ORD-xxxx)."""
-    try:
-        from .serializers import OrderSerializer
-        order = Order.objects.get(order_number=order_number)
-        return Response(OrderSerializer(order).data)
-    except Order.DoesNotExist:
-        return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        UserActivityLog.objects.create(
+            user=log_user,
+            action='update',
+            description=f"Supplier {ret.supplier.name} REJECTED Return {ret.return_number}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return Response(PurchaseReturnSerializer(ret).data)

@@ -24,11 +24,13 @@ INSTALLED_APPS = [
     
     # Local apps
     'modules.users',
-    'modules.products',
-    'modules.inventory',
+    'modules.products.apps.ProductsConfig',
+    'modules.inventory.apps.InventoryConfig',
     'modules.sales',
     'modules.payments',
     'modules.company',
+    'modules.supplier.apps.SupplierConfig',
+    'modules.customer.apps.CustomerConfig',
 ]
 
 MIDDLEWARE = [
@@ -98,7 +100,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'modules.users.authentication.MultiTableJWTAuthentication',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
@@ -114,11 +116,14 @@ CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localho
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_DATABASE', 'qavidb'),
+        'NAME': os.environ.get('MYSQL_DATABASE', 'al_qavidb'),
         'USER': os.environ.get('MYSQL_USER', 'root'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'root_password'),
-        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
         'PORT': os.environ.get('DB_PORT', '3306'),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
 

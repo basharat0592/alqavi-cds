@@ -5,6 +5,14 @@ DEBUG = True
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-alkavi-dev-key-2025')
 ALLOWED_HOSTS = ['*']
 
+# Force refresh the signing key to match the dev secret key
+SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
+
+# Register debug middleware
+MIDDLEWARE = [
+    'core.middleware.DebugMiddleware',
+] + MIDDLEWARE
+
 # Database — local MySQL (XAMPP/WAMP) with SQLite fallback
 if os.environ.get('USE_SQLITE', 'False').lower() == 'true':
     DATABASES = {
@@ -30,7 +38,7 @@ else:
 
 # Allow frontend to talk to backend
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False  # Disable to avoid CSRF issues with cookies in dev
 
 # Disable CSRF for API endpoints (API uses JWT auth)
 CSRF_TRUSTED_ORIGINS = [
@@ -38,3 +46,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:8000',
 ]
+
+# Ensure we don't have mixed session/token auth issues
+REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (
+    'modules.users.authentication.MultiTableJWTAuthentication',
+)

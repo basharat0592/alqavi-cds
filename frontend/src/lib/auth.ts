@@ -53,7 +53,7 @@ export const authService = {
         const detail = error.response?.data;
         let errorMessage = defaultMsg;
         console.error("Auth Error Detail:", detail);
-        
+
         if (detail) {
             if (typeof detail === 'string') errorMessage = detail;
             else if (typeof detail === 'object') {
@@ -92,17 +92,17 @@ export const authService = {
     },
 
     logout: () => {
-        localStorage.removeItem(STORAGE_KEY_USER);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem(STORAGE_KEY_USER);
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
     },
 
     getUser: (): User | null => {
         if (typeof window === 'undefined') return null;
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         if (!token) return null;
 
-        const userStr = localStorage.getItem(STORAGE_KEY_USER);
+        const userStr = sessionStorage.getItem(STORAGE_KEY_USER);
         if (!userStr || userStr === 'undefined') return null;
         try {
             return JSON.parse(userStr);
@@ -112,21 +112,21 @@ export const authService = {
     },
 
     setSession: (user: User, token: string, refreshToken?: string) => {
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
-        localStorage.setItem('accessToken', token);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
+        sessionStorage.setItem('accessToken', token);
+        if (refreshToken) sessionStorage.setItem('refreshToken', refreshToken);
     },
 
     isAuthenticated: (): boolean => {
         if (typeof window === 'undefined') return false;
-        return !!localStorage.getItem('accessToken');
+        return !!sessionStorage.getItem('accessToken');
     },
 
     updateProfile: async (userId: string, updates: Partial<User>): Promise<User> => {
         await new Promise((resolve) => setTimeout(resolve, 800));
         const currentUser = authService.getUser() || {} as User;
         const updatedUser = { ...currentUser, ...updates };
-        authService.setSession(updatedUser, localStorage.getItem('accessToken') || '', localStorage.getItem('refreshToken') || '');
+        authService.setSession(updatedUser, sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '');
         return updatedUser;
     }
 };

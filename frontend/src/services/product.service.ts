@@ -1,64 +1,98 @@
 import api from '@/lib/axios';
-import { PaginatedResponse, Product, ProductParams } from '@/types';
-import { categoryService } from './category.service';
 
+/**
+ * Service for managing Product catalog items.
+ * Linked to the new Stock-integrated Product model.
+ */
 export const productService = {
-    getAll: async (params?: ProductParams): Promise<Product[]> => {
+    // ── Product Registry ─────────────────────────────────────────────────────
+    getAll: async (params?: any): Promise<any> => {
         try {
             const { data } = await api.get('v1/products/items/', { params });
-            const apiProducts = data.results || data || [];
-            return apiProducts;
-        } catch (error: any) {
-            console.error("API Fetch Error", error);
+            // Return the full response object so the caller can handle pagination
+            return data;
+        } catch (error) {
+            console.error("Failed to fetch product registry", error);
             return [];
         }
     },
-    getPaginated: async (params?: ProductParams): Promise<PaginatedResponse<Product>> => {
-        try {
-            const { data } = await api.get('v1/products/items/', { params });
-            return {
-                results: data.results || [],
-                count: data.count || 0,
-                next: data.next,
-                previous: data.previous
-            };
-        } catch (error) {
-            console.error("Paginated API Fetch Error", error);
-            return { results: [], count: 0, next: null, previous: null };
-        }
+    getById: async (id: string | number): Promise<any> => {
+        const { data } = await api.get(`v1/products/items/${id}/`);
+        return data;
     },
-    getById: async (id: string) => {
-        const response = await api.get(`v1/products/items/${id}/`);
-        return response.data;
-    },
-    getCategories: async () => {
-        return await categoryService.getAll();
-    },
-    getFeatured: async () => {
-        const all = await productService.getAll();
-        return all.slice(0, 8);
-    },
-    create: async (data: FormData | any) => {
-        const response = await api.post('v1/products/items/', data, {
+    create: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/products/items/', payload, {
             headers: {
-                'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json',
+                'Content-Type': payload instanceof FormData ? 'multipart/form-data' : 'application/json',
             },
         });
-        return response.data as Product;
+        return data;
     },
-    update: async (id: string, data: FormData | any) => {
-        const response = await api.patch(`v1/products/items/${id}/`, data, {
+    update: async (id: string | number, payload: any): Promise<any> => {
+        const { data } = await api.patch(`v1/products/items/${id}/`, payload, {
             headers: {
-                'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json',
+                'Content-Type': payload instanceof FormData ? 'multipart/form-data' : 'application/json',
             },
         });
-        return response.data;
+        return data;
     },
-    delete: async (id: string) => {
+    delete: async (id: string | number): Promise<void> => {
         await api.delete(`v1/products/items/${id}/`);
     },
-    adjustStock: async (id: string | number, adjustment: number) => {
-        const response = await api.post(`v1/products/items/${id}/adjust-stock/`, { adjustment });
-        return response.data;
+
+    // ── Wishlist Operations ──────────────────────────────────────────────────
+    getWishlist: async (): Promise<any[]> => {
+        try {
+            const { data } = await api.get('v1/products/wishlist/');
+            return data.results || data || [];
+        } catch {
+            return [];
+        }
+    },
+    addToWishlist: async (productId: string | number): Promise<any> => {
+        const { data } = await api.post('v1/products/wishlist/', { product: productId });
+        return data;
+    },
+    removeFromWishlist: async (id: string | number): Promise<void> => {
+        await api.delete(`v1/products/wishlist/${id}/`);
+    },
+
+    // ── Supplier Specific Listings ──────────────────────────────────────────
+    getAllSupplier: async (params?: any): Promise<any> => {
+        try {
+            const { data } = await api.get('v1/products/supplier-items/', { params });
+            return data;
+        } catch (error) {
+            console.error("Failed to fetch supplier products", error);
+            return { results: [] };
+        }
+    },
+    getByIdSupplier: async (id: string | number): Promise<any> => {
+        const { data } = await api.get(`v1/products/supplier-items/${id}/`);
+        return data;
+    },
+    createSupplier: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/products/supplier-items/', payload, {
+            headers: {
+                'Content-Type': payload instanceof FormData ? 'multipart/form-data' : 'application/json',
+            },
+        });
+        return data;
+    },
+    updateSupplier: async (id: string | number, payload: any): Promise<any> => {
+        const { data } = await api.patch(`v1/products/supplier-items/${id}/`, payload, {
+            headers: {
+                'Content-Type': payload instanceof FormData ? 'multipart/form-data' : 'application/json',
+            },
+        });
+        return data;
+    },
+    deleteSupplier: async (id: string | number): Promise<void> => {
+        await api.delete(`v1/products/supplier-items/${id}/`);
+    },
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    getCategories: async () => {
+        return [];
     }
 };

@@ -8,7 +8,7 @@ import { Loader2, AlertTriangle, ChevronRight } from 'lucide-react';
 
 const INPUT = (err?: boolean) =>
     `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
-    focus:border-[#F7CA00] focus:shadow-[0_0_3px_2px_rgba(29,78,216,0.3)] placeholder:text-gray-400
+    focus:border-[#F59E0B] focus:shadow-[0_0_3px_2px_rgba(29,78,216,0.3)] placeholder:text-gray-400
     ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
 
 const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
@@ -37,7 +37,7 @@ export default function LoginPage() {
             } else if (role === 'supplier') {
                 router.push('/supplier/dashboard');
             } else {
-                router.push('/dashboard');
+                router.push('/customer/dashboard');
             }
         }
         
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 } else if (role === 'supplier') {
                     router.push('/supplier/dashboard');
                 } else {
-                    router.push('/dashboard');
+                    router.push('/customer/dashboard');
                 }
             }
         } catch (err: any) {
@@ -86,7 +86,7 @@ export default function LoginPage() {
         <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
             <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
                 <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-2xl text-[#F7CA00] tracking-tighter uppercase">AL-QAVI</span>
+                    <span className="font-extrabold text-2xl text-[#F59E0B] tracking-tighter uppercase">AL-QAVI</span>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Cosmetics Distributor</span>
                 </Link>
             </header>
@@ -129,7 +129,7 @@ export default function LoginPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-1">
                                     <label className={LABEL}>Password</label>
-                                    <Link href="/forgot-password" className="text-xs text-[#0066c0] hover:text-[#F7CA00] hover:underline">
+                                    <Link href="/forgot-password" className="text-xs text-[#0066c0] hover:text-[#F59E0B] hover:underline">
                                         Forgot your password?
                                     </Link>
                                 </div>
@@ -141,7 +141,7 @@ export default function LoginPage() {
                             </div>
 
                             <button type="submit" disabled={loading}
-                                className="w-full py-1.5 bg-[#F7CA00] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded shadow-sm text-sm font-bold text-white transition-colors mt-6">
+                                className="w-full py-1.5 bg-[#F59E0B] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded shadow-sm text-sm font-bold text-white transition-colors mt-6">
                                 {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" strokeWidth={3} /> : 'Sign in'}
                             </button>
 
@@ -149,7 +149,7 @@ export default function LoginPage() {
                                 <input
                                     id="rememberMe" name="rememberMe" type="checkbox"
                                     checked={formData.rememberMe} onChange={handleChange}
-                                    className="h-3.5 w-3.5 rounded border-[#d5d9d9] accent-[#F7CA00]"
+                                    className="h-3.5 w-3.5 rounded border-[#d5d9d9] accent-[#F59E0B]"
                                 />
                                 <label htmlFor="rememberMe" className="text-xs text-gray-800 cursor-pointer">
                                     Keep me signed in

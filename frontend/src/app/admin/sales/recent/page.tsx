@@ -1,361 +1,349 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { orderService, Order } from '@/lib/api';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { orderService } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
-    ShoppingBag, Search, X, RefreshCw, Clock, Printer, Plus,
-    Activity, Eye, ChevronDown, Check, ChevronRight, Filter, Trash2, AlertTriangle
+    ShoppingBag, Search, X, RefreshCw, Printer, Plus,
+    Activity, Eye, ChevronDown, ChevronRight, Filter,
+    Trash2, AlertTriangle, Calendar, TrendingUp, Package,
+    CheckCircle2, User, Hash, Phone, MapPin
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PrintSlip } from '@/components/admin/PrintSlip';
 
-/* ══════════════════════════════════════════════
-   COMPONENTS & STYLES (Synchronized with Company Hub)
-   ══════════════════════════════════════════════ */
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
-        {children}
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE AMAZON RETAIL DESIGN SYSTEM - RECENT ORDERS
+   ───────────────────────────────────────────────────────────────────────────── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+    const styles = {
+        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+    };
+    return (
+        <button type={type} onClick={onClick} disabled={loading || disabled}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {children}
+        </button>
+    );
+};
+
+const MetricCard = ({ label, value, subtext, color = "#111", borderTop = "#e47911", alert = false }: any) => (
+    <div className={`bg-white border border-[#ddd] p-5 rounded-[4px] shadow-sm hover:shadow-md transition-all relative overflow-hidden group ${alert ? 'bg-amber-50/20' : ''}`}>
+        <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: borderTop }}></div>
+        <p className="text-[12px] font-bold text-[#565959] uppercase tracking-tight mb-2">{label}</p>
+        <div className="flex items-baseline gap-1">
+            <span className="text-[26px] font-medium leading-none" style={{ color: color }}>{value}</span>
+        </div>
+        {subtext && (
+            <div className="flex items-center gap-1.5 mt-3">
+                <span className={`text-[11px] font-medium ${alert ? 'text-amber-700' : 'text-[#565959]'}`}>{subtext}</span>
+            </div>
+        )}
     </div>
 );
 
-const PRIMARY_BTN = "bg-[#EEAF1C] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
-const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2 px-4 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50";
+const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
 const STATUS_LIST = [
-    { value: 'ordered', label: 'Ordered' },
-    { value: 'confirmed', label: 'Confirmed' },
-    { value: 'processing', label: 'Processing' },
-    { value: 'shipped', label: 'Shipped' },
-    { value: 'delivered', label: 'Delivered' },
-    { value: 'cancelled', label: 'Cancelled' },
+    { value: 'ALL', label: 'All Status' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'CONFIRMED', label: 'Confirmed' },
+    { value: 'PROCESSING', label: 'Processing' },
+    { value: 'SHIPPED', label: 'Shipped' },
+    { value: 'DELIVERED', label: 'Delivered' },
+    { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-// ── Status Dropdown ───────────────────────────────────────────────────────────
-function StatusDropdown({
-    orderId,
-    currentStatus,
-    onChange,
-    disabled
-}: {
-    orderId: string;
-    currentStatus: string;
-    onChange: (id: string, s: string) => void;
-    disabled?: boolean;
-}) {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const activeStatus = STATUS_LIST.find(s => s.value === currentStatus) || { label: currentStatus, value: currentStatus };
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => !disabled && setIsOpen(!isOpen)}
-                disabled={disabled}
-                className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-sm group
-                    ${disabled 
-                        ? 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-400 cursor-not-allowed opacity-60' 
-                        : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-[#EEAF1C]/50'}`}
-            >
-                <span className={`w-1.5 h-1.5 rounded-full ${disabled ? 'bg-slate-300' : 'bg-[#EEAF1C] group-hover:animate-pulse'}`}></span>
-                {activeStatus.label}
-                {!disabled && <ChevronDown className={`h-3 w-3 opacity-50 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
-            </button>
-
-            {isOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1a1b1e] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl z-[150] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                    <div className="p-1.5 space-y-0.5">
-                        <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-white/5 mb-1">Update Protocol</div>
-                        {STATUS_LIST.map((s) => (
-                            <button
-                                key={s.value}
-                                onClick={() => { onChange(orderId, s.value); setIsOpen(false); }}
-                                className={`w-full flex items-center px-4 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all
-                                    ${currentStatus === s.value
-                                        ? 'bg-[#EEAF1C] text-white'
-                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-[#EEAF1C]'}`}
-                            >
-                                {s.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ── Delete Confirmation Modal ────────────────────────────────────────────────
-function DeleteConfirmModal({ 
-    orderNumber, 
-    onClose, 
-    onConfirm, 
-    loading 
-}: { 
-    orderNumber: string; 
-    onClose: () => void; 
-    onConfirm: () => void;
-    loading: boolean;
-}) {
-    return (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/10">
-                    <div className="w-9 h-9 bg-rose-50 dark:bg-rose-900/10 rounded-lg flex items-center justify-center mt-0.5 shrink-0">
-                        <AlertTriangle className="h-4 w-4 text-rose-500" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Delete Order Record</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                            Are you sure you want to permanently delete order <span className="font-semibold text-[#EEAF1C]">#{orderNumber}</span>? This action cannot be reversed.
-                        </p>
-                    </div>
-                </div>
-                <div className="flex justify-end gap-2 px-5 py-3 bg-slate-50 dark:bg-white/[0.02]">
-                    <button 
-                        onClick={onClose} 
-                        disabled={loading}
-                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-all"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        onClick={onConfirm} 
-                        disabled={loading} 
-                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-all flex items-center gap-2 disabled:opacity-60 shadow-sm"
-                    >
-                        {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-                        Delete Order
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function RecentOrdersPage() {
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [dateFilter, setDateFilter] = useState('');
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [deleteTarget, setDeleteTarget] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const printRef = useRef<HTMLDivElement>(null);
 
-    const loadOrders = async () => {
+    const loadData = async () => {
         setLoading(true);
         try {
-            const params = { ordering: '-created_at', page: 1, pageSize: 100, exclude_status: 'delivered,cancelled' };
+            const statsParams: any = {};
+            if (dateFilter) statsParams.date = dateFilter;
+            const statsData = await orderService.getStats(statsParams);
+            setStats(statsData);
+
+            const params: any = { ordering: '-created_at', page: 1, pageSize: 100 };
+            if (statusFilter !== 'ALL') params.status = statusFilter;
+            if (dateFilter) params.date = dateFilter;
+
             const response = await orderService.getPaginated(params);
             setOrders(response.results);
-        } catch (error) {
-            toast.error("Telemetry sync failure.");
-        } finally {
-            setLoading(false);
-        }
+        } catch { toast.error("Failed to refresh"); } finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        loadOrders();
-        const interval = setInterval(loadOrders, 10000); // poll every 10s
-        return () => clearInterval(interval);
-    }, []);
+    useEffect(() => { loadData(); }, [statusFilter, dateFilter]);
 
-    const handleStatusMove = async (orderId: string, newStatus: string) => {
+    const handlePrint = (order?: any) => {
+        const target = order || selectedOrder;
+        if (!target) return;
+        setTimeout(() => { window.print(); }, 100);
+    };
+
+    const handleUpdateStatus = async (orderId: string, newStatus: string) => {
         setLoading(true);
         try {
             await orderService.update(orderId, { status: newStatus });
-            toast.success("Lifecycle synchronization complete.");
-            if (['delivered', 'cancelled', 'completed'].includes(newStatus)) {
-                // Keep it in the list if we want to show delivered/cancelled with delete option?
-                // Actually the current filtering excludes them. Let's let the reload handle it.
-                loadOrders();
-            } else {
-                loadOrders();
-            }
-        } catch {
-            toast.error("Initialization failure.");
-        } finally {
-            setLoading(false);
-        }
+            toast.success("Status updated");
+            loadData();
+        } catch { toast.error("Failed to update"); } finally { setLoading(false); }
     };
 
     const handleDelete = async () => {
         if (!deleteTarget) return;
         setIsDeleting(true);
         try {
-            await orderService.delete(deleteTarget.id as string);
-            toast.success("Order purged from registry.");
-            setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
+            await orderService.delete(deleteTarget.id);
+            toast.success("Order deleted");
+            loadData();
             setDeleteTarget(null);
-        } catch {
-            toast.error("Purge sequence failure.");
-        } finally {
-            setIsDeleting(false);
-        }
+        } catch { toast.error("Failed to delete"); } finally { setIsDeleting(false); }
     };
 
-    const filtered = orders.filter(o => {
-        const c = o.customer as any;
-        const cName = ((o as any).customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || c?.email || '')).toLowerCase();
+    const filtered = (orders || []).filter(o => {
         const q = searchQuery.toLowerCase();
-        return o.order_number.toLowerCase().includes(q) || cName.includes(q);
+        return (o.order_number || '').toString().toLowerCase().includes(q) ||
+            (o.customer_name || '').toLowerCase().includes(q) ||
+            (o.phone_number || '').toLowerCase().includes(q) ||
+            (o.tracking_id || '').toLowerCase().includes(q);
     });
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-24 px-4 mt-4 font-sans animate-in fade-in duration-500">
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
 
-            {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#EEAF1C] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Activity className="h-5 w-5 text-white" />
+            {/* hidden printable area */}
+            <div className="hidden print:block">
+                <PrintSlip ref={printRef} order={selectedOrder} />
+            </div>
+
+            {/* Header */}
+            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
+                <div className="max-w-[1400px] mx-auto px-6 text-left">
+                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
+                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                        <ChevronRight size={10} />
+                        <span className="text-[#c45500]">Recent Orders</span>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Sales Monitor</h1>
-                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Real-time Transactional Intelligence</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-[22px] font-normal text-[#111]">Recent Orders</h1>
+                            <p className="text-[13px] text-[#565959] mt-0.5">Overview of latest transactions</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Btn variant="secondary" onClick={loadData} loading={loading}>
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                            </Btn>
+                            <Link href="/admin/sales">
+                                <Btn><Plus size={14} /> New Order</Btn>
+                            </Link>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={loadOrders} className={SECONDARY_BTN}>
-                        <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <Link href="/admin/sales" className={SECONDARY_BTN}>
-                        Archive Ledger
-                    </Link>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                {/* ── Filters ── */}
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center">
-                    <div className="relative flex-1 group w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#EEAF1C] transition-colors" />
+            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+
+                {/* Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <MetricCard label="Today's Orders" value={stats?.today_count || '0'} subtext={`${stats?.pending_count || 0} Pending`} borderTop="#3498db" />
+                    <MetricCard label="Today's Profit" value={`Rs. ${stats?.today_profit ? parseFloat(stats.today_profit).toLocaleString() : '0'}`} subtext="Daily gain" color="#067d62" borderTop="#067d62" />
+                    <MetricCard label="Monthly Profit" value={`Rs. ${stats?.month_profit ? parseFloat(stats.month_profit).toLocaleString() : '0'}`} subtext="Monthly total" color="#e47911" borderTop="#e47911" />
+                    <MetricCard label="Total Delivered" value={stats?.delivered_count || '0'} subtext="Completed sales" borderTop="#007185" />
+                </div>
+
+                {/* Filters */}
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-col xl:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
-                            type="text"
-                            placeholder="Locate active trade identifier..."
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#EEAF1C] transition-all font-medium"
+                            placeholder="Search by Phone, Tracking ID or Order #..."
+                            className={inputCls + " pl-10 h-[35px]"}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button className="p-2 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400">
-                            <Filter className="h-4 w-4" />
-                        </button>
+                    <div className="flex gap-3">
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={inputCls + " pl-10 h-[35px] w-[180px]"} />
+                        </div>
+                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls + " w-[160px] h-[35px] cursor-pointer"}>
+                            {STATUS_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
                     </div>
                 </div>
 
-                {/* ── Tactical Data Registry ── */}
-                <SectionCard>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Trade Identifier</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Subscriber Node</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Net Value</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 text-center uppercase tracking-widest">Protocol Status</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 text-right uppercase tracking-widest">Control</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                                {loading && orders.length === 0 ? (
-                                    Array(5).fill(0).map((_, i) => (
-                                        <tr key={i} className="animate-pulse">
-                                            <td colSpan={5} className="px-4 py-6"><div className="h-4 bg-slate-100 dark:bg-white/5 rounded-full w-full" /></td>
-                                        </tr>
-                                    ))
-                                ) : filtered.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-10 py-24 text-center">
-                                            <ShoppingBag className="w-16 h-16 text-slate-100 dark:text-white/5 mx-auto mb-6 stroke-[1.5]" />
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Telemetry void. No active trades detected.</p>
+                {/* Orders List */}
+                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
+                                <th className="px-6 py-3">Order Info</th>
+                                <th className="px-6 py-3">Customer</th>
+                                <th className="px-6 py-3">Total</th>
+                                <th className="px-6 py-3 text-center">Status</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#eee]">
+                            {loading && filtered.length === 0 ? (
+                                <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">Loading...</td></tr>
+                            ) : filtered.length === 0 ? (
+                                <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No orders found.</td></tr>
+                            ) : (
+                                filtered.map((o) => (
+                                    <tr key={o.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]" onClick={() => setSelectedOrder(o)}>
+                                        <td className="px-6 py-4">
+                                            <div className="font-bold text-[#007185] group-hover:underline cursor-pointer">#{o.order_number}</div>
+                                            <div className="text-[11px] text-[#aaa] mt-0.5">{formatDate(o.created_at)}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="font-bold text-[#111]">{o.customer_name || 'Walk-in'}</div>
+                                            <div className="flex items-center gap-2 text-[11px] text-[#565959] mt-0.5">
+                                                <Phone size={10} className="text-[#aaa]" /> {o.phone_number || 'N/A'}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="font-bold text-[#111]">{formatCurrency(o.total_amount)}</div>
+                                            <div className="text-[11px] text-green-600 font-bold uppercase">{o.items?.length || 0} Items</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <StatusBadge status={o.status || 'PENDING'} />
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                <button onClick={() => setSelectedOrder(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
+                                                <button onClick={() => handlePrint(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-blue-600"><Printer size={14} /></button>
+                                                <button onClick={() => setDeleteTarget(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ) : (
-                                    filtered.map((o) => {
-                                        const c = o.customer as any;
-                                        const cName = (o as any).customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || 'GUEST-NODE');
-                                        return (
-                                            <tr key={o.id} className="group hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 bg-blue-50 dark:bg-blue-900/10 text-[#EEAF1C] rounded-lg flex items-center justify-center font-black text-[10px] group-hover:bg-[#EEAF1C] group-hover:text-white transition-all">
-                                                            ID
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#EEAF1C] transition-colors tracking-tight">#{o.order_number}</div>
-                                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{formatDate(o.created_at)}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-1">{cName}</div>
-                                                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-60">{c?.email || 'Individual Mesh'}</div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="text-sm font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(o.total_amount || 0)}</div>
-                                                    <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{o.payment_status || 'Unverified'}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <StatusBadge status={o.status || 'pending'} />
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex justify-end items-center gap-2">
-                                                        <Link
-                                                            href={`/admin/sales?id=${o.id}`}
-                                                            className="p-1.5 rounded-lg text-slate-400 hover:text-[#EEAF1C] hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
-                                                            title="View Packet"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Link>
-                                                        <StatusDropdown
-                                                            orderId={o.id as string}
-                                                            currentStatus={o.status || 'pending'}
-                                                            onChange={handleStatusMove}
-                                                            disabled={['delivered', 'cancelled', 'rejected', 'completed'].includes(o.status?.toLowerCase() || '')}
-                                                        />
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(o); }}
-                                                            className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors"
-                                                            title="Purge Order"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </SectionCard>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
+            {/* Order Detail Modal */}
+            {selectedOrder && (
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
+                    <div className="bg-white rounded-[4px] border border-[#ddd] max-w-2xl w-full shadow-2xl overflow-hidden text-left">
+                        <div className="px-6 py-4 border-b border-[#ddd] flex items-center justify-between bg-[#f7f8fa]">
+                            <h3 className="text-[15px] font-bold text-[#111]">Order #{selectedOrder.order_number}</h3>
+                            <button onClick={() => setSelectedOrder(null)} className="text-[#aaa] hover:text-[#565959]"><X size={20} /></button>
+                        </div>
+                        <div className="p-6 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-8 mb-8">
+                                <div>
+                                    <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3">Customer Details</p>
+                                    <div className="space-y-1">
+                                        <p className="text-[14px] font-bold text-[#111]">{selectedOrder.customer_name || 'Walk-in'}</p>
+                                        <p className="text-[13px] text-[#565959]">{selectedOrder.phone_number}</p>
+                                    </div>
+                                    <div className="mt-4">
+                                        <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-2">Shipping Address</p>
+                                        <p className="text-[13px] text-[#565959]">{selectedOrder.shipping_address || '—'}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-[#fcfdff] p-4 border border-[#eee] rounded-[4px]">
+                                    <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3 text-center">Update Status</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {STATUS_LIST.filter(s => s.value !== 'ALL').map((s) => (
+                                            <button
+                                                key={s.value}
+                                                onClick={() => handleUpdateStatus(selectedOrder.id, s.value)}
+                                                className={`px-3 py-1.5 text-[11px] font-bold border rounded-[3px] transition-all
+                                                    ${selectedOrder.status === s.value ? 'bg-[#007185] border-[#007185] text-white' : 'bg-white border-[#ddd] text-[#565959] hover:bg-[#f7f8fa]'}
+                                                `}
+                                            >
+                                                {s.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p className="text-[11px] font-bold text-[#aaa] uppercase mb-3">Items</p>
+                            <div className="border border-[#eee] rounded-[4px] overflow-hidden">
+                                <table className="w-full text-left text-[13px]">
+                                    <thead className="bg-[#f9fafb]">
+                                        <tr>
+                                            <th className="px-4 py-2 border-b">Product</th>
+                                            <th className="px-4 py-2 border-b text-center">Qty</th>
+                                            <th className="px-4 py-2 border-b text-right">Price</th>
+                                            <th className="px-4 py-2 border-b text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#eee]">
+                                        {selectedOrder.items?.map((item: any) => (
+                                            <tr key={item.id}>
+                                                <td className="px-4 py-3">{item.product_name}</td>
+                                                <td className="px-4 py-3 text-center font-bold">{item.quantity}</td>
+                                                <td className="px-4 py-3 text-right">{parseFloat(item.price).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-bold">{(item.quantity * parseFloat(item.price)).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-[#0f1111] text-white">
+                                        <tr>
+                                            <td colSpan={3} className="px-4 py-3 text-right text-[11px] uppercase tracking-widest opacity-70">Total Amount</td>
+                                            <td className="px-4 py-3 text-right text-[16px] font-bold text-[#ffd814]">Rs. {parseFloat(selectedOrder.total_amount).toLocaleString()}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {selectedOrder.notes && (
+                                <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-[4px]">
+                                    <p className="text-[11px] font-bold text-amber-800 uppercase mb-1">Notes</p>
+                                    <p className="text-[13px] text-amber-700 italic">"{selectedOrder.notes}"</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="px-6 py-4 bg-[#f7f8fa] border-t border-[#ddd] flex gap-3">
+                            <button onClick={() => setSelectedOrder(null)} className="flex-1 h-[35px] text-[13px] font-bold text-[#565959] bg-white border border-[#ddd] rounded-[3px] hover:bg-[#fcfdff]">Close</button>
+                            <button onClick={() => handlePrint()} className="flex-1 h-[35px] text-[13px] font-bold text-[#111] bg-[#f0c14b] border border-[#a88734] rounded-[3px] hover:bg-[#f5d78e] flex items-center justify-center gap-2 shadow-sm">
+                                <Printer size={16} /> Print Logistics Slip
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Modal */}
             {deleteTarget && (
-                <DeleteConfirmModal 
-                    orderNumber={deleteTarget.order_number || deleteTarget.id.toString().slice(-6).toUpperCase()}
-                    onClose={() => setDeleteTarget(null)}
-                    onConfirm={handleDelete}
-                    loading={isDeleting}
-                />
+                <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-xl text-center">
+                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                            <Trash2 size={24} className="text-red-600" />
+                        </div>
+                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Delete Order?</h3>
+                        <p className="text-[13px] text-[#565959]">Delete order <span className="font-bold">#{deleteTarget.order_number}</span>? This cannot be undone.</p>
+                        <div className="mt-6 space-y-2">
+                            <button onClick={handleDelete} className="w-full h-[31px] bg-red-600 text-white border border-red-700 rounded-[3px] text-[13px] font-medium shadow-sm">
+                                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                            </button>
+                            <button onClick={() => setDeleteTarget(null)} className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
 }
-
