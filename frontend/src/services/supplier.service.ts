@@ -5,9 +5,9 @@ import api from '@/lib/axios';
  * Linked to the Supplier model via company endpoints.
  */
 export const supplierService = {
-    getAll: async (): Promise<any[]> => {
+    getAll: async (params?: any): Promise<any[]> => {
         try {
-            const { data } = await api.get('v1/company/suppliers/');
+            const { data } = await api.get('v1/company/suppliers/', { params });
             return Array.isArray(data) ? data : data.results || [];
         } catch (error) {
             console.error("Failed to fetch suppliers", error);

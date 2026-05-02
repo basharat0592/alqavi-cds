@@ -18,10 +18,10 @@ import Link from 'next/link';
 const AmazonButton = ({ children, onClick, loading, variant = "primary", className = "", type = "button", disabled = false }: any) => {
     const primary = "bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] #9c7e31 #846a29 hover:from-[#f5d78e] hover:to-[#eeb933] shadow-[0_1px_0_rgba(255,255,255,0.4)_inset,0_1px_3px_rgba(0,0,0,0.1)]";
     const secondary = "bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] #a2a6ac #8d9096 hover:from-[#eef1f3] hover:to-[#dce0e4] shadow-sm";
-    
+
     return (
-        <button 
-            type={type} onClick={onClick} disabled={loading || disabled} 
+        <button
+            type={type} onClick={onClick} disabled={loading || disabled}
             className={`h-[31px] px-5 rounded-[3px] text-[13px] font-[500] text-[#0f1111] border transition-all active:shadow-inner flex items-center justify-center gap-2 ${variant === 'primary' ? primary : secondary} ${className}`}
         >
             {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
@@ -80,7 +80,7 @@ export default function SectionsPage() {
     });
 
     const loadData = async () => {
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         if (!token) {
             router.push('/login');
             return;
@@ -141,7 +141,7 @@ export default function SectionsPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.name.trim()) return toast.error("Section name is required");
-        
+
         setSaving(true);
         try {
             const payload = {
@@ -162,21 +162,21 @@ export default function SectionsPage() {
                 await sectionService.create(payload);
                 toast.success('Section created successfully');
             }
-            
+
             await loadData();
             setView('list');
         } catch (e: any) {
             console.error("Section Save Error Details:", e.response?.data);
             const backendError = e.response?.data;
             let errorMsg = 'Failed to save section';
-            
+
             if (backendError) {
                 if (typeof backendError === 'string') errorMsg = backendError;
                 else if (backendError.detail) errorMsg = backendError.detail;
                 else if (backendError.name) errorMsg = `Name error: ${backendError.name[0]}`;
                 else if (backendError.non_field_errors) errorMsg = backendError.non_field_errors[0];
             }
-            
+
             toast.error(errorMsg);
         } finally {
             setSaving(false);
@@ -213,7 +213,7 @@ export default function SectionsPage() {
     if (view === 'form') {
         return (
             <div className="bg-[#fcfcfc] min-h-screen pb-20 font-sans animate-in fade-in duration-500 text-left">
-                
+
                 {/* ── PROFESSIONAL HEADER ── */}
                 <div className="bg-white border-b border-[#ddd] py-5 shadow-sm">
                     <div className="max-w-[1240px] mx-auto px-4 md:px-8">
@@ -238,7 +238,7 @@ export default function SectionsPage() {
 
                 <div className="max-w-[1240px] mx-auto mt-8 px-4 md:px-8">
                     <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                        
+
                         <div className="lg:col-span-4 space-y-6 animate-in slide-in-from-bottom-5 duration-500">
                             {/* 1. Page Config */}
                             <div className="bg-white border border-[#ddd] rounded-lg p-8 shadow-sm">
@@ -269,8 +269,8 @@ export default function SectionsPage() {
                         </div>
 
                         <div className="lg:col-span-8 flex flex-col gap-6 animate-in slide-in-from-bottom-6 duration-500">
-                             {/* 2. SELECT PRODUCTS */}
-                             <div className="bg-white border border-[#ddd] rounded-lg p-8 shadow-sm">
+                            {/* 2. SELECT PRODUCTS */}
+                            <div className="bg-white border border-[#ddd] rounded-lg p-8 shadow-sm">
                                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#f3f3f3]">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2.5 bg-slate-50 rounded-lg"><Package className="h-5 w-5 text-[#e47911]" /></div>
@@ -287,7 +287,7 @@ export default function SectionsPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <label className="text-[12px] font-bold text-[#111]">Select Products to Include</label>
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                             className="text-[11px] font-black text-[#007185] hover:text-[#c45500] uppercase tracking-tighter"
@@ -347,9 +347,9 @@ export default function SectionsPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {!isDropdownOpen && (
-                                        <div 
+                                        <div
                                             onClick={() => setIsDropdownOpen(true)}
                                             className="w-full h-[45px] px-4 border border-[#adb1b8] rounded-[4px] bg-[#f7f8fa] flex items-center justify-between cursor-pointer hover:bg-[#eff1f3] transition-colors"
                                         >
@@ -375,7 +375,7 @@ export default function SectionsPage() {
 
     return (
         <div className="bg-[#fcfcfc] min-h-screen pb-20 font-sans animate-in fade-in duration-500 text-left">
-            
+
             {/* ── PROFESSIONAL HEADER ── */}
             <div className="bg-white border-b border-[#ddd] py-5 shadow-sm">
                 <div className="max-w-[1240px] mx-auto px-4 md:px-8">
@@ -402,7 +402,7 @@ export default function SectionsPage() {
             </div>
 
             <div className="max-w-[1240px] mx-auto mt-8 px-4 md:px-8">
-                
+
                 {/* ── SEARCH BOX ── */}
                 <div className="bg-white border border-[#ddd] rounded p-4 mb-6 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300">
                     <div className="relative flex-1 max-w-md">

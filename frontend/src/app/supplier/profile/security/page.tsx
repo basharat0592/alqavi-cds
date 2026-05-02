@@ -93,8 +93,8 @@ export default function SecuritySetup() {
 
             <div className="space-y-10">
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Login & Security Protocol</h1>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Manage access keys and credential rotation</p>
+                    <h1 className="text-3xl font-medium text-slate-900 mb-1">Login & Security</h1>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Manage access keys and credential rotation</p>
                 </div>
 
                 <div className="bg-white border border-slate-300 rounded overflow-hidden divide-y divide-slate-100 shadow-sm">

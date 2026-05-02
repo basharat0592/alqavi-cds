@@ -7,8 +7,8 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
     ShoppingBag, Search, X, RefreshCw, Printer, Plus,
-    Activity, Eye, ChevronDown, ChevronRight, Filter, 
-    Trash2, AlertTriangle, Calendar, TrendingUp, Package, 
+    Activity, Eye, ChevronDown, ChevronRight, Filter,
+    Trash2, AlertTriangle, Calendar, TrendingUp, Package,
     CheckCircle2, User, Hash, Phone, MapPin
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -81,7 +81,7 @@ export default function RecentOrdersPage() {
             const params: any = { ordering: '-created_at', page: 1, pageSize: 100 };
             if (statusFilter !== 'ALL') params.status = statusFilter;
             if (dateFilter) params.date = dateFilter;
-            
+
             const response = await orderService.getPaginated(params);
             setOrders(response.results);
         } catch { toast.error("Failed to refresh"); } finally { setLoading(false); }
@@ -117,15 +117,15 @@ export default function RecentOrdersPage() {
 
     const filtered = (orders || []).filter(o => {
         const q = searchQuery.toLowerCase();
-        return (o.order_number || '').toString().toLowerCase().includes(q) || 
-               (o.customer_name || '').toLowerCase().includes(q) || 
-               (o.phone_number || '').toLowerCase().includes(q) || 
-               (o.tracking_id || '').toLowerCase().includes(q);
+        return (o.order_number || '').toString().toLowerCase().includes(q) ||
+            (o.customer_name || '').toLowerCase().includes(q) ||
+            (o.phone_number || '').toLowerCase().includes(q) ||
+            (o.tracking_id || '').toLowerCase().includes(q);
     });
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            
+
             {/* hidden printable area */}
             <div className="hidden print:block">
                 <PrintSlip ref={printRef} order={selectedOrder} />
@@ -157,7 +157,7 @@ export default function RecentOrdersPage() {
             </div>
 
             <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
-                
+
                 {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <MetricCard label="Today's Orders" value={stats?.today_count || '0'} subtext={`${stats?.pending_count || 0} Pending`} borderTop="#3498db" />
@@ -178,7 +178,7 @@ export default function RecentOrdersPage() {
                         />
                     </div>
                     <div className="flex gap-3">
-                         <div className="relative">
+                        <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                             <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={inputCls + " pl-10 h-[35px] w-[180px]"} />
                         </div>

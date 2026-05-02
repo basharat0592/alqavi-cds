@@ -60,10 +60,10 @@ export default function PurchaseReturnsPage() {
         try {
             const r = await purchaseService.getReturns();
             setReturns(Array.isArray(r) ? r : r?.results || []);
-        } catch { 
-            toast.error('Failed to load returns'); 
-        } finally { 
-            setLoading(false); 
+        } catch {
+            toast.error('Failed to load returns');
+        } finally {
+            setLoading(false);
         }
     }, []);
 
@@ -191,9 +191,19 @@ export default function PurchaseReturnsPage() {
                                                 <StatusPill status={row.status} />
                                             </td>
                                             <td className="px-4 py-4 text-right">
-                                                <div className="flex justify-end gap-1">
-                                                    <button onClick={() => setViewRow(row)} className="p-1.5 rounded-[3px] border border-transparent hover:border-[#ddd] hover:bg-white text-[#565959] transition-all" title="View"><Eye size={14} /></button>
-                                                    <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-[3px] border border-transparent hover:border-[#ddd] hover:bg-white text-red-500 transition-all" title="Delete"><Trash2 size={14} /></button>
+                                                <div className="flex justify-end gap-3 text-[13px]">
+                                                    <button 
+                                                        onClick={() => setViewRow(row)} 
+                                                        className="text-[#007185] hover:text-[#c45500] hover:underline font-medium transition-all"
+                                                    >
+                                                        View
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setDeleteRow(row)} 
+                                                        className="text-red-600 hover:text-red-700 hover:underline font-medium transition-all"
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -208,18 +218,46 @@ export default function PurchaseReturnsPage() {
             {/* View Modal */}
             {viewRow && (
                 <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] w-full max-w-lg shadow-xl overflow-hidden">
+                    <div className="bg-white rounded-[4px] border border-[#ddd] w-full max-w-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
                             <h3 className="text-[16px] font-bold">Return Record Details</h3>
                             <button onClick={() => setViewRow(null)}><X size={18} className="text-[#565959]" /></button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-y-4 text-[13px]">
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-[13px]">
                                 <div><p className="text-[#565959] mb-1">Return #</p><p className="font-bold">#{viewRow.return_number}</p></div>
                                 <div><p className="text-[#565959] mb-1">Date</p><p className="font-bold">{viewRow.return_date}</p></div>
                                 <div><p className="text-[#565959] mb-1">Supplier</p><p className="font-bold">{viewRow.supplier_name}</p></div>
                                 <div><p className="text-[#565959] mb-1">Status</p><StatusPill status={viewRow.status} /></div>
                             </div>
+
+                            {/* Products Table */}
+                            <div className="border border-[#ddd] rounded-[4px] overflow-hidden">
+                                <table className="w-full text-left text-[12px]">
+                                    <thead className="bg-[#f7f8fa] border-b border-[#ddd]">
+                                        <tr>
+                                            <th className="px-3 py-2 font-bold text-[#565959]">Product</th>
+                                            <th className="px-3 py-2 font-bold text-[#565959] text-center">Qty</th>
+                                            <th className="px-3 py-2 font-bold text-[#565959] text-right">Price</th>
+                                            <th className="px-3 py-2 font-bold text-[#565959] text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#eee]">
+                                        {(viewRow.items || []).map((item: any, idx: number) => (
+                                            <tr key={idx}>
+                                                <td className="px-3 py-2 font-medium">{item.product_name}</td>
+                                                <td className="px-3 py-2 text-center">{item.quantity}</td>
+                                                <td className="px-3 py-2 text-right">{formatCurrency(item.refund_price)}</td>
+                                                <td className="px-3 py-2 text-right font-bold">{formatCurrency(item.total_refund)}</td>
+                                            </tr>
+                                        ))}
+                                        {(!viewRow.items || viewRow.items.length === 0) && (
+                                            <tr><td colSpan={4} className="px-3 py-8 text-center text-slate-400 italic">No products found for this return</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
                             {viewRow.reason && (
                                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-[3px]">
                                     <p className="text-[12px] font-bold mb-1 opacity-60">REASON</p>
@@ -227,8 +265,8 @@ export default function PurchaseReturnsPage() {
                                 </div>
                             )}
                             <div className="pt-4 border-t border-[#ddd] flex justify-between items-center">
-                                <span className="text-[13px]">Total Refund Amount:</span>
-                                <span className="text-[20px] font-bold text-[#b12704]">{formatCurrency(viewRow.total_refund_amount || 0)}</span>
+                                <span className="text-[13px] font-bold">Total Refund Amount:</span>
+                                <span className="text-[22px] font-bold text-[#b12704]">{formatCurrency(viewRow.total_refund_amount || 0)}</span>
                             </div>
                         </div>
                         <div className="px-6 py-4 bg-[#f7f8fa] border-t border-[#ddd] flex justify-end">

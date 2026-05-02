@@ -35,6 +35,8 @@ export default function AddSupplierProductAmazon() {
         batch_number: 'INITIAL-LOG',
         quantity_in_stock: '0',
         is_supplier_only: 'true',
+        weight: '',
+        size: '',
     });
 
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -101,6 +103,8 @@ export default function AddSupplierProductAmazon() {
             data.append('sku', formData.sku);
             data.append('barcode', formData.barcode);
             data.append('is_supplier_only', formData.is_supplier_only);
+            data.append('weight', formData.weight);
+            data.append('size', formData.size);
 
             if (mainImage) data.append('image', mainImage);
             additionalImages.forEach(file => data.append('upload_images', file));
@@ -123,8 +127,7 @@ export default function AddSupplierProductAmazon() {
     );
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans">
-            <div className="max-w-[1240px] mx-auto px-6 pt-8">
+        <div className="max-w-[1000px] mx-auto animate-in fade-in duration-500 font-sans">
                 
                 {/* Back Nav */}
                 <div className="mb-6">
@@ -161,9 +164,8 @@ export default function AddSupplierProductAmazon() {
 
                     {/* Main Content Area */}
                     <div className="lg:col-span-3">
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-medium text-[#111]">Add New Product</h2>
-                            <p className="text-[13px] text-gray-600 mt-1">Fill in the details below to add a product to your catalog.</p>
+                        <div className="mb-6 border-b border-gray-200 pb-4">
+                            <h2 className="text-3xl font-medium text-slate-900">Add New Product</h2>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
@@ -186,20 +188,15 @@ export default function AddSupplierProductAmazon() {
 
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className={labelCls}>Main Category</label>
-                                            <select name="main_category" value={formData.main_category} onChange={handleChange} className={inputCls}>
-                                                <option value="">Select Category</option>
-                                                {mainCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
+                                            <label className={labelCls}>Product Weight (e.g. 500g)</label>
+                                            <input name="weight" value={formData.weight} onChange={handleChange} placeholder="Weight" className={inputCls} />
                                         </div>
                                         <div>
-                                            <label className={labelCls}>Sub Category</label>
-                                            <select name="category" value={formData.category} onChange={handleChange} className={inputCls}>
-                                                <option value="">Select Category</option>
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
+                                            <label className={labelCls}>Product Type / Variant</label>
+                                            <input name="size" value={formData.size} onChange={handleChange} placeholder="e.g. Liquid, Powder, XL" className={inputCls} />
                                         </div>
                                     </div>
+
 
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
@@ -212,23 +209,6 @@ export default function AddSupplierProductAmazon() {
                                         </div>
                                     </div>
                                     
-                                    <div className="pt-4 border-t border-[#eee]">
-                                        <div className="flex items-start gap-3 p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
-                                            <input 
-                                                type="checkbox" 
-                                                id="broadcast"
-                                                checked={formData.is_supplier_only === 'false'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, is_supplier_only: e.target.checked ? 'false' : 'true' }))}
-                                                className="mt-1 h-4 w-4 text-[#ff9900] border-gray-300 rounded focus:ring-[#ff9900]"
-                                            />
-                                            <label htmlFor="broadcast" className="cursor-pointer">
-                                                <span className="text-[13px] font-bold text-[#111] block">Show to Admin</span>
-                                                <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">
-                                                    If checked, this product will be visible to administrator for approval and distribution.
-                                                </span>
-                                            </label>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
@@ -354,6 +334,5 @@ export default function AddSupplierProductAmazon() {
                     </div>
                 </div>
             </div>
-        </div>
     );
 }

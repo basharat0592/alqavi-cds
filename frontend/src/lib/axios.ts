@@ -9,7 +9,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -41,34 +41,34 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             if (isInvalidToken) {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('cosmetic_distro_user');
+                sessionStorage.removeItem('accessToken');
+                sessionStorage.removeItem('refreshToken');
+                sessionStorage.removeItem('cosmetic_distro_user');
                 window.location.href = '/login';
                 return Promise.reject(error);
             }
 
             try {
-                const refreshToken = localStorage.getItem('refreshToken');
+                const refreshToken = sessionStorage.getItem('refreshToken');
                 if (refreshToken) {
                     const response = await axios.post(`${API_URL}/v1/users/token/refresh/`, {
                         refresh: refreshToken
                     });
-                    localStorage.setItem('accessToken', response.data.access);
+                    sessionStorage.setItem('accessToken', response.data.access);
                     api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
                     return api(originalRequest);
                 } else {
                     // No refresh token available — force logout
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    localStorage.removeItem('cosmetic_distro_user');
+                    sessionStorage.removeItem('accessToken');
+                    sessionStorage.removeItem('refreshToken');
+                    sessionStorage.removeItem('cosmetic_distro_user');
                     window.location.href = '/login';
                 }
             } catch (refreshError) {
                 // Handle refresh token failure (e.g., logout)
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('cosmetic_distro_user');
+                sessionStorage.removeItem('accessToken');
+                sessionStorage.removeItem('refreshToken');
+                sessionStorage.removeItem('cosmetic_distro_user');
                 window.location.href = '/login';
             }
         }

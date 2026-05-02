@@ -1,7 +1,9 @@
 from django.core.exceptions import ValidationError
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from django.db.models import F, ExpressionWrapper, DecimalField, Q
-from .models import Product, Wishlist, Category, SupplierProduct, MainCategory
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage
 from .serializers import (
     ProductSerializer, WishlistSerializer, CategorySerializer, 
     SupplierProductSerializer, MainCategorySerializer
@@ -23,13 +25,80 @@ class MainCategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all().order_by('-created_at')
+    queryset = Product.objects.exclude(status='ARCHIVED').order_by('-created_at')
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def perform_create(self, serializer):
+        """Handle professional deduplication and merging with existing products"""
+        stock_obj = serializer.validated_data.get('stock')
+        sku = serializer.validated_data.get('sku')
+        barcode = serializer.validated_data.get('barcode')
+        name = serializer.validated_data.get('product_name')
+
+        # Complex query to find existing product by Name, SKU or Barcode
+        query = Q(product_name=name)
+        if sku: query |= Q(sku=sku)
+        if barcode: query |= Q(barcode=barcode)
+
+        existing = Product.objects.filter(query).first()
+
+        if existing:
+            # Atomic Merge with existing: increase quantity and update metadata
+            added_qty = serializer.validated_data.get('total_quantity', 0)
+            existing.total_quantity = F('total_quantity') + added_qty
+            
+            # Update price if changed
+            new_price = serializer.validated_data.get('selling_price')
+            if new_price:
+                existing.selling_price = new_price
+            
+            # Update other metadata
+            existing.cost_price = serializer.validated_data.get('cost_price', existing.cost_price)
+            existing.stock = stock_obj or existing.stock
+            existing.badge = serializer.validated_data.get('badge', existing.badge)
+            existing.status = serializer.validated_data.get('status', existing.status)
+            existing.description = serializer.validated_data.get('description', existing.description)
+            
+            existing.save()
+            serializer.instance = existing # Link to serializer for response serialization
+            return existing
+
+        # If no existing product, proceed with normal creation
+        instance = serializer.save()
+        
+        # Handle additional images
+        additional_images = self.request.FILES.getlist('additional_images')
+        for img in additional_images:
+            ProductImage.objects.create(product=instance, image=img)
+            
+        return instance
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        
+        # Handle new additional images (append to existing)
+        additional_images = self.request.FILES.getlist('additional_images')
+        for img in additional_images:
+            ProductImage.objects.create(product=instance, image=img)
+
     def get_queryset(self):
-        # Annotate with profit for ordering
-        queryset = Product.objects.annotate(
+        from django.db.models import Sum, OuterRef, Subquery
+        from django.db.models.functions import Coalesce
+        from modules.inventory.models import Stock
+
+        # Sum batches matching ALL 4 keys: Name, Price, Weight, and Type
+        stock_sum = Stock.objects.filter(
+            product_name__iexact=OuterRef('product_name'),
+            price_per_item=OuterRef('cost_price'),
+            weight=OuterRef('weight'),
+            size=OuterRef('size')
+        ).order_by().values('product_name').annotate(
+            total=Sum('total_quantity')
+        ).values('total')
+
+        queryset = Product.objects.exclude(status='ARCHIVED').annotate(
+            live_stock_total=Coalesce(Subquery(stock_sum[:1]), F('total_quantity')),
             profit_amount=ExpressionWrapper(
                 F('selling_price') - F('cost_price'),
                 output_field=DecimalField()
@@ -108,6 +177,30 @@ class WishlistViewSet(viewsets.ModelViewSet):
                 return
         serializer.save()
 
+    @action(detail=False, methods=['post'])
+    def toggle(self, request):
+        product_id = request.data.get('product_id')
+        if not product_id:
+            return Response({"error": "product_id is required"}, status=400)
+            
+        user = request.user
+        if not hasattr(user, 'is_customer') or not user.is_customer:
+            return Response({"error": "Only customers can manage wishlists"}, status=403)
+            
+        from modules.customer.models import Customer
+        customer_instance = Customer.objects.filter(id=user.real_id).first()
+        if not customer_instance:
+            return Response({"error": "Customer profile not found"}, status=404)
+            
+        # Check if already in wishlist
+        existing = Wishlist.objects.filter(user=customer_instance, product_id=product_id).first()
+        if existing:
+            existing.delete()
+            return Response({"status": "removed", "message": "Product removed from wishlist"})
+        else:
+            Wishlist.objects.create(user=customer_instance, product_id=product_id)
+            return Response({"status": "added", "message": "Product added to wishlist"})
+
 
 class SupplierProductViewSet(viewsets.ModelViewSet):
     """ViewSet for products uploaded by suppliers for review"""
@@ -119,7 +212,7 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
         
         # Admins can filter by supplier; Suppliers only see their own
         if getattr(user, 'is_staff', False):
-            queryset = SupplierProduct.objects.all().order_by('-created_at')
+            queryset = SupplierProduct.objects.exclude(status='ARCHIVED').order_by('-created_at')
             supplier_id = self.request.query_params.get('supplier')
             
             if supplier_id and supplier_id != 'undefined' and supplier_id != 'null':
@@ -159,6 +252,11 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
             return SupplierProduct.objects.filter(supplier=user).order_by('-created_at')
             
         return SupplierProduct.objects.none()
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def perform_create(self, serializer):
         user = self.request.user

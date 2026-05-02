@@ -84,6 +84,8 @@ export const useAdminDashboard = (filters: { date?: string; payment_method?: str
                     pendingOrders: statsData.pending_orders || 0,
                     totalPayable: statsData.total_payable || 0,
                     deliveredOrders: statsData.delivered_orders || 0,
+                    totalActive: statsData.total_active || 0,
+                    systemTotal: statsData.system_total || 0,
                 },
                 recentOrders: statsData.recent_orders || [],
                 recentPurchases: statsData.recent_purchases || [],

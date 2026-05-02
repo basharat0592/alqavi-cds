@@ -79,20 +79,106 @@ def get_profile(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_users(request):
-    """List internal users, strictly excluding Customers and Suppliers for data isolation."""
+    """List users, with support for real-time classification (Walk-in vs Registered)."""
+    from modules.customer.models import Customer
+    from modules.supplier.models import Supplier
+    from django.db.models import Q
+    
+    user_type = request.query_params.get('user_type') # 'guest' or 'registered'
+    role_filter = request.query_params.get('role', '').lower()
+    search = request.query_params.get('search', '')
+
+    # 1. Handle Customer Classification
+    if role_filter == 'customer' or user_type:
+        if user_type == 'guest':
+            # Walk-in: Capture unique names from POS orders (SHOP payment method)
+            from modules.sales.models import Order
+            pos_orders = Order.objects.filter(payment_method='SHOP')
+            if search:
+                pos_orders = pos_orders.filter(customer_name__icontains=search)
+            
+            # Use unique names as the primary identity for walk-ins
+            walk_in_names = pos_orders.values('customer_name', 'phone_number', 'created_at').distinct('customer_name')
+            
+            results = []
+            for item in walk_in_names:
+                results.append({
+                    'id': f"guest_{item['customer_name']}",
+                    'username': item['customer_name'],
+                    'email': 'N/A',
+                    'full_name': item['customer_name'],
+                    'phone': item['phone_number'],
+                    'role_name': 'customer',
+                    'is_active': True,
+                    'date_joined': item['created_at'],
+                    'plain_password': 'N/A'
+                })
+            return Response({'results': results, 'count': len(results)})
+
+        queryset = Customer.objects.all()
+        if user_type == 'registered':
+            # Registered: Signed up via web/register page (Has password)
+            queryset = queryset.exclude(password__exact='')
+        
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search) | Q(email__icontains=search) | 
+                Q(first_name__icontains=search) | Q(last_name__icontains=search)
+            )
+            
+        # Transform Registered Users
+        results = []
+        for c in queryset:
+            results.append({
+                'id': c.id,
+                'username': c.username,
+                'email': c.email,
+                'full_name': f"{c.first_name} {c.last_name}".strip(),
+                'phone': c.phone,
+                'address': c.address,
+                'city': c.city,
+                'country': c.country,
+                'role': 'customer',
+                'role_name': 'customer',
+                'is_active': c.is_active,
+                'date_joined': c.created_at,
+                'plain_password': c.plain_password
+            })
+        return Response({'results': results, 'count': len(results)})
+
+    # 2. Handle Supplier Classification
+    if role_filter == 'supplier':
+        queryset = Supplier.objects.all()
+        if search:
+            queryset = queryset.filter(Q(username__icontains=search) | Q(email__icontains=search))
+        
+        results = []
+        for s in queryset:
+            results.append({
+                'id': s.id,
+                'username': s.username,
+                'email': s.email,
+                'full_name': s.name,
+                'company': s.company,
+                'phone': s.phone,
+                'address': s.address,
+                'city': s.city,
+                'country': s.country,
+                'role': 'supplier',
+                'role_name': 'supplier',
+                'is_active': s.is_active,
+                'date_joined': s.created_at,
+                'plain_password': s.plain_password
+            })
+        return Response({'results': results, 'count': len(results)})
+
+    # 3. Standard Internal User List
     users = User.objects.exclude(role__name__iexact='customer').exclude(role__name__iexact='supplier')
-
-    role = request.query_params.get('role')
-    if role:
-        users = users.filter(role_id=role)
-
+    if search:
+        users = users.filter(Q(username__icontains=search) | Q(email__icontains=search))
+    
     status_filter = request.query_params.get('status')
-    if status_filter:
-        users = users.filter(status=status_filter)
-
-    is_active = request.query_params.get('is_active')
-    if is_active:
-        users = users.filter(is_active=is_active.lower() == 'true')
+    if status_filter: users = users.filter(status=status_filter)
 
     serializer = UserListSerializer(users, many=True)
     return Response({'results': serializer.data, 'count': users.count()})
@@ -138,7 +224,7 @@ def create_user(request):
             plain_password=password,
             name=request.data.get('business_name') or f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip() or email,
             company=request.data.get('business_name', ''),
-            contact=request.data.get('phone', ''),
+            phone=request.data.get('phone', ''),
             address=request.data.get('address', ''),
             contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip()
         )
@@ -366,20 +452,61 @@ def admin_reset_password(request, user_id):
 # ==================== ACTIVITY LOGS ====================
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def user_activity_log(request, user_id):
-    """Get activity logs for a specific user."""
-    user, err = get_or_404_response(User, id=user_id)
-    if err:
-        return err
+    """
+    Get activity logs for a specific user. 
+    Registry Aware: Supports looking up logs for the authenticated User even if 
+    the frontend passes a Supplier/Customer specific ID.
+    """
+    curr_user = request.user
+    target_user = None
 
-    if request.user.id != user_id and not request.user.is_staff:
-        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+    # Handle "Self" lookup logic
+    is_self_lookup = (curr_user.id == user_id)
+    
+    # For Suppliers/Customers, user_id might be their real_id (Supplier PK)
+    if not is_self_lookup:
+        if (getattr(curr_user, 'is_supplier', False) or getattr(curr_user, 'is_customer', False)):
+            if getattr(curr_user, 'real_id', None) == user_id:
+                is_self_lookup = True
+
+    if is_self_lookup:
+        target_user = curr_user
+    else:
+        # Admin or cross-user lookup
+        if not curr_user.is_staff:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        target_user = User.objects.filter(id=user_id).first()
+        if not target_user:
+            return Response({'error': 'User not found'}, status=404)
 
     limit = int(request.query_params.get('limit', 50))
-    logs = UserActivityLog.objects.filter(user=user)[:limit]
-    serializer = UserActivityLogSerializer(logs, many=True)
-    return Response({'results': serializer.data, 'count': logs.count()})
+    logs_qs = UserActivityLog.objects.filter(user=target_user)[:limit]
+    serializer = UserActivityLogSerializer(logs_qs, many=True)
+    results = serializer.data
+
+    if getattr(target_user, 'is_supplier', False):
+        from modules.sales.models import PurchaseReturn
+        returns = PurchaseReturn.objects.filter(supplier_id=target_user.real_id).order_by('-created_at')[:limit]
+        for ret in returns:
+            results.append({
+                'id': f"ret_{ret.id}",
+                'user': target_user.id,
+                'user_name': getattr(target_user, 'username', 'Supplier'),
+                'action': 'other',
+                'action_display': 'Other',
+                'description': f"New Return Request RECEIVED: {ret.return_number} from Admin. [ID: {ret.id}] Reason: {ret.reason or 'Not specified'}",
+                'ip_address': 'Internal',
+                'timestamp': ret.created_at.isoformat() if ret.created_at else None
+            })
+        
+        # Sort combined results descending by timestamp
+        results.sort(key=lambda x: str(x.get('timestamp') or ''), reverse=True)
+        results = results[:limit]
+
+    return Response({'results': results, 'count': len(results)})
 
 
 @api_view(['GET'])
@@ -556,7 +683,7 @@ def signup_supplier(request):
         plain_password=password,
         name=request.data.get('company_name', email),
         company=request.data.get('company_name', ''),
-        contact=request.data.get('phone', ''),
+        phone=request.data.get('phone', ''),
         address=request.data.get('address', ''),
         contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip() or email
     )

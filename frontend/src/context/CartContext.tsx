@@ -74,7 +74,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
     const cartTotal = items.reduce((sum, i) => {
-        const price = typeof i.price === 'string' ? parseFloat(i.price) : i.price;
+        const p = typeof i.price === 'string' ? parseFloat(i.price) : i.price;
+        const price = isNaN(p as number) ? 0 : (p as number);
         return sum + price * i.quantity;
     }, 0);
 

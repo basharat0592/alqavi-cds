@@ -50,4 +50,14 @@ export const purchaseService = {
         const { data } = await api.post(`v1/sales/purchase-returns/${id}/reject/`);
         return data;
     },
+
+    // ── Payment Verification ──────────────────────────────────────────────────
+    acceptPayment: async (id: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchases/${id}/accept_payment/`);
+        return data;
+    },
+    rejectPayment: async (id: string, reason: string): Promise<any> => {
+        const { data } = await api.post(`v1/sales/purchases/${id}/reject_payment/`, { reason });
+        return data;
+    },
 };

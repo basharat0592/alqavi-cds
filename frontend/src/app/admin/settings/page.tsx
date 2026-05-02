@@ -141,7 +141,7 @@ export default function SettingsPage() {
             fd.append('phone', profile.phone);
             if (selectedAvatar) fd.append('avatar', selectedAvatar);
             const updated = await settingsService.updateProfile(Number(currentUser.id), fd as any);
-            authService.setSession(updated, localStorage.getItem('accessToken') || '', localStorage.getItem('refreshToken') || '');
+            authService.setSession(updated, sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '');
             window.dispatchEvent(new Event('profileUpdated'));
             toast.success('Profile updated');
         } catch { toast.error('Failed to update profile'); } finally { setProfileSaving(false); }
@@ -506,7 +506,19 @@ export default function SettingsPage() {
                                             { n: 'Staff Roles', h: '/admin/users/roles' },
                                             { n: 'Permissions', h: '/admin/users/permissions' },
                                             { n: 'System Alerts', h: '/admin/alerts' },
-                                            { n: 'Business Reports', h: '/admin/reports' },
+                                        ]
+                                    },
+                                    {
+                                        group: 'Detailed Reports',
+                                        items: [
+                                            { n: 'Reports Center', h: '/admin/reports' },
+                                            { n: 'Sales Reports', h: '/admin/reports/sales' },
+                                            { n: 'Purchase Reports', h: '/admin/reports/purchases' },
+                                            { n: 'Inventory Reports', h: '/admin/reports/inventory' },
+                                            { n: 'Customer Reports', h: '/admin/reports/customers' },
+                                            { n: 'Accounting Reports', h: '/admin/reports/accounting' },
+                                            { n: 'Returns Reports', h: '/admin/reports/sales-returns' },
+                                            { n: 'Data Hub', h: '/admin/reports/data-hub' },
                                         ]
                                     },
                                 ].map(g => (

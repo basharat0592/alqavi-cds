@@ -28,12 +28,13 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[4px] text-[14px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
 const STATUS_OPTIONS = [
-    { label: 'Pending', value: 'PENDING', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-    { label: 'Confirmed', value: 'CONFIRMED', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { label: 'Processing', value: 'PROCESSING', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { label: 'Shipped', value: 'SHIPPED', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-    { label: 'Delivered', value: 'DELIVERED', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    { label: 'Cancelled', value: 'CANCELLED', color: 'bg-red-50 text-red-700 border-red-200' },
+    { label: 'Pending',          value: 'PENDING',           color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { label: 'Confirmed',        value: 'CONFIRMED',         color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    { label: 'Processing',       value: 'PROCESSING',        color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    { label: 'Shipped',          value: 'SHIPPED',           color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+    { label: 'Delivered',        value: 'DELIVERED',         color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    { label: 'Cancel Requested', value: 'CANCEL_REQUESTED',  color: 'bg-rose-50 text-rose-700 border-rose-200' },
+    { label: 'Cancelled',        value: 'CANCELLED',         color: 'bg-red-50 text-red-700 border-red-200' },
 ];
 
 export default function AdminOrdersPage() {

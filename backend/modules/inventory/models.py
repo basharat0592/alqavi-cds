@@ -27,8 +27,8 @@ class Stock(BaseModel):
     product_name = models.CharField(max_length=255)
     product = models.ForeignKey('products.SupplierProduct', on_delete=models.SET_NULL, null=True, blank=True, related_name='stocks')
     category = models.ForeignKey('products.Category', on_delete=models.CASCADE, related_name='stocks', null=True, blank=True)
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='stocks')
-    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stocks')
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='stocks', null=True, blank=True)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='stocks', null=True, blank=True)
     purchase_type = models.CharField(max_length=20, choices=PURCHASE_TYPE_CHOICES)
     
     # Quantitative fields
@@ -40,6 +40,9 @@ class Stock(BaseModel):
     price_per_carton = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     price_per_item = models.DecimalField(max_digits=15, decimal_places=2)
     
+    weight = models.CharField(max_length=50, null=True, blank=True)
+    size = models.CharField(max_length=50, null=True, blank=True)
+    
     date = models.DateField()
 
     class Meta:
@@ -50,3 +53,32 @@ class Stock(BaseModel):
 
     def __str__(self):
         return f"{self.product_name} ({self.total_quantity})"
+
+
+class StockMovement(BaseModel):
+    """Log of every stock change"""
+    MOVEMENT_TYPES = [
+        ('PURCHASE', 'Purchase'),
+        ('TRANSFER_IN', 'Transfer In'),
+        ('TRANSFER_OUT', 'Transfer Out'),
+        ('SALE', 'Sale'),
+        ('RETURN', 'Return'),
+        ('ADJUSTMENT', 'Adjustment'),
+    ]
+    
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='movements')
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
+    quantity = models.IntegerField() # Amount changed
+    from_warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, related_name='movements_out')
+    to_warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, related_name='movements_in')
+    date = models.DateField()
+    description = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'stock_movements'
+        verbose_name = 'Stock Movement'
+        verbose_name_plural = 'Stock Movements'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.movement_type} - {self.stock.product_name} ({self.quantity})"

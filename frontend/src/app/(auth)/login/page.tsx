@@ -37,7 +37,7 @@ export default function LoginPage() {
             } else if (role === 'supplier') {
                 router.push('/supplier/dashboard');
             } else {
-                router.push('/dashboard');
+                router.push('/customer/dashboard');
             }
         }
         
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 } else if (role === 'supplier') {
                     router.push('/supplier/dashboard');
                 } else {
-                    router.push('/dashboard');
+                    router.push('/customer/dashboard');
                 }
             }
         } catch (err: any) {

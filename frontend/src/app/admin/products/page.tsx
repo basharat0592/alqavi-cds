@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Plus, Search, Edit, Trash2, Package,
@@ -8,8 +8,8 @@ import {
     X, AlertTriangle, CheckCircle, Building2, Activity,
     ChevronLeft, ChevronRight, Truck, MapPin, TrendingUp
 } from 'lucide-react';
-import { productService, categoryService, supplierService } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { productService, categoryService, supplierService, inventoryService } from '@/lib/api';
+import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -23,7 +23,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -35,6 +35,8 @@ export default function ProductsPage() {
     const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [allStocks, setAllStocks] = useState<any[]>([]);
+    const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [deleteProd, setDeleteProd] = useState<any | null>(null);
@@ -69,7 +71,15 @@ export default function ProductsPage() {
                 supplier: supplier || undefined,
                 ordering: ordering || undefined,
             };
-            const resp = await productService.getAll(params);
+            const [resp, stockResp, catProdData] = await Promise.all([
+                productService.getAll(params),
+                inventoryService.getInventory(),
+                productService.getAllSupplier({ no_pagination: 'true' })
+            ]);
+
+            setAllStocks(stockResp || []);
+            setCatalogProducts(Array.isArray(catProdData) ? catProdData : catProdData?.results || []);
+
             if (resp && typeof resp === 'object' && 'results' in resp) {
                 setProducts(resp.results);
                 setTotalCount(resp.count);
@@ -84,10 +94,20 @@ export default function ProductsPage() {
     }, [currentPage, search, category, supplier, ordering]);
 
     useEffect(() => { fetchFilters(); }, []);
-    useEffect(() => { 
+    useEffect(() => {
         const t = setTimeout(loadData, 300);
         return () => clearTimeout(t);
     }, [loadData]);
+
+    // Live Telemetry: Auto-update every 2 seconds
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (!loading && !syncing && !deleting) {
+                loadData();
+            }
+        }, 2000);
+        return () => clearInterval(timer);
+    }, [loading, syncing, deleting, loadData]);
 
     const handleDelete = async () => {
         if (!deleteProd) return;
@@ -100,12 +120,35 @@ export default function ProductsPage() {
         } catch { toast.error('Failed to delete product'); } finally { setDeleting(false); }
     };
 
+    // Grouped Products: Merge by [Name + Selling Price]
+    const groupedProducts = useMemo(() => {
+        const groups = new Map();
+
+        products.forEach(prod => {
+            const key = `${(prod.product_name || '').toLowerCase().trim()}_${prod.selling_price}`;
+
+            if (!groups.has(key)) {
+                groups.set(key, { ...prod, total_quantity: Number(prod.total_quantity || 0) });
+            } else {
+                const g = groups.get(key);
+                g.total_quantity = (g.total_quantity || 0) + Number(prod.total_quantity || 0);
+
+                // Track if multiple warehouses are involved in this price point
+                if (g.warehouse_name !== prod.warehouse_name) {
+                    g.warehouse_name = 'Multiple';
+                }
+            }
+        });
+
+        return Array.from(groups.values());
+    }, [products]);
+
     const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
-                
+
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -116,7 +159,7 @@ export default function ProductsPage() {
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-[22px] font-normal">Products List</h1>
                     <div className="flex gap-2">
-                         <Btn variant="secondary" onClick={loadData} loading={syncing}>
+                        <Btn variant="secondary" onClick={loadData} loading={syncing}>
                             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
                         </Btn>
                         <Btn onClick={() => router.push('/admin/products/add')}>
@@ -156,7 +199,7 @@ export default function ProductsPage() {
                                     <th className="px-6 py-4 text-[12px] font-bold text-[#111]">Product</th>
                                     <th className="px-6 py-4 text-[12px] font-bold text-[#111]">Price</th>
                                     <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-center">Status</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-right">Stock</th>
+                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-right">Current Units</th>
                                     <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -166,50 +209,68 @@ export default function ProductsPage() {
                                 ) : products.length === 0 ? (
                                     <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No products found.</td></tr>
                                 ) : (
-                                    products.map(prod => (
-                                        <tr key={prod.id} className="hover:bg-[#fcfdff] transition-colors group">
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-white border border-[#eee] rounded-[3px] flex-shrink-0 flex items-center justify-center p-1">
-                                                        {prod.image ? <img src={prod.image} alt="" className="w-full h-full object-contain" /> : <Package className="h-6 w-6 text-slate-100" />}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="text-[14px] font-bold text-[#007185] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/add/${prod.id}`)}>{prod.product_name}</div>
-                                                            {prod.badge && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[#e47911] text-white rounded-[2px] uppercase">{prod.badge}</span>}
+                                    groupedProducts.map(prod => {
+                                        return (
+                                            <tr key={prod.id} className="hover:bg-[#fcfdff] transition-colors group">
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-[3px] flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
+                                                            {(() => {
+                                                                const finalImg = prod.image || prod.catalog_image;
+                                                                return finalImg ? (
+                                                                    <img src={getImageUrl(finalImg)} alt="" className="w-full h-full object-contain" />
+                                                                ) : (
+                                                                    <Package className="h-6 w-6 text-slate-100" />
+                                                                );
+                                                            })()}
                                                         </div>
-                                                        <div className="text-[11px] text-[#565959] mt-0.5 flex items-center gap-2">
-                                                            <span className="flex items-center gap-1"><Truck size={12} className="opacity-40" /> {prod.supplier_name}</span>
-                                                            <span className="opacity-20">|</span>
-                                                            <span className="flex items-center gap-1"><MapPin size={11} className="opacity-40" /> {prod.warehouse_name}</span>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className="text-[14px] font-bold text-[#007185] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>{prod.product_name}</div>
+                                                                    {(prod.weight || prod.size) && (
+                                                                        <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                                            — {prod.weight}{prod.weight && prod.size ? ' • ' : ''}{prod.size}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {prod.badge && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[#e47911] text-white rounded-[2px] uppercase">{prod.badge}</span>}
+                                                            </div>
+                                                            <div className="text-[11px] text-[#565959] mt-0.5 flex items-center gap-2">
+                                                                <span className="flex items-center gap-1"><Truck size={12} className="opacity-40" /> {prod.supplier_name}</span>
+                                                                <span className="opacity-20">|</span>
+                                                                <span className="flex items-center gap-1"><MapPin size={11} className="opacity-40" /> {prod.warehouse_name}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div className="text-[15px] font-bold text-[#111]">{formatCurrency(prod.selling_price)}</div>
-                                                <div className="flex items-center gap-1 mt-0.5">
-                                                    <TrendingUp className="h-3 w-3 text-green-600" />
-                                                    <span className="text-[10px] font-bold text-green-700">{Number(prod.profit_margin).toFixed(1)}% profit</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5 text-center">
-                                                <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold uppercase border ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-                                                    {prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-5 text-right">
-                                                <div className={`text-[15px] font-bold ${prod.total_quantity < 10 ? 'text-red-600' : 'text-[#111]'}`}>{Number(prod.total_quantity).toLocaleString()}</div>
-                                                <div className="text-[10px] text-[#aaa] font-bold uppercase">Units</div>
-                                            </td>
-                                            <td className="px-6 py-5 text-right">
-                                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Btn variant="secondary" onClick={() => router.push(`/admin/products/add/${prod.id}`)} className="h-[26px]">Edit</Btn>
-                                                    <button onClick={() => setDeleteProd(prod)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="text-[15px] font-bold text-[#111]">{formatCurrency(prod.selling_price)}</div>
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        <TrendingUp className="h-3 w-3 text-green-600" />
+                                                        <span className="text-[10px] font-bold text-green-700">{Number(prod.profit_margin).toFixed(1)}% profit</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold uppercase border ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                                                        {prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className={`text-[16px] font-black ${(prod.total_quantity || 0) < 10 ? 'text-red-600' : 'text-[#111]'}`}>
+                                                        {(prod.total_quantity || 0).toLocaleString()}
+                                                    </div>
+                                                    <div className="text-[10px] text-[#aaa] font-bold uppercase tracking-tighter">Unit Balance</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="flex justify-end gap-2 transition-opacity">
+                                                        <Btn variant="secondary" onClick={() => router.push(`/admin/products/edit/${prod.id}`)} className="h-[26px]">Edit</Btn>
+                                                        <button onClick={() => setDeleteProd(prod)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>

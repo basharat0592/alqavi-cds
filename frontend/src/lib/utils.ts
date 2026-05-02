@@ -16,7 +16,7 @@ export function formatCurrency(amount: number | string, currency = 'PKR'): strin
         USD: '$',
         EUR: '\u20ac',
         GBP: '\u00a3',
-        PKR: 'PKR ',
+        PKR: 'Rs. ',
     };
     const symbol = symbols[currency] ?? currency;
     const value = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -34,8 +34,6 @@ export function parseNumber(value: unknown): number {
 
 /**
  * Format an ISO date string into a human-readable date.
- * @param dateStr - ISO date string or timestamp
- * @param options - Intl.DateTimeFormatOptions
  */
 export function formatDate(
     dateStr: string | number | undefined | null,
@@ -44,6 +42,27 @@ export function formatDate(
     if (!dateStr) return '—';
     try {
         return new Date(dateStr).toLocaleDateString('en-US', options);
+    } catch {
+        return String(dateStr);
+    }
+}
+
+/**
+ * Format an ISO date string into a human-readable date and time.
+ */
+export function formatDateTime(
+    dateStr: string | number | undefined | null,
+    options: Intl.DateTimeFormatOptions = { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit'
+    }
+): string {
+    if (!dateStr) return '—';
+    try {
+        return new Date(dateStr).toLocaleString('en-US', options);
     } catch {
         return String(dateStr);
     }

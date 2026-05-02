@@ -100,7 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const loadSettings = async () => {
             try {
                 const s = await settingsService.getSettings();
-                setTheme((s.theme as 'light' | 'dark') || 'light');
+                setTheme('light');
                 setAnimationsEnabled(s.animations ?? true);
                 setSidebarCollapsed(s.sidebar_collapsed ?? false);
             } catch { }
@@ -126,11 +126,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const handleUpdate = () => {
             loadProfile();
         };
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+            if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+        };
+
         window.addEventListener('profileUpdated', handleUpdate);
         window.addEventListener('settingsUpdated', loadSettings);
+        document.addEventListener('mousedown', handleClickOutside);
+
         return () => {
             window.removeEventListener('profileUpdated', handleUpdate);
             window.removeEventListener('settingsUpdated', loadSettings);
+            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
 
@@ -247,16 +256,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={() => { }} onMarkRead={() => { }} onRefresh={fetchActivity} />}
                                 </div>
 
-                                {/* Dynamic Theme */}
-                                <button onClick={toggleTheme}
-                                    className="relative p-2 rounded-[3px] bg-white dark:bg-white/5 border border-[#DDDDDD] dark:border-white/5 text-[#565959] dark:text-zinc-400 hover:border-[#c45500] transition-all w-10 h-10 flex items-center justify-center">
-                                    <div className={`absolute transition-all duration-500 ${theme === 'dark' ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
-                                        <Moon className="h-5 w-5" />
-                                    </div>
-                                    <div className={`absolute transition-all duration-500 ${theme === 'light' ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
-                                        <Sun className="h-5 w-5 text-[#c45500]" />
-                                    </div>
-                                </button>
+                                <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
 
                                 <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
 

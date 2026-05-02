@@ -155,7 +155,7 @@ export default function EditSupplierProductAmazon() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans">
-            <div className="max-w-[1240px] mx-auto px-6 pt-8">
+            <div className="max-w-[900px] mx-auto px-6 pt-10">
 
                 {/* Back Nav */}
                 <div className="mb-6">
@@ -189,9 +189,8 @@ export default function EditSupplierProductAmazon() {
 
                     {/* Main Content */}
                     <div className="lg:col-span-3">
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-medium text-[#111]">Edit Product: {formData.name}</h2>
-                            <p className="text-[13px] text-gray-600 mt-1">Update your product details here.</p>
+                        <div className="mb-6 border-b border-gray-200 pb-4">
+                            <h2 className="text-3xl font-medium text-slate-900">Edit Product</h2>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">

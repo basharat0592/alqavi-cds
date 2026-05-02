@@ -26,7 +26,7 @@ export const orderService = {
         return response.data;
     },
     create: async (data: any) => {
-        const response = await api.post('v1/sales/orders/create/', data);
+        const response = await api.post('v1/sales/orders/', data);
         return response.data;
     },
     update: async (id: string, data: any) => {
@@ -39,5 +39,9 @@ export const orderService = {
     getStats: async (params?: any) => {
         const response = await api.get('v1/sales/orders/stats/', { params });
         return response.data;
+    },
+    getBoughtProducts: async () => {
+        const response = await api.get('v1/sales/orders/bought_products/');
+        return response.data.results || response.data || [];
     }
 };

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus } from 'lucide-react';
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import toast from 'react-hot-toast';
 
 interface ProductCardProps {
     id?: string;
@@ -17,6 +19,8 @@ interface ProductCardProps {
     category?: string;
     badge?: string;
     batch?: string;
+    weight?: string;
+    size?: string;
     stock?: number;
     onAddToCart?: (qty: number) => void;
     onWishlist?: () => void;
@@ -34,12 +38,16 @@ export default function ProductCard({
     category = 'Cosmetic',
     badge,
     batch,
+    weight,
+    size,
     stock,
     onAddToCart,
     onWishlist,
 }: ProductCardProps) {
     const { items, addToCart, updateQuantity } = useCart();
-    const [wishlisted, setWishlisted] = useState(false);
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+
+    const isWishlisted = isInWishlist(id);
 
     const cartItem = items.find(i => String(i.id) === String(id));
     const quantityInCart = cartItem?.quantity || 0;
@@ -58,9 +66,25 @@ export default function ProductCard({
         updateQuantity(id, quantityInCart + delta);
     };
 
-    const handleWishlist = (e: React.MouseEvent) => {
+    const handleWishlist = async (e: React.MouseEvent) => {
         e.preventDefault();
-        setWishlisted(w => !w);
+
+        const item = {
+            id: id,
+            name: title,
+            price: price,
+            image: image || '',
+            category: category,
+            addedAt: new Date().toISOString()
+        };
+
+        if (isWishlisted) {
+            await removeFromWishlist(id);
+            toast.success('Removed from wishlist');
+        } else {
+            await addToWishlist(item);
+            toast.success('Added to wishlist');
+        }
         onWishlist?.();
     };
 
@@ -108,26 +132,26 @@ export default function ProductCard({
             <button
                 onClick={handleWishlist}
                 className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm border
-                    ${wishlisted
+                    ${isWishlisted
                         ? 'bg-red-500 border-red-400 text-white scale-110'
                         : 'bg-white/90 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/40 hover:border-red-300 hover:text-red-400'
                     }`}
-                title={wishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
             >
-                <Heart className={`h-4 w-4 ${wishlisted ? 'fill-white' : ''} transition-transform duration-200 ${wishlisted ? 'scale-110' : ''}`} />
+                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-white' : ''} transition-transform duration-200 ${isWishlisted ? 'scale-110' : ''}`} />
             </button>
 
             {/* Image Area */}
-            <Link href={`/product/${id}`} className="block relative overflow-hidden bg-gray-100 dark:bg-white/[0.03]" style={{ aspectRatio: '4/3' }}>
+            <Link href={`/customer/product/${id}`} className="block relative overflow-hidden bg-gray-100 dark:bg-white/[0.03]" style={{ aspectRatio: '3/2' }}>
                 <img
                     src={image || '/images/logo.png'}
                     alt={title}
-                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-contain p-0 group-hover:scale-105 transition-transform duration-700"
                 />
                 {/* Quick View Overlay */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-400 flex items-center justify-center">
-                    <span className="px-4 py-2 bg-white/90 dark:bg-[#1a252f]/90 backdrop-blur-sm rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 border border-white/50 dark:border-white/10 shadow-lg">
-                        <Eye className="h-3.5 w-3.5" /> Quick View
+                    <span className="px-6 py-2.5 bg-white/90 dark:bg-[#1a252f]/90 backdrop-blur-sm rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 border border-white/50 dark:border-white/10 shadow-lg">
+                        <Eye className="h-4 w-4" /> Quick View
                     </span>
                 </div>
             </Link>
@@ -137,23 +161,29 @@ export default function ProductCard({
 
                 {/* Category + Rating */}
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-[9px] font-black text-[#F59E0B] uppercase tracking-[0.18em]">{category}</span>
+                    <span className="text-[11px] font-black text-[#F59E0B] uppercase tracking-[0.18em]">{category}</span>
                     <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-0.5">{renderStars(rating)}</div>
-                        <span className="text-[9px] font-black text-slate-400 dark:text-white/30">({reviews})</span>
+                        <span className="text-[10px] font-black text-slate-400 dark:text-white/30">({reviews})</span>
                     </div>
                 </div>
 
                 {/* Title */}
-                <Link href={`/product/${id}`} className="block mb-1">
-                    <h3 className="text-sm font-black text-gray-900 dark:text-white line-clamp-1 group-hover:text-[#F59E0B] transition-colors tracking-tight leading-snug">
+                <Link href={`/customer/product/${id}`} className="block mb-1">
+                    <h3 className="text-[14px] font-black text-gray-900 dark:text-white line-clamp-2 group-hover:text-[#F59E0B] transition-colors tracking-tight leading-tight">
                         {title}
+                        {(weight || size) && (
+                            <span className="text-[11px] text-[#F59E0B] font-black ml-1.5 inline-flex items-center gap-1.5">
+                                <span className="opacity-20 text-slate-400 font-normal">—</span>
+                                {weight}{weight && size ? ' • ' : ''}{size}
+                            </span>
+                        )}
                     </h3>
                 </Link>
 
                 {/* Description */}
                 {description && (
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 leading-relaxed">
+                    <p className="text-[12px] text-slate-500 line-clamp-2 mt-1 leading-relaxed">
                         {description}
                     </p>
                 )}
@@ -162,15 +192,15 @@ export default function ProductCard({
                 <div className="flex-1" />
 
                 {/* Price Row */}
-                <div className="flex items-end justify-between mb-3">
+                <div className="flex items-end justify-between mb-4">
                     <div>
-                        <p className="text-[8px] text-slate-400 dark:text-white/25 font-black uppercase tracking-[0.2em] mb-0.5">Price</p>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-lg font-black text-gray-900 dark:text-white tracking-tighter leading-none">
+                        <p className="text-[9px] text-slate-400 dark:text-white/25 font-black uppercase tracking-[0.2em] mb-1">Price</p>
+                        <div className="flex items-baseline gap-1.5">
+                            <p className="text-[16px] font-black text-gray-900 dark:text-white tracking-tighter leading-none">
                                 Rs.{(price || 0).toLocaleString()}
                             </p>
                             {originalPrice && originalPrice > price && (
-                                <p className="text-xs text-slate-400 dark:text-white/25 font-bold line-through leading-none">
+                                <p className="text-sm text-slate-400 dark:text-white/25 font-bold line-through leading-none">
                                     Rs.{originalPrice.toLocaleString()}
                                 </p>
                             )}
@@ -191,7 +221,7 @@ export default function ProductCard({
                         <button
                             onClick={handleAddToCart}
                             disabled={stock === 0}
-                            className={`w-full h-full rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all duration-300 border
+                            className={`w-full h-full rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all duration-300 border
                                 ${stock === 0
                                     ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/20 cursor-not-allowed'
                                     : 'bg-[#131921] dark:bg-white/10 border-[#131921] dark:border-white/10 text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] hover:shadow-lg hover:shadow-[#F59E0B]/20 active:scale-95'
@@ -201,27 +231,27 @@ export default function ProductCard({
                                 'Out of Stock'
                             ) : (
                                 <>
-                                    <ShoppingCart className="h-3.5 w-3.5" />
+                                    <ShoppingCart className="h-4 w-4" />
                                     Add to Cart
                                 </>
                             )}
                         </button>
                     ) : (
-                        <div className="w-full h-full bg-[#F59E0B] rounded-xl flex items-center justify-between px-2 text-white animate-in zoom-in duration-300 overflow-hidden shadow-lg shadow-[#F59E0B]/20">
+                        <div className="w-full h-full bg-[#F59E0B] rounded-xl flex items-center justify-between px-3 text-white animate-in zoom-in duration-300 overflow-hidden shadow-lg shadow-[#F59E0B]/20">
                             <button
                                 onClick={(e) => handleUpdateQuantity(e, -1)}
                                 title="Decrease"
-                                className="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
+                                className="w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
                             >
-                                <Minus className="h-4 w-4" />
+                                <Minus className="h-5 w-5" />
                             </button>
-                            <span className="text-[11px] font-black">{quantityInCart} in Cart</span>
+                            <span className="text-[12px] font-black">{quantityInCart} in Cart</span>
                             <button
                                 onClick={(e) => handleUpdateQuantity(e, 1)}
                                 title="Increase"
-                                className="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
+                                className="w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
                             >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-5 w-5" />
                             </button>
                         </div>
                     )}

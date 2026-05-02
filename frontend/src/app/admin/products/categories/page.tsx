@@ -67,7 +67,7 @@ export default function ProductCategoriesPage() {
             const data = await categoryService.getAll();
             setCategories(data || []);
         } catch (e) {
-            toast.error("Hub communication failure");
+            toast.error("Connection Error");
         } finally {
             setLoading(false);
         }
@@ -80,7 +80,7 @@ export default function ProductCategoriesPage() {
         setForm({
             name: cat.name,
             description: cat.description || '',
-            status: (cat as any).status || 'ACTIVE',
+            status: (cat as any).status?.toUpperCase() || 'ACTIVE',
         });
         setView('form');
     };
@@ -120,8 +120,10 @@ export default function ProductCategoriesPage() {
             }
             load();
             setView('list');
-        } catch (e) {
-            toast.error('Failed to save category');
+        } catch (e: any) {
+            console.error("Save Error:", e);
+            const errorMsg = e.response?.data?.name?.[0] || e.response?.data?.detail || e.message || 'Failed to save category';
+            toast.error(errorMsg);
         } finally {
             setSaving(false);
         }
@@ -139,7 +141,7 @@ export default function ProductCategoriesPage() {
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                     <ChevronRight size={10} />
-                    <span className="text-[#c45500]">Product Categories</span>
+                    <span className="text-[#c45500] font-bold">Categories</span>
                 </div>
 
                 <div className="flex items-center justify-between mb-4">
@@ -149,13 +151,13 @@ export default function ProductCategoriesPage() {
                     {view === 'list' ? (
                         <div className="flex gap-2">
                             <Btn variant="secondary" onClick={load} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Btn>
                             <Btn onClick={handleNew}><Plus size={14} /> Add Category</Btn>
                         </div>
                     ) : (
                         <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
-                            <ChevronLeft size={14} /> Back to registry
+                            <ChevronLeft size={14} /> Back to List
                         </button>
                     )}
                 </div>
@@ -205,7 +207,7 @@ export default function ProductCategoriesPage() {
                                                     <div className="text-[13px] text-[#565959] line-clamp-1 italic max-w-sm">{cat.description || 'No description provided'}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold uppercase border ${cat.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                                    <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold uppercase border ${cat.status?.toUpperCase() === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                                         {cat.status || 'ACTIVE'}
                                                     </span>
                                                 </td>
@@ -236,21 +238,21 @@ export default function ProductCategoriesPage() {
                                         <Field label="Category Name" required>
                                             <input name="name" className={inputCls} value={form.name} onChange={handleChange} placeholder="e.g. Cosmetics" />
                                         </Field>
-                                        <Field label="Protocol Status">
+                                        <Field label="Category Status">
                                             <select name="status" className={selectCls} value={form.status} onChange={handleChange}>
-                                                <option value="ACTIVE">Active (Public)</option>
+                                                <option value="ACTIVE">Active (Visible)</option>
                                                 <option value="INACTIVE">Inactive (Hidden)</option>
                                             </select>
                                         </Field>
                                     </div>
-                                    <Field label="Description Mesh">
+                                    <Field label="About Category">
                                         <textarea
                                             name="description"
                                             rows={4}
                                             className={`${inputCls} h-auto py-2`}
                                             value={form.description}
                                             onChange={handleChange}
-                                            placeholder="Enter descriptive metadata..."
+                                            placeholder="Write something about this category..."
                                         />
                                     </Field>
                                 </div>

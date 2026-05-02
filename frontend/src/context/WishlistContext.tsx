@@ -5,7 +5,7 @@ import api from '@/lib/axios';
 import { authService } from '@/lib/auth';
 
 interface WishlistItem {
-    id: number;
+    id: string;
     name: string;
     price: number | string;
     image: string;
@@ -16,8 +16,8 @@ interface WishlistItem {
 interface WishlistContextType {
     wishlist: WishlistItem[];
     addToWishlist: (item: WishlistItem) => void;
-    removeFromWishlist: (id: number) => void;
-    isInWishlist: (id: number) => boolean;
+    removeFromWishlist: (id: string) => void;
+    isInWishlist: (id: string) => boolean;
     wishlistCount: number;
     refreshWishlist: () => void;
     loading: boolean;
@@ -45,14 +45,24 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         try {
             const response = await api.get('/v1/products/wishlist/');
-            const backendItems = response.data.map((item: any) => ({
-                id: item.product_details.id,
-                name: item.product_details.name,
-                price: item.product_details.price,
-                image: item.product_details.image,
-                category: item.product_details.category_name,
-                addedAt: item.created_at
+            console.log("Wishlist API Response:", response.data);
+            const rawData = response.data.results || response.data || [];
+            
+            if (!Array.isArray(rawData)) {
+                console.error("Wishlist API did not return an array", response.data);
+                setWishlist([]);
+                return;
+            }
+
+            const backendItems = rawData.map((item: any) => ({
+                id: item.product_details?.id,
+                name: item.product_details?.product_name || 'Unknown Product',
+                price: item.product_details?.selling_price || 0,
+                image: item.product_details?.image,
+                category: item.product_details?.category_name,
+                addedAt: item.created_at || new Date().toISOString()
             }));
+            console.log("Mapped Wishlist Items:", backendItems);
             setWishlist(backendItems);
         } catch (err) {
             console.error("Failed to fetch wishlist from DB", err);
@@ -76,7 +86,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
         if (authService.isAuthenticated()) {
             try {
-                await api.post('/v1/products/wishlist/add/', { product_id: item.id });
+                await api.post('/v1/products/wishlist/toggle/', { product_id: item.id });
                 refreshWishlist();
             } catch (err) {
                 console.error("Failed to add to database wishlist", err);
@@ -86,10 +96,10 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const removeFromWishlist = async (id: number) => {
+    const removeFromWishlist = async (id: string) => {
         if (authService.isAuthenticated()) {
             try {
-                await api.delete(`/v1/products/wishlist/${id}/remove/`);
+                await api.post('/v1/products/wishlist/toggle/', { product_id: id });
                 refreshWishlist();
             } catch (err) {
                 console.error("Failed to remove from database wishlist", err);
@@ -99,7 +109,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const isInWishlist = (id: number) => wishlist.some(i => i.id === id);
+    const isInWishlist = (id: string) => wishlist.some(i => i.id === id);
 
     return (
         <WishlistContext.Provider value={{ 

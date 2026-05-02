@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Wishlist, Category, SupplierProduct, MainCategory
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -9,21 +9,42 @@ class CategorySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'slug', 'created_at']
 
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image']
+
+
 class ProductSerializer(serializers.ModelSerializer):
     supplier_name = serializers.ReadOnlyField(source='supplier.name')
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     category_name = serializers.ReadOnlyField(source='category.name')
+    additional_images = ProductImageSerializer(many=True, read_only=True)
     profit_margin = serializers.SerializerMethodField()
+    catalog_image = serializers.SerializerMethodField()
+    total_quantity = serializers.IntegerField(source='live_stock_total', read_only=True)
+    sku = serializers.CharField(required=False, allow_null=True)
+    barcode = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Product
         fields = [
             'id', 'stock', 'product_name', 'category', 'category_name',
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
-            'cost_price', 'total_quantity', 'image', 'description', 
-            'selling_price', 'batch', 'badge', 'status', 'profit_margin', 'created_at'
+            'cost_price', 'total_quantity', 'image', 'additional_images', 'description', 'sku', 'barcode',
+            'selling_price', 'batch', 'badge', 'weight', 'size', 'status', 'profit_margin', 'created_at',
+            'catalog_image'
         ]
-        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'profit_margin']
+        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'profit_margin', 'catalog_image']
+
+    def get_catalog_image(self, obj):
+        if obj.image:
+            return None
+        from .models import SupplierProduct
+        sp = SupplierProduct.objects.filter(name__iexact=obj.product_name).first()
+        if sp and sp.image:
+            return sp.image.url
+        return None
 
     def get_profit_margin(self, obj):
         if obj.selling_price and obj.cost_price and obj.selling_price > 0:
@@ -63,19 +84,38 @@ class SupplierProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'sku', 'barcode', 'supplier', 'supplier_name',
             'category', 'category_name', 'image', 'description',
             'price', 'cost_price', 'retail_price', 'quantity', 
-            'status', 'batch_number', 'is_approved', 'created_at'
+            'status', 'batch_number', 'weight', 'size', 'is_approved', 'created_at'
         ]
         read_only_fields = ['id', 'supplier', 'supplier_name', 'category_name', 'is_approved', 'created_at']
 
     def validate(self, attrs):
         print(f"DEBUG: Validating SupplierProduct data: {attrs}")
         try:
-            # Convert empty strings to None for optional fields
+            # 1. Convert empty strings to None for optional fields
             for field in ['sku', 'barcode', 'category']:
                 if field in attrs and attrs[field] == '':
                     attrs[field] = None
             
-            # Ensure 'price' is set for DB integrity if 'retail_price' is provided
+            # 2. Merge Weight and Size into the Name field for the database
+            # This satisfies the requirement to have them in the same column in the backend
+            name = attrs.get('name', '').strip()
+            weight = attrs.get('weight', '').strip()
+            size = attrs.get('size', '').strip()
+            
+            if weight or size:
+                # Clean up name if it already has specs (to prevent duplicates on update)
+                import re
+                name = re.sub(r'\s*\([^)]*\)$', '', name).strip()
+                
+                # Format: Product Name (Weight - Type)
+                specs = []
+                if weight: specs.append(weight)
+                if size: specs.append(size)
+                
+                if specs:
+                    attrs['name'] = f"{name} ({' - '.join(specs)})"
+            
+            # 3. Ensure 'price' is set for DB integrity if 'retail_price' is provided
             if not attrs.get('price') and attrs.get('retail_price'):
                 attrs['price'] = attrs['retail_price']
             

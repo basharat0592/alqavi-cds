@@ -94,8 +94,8 @@ export default function EditPersonalDetails() {
             <div className="space-y-12">
                 {/* Title Segment */}
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Personal Identity Protocol</h1>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Modify core distributing member credentials</p>
+                    <h1 className="text-3xl font-medium text-slate-900 mb-1">Personal Identity</h1>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Modify core distributing member credentials</p>
                 </div>
 
                 {/* Tactical Form Fieldsets */}

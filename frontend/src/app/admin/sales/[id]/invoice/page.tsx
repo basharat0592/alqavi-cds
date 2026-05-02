@@ -42,6 +42,10 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                 console.error("Failed to load order", error);
             } finally {
                 setLoading(false);
+                // Auto-print if query param is present
+                if (window.location.search.includes('print=true')) {
+                    setTimeout(() => window.print(), 800);
+                }
             }
         };
         fetchOrder();

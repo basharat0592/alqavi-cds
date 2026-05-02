@@ -40,6 +40,14 @@ export const inventoryService = {
         if (!id) return;
         await api.delete(`v1/inventory/stocks/${id}/`);
     },
+    transferStock: async (id: string | number, payload: { destination_warehouse: string | number; quantity: number; date?: string }): Promise<any> => {
+        const { data } = await api.post(`v1/inventory/stocks/${id}/transfer/`, payload);
+        return data;
+    },
+    getStockMovements: async (stockId: string | number): Promise<any[]> => {
+        const { data } = await api.get(`v1/inventory/stocks/${stockId}/movements/`);
+        return data;
+    },
 
     // Legacy or placeholder methods - keeping for safety but may be removed if not used
     getInventorySummary: async (): Promise<any> => {
@@ -53,5 +61,13 @@ export const inventoryService = {
     createInventory: async (payload: any): Promise<any> => {
         // Alias for createStock for existing components
         return inventoryService.createStock(payload);
+    },
+
+    // ── Movements Aliases ───────────────────────────────────────────────────
+    getMovements: async (params?: any): Promise<any[]> => {
+        return inventoryService.getInventory(params);
+    },
+    getMovementsSummary: async (): Promise<any> => {
+        return inventoryService.getInventorySummary();
     },
 };

@@ -13,6 +13,7 @@ class Order(models.Model):
         ('SHIPPED', 'Shipped'),
         ('DELIVERED', 'Delivered'),
         ('CANCELLED', 'Cancelled'),
+        ('CANCEL_REQUESTED', 'Cancel Requested'),
     ]
     PAYMENT_CHOICES = [
         ('COD', 'COD'),
@@ -26,6 +27,13 @@ class Order(models.Model):
         on_delete=models.CASCADE, 
         related_name='orders', 
         null=True, 
+        blank=True
+    )
+    customer = models.ForeignKey(
+        'customer.Customer',
+        on_delete=models.SET_NULL,
+        related_name='orders',
+        null=True,
         blank=True
     )
     tracking_id = models.CharField(max_length=20, unique=True, db_index=True)
@@ -45,13 +53,24 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.tracking_id:
-            from django.db.models import Max
-            # Correctly find the absolute maximum numeric tracking ID instead of relying on creation time
-            max_tid = Order.objects.filter(tracking_id__regex=r'^\d+$').aggregate(Max('tracking_id'))['tracking_id__max']
-            if max_tid:
-                self.tracking_id = str(int(max_tid) + 1)
-            else:
-                self.tracking_id = "10001"
+            # Generate a new unique numeric tracking ID
+            try:
+                # Find the maximum numeric ID currently in use
+                tids = Order.objects.values_list('tracking_id', flat=True)
+                numeric_ids = [int(tid) for tid in tids if str(tid).isdigit()]
+                
+                next_id = max(numeric_ids) + 1 if numeric_ids else 10001
+                
+                # Double-check for collisions (important for data integrity)
+                while Order.objects.filter(tracking_id=str(next_id)).exists():
+                    next_id += 1
+                
+                self.tracking_id = str(next_id)
+            except Exception:
+                # Absolute fallback: Timestamp + Randomness
+                import time, random
+                self.tracking_id = str(int(time.time()))[-7:] + str(random.randint(10, 99))
+                
         super().save(*args, **kwargs)
 
     class Meta:
@@ -74,6 +93,27 @@ class OrderItem(models.Model):
     def __str__(self):
         product_name = self.product.product_name if self.product else "Deleted Product"
         return f"{self.quantity} x {product_name}"
+
+class CustomerBoughtProduct(models.Model):
+    """Dedicated table for customer purchased products (Order Products) - Work in Real."""
+    customer = models.ForeignKey('customer.Customer', on_delete=models.CASCADE, related_name='bought_items', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='customer_bought_items', null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    purchased_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Customer Bought Products"
+        ordering = ['-purchased_at']
+
+    def __str__(self):
+        return f"{self.customer_name} bought {self.product.product_name}"
+
+    @property
+    def customer_name(self):
+        return self.customer.name if self.customer else (self.user.username if self.user else "Unknown")
 
 
 class PurchaseOrder(models.Model):
@@ -106,7 +146,9 @@ class PurchaseOrder(models.Model):
     payment_method = models.CharField(max_length=30, choices=[
         ('CASH', 'Cash'),
         ('BANK_TRANSFER', 'Bank Transfer'),
-        ('ONLINE_PAYMENT', 'Online Payment'),
+        ('ONLINE', 'Online Payment'),
+        ('CHEQUE', 'Cheque'),
+        ('CREDIT', 'Credit'),
     ], default='CASH')
     
     order_date = models.DateTimeField(auto_now_add=True)
@@ -159,6 +201,9 @@ class PurchaseOrderItem(models.Model):
     quantity = models.PositiveIntegerField(default=1) # Number of cartons or items
     price = models.DecimalField(max_digits=10, decimal_places=2) # Cost Price (from supplier)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Planned Sale Price for distributor
+
+    weight = models.CharField(max_length=50, null=True, blank=True)
+    size = models.CharField(max_length=50, null=True, blank=True)
 
     @property
     def total_units(self):
@@ -221,3 +266,55 @@ class PurchaseReturnItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name if self.product else 'Deleted'}"
+
+
+class SaleReturn(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('ACCEPTED', 'Accepted'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    return_number = models.CharField(max_length=20, unique=True, db_index=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='sale_returns')
+    
+    # Identify who is returning
+    customer = models.ForeignKey('customer.Customer', on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reason = models.TextField()
+    notes = models.TextField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.return_number:
+            last = SaleReturn.objects.order_by('-created_at').first()
+            if last and last.return_number and last.return_number.startswith('SR-'):
+                try:
+                    num = int(last.return_number.split('-')[1])
+                    self.return_number = f"SR-{num + 1}"
+                except:
+                    self.return_number = f"SR-{random.randint(100000, 999999)}"
+            else:
+                self.return_number = f"SR-80001"
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Return {self.return_number} - {self.order.tracking_id}"
+
+
+class SaleReturnItem(models.Model):
+    sale_return = models.ForeignKey(SaleReturn, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    # Snapshotted price at return time if needed
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.product_name}"

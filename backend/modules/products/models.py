@@ -68,8 +68,12 @@ class Product(BaseModel):
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)
+    sku = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    barcode = models.CharField(max_length=100, unique=True, null=True, blank=True)
     batch = models.CharField(max_length=100, null=True, blank=True)
     badge = models.CharField(max_length=20, null=True, blank=True)
+    weight = models.CharField(max_length=50, null=True, blank=True)
+    size = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, default='ACTIVE')
 
     class Meta:
@@ -86,11 +90,30 @@ class Product(BaseModel):
             self.supplier = self.stock.supplier
             self.warehouse = self.stock.warehouse
             self.cost_price = self.stock.price_per_item
+            
+            # Fulfilling the 'not all' requirement: Only show the quantity of this specific product/batch
             self.total_quantity = self.stock.total_quantity
+            
+            if self.stock.product:
+                if not self.sku: self.sku = self.stock.product.sku
+                if not self.barcode: self.barcode = self.stock.product.barcode
+            
+            # Sync weight and size from stock
+            if not self.weight: self.weight = self.stock.weight
+            if not self.size: self.size = self.stock.size
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        """Ensure underlying stock record is also removed when a product is deleted"""
+        if self.stock:
+            stock = self.stock
+            super().delete(*args, **kwargs)
+            stock.delete()
+        else:
+            super().delete(*args, **kwargs)
+
     def __str__(self):
-        return self.product_name
+        return f"{self.product_name} ({self.total_quantity} units)"
 
 
 class SupplierProduct(BaseModel):
@@ -111,6 +134,8 @@ class SupplierProduct(BaseModel):
     quantity = models.IntegerField(default=0)
     status = models.CharField(max_length=20, default='ACTIVE')
     batch_number = models.CharField(max_length=100, null=True, blank=True)
+    weight = models.CharField(max_length=50, null=True, blank=True)
+    size = models.CharField(max_length=50, null=True, blank=True)
     
     is_approved = models.BooleanField(default=False)
     
@@ -134,3 +159,15 @@ class Wishlist(BaseModel):
 
     def __str__(self):
         return f"{self.user.username}'s wishlist: {self.product.product_name}"
+class ProductImage(BaseModel):
+    """Gallery images for products"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='additional_images')
+    image = models.ImageField(upload_to='product_gallery/')
+    
+    class Meta:
+        db_table = 'product_images'
+        verbose_name = 'Product Image'
+        verbose_name_plural = 'Product Images'
+
+    def __str__(self):
+        return f"Image for {self.product.product_name}"

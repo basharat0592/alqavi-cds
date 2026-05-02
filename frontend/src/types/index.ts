@@ -16,7 +16,7 @@ export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
 export type StockStatus = 'In Stock' | 'Low Stock' | 'Critical' | 'Out of Stock';
 
-export type UserStatus = 'active' | 'inactive' | 'suspended';
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'suspended';
 
 export type UserRole = 'admin' | 'manager' | 'user' | 'customer' | string;
 
@@ -92,7 +92,7 @@ export interface ProductCategory {
     description?: string;
     slug: string;
     image?: string;
-    status: 'active' | 'inactive';
+    status: 'ACTIVE' | 'INACTIVE';
     created_at?: string;
     updated_at?: string;
 }
@@ -293,6 +293,8 @@ export interface DashboardStats {
     productsChange?: number;
     customersChange?: number;
     totalPayable?: number;
+    totalActive?: number;
+    systemTotal?: number;
 }
 
 // ─── Inventory ────────────────────────────────────────────────────────────────
@@ -301,7 +303,7 @@ export interface Warehouse {
     name: string;
     location?: string;
     is_default: boolean;
-    status?: string | 'active' | 'inactive';
+    status?: string | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface ProductBatch {

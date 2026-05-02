@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-    LayoutDashboard, Package, ShoppingCart, 
+import {
+    LayoutDashboard, Package, ShoppingCart,
     LogOut, Boxes, Bell, TrendingUp,
     ChevronsLeft, ChevronsRight, Settings,
     User, HelpCircle
@@ -102,7 +102,7 @@ export default function SupplierSidebar({ isCollapsed = false, onToggle }: { isC
                     <Settings size={18} />
                     {!isCollapsed && <span className="text-xs font-bold tracking-tight">Settings</span>}
                 </Link>
-                <button 
+                <button
                     onClick={() => authService.logout()}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                 >

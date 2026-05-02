@@ -18,7 +18,7 @@ export default function AuthGuard({ children, allowedRoles }: {
         // Only check once per mount — don't let pathname/router changes retrigger
         if (redirected.current) return;
 
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
 
         if (!token) {
             redirected.current = true;
@@ -27,7 +27,7 @@ export default function AuthGuard({ children, allowedRoles }: {
         }
 
         // Perform role-based authorization check
-        const userStr = localStorage.getItem('cosmetic_distro_user');
+        const userStr = sessionStorage.getItem('cosmetic_distro_user');
         if (userStr && userStr !== 'undefined' && userStr !== 'null') {
             try {
                 const user = JSON.parse(userStr);

@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    X, CheckCircle, Package, RefreshCw, ChevronRight, 
+    X, CheckCircle, Package, RefreshCw, ChevronRight,
     CheckCircle2, Info, Upload, ArrowLeft, Loader2
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PURE AMAZON RETAIL DESIGN SYSTEM - PURCHASE EDIT PAGE
@@ -38,6 +39,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
     const [isUpdating, setIsUpdating] = useState(false);
     const [purchase, setPurchase] = useState<any>(null);
     const [paymentSlip, setPaymentSlip] = useState<File | null>(null);
+    const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchPurchase = async () => {
@@ -55,17 +57,26 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
         fetchPurchase();
     }, [id, router]);
 
-    const handleUpdate = async () => {
+    const handleUpdate = async (warehouseIdOrEvent?: any) => {
+        const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
         if (!purchase) return;
+
+        // If status is RECEIVED and no warehouseId provided yet, show modal
+        if (purchase.status === 'RECEIVED' && !purchase.is_inventory_synced && !warehouseId) {
+            setIsWarehouseModalOpen(true);
+            return;
+        }
+
         setIsUpdating(true);
         try {
             const formData = new FormData();
             formData.append('status', purchase.status);
-            
+            if (warehouseId) formData.append('warehouse', warehouseId);
+
             if (purchase.status !== 'cancelled') {
                 if (purchase.payment_status) formData.append('payment_status', purchase.payment_status.toUpperCase());
                 if (purchase.payment_method) formData.append('payment_method', purchase.payment_method.toUpperCase());
-                
+
                 if (purchase.payment_status?.toUpperCase() === 'PARTIAL' || purchase.payment_status?.toUpperCase() === 'PAID') {
                     const finalPaid = purchase.payment_status?.toUpperCase() === 'PAID' ? purchase.total_amount : purchase.paid_amount;
                     formData.append('paid_amount', (finalPaid || 0).toString());
@@ -75,13 +86,14 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                     if (paymentSlip) formData.append('payment_slip', paymentSlip);
                 }
             }
-            
+
             await purchaseService.update(id, formData);
             toast.success('Purchase updated successfully');
+            setIsWarehouseModalOpen(false);
             router.push('/admin/purchases');
         } catch (err: any) {
             console.error(err);
-            const msg = err.response?.data?.error || err.response?.data?.message || 'Update failed';
+            const msg = err.response?.data?.error || err.response?.data?.message || err.response?.data?.detail || 'Update failed';
             toast.error(msg);
         } finally {
             setIsUpdating(false);
@@ -166,7 +178,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                             </h2>
 
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setPurchase({ ...purchase, payment_status: 'PAID' })}
                                     className={`flex flex-col items-center justify-center p-4 border rounded-[4px] transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-200 shadow-inner' : 'bg-white border-[#ddd] hover:bg-[#f7f8fa]'}`}
@@ -176,7 +188,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                     </div>
                                     <span className="text-[13px] font-bold">Fully Paid</span>
                                 </button>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setPurchase({ ...purchase, payment_status: 'PARTIAL' })}
                                     className={`flex flex-col items-center justify-center p-4 border rounded-[4px] transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-orange-50 border-orange-400 ring-1 ring-orange-200 shadow-inner' : 'bg-white border-[#ddd] hover:bg-[#f7f8fa]'}`}
@@ -198,14 +210,14 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                     <div className="space-y-4">
                                         <label className="block text-[12px] font-bold text-[#565959]">Payment Receipt / Screenshot</label>
                                         <div className="relative group">
-                                            <input 
-                                                type="file" 
+                                            <input
+                                                type="file"
                                                 id="payment-slip"
-                                                className="hidden" 
+                                                className="hidden"
                                                 accept="image/*,application/pdf"
                                                 onChange={(e) => setPaymentSlip(e.target.files?.[0] || null)}
                                             />
-                                            <label 
+                                            <label
                                                 htmlFor="payment-slip"
                                                 className="flex flex-col items-center justify-center w-full h-[120px] border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 hover:border-orange-400 transition-all group"
                                             >
@@ -230,20 +242,20 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
                                             <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Payment Date</label>
-                                            <input 
-                                                type="date" 
-                                                className={inputCls} 
-                                                value={purchase.payment_date ? purchase.payment_date.slice(0, 10) : new Date().toISOString().slice(0, 10)} 
+                                            <input
+                                                type="date"
+                                                className={inputCls}
+                                                value={purchase.payment_date ? purchase.payment_date.slice(0, 10) : new Date().toISOString().slice(0, 10)}
                                                 onChange={e => setPurchase({ ...purchase, payment_date: e.target.value })}
                                             />
                                         </div>
                                         <div>
                                             <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Transaction reference</label>
-                                            <input 
-                                                type="text" 
-                                                className={inputCls} 
+                                            <input
+                                                type="text"
+                                                className={inputCls}
                                                 placeholder="e.g. Bank Ref #, Check #"
-                                                value={purchase.transaction_id || ''} 
+                                                value={purchase.transaction_id || ''}
                                                 onChange={e => setPurchase({ ...purchase, transaction_id: e.target.value })}
                                             />
                                         </div>
@@ -254,10 +266,10 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                                     <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Amount Paid Now</label>
                                                     <div className="relative">
                                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aaa] text-[13px]">$</span>
-                                                        <input 
-                                                            type="number" 
-                                                            className={inputCls + " pl-7"} 
-                                                            value={purchase.paid_amount || 0} 
+                                                        <input
+                                                            type="number"
+                                                            className={inputCls + " pl-7"}
+                                                            value={purchase.paid_amount || 0}
                                                             onChange={e => setPurchase({ ...purchase, paid_amount: parseFloat(e.target.value) })}
                                                         />
                                                     </div>
@@ -270,13 +282,13 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                                 </div>
                                             </>
                                         )}
-                                        
+
                                         <div className="col-span-2">
                                             <label className="block text-[12px] font-bold text-[#565959] mb-1.5">Internal Notes</label>
-                                            <textarea 
-                                                className={inputCls + " h-[80px] py-3 resize-none"} 
+                                            <textarea
+                                                className={inputCls + " h-[80px] py-3 resize-none"}
                                                 placeholder="Enter any additional payment details for records..."
-                                                value={purchase.payment_notes || ''} 
+                                                value={purchase.payment_notes || ''}
                                                 onChange={e => setPurchase({ ...purchase, payment_notes: e.target.value })}
                                             />
                                         </div>
@@ -319,12 +331,12 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                     )}
                                 </div>
                             </div>
-                            
+
                             <div className="mt-8 space-y-3">
                                 <Btn className="w-full h-[40px]" onClick={handleUpdate} loading={isUpdating}>
                                     Save Record Updates
                                 </Btn>
-                                <button 
+                                <button
                                     onClick={() => router.back()}
                                     className="w-full h-[40px] text-[13px] font-bold text-[#565959] hover:bg-gray-50 rounded-[4px] border border-[#ddd] transition-colors"
                                 >
@@ -336,6 +348,12 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                     </aside>
                 </div>
             </main>
+            <WarehouseSelectionModal 
+                isOpen={isWarehouseModalOpen}
+                onClose={() => setIsWarehouseModalOpen(false)}
+                onConfirm={(warehouseId) => handleUpdate(warehouseId)}
+                loading={isUpdating}
+            />
         </div>
     );
 }

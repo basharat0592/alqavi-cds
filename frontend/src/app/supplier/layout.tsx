@@ -20,6 +20,7 @@ import {
     X,
     Settings,
     Mail,
+    RotateCcw,
     History
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
@@ -32,8 +33,9 @@ const SIDEBAR_LINKS = [
     { href: '/supplier/dashboard', label: 'Overview', icon: LayoutDashboard },
     { href: '/supplier/orders', label: 'Orders', icon: ShoppingCart },
     { href: '/supplier/products', label: 'Inventory', icon: Package },
-    { href: '/supplier/activity', label: 'Recent Activity', icon: History },
-    { href: '/supplier/sales', label: 'Finance & Sales', icon: TrendingUp },
+    { href: '/supplier/returns', label: 'Returns', icon: RotateCcw },
+    { href: '/supplier/activity', label: 'Activity', icon: History },
+    { href: '/supplier/sales', label: 'Transactions', icon: TrendingUp },
 ];
 
 const ACCOUNT_LINKS = [
@@ -78,7 +80,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
         }
 
         return (
-            <div className={cn(size, "rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-xs border-2 border-white shadow-sm")}>
+            <div className={cn(size, "rounded-full bg-gradient-to-br from-[#00b4d8] to-[#0f172a] flex items-center justify-center font-bold text-white text-xs border-2 border-white shadow-sm")}>
                 {initial}
             </div>
         );
@@ -86,162 +88,163 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
 
     return (
         <AuthGuard allowedRoles={['supplier']}>
-            <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
-                
-                {/* ── MODERN SIDEBAR ── */}
-                <aside className={cn(
-                    "fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out lg:static lg:block print:hidden",
-                    isSidebarOpen ? "w-64" : "w-20",
-                    isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-                )}>
-                    <div className="h-full flex flex-col">
-                        {/* Logo Area */}
-                        <div className={cn("p-6 flex items-center gap-3", !isSidebarOpen && "justify-center")}>
-                            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-white shadow-lg shadow-indigo-200 shrink-0">A</div>
-                            {isSidebarOpen && (
-                                <div className="flex flex-col overflow-hidden">
-                                    <span className="font-black text-slate-900 text-[14px] leading-tight truncate">AL-QAVI Hub</span>
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">Partner Portal</span>
-                                </div>
-                            )}
+            <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
+
+                {/* ── FULL WIDTH NAVBAR ── */}
+                <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-8 sticky top-0 z-[60] shrink-0 print:hidden shadow-sm w-full">
+                    <div className="flex items-center gap-6 flex-1">
+                        {/* Branding in Navbar */}
+                        <div className="flex items-center gap-3 pr-4 border-r border-slate-100">
+                            <div className="w-9 h-9 bg-[#00b4d8] rounded-xl flex items-center justify-center font-black text-white shadow-lg shadow-[#00b4d8]/20 shrink-0 transform -rotate-3 transition-transform">Q</div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="font-black text-slate-900 text-[15px] leading-tight truncate tracking-tight">AL-QAVI Hub</span>
+                                <span className="text-[10px] text-[#00b4d8] font-black uppercase tracking-[0.3em] truncate opacity-80">Partner Portal</span>
+                            </div>
                         </div>
 
-                        {/* Navigation Section */}
-                        <nav className="flex-1 px-4 space-y-6 overflow-y-auto no-scrollbar py-4">
-                            <div>
-                                {isSidebarOpen && <span className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-4">Core Management</span>}
-                                <div className="space-y-1">
-                                    {SIDEBAR_LINKS.map(link => {
-                                        const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
-                                        return (
-                                            <Link
-                                                key={link.href}
-                                                href={link.href}
-                                                className={cn(
-                                                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-                                                    isActive 
-                                                        ? "bg-indigo-50 text-indigo-700 font-bold shadow-sm" 
-                                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                                                )}
-                                            >
-                                                <link.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600")} />
-                                                {isSidebarOpen && <span className="text-sm">{link.label}</span>}
-                                                {isActive && isSidebarOpen && <div className="ml-auto w-1 h-4 bg-indigo-600 rounded-full" />}
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="hidden lg:flex p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-all font-bold"
+                        >
+                            <Menu size={22} />
+                        </button>
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="lg:hidden p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-all font-bold"
+                        >
+                            <Menu size={22} />
+                        </button>
 
-                            <div>
-                                {isSidebarOpen && <span className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-4">Account & Help</span>}
-                                <div className="space-y-1">
-                                    {ACCOUNT_LINKS.map(link => (
-                                        <Link
-                                            key={link.href}
-                                            href={link.href}
-                                            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200"
-                                        >
-                                            <link.icon className="h-5 w-5 text-slate-400 group-hover:text-slate-600 shrink-0" />
-                                            {isSidebarOpen && <span className="text-sm">{link.label}</span>}
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        </nav>
-
-                        {/* Logout Area */}
-                        <div className="p-4 border-t border-slate-100">
-                            <button
-                                onClick={() => { authService.logout(); window.location.href = '/login'; }}
-                                className={cn(
-                                    "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 group",
-                                    !isSidebarOpen && "justify-center"
-                                )}
-                            >
-                                <LogOut className="h-5 w-5 text-slate-400 group-hover:text-rose-500 shrink-0" />
-                                {isSidebarOpen && <span className="text-sm font-medium">Sign Out</span>}
-                            </button>
+                        {/* Modern Search */}
+                        <div className="relative max-w-md w-full hidden sm:block">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 h-4 w-4" />
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-[13px] focus:ring-4 focus:ring-cyan-50 focus:border-[#00b4d8] outline-none transition-all placeholder:text-slate-400 font-medium"
+                            />
                         </div>
                     </div>
-                </aside>
 
-                {/* ── MAIN AREA ── */}
-                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                    
-                    {/* Modern Top Navbar */}
-                    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 shrink-0 print:hidden">
-                        <div className="flex items-center gap-4 flex-1">
-                            <button 
-                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                                className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
-                            >
-                                <Menu size={20} />
-                            </button>
-                            <button 
-                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
-                            >
-                                <Menu size={20} />
-                            </button>
-                            
-                            {/* Modern Search */}
-                            <div className="relative max-w-md w-full hidden sm:block">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Global search orders, tracking, units..."
-                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[13px] focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <button className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-500 transition-all relative group">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                            <button className="p-3 rounded-2xl hover:bg-slate-50 text-slate-400 hover:text-[#00b4d8] transition-all relative group">
                                 <Bell size={20} />
-                                <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-indigo-600 rounded-full ring-2 ring-white"></span>
+                                <span className="absolute top-3 right-3 h-2 w-2 bg-[#00b4d8] rounded-full ring-4 ring-white"></span>
                             </button>
-                            <button className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-500 transition-all">
+                            <button className="p-3 rounded-2xl hover:bg-slate-50 text-slate-400 hover:text-[#00b4d8] transition-all">
                                 <Mail size={20} />
                             </button>
-                            
-                            <div className="h-8 w-px bg-slate-200 mx-2"></div>
-                            
-                            <Link href="/supplier/profile" className="flex items-center gap-3 p-1 rounded-xl hover:bg-slate-50 transition-all group max-w-[180px]">
-                                {renderAvatar("w-9 h-9")}
-                                <div className="hidden md:flex flex-col text-left overflow-hidden">
-                                    <span className="text-[12px] font-bold text-slate-900 leading-none truncate">{profile?.first_name || user?.name?.split(' ')[0] || 'Partner'}</span>
-                                    <span className="text-[10px] text-slate-500 font-medium mt-1 uppercase tracking-tighter">Verified Hub</span>
+                        </div>
+
+                        <div className="h-8 w-px bg-slate-100 mx-2"></div>
+
+                        <Link href="/supplier/profile" className="flex items-center gap-4 p-1 rounded-2xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
+                            <div className="relative">
+                                {renderAvatar("w-10 h-10")}
+                                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
+                            </div>
+                            <div className="hidden lg:flex flex-col text-left overflow-hidden">
+                                <span className="text-[13px] font-black text-slate-900 leading-none truncate">{profile?.first_name || user?.name?.split(' ')[0] || 'Supplier'}</span>
+                                <span className="text-[10px] text-emerald-500 font-black mt-1.5 uppercase tracking-[0.2em] opacity-70">Active</span>
+                            </div>
+                            <ChevronDown size={14} className="text-slate-300 group-hover:text-slate-600 transition-colors hidden lg:block" />
+                        </Link>
+                    </div>
+                </header>
+
+                <div className="flex flex-1 overflow-hidden h-[calc(100vh-80px)]">
+                    {/* ── MODERN SIDEBAR ── */}
+                    <aside className={cn(
+                        "fixed top-[96px] bottom-4 left-4 z-50 bg-[#131921] transition-all duration-300 ease-in-out lg:block print:hidden rounded-[16px] shadow-xl overflow-hidden",
+                        isSidebarOpen ? "w-64" : "w-16",
+                        isMobileMenuOpen ? "translate-x-0" : "-translate-x-[calc(100%+32px)] lg:translate-x-0"
+                    )}>
+                        <div className="h-full flex flex-col">
+                            {/* Navigation Section */}
+                            <nav className="flex-1 px-3 space-y-6 overflow-y-auto no-scrollbar py-6">
+                                <div>
+                                    {isSidebarOpen && <span className="px-3 text-[11px] font-bold text-[#8a919e] uppercase tracking-wider block mb-3">Menu</span>}
+                                    <div className="space-y-1">
+                                        {SIDEBAR_LINKS.map(link => {
+                                            const isActive = pathname === link.href || (link.href !== '/supplier/dashboard' && pathname.startsWith(link.href));
+                                            return (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    className={cn(
+                                                        "group flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-200",
+                                                        isActive
+                                                            ? "bg-[#232f3e] text-white border-l-4 border-[#f0c14b] pl-2"
+                                                            : "text-[#d5d9d9] hover:bg-[#232f3e] hover:text-white"
+                                                    )}
+                                                >
+                                                    <link.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-[#f0c14b]" : "text-[#8a919e] group-hover:text-white")} />
+                                                    {isSidebarOpen && <span className="text-[13px] font-medium tracking-tight">{link.label}</span>}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 transition-colors hidden md:block" />
-                            </Link>
+
+                                <div>
+                                    {isSidebarOpen && <span className="px-3 text-[11px] font-bold text-[#8a919e] uppercase tracking-wider block mb-3">Account</span>}
+                                    <div className="space-y-1">
+                                        {ACCOUNT_LINKS.map(link => {
+                                            const isActive = pathname === link.href;
+                                            return (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    className={cn(
+                                                        "group flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-200",
+                                                        isActive
+                                                            ? "bg-[#232f3e] text-white border-l-4 border-[#f0c14b] pl-2"
+                                                            : "text-[#d5d9d9] hover:bg-[#232f3e] hover:text-white"
+                                                    )}
+                                                >
+                                                    <link.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-[#f0c14b]" : "text-[#8a919e] group-hover:text-white")} />
+                                                    {isSidebarOpen && <span className="text-[13px] font-medium tracking-tight">{link.label}</span>}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </nav>
+
+                            {/* Logout Area */}
+                            <div className="p-4 bg-[#19222d] border-t border-[#232f3e]">
+                                <button
+                                    onClick={() => { authService.logout(); window.location.href = '/login'; }}
+                                    className={cn(
+                                        "flex items-center gap-3 w-full px-3 py-2.5 rounded-[4px] text-[#d5d9d9] hover:bg-rose-900/20 hover:text-rose-400 transition-all duration-200 font-medium",
+                                        !isSidebarOpen && "justify-center"
+                                    )}
+                                >
+                                    <LogOut className="h-5 w-5 shrink-0" />
+                                    {isSidebarOpen && <span className="text-[13px]">Sign Out</span>}
+                                </button>
+                            </div>
                         </div>
-                    </header>
+                    </aside>
 
-                    {/* Content Scroll Container */}
-                    <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-6 py-6 pb-0 print:p-0">
-                        {/* Page Header Section (Dynamic Breadcrumb) */}
-                        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-                           <div className="flex items-center gap-2 text-xs font-bold text-indigo-600/60 uppercase tracking-widest mb-1 group cursor-pointer" onClick={() => router.push('/supplier/dashboard')}>
-                                <Home size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                                <span>Supplier Portal</span>
-                                <ChevronRight size={10} />
-                                <span className="text-slate-900">{SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Account'}</span>
-                           </div>
-                           <h2 className="text-[28px] font-black translate-x-[-1px] text-slate-900 tracking-tight">
-                                {SIDEBAR_LINKS.find(l => pathname === l.href || (l.href !== '/supplier/dashboard' && pathname.startsWith(l.href)))?.label || 'Account Overview'}
-                           </h2>
-                        </div>
+                    {/* ── MAIN AREA ── */}
+                    <div className={cn(
+                        "flex-1 flex flex-col min-w-0 overflow-y-auto no-scrollbar transition-all duration-300",
+                        isSidebarOpen ? "lg:pl-[288px]" : "lg:pl-[96px]"
+                    )}>
+                        <main className="px-12 pt-12 pb-24 print:p-0 bg-slate-50/50 min-h-screen">
 
-                        {children}
-                    </main>
 
+                            {children}
+                        </main>
+                    </div>
                 </div>
 
                 {/* Mobile Menu Backdrop */}
                 {isMobileMenuOpen && (
-                    <div 
-                        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden transition-opacity" 
+                    <div
+                        className="fixed inset-0 z-40 bg-[#0f172a]/60 backdrop-blur-md lg:hidden transition-opacity"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
                 )}

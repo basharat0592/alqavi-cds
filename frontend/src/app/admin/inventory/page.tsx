@@ -48,17 +48,25 @@ export default function StockManagementOverview() {
         expired_batches: 0,
         total_movements: 0
     });
+    const [recentMovements, setRecentMovements] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const summary = await inventoryService.getInventorySummary();
             const movements = await inventoryService.getMovements();
+            
             setStats({
                 ...summary,
                 total_movements: movements.length
             });
+
+            // Sort by latest created_at or date and pick top 5
+            const sorted = [...movements].sort((a: any, b: any) => 
+                new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+            );
+            setRecentMovements(sorted.slice(0, 5));
         } catch (error) {
             console.error(error);
         } finally {
@@ -93,7 +101,7 @@ export default function StockManagementOverview() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadData} className={SECONDARY_BTN}>
+                    <button onClick={() => loadData()} className={SECONDARY_BTN}>
                         <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                     <Link href="/admin/inventory/adjustments/add" className={PRIMARY_BTN}>
@@ -168,16 +176,52 @@ export default function StockManagementOverview() {
                         </div>
                     </SectionCard>
 
-                    <SectionCard className="p-6 bg-[#F59E0B]/5 border-[#F59E0B]/10 shadow-none">
-                        <div className="flex items-center gap-2 mb-4">
-                            <ShieldCheck className="h-4 w-4 text-[#F59E0B]" />
-                            <h3 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-widest">Network Health</h3>
+                    <SectionCard className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2 border-l-4 border-[#F59E0B] pl-4 py-0.5">
+                                <Activity className="h-4 w-4 text-[#F59E0B]" />
+                                <h2 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Live Stock Stream</h2>
+                            </div>
+                            <Link href="/admin/inventory/movements" className="text-[10px] font-black text-[#F59E0B] uppercase hover:underline">View All</Link>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase leading-relaxed mb-6 tracking-tight">
-                            Matrix heartbeat is nominal. Logistics nodes are synchronized across the global fulfillment mesh.
-                        </p>
-                        <div className="flex items-center gap-2 text-[9px] font-black text-[#F59E0B] uppercase tracking-[0.2em] animate-pulse">
-                            <RefreshCw className="h-3 w-3 animate-spin" /> Live Telemetry Linked
+                        
+                        <div className="space-y-4">
+                            {recentMovements.length === 0 ? (
+                                <p className="text-[11px] text-slate-400 italic text-center py-4 uppercase font-bold tracking-tighter">No recent arrivals recorded.</p>
+                            ) : (
+                                recentMovements.slice(0, 5).map((m, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 hover:border-[#F59E0B]/20 transition-all group">
+                                        <div className="w-8 h-8 rounded bg-white dark:bg-white/10 border border-slate-100 dark:border-white/20 flex items-center justify-center shrink-0">
+                                            <ShoppingBag size={14} className="text-emerald-500" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#F59E0B] transition-colors">{m.product_name}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1 mt-0.5">
+                                                <MapPin size={10} /> {m.warehouse_name || 'Central Hub'}
+                                            </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-[12px] font-black text-emerald-600">+{m.total_quantity || m.quantity}</p>
+                                            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">
+                                                {new Date(m.created_at || m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-2 mb-4">
+                                <ShieldCheck className="h-4 w-4 text-[#F59E0B]" />
+                                <h3 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-widest">Network Health</h3>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed mb-4 tracking-tight">
+                                Matrix heartbeat is nominal. Logistics nodes are synchronized across the global fulfillment mesh.
+                            </p>
+                            <div className="flex items-center gap-2 text-[9px] font-black text-[#F59E0B] uppercase tracking-[0.2em] animate-pulse">
+                                <RefreshCw className="h-3 w-3 animate-spin" /> Live Telemetry Linked
+                            </div>
                         </div>
                     </SectionCard>
                 </div>

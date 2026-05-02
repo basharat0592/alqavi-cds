@@ -56,7 +56,7 @@ export const useAdminSearch = () => {
                         title: p.name,
                         subtitle: `SKU: ${p.sku}`,
                         url: `/admin/products`,
-                        highlight: p.price ? `PKR ${p.price}` : undefined,
+                        highlight: p.price ? `Rs. ${p.price}` : undefined,
                     });
                 });
 
