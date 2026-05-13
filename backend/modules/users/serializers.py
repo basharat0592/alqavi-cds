@@ -38,7 +38,7 @@ class UserActivityLogSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserActivityLog
-        fields = ['id', 'user', 'user_name', 'action', 'action_display', 'description', 'ip_address', 'timestamp']
+        fields = ['id', 'user', 'user_name', 'action', 'action_display', 'description', 'ip_address', 'timestamp', 'is_read']
         read_only_fields = ['id', 'timestamp']
 
 

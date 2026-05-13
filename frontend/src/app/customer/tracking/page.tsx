@@ -16,7 +16,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#FFD814] hover:bg-[#F7CA00] border-[#FCD200] text-[#0f1111] shadow-[0_2px_5px_0_rgba(213,217,217,0.5)]',
+        primary: 'bg-[#119AB8] hover:bg-[#13B0D1] border-[#119AB8] text-white shadow-[0_2px_5px_0_rgba(17,154,184,0.3)]',
         secondary: 'bg-white hover:bg-[#f7f8fa] border-[#D5D9D9] text-[#0f1111] shadow-[0_2px_5px_0_rgba(213,217,217,0.5)]',
         danger: 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700 shadow-sm'
     };
@@ -29,7 +29,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     );
 };
 
-const inputCls = "w-full h-[45px] px-12 border border-[#D5D9D9] rounded-[8px] text-[16px] outline-none focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.3)] placeholder:text-[#888] bg-white transition-all font-medium";
+const inputCls = "w-full h-[45px] px-12 border border-[#D5D9D9] rounded-[8px] text-[16px] outline-none focus:border-[#119AB8] focus:shadow-[0_0_0_3px_rgba(17,154,184,0.2)] placeholder:text-[#888] bg-white transition-all font-medium";
 
 export default function TrackingPage() {
     const router = useRouter();
@@ -133,7 +133,7 @@ export default function TrackingPage() {
                             placeholder="Enter Tracking ID (e.g. ALQ-123456)"
                             className={inputCls}
                         />
-                        <button type="submit" disabled={loading} className="absolute right-1.5 top-1.5 bottom-1.5 px-8 rounded-[7px] bg-[#FFD814] hover:bg-[#F7CA00] text-[14px] font-bold transition-colors">
+                        <button type="submit" disabled={loading} className="absolute right-1.5 top-1.5 bottom-1.5 px-8 rounded-[7px] bg-[#119AB8] hover:bg-[#13B0D1] text-[14px] font-bold text-white transition-colors">
                             {loading ? <Loader2 size={16} className="animate-spin" /> : 'Track'}
                         </button>
                     </form>
@@ -175,7 +175,7 @@ export default function TrackingPage() {
                                         <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-[#F0F2F2] -translate-y-1/2 rounded-full" />
                                         {currentStepIndex >= 0 && order.status !== 'CANCELLED' && (
                                             <div 
-                                                className="absolute top-1/2 left-0 h-1.5 bg-[#007600] -translate-y-1/2 rounded-full transition-all duration-1000 ease-out" 
+                                                className="absolute top-1/2 left-0 h-1.5 bg-[#119AB8] -translate-y-1/2 rounded-full transition-all duration-1000 ease-out" 
                                                 style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
                                             />
                                         )}
@@ -189,8 +189,8 @@ export default function TrackingPage() {
                                                 return (
                                                     <div key={idx} className="flex flex-col items-center relative group">
                                                         <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center bg-white z-10 transition-all duration-500
-                                                            ${isCompleted ? 'border-[#007600] text-[#007600] scale-110 shadow-sm' : 'border-[#D5D9D9] text-[#888]'}`}>
-                                                            {isCompleted ? <CheckCircle2 size={20} fill="currentColor" className="text-white bg-[#007600] rounded-full" /> : <Icon size={18} />}
+                                                            ${isCompleted ? 'border-[#119AB8] text-[#119AB8] scale-110 shadow-sm' : 'border-[#D5D9D9] text-[#888]'}`}>
+                                                            {isCompleted ? <CheckCircle2 size={20} fill="currentColor" className="text-white bg-[#119AB8] rounded-full" /> : <Icon size={18} />}
                                                         </div>
                                                         <div className="absolute top-14 flex flex-col items-center min-w-[100px] text-center">
                                                             <p className={`text-[11px] font-bold uppercase tracking-tight leading-tight ${isCompleted ? 'text-[#007600]' : 'text-[#888]'}`}>{step.label}</p>
@@ -204,7 +204,7 @@ export default function TrackingPage() {
 
                                     {/* Latest Update Status */}
                                     <div className="flex items-center gap-4 pt-6 border-t border-[#F0F2F2]">
-                                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
+                                        <div className="w-12 h-12 bg-cyan-50 text-[#119AB8] rounded-full flex items-center justify-center shrink-0">
                                             <RefreshCw size={20} className="animate-spin duration-[4s]" />
                                         </div>
                                         <div>

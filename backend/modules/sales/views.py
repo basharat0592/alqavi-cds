@@ -181,7 +181,8 @@ class OrderViewSet(viewsets.ModelViewSet):
                 'order_number': item.order.tracking_id,
                 'quantity': item.quantity,
                 'price': float(item.price),
-                'purchased_at': item.order.created_at
+                'purchased_at': item.order.created_at,
+                'delivered_at': item.order.delivered_at or item.order.updated_at
             })
             
         return Response(results)
@@ -282,101 +283,113 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         try:
+            from django.db import transaction
+            from django.db.models import F
+            
             order = self.get_object()
-            if order.status == 'DELIVERED':
+            if order.status == "DELIVERED":
                 return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
             
-            new_status = request.data.get('status', '').upper()
-            warehouse_id = request.data.get('warehouse_id')
-            
-            # Trigger inventory deduction if moving to DELIVERED
-            if new_status == 'DELIVERED' and order.status != 'DELIVERED':
-                if not warehouse_id:
-                    return Response({"error": "Warehouse selection is required for delivery."}, status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    from django.db import transaction
-                    from modules.inventory.models import Stock
-                    with transaction.atomic():
-                        for item in order.items.all():
-                            if item.product:
-                                # 1. Deduct from specific Stock entry in the SELECTED warehouse
-                                stock = Stock.objects.filter(
-                                    product_name__iexact=item.product.product_name,
-                                    weight=item.product.weight,
-                                    size=item.product.size,
-                                    warehouse_id=warehouse_id
-                                ).first()
-                                
-                                if stock:
-                                    stock.total_quantity = F('total_quantity') - item.quantity
-                                    stock.save()
-                                    
-                                    # 3. Deduct from associated Supplier Product (Catalog)
-                                    if hasattr(stock, 'product') and stock.product:
-                                        sp_prod = stock.product
-                                        sp_prod.quantity = F('quantity') - item.quantity
-                                        sp_prod.save()
-                                
-                                # 2. Trigger Product re-aggregation
-                                product = item.product
-                                product.save()
-
-                                # 4. Sync to CustomerBoughtProduct Table
-                                from .models import CustomerBoughtProduct
-                                CustomerBoughtProduct.objects.get_or_create(
-                                    order=order,
-                                    product=product,
-                                    defaults={
-                                        'customer': order.customer,
-                                        'user': order.user,
-                                        'quantity': item.quantity,
-                                        'price': item.price
-                                    }
-                                )
-                except Exception as e:
-                    return Response({"error": f"Inventory sync failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            # Capture old status for trigger logic
+            new_status = request.data.get("status", "").upper()
             old_status = order.status
-            response = super().partial_update(request, *args, **kwargs)
+            warehouse_id = request.data.get("warehouse_id")
+
+            with transaction.atomic():
+                # 1. RESERVE STOCK on Confirmation (Accept)
+                if new_status == "CONFIRMED" and not order.is_reserved:
+                    for item in order.items.all():
+                        if item.product:
+                            item.product.reserved_quantity = F("reserved_quantity") + item.quantity
+                            item.product.save()
+                    order.is_reserved = True
+                    order.save()
+
+                # 2. DEDUCT PHYSICAL STOCK on Delivery
+                if new_status == "DELIVERED" and order.status != "DELIVERED":
+                    if not warehouse_id:
+                        return Response({"error": "Warehouse selection is required for delivery."}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    from modules.inventory.models import Stock
+                    for item in order.items.all():
+                        if item.product:
+                            # Release Reserved first
+                            if order.is_reserved:
+                                item.product.reserved_quantity = F("reserved_quantity") - item.quantity
+                                item.product.save()
+                            
+                            # Actual Deduction from Stock
+                            stock = Stock.objects.filter(
+                                product_name__iexact=item.product.product_name,
+                                weight=item.product.weight,
+                                size=item.product.size,
+                                warehouse_id=warehouse_id
+                            ).first()
+                            
+                            if stock:
+                                stock.total_quantity = F("total_quantity") - item.quantity
+                                stock.save()
+                                if hasattr(stock, "product") and stock.product:
+                                    sp_prod = stock.product
+                                    sp_prod.quantity = F("quantity") - item.quantity
+                                    sp_prod.save()
+                            
+                            # Trigger Master Product re-aggregation
+                            item.product.save()
+
+                            # Sync to CustomerBoughtProduct Table
+                            from .models import CustomerBoughtProduct
+                            CustomerBoughtProduct.objects.get_or_create(
+                                order=order,
+                                product=item.product,
+                                defaults={
+                                    "customer": order.customer,
+                                    "user": order.user,
+                                    "quantity": item.quantity,
+                                    "price": item.price
+                                }
+                            )
+                    order.is_reserved = False
+                    order.delivered_at = timezone.now()
+                    order.save()
+
+                # 3. RELEASE RESERVED on Cancellation
+                if new_status == "CANCELLED" and order.is_reserved:
+                    for item in order.items.all():
+                        if item.product:
+                            item.product.reserved_quantity = F("reserved_quantity") - item.quantity
+                            item.product.save()
+                    order.is_reserved = False
+                    order.save()
+
+            # Execute original status change logic
+            response = super(OrderViewSet, self).partial_update(request, *args, **kwargs)
             
-            # Trigger WhatsApp Confirmation if newly CONFIRMED (Accepted)
-            if response.status_code == 200 and new_status == 'CONFIRMED':
+            # 4. Trigger WhatsApp Confirmation if newly CONFIRMED (Accepted)
+            if response.status_code == 200 and new_status == "CONFIRMED" and old_status != "CONFIRMED":
                 try:
                     from .utils import send_whatsapp_order_confirmation, get_whatsapp_message_body
                     order.refresh_from_db()
-                    
-                    # Generate the professional message body
                     message_body = get_whatsapp_message_body(order)
-                    
-                    # Attempt Direct Automated Sending (for logs)
                     success, _ = send_whatsapp_order_confirmation(order)
                     
                     if isinstance(response.data, dict):
-                        response.data['whatsapp_sent'] = success
-                        response.data['whatsapp_message'] = message_body
-                        response.data['whatsapp_number'] = order.whatsapp_number # Ensure number is sent too
+                        response.data["whatsapp_sent"] = success
+                        response.data["whatsapp_message"] = message_body
+                        response.data["whatsapp_number"] = order.whatsapp_number
                         
                 except Exception as e:
-                    # Log but don't fail the order update if WhatsApp sending fails
                     import traceback
                     error_info = f"WhatsApp Automation Error: {str(e)}\n{traceback.format_exc()}\n"
                     print(error_info)
-                    with open('scratch/whatsapp_error.txt', 'a') as f:
-                        f.write(f"--- {timezone.now()} ---\n{error_info}\n")
-                        
                     if isinstance(response.data, dict):
-                        response.data['whatsapp_sent'] = False
-                        response.data['whatsapp_error'] = str(e)
+                        response.data["whatsapp_sent"] = False
+                        response.data["whatsapp_error"] = str(e)
 
             return response
         except Exception as e:
             import traceback
             crash_info = f"CRITICAL PARTIAL_UPDATE CRASH: {str(e)}\n{traceback.format_exc()}\n"
             print(crash_info)
-            with open('scratch/crash_log.txt', 'a') as f:
-                f.write(f"--- {timezone.now()} ---\n{crash_info}\n")
             return Response({"error": f"Internal Server Error: {str(e)}"}, status=500)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -528,6 +541,7 @@ class SaleReturnViewSet(viewsets.ModelViewSet):
             )
 
         order.status = 'DELIVERED'
+        order.delivered_at = timezone.now()
         order.save()
 
         # Trigger inventory deduction (same logic as admin delivering)

@@ -4,9 +4,9 @@ import { Plus, Trash2, Edit3, Save, X, Loader2, ChevronRight, Menu as MenuIcon }
 import cmsService, { NavigationMenu, NavigationItem } from '@/services/cms.service';
 import toast from 'react-hot-toast';
 
-interface Props { 
-    menus: NavigationMenu[]; 
-    setMenus: (m: NavigationMenu[]) => void; 
+interface Props {
+    menus: NavigationMenu[];
+    setMenus: (m: NavigationMenu[]) => void;
 }
 
 const LOCATIONS = [
@@ -88,7 +88,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
     return (
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 text-left">
             <div className="grid md:grid-cols-4 gap-8">
-                
+
                 {/* Menu List */}
                 <div className="md:col-span-1 space-y-3">
                     <p className="text-[13px] font-bold text-[#565959] uppercase px-1">Menu Sets</p>
@@ -98,9 +98,8 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                             const isActive = activeMenu === menu?.id;
                             return menu ? (
                                 <button key={loc.id} onClick={() => setActiveMenu(menu.id!)}
-                                    className={`w-full text-left px-4 py-3 text-[13px] font-medium border-l-4 transition-all flex items-center justify-between border-b border-[#eee] last:border-0 ${
-                                        isActive ? 'border-[#e77600] bg-[#f7f8fa] text-[#111]' : 'border-transparent text-[#565959] hover:bg-[#f7f8fa]'
-                                    }`}>
+                                    className={`w-full text-left px-4 py-3 text-[13px] font-medium border-l-4 transition-all flex items-center justify-between border-b border-[#eee] last:border-0 ${isActive ? 'border-[#e77600] bg-[#f7f8fa] text-[#111]' : 'border-transparent text-[#565959] hover:bg-[#f7f8fa]'
+                                        }`}>
                                     <span>{loc.label.split(' - ')[1] || loc.label}</span>
                                     <span className="text-[11px] font-bold text-[#888]">{menu.items.length}</span>
                                 </button>
@@ -119,7 +118,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                     <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
                         <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3 flex items-center justify-between">
                             <h3 className="font-bold text-[#111] text-[15px] flex items-center gap-2">
-                                <MenuIcon size={16} /> 
+                                <MenuIcon size={16} />
                                 {currentMenu ? currentMenu.name : 'Select a Menu Set'}
                             </h3>
                             {currentMenu && (
@@ -196,16 +195,16 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                             )}
                         </div>
                     </div>
-                    
+
                     {currentMenu && (
-                         <div className="bg-[#f0f2f2] border border-[#ddd] rounded-[4px] px-6 py-4 flex items-center gap-3">
-                             <div className="p-2 bg-white rounded-full border border-[#ddd] shadow-sm">
+                        <div className="bg-[#f0f2f2] border border-[#ddd] rounded-[4px] px-6 py-4 flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-full border border-[#ddd] shadow-sm">
                                 <MenuIcon size={16} className="text-[#c45500]" />
-                             </div>
-                             <p className="text-[12px] text-[#565959] font-medium leading-relaxed">
+                            </div>
+                            <p className="text-[12px] text-[#565959] font-medium leading-relaxed">
                                 Tip: Use absolute paths like <span className="font-mono bg-white px-1">/shop</span> or <span className="font-mono bg-white px-1">/contact</span>. External links should start with <span className="font-mono bg-white px-1">https://</span>.
-                             </p>
-                         </div>
+                            </p>
+                        </div>
                     )}
                 </div>
             </div>

@@ -4,26 +4,28 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authService } from '@/lib/auth';
-import { Loader2, AlertTriangle, X, Save, User } from 'lucide-react';
+import {
+    Loader2, AlertTriangle, ArrowLeft, Camera,
+    Phone, Mail, MapPin, Eye, EyeOff, Globe, X, UserCircle2
+} from 'lucide-react';
 
-const INPUT_CLS = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all font-medium";
+const inputCls = "w-full h-10 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/5 transition-all duration-300 outline-none font-medium";
 
-const LABEL_CLS = "block text-[13px] font-bold text-[#0f1111] mb-1 text-left";
-
-const REQ = <span className="text-red-600 ml-0.5">*</span>;
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
-
-const getAvatarUrl = (path: string | null): string | undefined => {
-    if (!path) return undefined;
-    if (path.startsWith('http')) return path;
-    return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
-};
+const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+    <div className="w-full">
+        <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 text-left">
+            {label}{required && <span className="text-red-600 ml-0.5">*</span>}
+        </label>
+        {children}
+    </div>
+);
 
 export default function CustomerRegisterPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPw, setShowPw] = useState(false);
+    const [showConfirmPw, setShowConfirmPw] = useState(false);
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
@@ -43,6 +45,11 @@ export default function CustomerRegisterPage() {
         const { name, value } = e.target;
         setFormData(p => ({ ...p, [name]: value }));
         if (error) setError(null);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        setFormData(p => ({ ...p, avatar: file }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -78,117 +85,156 @@ export default function CustomerRegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F1F1F1] flex flex-col items-center justify-center py-10 px-4 font-sans text-[#0f1111]">
-            <div className="w-full max-w-[650px] bg-white rounded-[4px] border border-[#ddd] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                {/* Header */}
-                <div className="bg-white px-8 py-5 border-b border-[#eee] flex items-center justify-between">
-                    <h3 className="text-[14px] font-black uppercase tracking-wider text-[#111]">REGISTER NEW CUSTOMER</h3>
-                    <Link href="/" className="text-slate-400 hover:text-[#111] transition-colors"><X size={20} /></Link>
-                </div>
-
-                {error && (
-                    <div className="mx-8 mt-6 flex items-start gap-2 border border-[#c40000] bg-white rounded p-3 text-sm text-left">
-                        <AlertTriangle className="h-4 w-4 text-[#c45500] flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-[#c45500] font-bold">There was a problem</p>
-                            <p className="text-gray-800 text-xs mt-1 leading-relaxed">{error}</p>
+        <div className="h-screen bg-white flex font-sans overflow-hidden">
+            <div className="w-full lg:w-[48%] xl:w-[42%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-6 md:py-8 relative z-10">
+                <div className="max-w-lg mx-auto w-full animate-in fade-in slide-in-from-left-4 duration-700">
+                    <div className="mb-8 text-left pt-4 pl-2">
+                        <div className="flex items-center justify-between mb-3">
+                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+                                <span className="relative inline-block pb-1 mr-2">
+                                    Customer
+                                    <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#13B0D1] rounded-full" />
+                                </span>
+                                <span className="text-[#13B0D1]">Register</span>
+                            </h1>
+                            <UserCircle2 className="text-[#13B0D1]" size={32} />
                         </div>
+                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
+                            Discover our premium cosmetic collection
+                        </p>
                     </div>
-                )}
 
-                <form onSubmit={handleSubmit} className="p-10 pt-8">
-                    <div className="grid grid-cols-3 gap-x-6 gap-y-6 mb-6">
-                        <div className="col-span-1">
-                            <label className={LABEL_CLS}>Profile Pic</label>
-                            <div className="mt-1 flex flex-col items-center gap-2">
-                                <div className="w-20 h-20 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center overflow-hidden">
-                                    {formData.avatar ? (
-                                        <img src={URL.createObjectURL(formData.avatar)} alt="" className="w-full h-full object-cover" />
-                                    ) : <User size={32} className="text-gray-200" />}
+                    <div className="bg-white px-2 py-4">
+                        {error && (
+                            <div className="mb-6 flex items-start gap-3 border border-red-100 bg-red-50/50 rounded-xl p-4 animate-in shake duration-500">
+                                <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                                <p className="text-gray-800 text-sm leading-relaxed">{error}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                                <div className="md:col-span-1">
+                                    <div className="relative w-full aspect-square bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden group hover:border-[#13B0D1] transition-colors">
+                                        {formData.avatar ? (
+                                            <>
+                                                <img src={URL.createObjectURL(formData.avatar)} className="w-full h-full object-cover" alt="Avatar" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(p => ({ ...p, avatar: null }))}
+                                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
+                                                <Camera className="text-slate-300 group-hover:text-[#13B0D1]" size={18} />
+                                                <span className="text-[9px] font-bold uppercase text-slate-400 mt-2">Upload</span>
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                            </label>
+                                        )}
+                                    </div>
                                 </div>
-                                <input type="file" accept="image/*" className="hidden" id="avatar-up" 
-                                    onChange={e => {
-                                        const file = e.target.files?.[0];
-                                        if (file) setFormData({...formData, avatar: file});
-                                    }}
-                                />
-                                <label htmlFor="avatar-up" className="text-[10px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer uppercase tracking-wider">Upload</label>
+                                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <Field label="First Name" required>
+                                        <input name="first_name" className={inputCls} value={formData.first_name} onChange={handleChange} placeholder="Ali" required />
+                                    </Field>
+                                    <Field label="Last Name" required>
+                                        <input name="last_name" className={inputCls} value={formData.last_name} onChange={handleChange} placeholder="Khan" required />
+                                    </Field>
+                                    <div className="md:col-span-2">
+                                        <Field label="Phone Number">
+                                            <div className="relative">
+                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                                <input name="phone" className={`${inputCls} pl-10`} value={formData.phone} onChange={handleChange} placeholder="+92 3XX XXXXXXX" />
+                                            </div>
+                                        </Field>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div className="col-span-2 grid grid-cols-1 gap-y-6">
-                            <div>
-                                <label className={LABEL_CLS}>First Name {REQ}</label>
-                                <input name="first_name" required className={INPUT_CLS} value={formData.first_name} onChange={handleChange} placeholder="e.g. Adnan" />
-                            </div>
-                            <div>
-                                <label className={LABEL_CLS}>Last Name {REQ}</label>
-                                <input name="last_name" required className={INPUT_CLS} value={formData.last_name} onChange={handleChange} placeholder="e.g. Ali" />
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label className={LABEL_CLS}>Email Address {REQ}</label>
-                            <input name="email" type="email" required className={INPUT_CLS} value={formData.email} onChange={handleChange} placeholder="customer@example.com" />
-                        </div>
-                        <div>
-                            <label className={LABEL_CLS}>Phone Number</label>
-                            <input name="phone" className={INPUT_CLS} value={formData.phone} onChange={handleChange} placeholder="+92 3XX XXXXXXX" />
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="md:col-span-2">
+                                    <Field label="Email Address" required>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                            <input name="email" type="email" className={`${inputCls} pl-10`} value={formData.email} onChange={handleChange} placeholder="customer@email.com" required />
+                                        </div>
+                                    </Field>
+                                </div>
+                                <Field label="Password" required>
+                                    <div className="relative">
+                                        <input name="password" type={showPw ? 'text' : 'password'} className={inputCls} value={formData.password} onChange={handleChange} required />
+                                        <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#13B0D1] transition-colors">{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                    </div>
+                                </Field>
+                                <Field label="Confirm" required>
+                                    <div className="relative">
+                                        <input name="confirmPassword" type={showConfirmPw ? 'text' : 'password'} className={inputCls} value={formData.confirmPassword} onChange={handleChange} required />
+                                        <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#13B0D1] transition-colors">{showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                    </div>
+                                </Field>
+                                <div className="md:col-span-2">
+                                    <Field label="Full Address">
+                                        <div className="relative">
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                            <input name="address" className={`${inputCls} pl-10`} value={formData.address} onChange={handleChange} placeholder="Street, Sector, Area..." />
+                                        </div>
+                                    </Field>
+                                </div>
+                                <Field label="City">
+                                    <input name="city" className={inputCls} value={formData.city} onChange={handleChange} placeholder="City" />
+                                </Field>
+                                <Field label="Country">
+                                    <div className="relative">
+                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                        <input name="country" className={`${inputCls} pl-10`} value={formData.country} onChange={handleChange} placeholder="PK" />
+                                    </div>
+                                </Field>
+                            </div>
 
-                    <div className="space-y-6">
-                        <div>
-                            <label className={LABEL_CLS}>Permanent Address</label>
-                            <input name="address" className={INPUT_CLS} value={formData.address} onChange={handleChange} placeholder="Street address, apartment, etc." />
-                        </div>
-                        <div className="grid grid-cols-3 gap-6">
-                            <div>
-                                <label className={LABEL_CLS}>City</label>
-                                <input name="city" className={INPUT_CLS} value={formData.city} onChange={handleChange} placeholder="City" />
-                            </div>
-                            <div>
-                                <label className={LABEL_CLS}>Country</label>
-                                <input name="country" className={INPUT_CLS} value={formData.country} onChange={handleChange} placeholder="Country" />
-                            </div>
-                            <div>
-                                <label className={LABEL_CLS}>Postal Code</label>
-                                <input name="postal_code" className={INPUT_CLS} value={formData.postal_code} onChange={handleChange} placeholder="00000" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                            <div>
-                                <label className={LABEL_CLS}>Account Password {REQ}</label>
-                                <input name="password" type="password" required className={INPUT_CLS} value={formData.password} onChange={handleChange} placeholder="At least 8 characters" />
-                            </div>
-                            <div>
-                                <label className={LABEL_CLS}>Confirm Password {REQ}</label>
-                                <input name="confirmPassword" type="password" required className={INPUT_CLS} value={formData.confirmPassword} onChange={handleChange} placeholder="Repeat password" />
-                            </div>
-                        </div>
-                    </div>
+                            <button type="submit" disabled={loading}
+                                className="w-full h-12 bg-[#13B0D1] hover:bg-[#119ab8] text-white rounded-xl text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#13B0D1]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60">
+                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : (
+                                    <>Register Account <ArrowLeft className="h-4 w-4 rotate-180" /></>
+                                )}
+                            </button>
 
-                    <div className="mt-10 flex gap-4">
-                        <button type="submit" disabled={loading}
-                            className="flex-1 h-[40px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] text-[14px] font-black uppercase tracking-widest text-[#0f1111] shadow-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
-                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : (
-                                <>
-                                    <Save size={18} /> REGISTER ACCOUNT
-                                </>
-                            )}
-                        </button>
-                        <Link href="/login" className="px-10 h-[40px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] rounded-[3px] text-[13px] font-bold text-[#0f1111] flex items-center justify-center">
-                            Cancel
-                        </Link>
+                            <div className="text-center pt-4 border-t border-slate-50">
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
+                                    Already registered? <Link href="/login" className="text-[#13B0D1] hover:underline ml-1">Sign In</Link>
+                                </p>
+                            </div>
+                        </form>
                     </div>
-                </form>
-
-                <div className="bg-[#f7f8fa] px-8 py-4 border-t border-[#eee] text-center">
-                    <p className="text-[11px] text-[#565959]">
-                        Already have an account? <Link href="/login" className="text-[#007185] hover:text-[#c45500] hover:underline font-bold">Sign In</Link>
-                    </p>
                 </div>
+
+                <footer className="mt-auto pt-6 text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center border-t border-slate-50">
+                    © 2026 Al-Qavi Hub Distribution
+                </footer>
+            </div>
+
+            <div className="hidden lg:block lg:flex-1 relative overflow-hidden">
+                <img
+                    src="/images/admin-security-bg.png.png"
+                    className="absolute inset-0 w-full h-full object-cover scale-105"
+                    alt="Branding"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#13B0D1]/80 via-transparent to-black/60" />
+                <div className="absolute inset-0 p-20 flex flex-col justify-end text-white z-20">
+                    <div className="max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        <div className="w-16 h-1 bg-white mb-8 rounded-full" />
+                        <h2 className="text-5xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-6">
+                            Luxury <br />
+                            <span className="text-[#13B0D1]">Unveiled.</span>
+                        </h2>
+                        <p className="text-xl font-medium text-white/90 leading-relaxed">
+                            Join our community of beauty enthusiasts. Access Pakistan's finest collection of premium cosmetics.
+                        </p>
+                    </div>
+                </div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/10 rounded-full animate-pulse" />
             </div>
         </div>
     );

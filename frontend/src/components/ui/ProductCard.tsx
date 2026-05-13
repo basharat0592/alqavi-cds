@@ -48,7 +48,7 @@ export default function ProductCard({
     onWishlist,
     layout = 'vertical',
     variant = 'default',
-}: ProductCardProps & { variant?: 'default' | 'minimal' | 'overlay' }) {
+}: ProductCardProps & { variant?: 'default' | 'minimal' | 'overlay' | 'luxury' }) {
     const { items, addToCart, updateQuantity } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
@@ -63,7 +63,22 @@ export default function ProductCard({
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
-        onAddToCart?.(1); // Default to 1 unit
+        
+        if (onAddToCart) {
+            onAddToCart(1);
+        } else {
+            addToCart({
+                id: id,
+                name: title,
+                price: price,
+                image: image || '',
+                category: category,
+                weight: weight,
+                size: size,
+                batch: batch,
+                quantity: 1
+            });
+        }
     };
 
     const handleUpdateQuantity = (e: React.MouseEvent, delta: number) => {
@@ -96,34 +111,36 @@ export default function ProductCard({
     const isHorizontal = layout === 'horizontal';
     const isMinimal = variant === 'minimal';
     const isOverlay = variant === 'overlay';
+    const isLuxury = variant === 'luxury';
 
     return (
         <div className={cn(
-            "group relative bg-white rounded-[40px] shadow-[0_10px_30px_-5px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.15)] transition-all duration-500 flex border border-slate-50 overflow-hidden",
+            "group relative bg-white rounded-[8px] shadow-sm hover:shadow-md transition-all duration-300 flex border border-[#D5D9D9] overflow-hidden",
             isHorizontal ? "flex-row h-[180px] md:h-[220px]" : "flex-col",
-            isOverlay && "aspect-square"
+            isOverlay && "aspect-square",
+            isLuxury && "border-0 shadow-xl rounded-[16px] ring-1 ring-slate-100"
         )}>
 
             {/* 1. IMAGE PORTAL - ZERO PADDING */}
             <div className={cn(
                 "relative bg-[#F0F7FF] flex items-center justify-center overflow-hidden group/img",
-                isHorizontal ? "w-1/3 aspect-square" : "aspect-[1.4/1] w-full",
+                isHorizontal ? "w-1/3 aspect-square" : "aspect-[4/3] w-full",
                 isOverlay && "w-full h-full aspect-square absolute inset-0"
             )}>
                 {/* Badges Stack - Top Left */}
-                <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+                <div className="absolute top-2 left-2 z-20 flex flex-col gap-1.5">
                     {batch && (
-                        <div className="px-3 py-1.5 bg-[#111]/80 backdrop-blur-md rounded-xl shadow-lg flex items-center gap-2 border border-white/20">
-                            <Package className="h-3 w-3 text-white" />
-                            <span className="text-white text-[9px] font-black uppercase tracking-widest">
-                                Batch: {batch}
+                        <div className="px-2 py-0.5 bg-[#111]/80 backdrop-blur-md rounded-[3px] shadow-lg flex items-center gap-1.5 border border-white/20">
+                            <Package className="h-2.5 w-2.5 text-white" />
+                            <span className="text-white text-[8px] font-black uppercase tracking-widest">
+                                {batch}
                             </span>
                         </div>
                     )}
                     {badge && (
-                        <div className="px-3 py-1.5 bg-red-600 rounded-xl shadow-[0_8px_20px_rgba(220,38,38,0.4)] flex items-center gap-2 border border-white/20">
-                            <Sparkles className="h-3 w-3 text-white fill-white animate-pulse" />
-                            <span className="text-white text-[10px] font-black uppercase tracking-widest">
+                        <div className="px-2 py-0.5 bg-red-600 rounded-[3px] shadow-lg flex items-center gap-1.5 border border-white/20">
+                            <Sparkles className="h-2.5 w-2.5 text-white fill-white animate-pulse" />
+                            <span className="text-white text-[8px] font-black uppercase tracking-widest">
                                 {badge}
                             </span>
                         </div>
@@ -134,13 +151,13 @@ export default function ProductCard({
                 {!isOverlay && (
                     <button
                         onClick={handleWishlist}
-                        className={`absolute top-4 right-4 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/50
+                        className={`absolute top-2 right-2 z-20 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/50
                             ${isWishlisted
                                 ? 'bg-[#13B0D1] text-white shadow-lg'
                                 : 'bg-white/80 text-[#13B0D1] hover:bg-white shadow-sm'
                             }`}
                     >
-                        <Heart className={`h-4.5 w-4.5 ${isWishlisted ? 'fill-white' : ''}`} />
+                        <Heart className={`h-3.5 w-3.5 ${isWishlisted ? 'fill-white' : ''}`} />
                     </button>
                 )}
 
@@ -153,9 +170,9 @@ export default function ProductCard({
                 </Link>
 
                 {isOverlay && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end">
-                        <h3 className="text-white text-xl font-black uppercase tracking-tighter leading-none mb-1">{title}</h3>
-                        <p className="text-[#13B0D1] font-black text-lg">Rs.{price.toLocaleString()}</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 flex flex-col justify-end">
+                        <h3 className="text-white text-lg font-black uppercase tracking-tighter leading-none mb-1">{title}</h3>
+                        <p className="text-[#13B0D1] font-black text-base">Rs.{price.toLocaleString()}</p>
                     </div>
                 )}
             </div>
@@ -163,16 +180,16 @@ export default function ProductCard({
             {/* 2. CONTENT AREA - WITH PADDING */}
             {!isOverlay && (
                 <div className={cn(
-                    "p-5 flex flex-col flex-1",
+                    "p-2.5 md:p-3 flex flex-col flex-1",
                     isHorizontal && "justify-center"
                 )}>
                     {/* Product Info */}
-                    <div className="mb-4">
-                        <div className="flex items-start justify-between gap-4">
+                    <div className="mb-3">
+                        <div className="flex items-start justify-between gap-2">
                             <Link href={`/customer/product/${id}`} className="flex-1">
                                 <h3 className={cn(
                                     "font-black text-[#1E1B4B] leading-tight line-clamp-1 uppercase tracking-tight group-hover:text-[#0891B2] transition-colors",
-                                    isHorizontal ? "text-lg md:text-xl" : "text-[13px]"
+                                    isHorizontal ? "text-base md:text-lg" : "text-[11px]"
                                 )}>
                                     {title}
                                 </h3>
@@ -180,20 +197,20 @@ export default function ProductCard({
                             {!isHorizontal && (
                                 <span className={cn(
                                     "font-black text-[#0891B2] whitespace-nowrap tracking-tighter",
-                                    "text-[15px]"
+                                    "text-[13px]"
                                 )}>
                                     Rs.{price.toLocaleString()}
                                 </span>
                             )}
                             {isHorizontal && (
-                                <span className="text-xl md:text-2xl font-black text-[#0891B2] whitespace-nowrap tracking-tighter">
+                                <span className="text-lg md:text-xl font-black text-[#0891B2] whitespace-nowrap tracking-tighter">
                                     Rs.{price.toLocaleString()}
                                 </span>
                             )}
                         </div>
                         {!isMinimal && (weight || size || batch) && (
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[#FD8E23] font-bold text-[9px] uppercase tracking-widest">
                                     {weight} {weight && (size || batch) ? '•' : ''} {size} {(size && batch) ? '•' : ''} {batch && `Batch: ${batch}`}
                                 </span>
                             </div>
@@ -201,21 +218,19 @@ export default function ProductCard({
 
                         {/* Description */}
                         {!isMinimal && description && (
-                            <div className="mt-2.5 relative group/desc">
+                            <div className="mt-1.5 relative">
                                 <p className={cn(
-                                    "text-[#475569] leading-relaxed font-medium pr-1",
-                                    isHorizontal ? "text-sm line-clamp-3" : "text-[11px] line-clamp-2"
+                                    "text-[#475569] leading-tight font-medium line-clamp-2 pr-2",
+                                    isHorizontal ? "text-xs" : "text-[10px]"
                                 )}>
                                     {description}
                                 </p>
-                                {!isHorizontal && (
-                                    <Link 
-                                        href={`/customer/product/${id}`} 
-                                        className="absolute bottom-0 right-0 pl-8 bg-gradient-to-r from-transparent via-white/80 to-white text-[#0891B2] font-black text-[11px] hover:underline cursor-pointer"
-                                    >
-                                        more
-                                    </Link>
-                                )}
+                                <Link
+                                    href={`/customer/product/${id}`}
+                                    className="absolute bottom-0 right-0 bg-white pl-1 text-[#FD8E23] font-black text-[10px] hover:underline"
+                                >
+                                    Read More
+                                </Link>
                             </div>
                         )}
                     </div>
@@ -223,7 +238,7 @@ export default function ProductCard({
                     {/* 3. ACTION ROW */}
                     <div className={cn(
                         "flex items-center mt-auto",
-                        isHorizontal ? "max-w-[200px]" : "w-full"
+                        isHorizontal ? "max-w-[160px]" : "w-full"
                     )}>
                         {/* Add to Cart Button - Full Width */}
                         <div className="w-full">
@@ -231,22 +246,29 @@ export default function ProductCard({
                                 <button
                                     onClick={handleAddToCart}
                                     disabled={stock === 0}
-                                    className={`w-full h-11 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center justify-center transition-all duration-300
+                                    className={`w-full h-8 rounded-[4px] text-[10px] font-bold uppercase tracking-widest flex items-center justify-center transition-all duration-300
                                         ${stock === 0
                                             ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                            : 'bg-[#13B0D1] text-white hover:bg-[#119ab8] hover:shadow-lg shadow-[#13B0D1]/20 active:scale-95'
+                                            : 'bg-[#119AB8] text-white hover:bg-[#13B0D1] shadow-sm active:scale-95'
                                         }`}
                                 >
                                     Add To Cart
                                 </button>
                             ) : (
-                                <div className="w-full h-11 bg-[#13B0D1] rounded-full flex items-center justify-between px-2.5 text-white shadow-lg">
-                                    <button onClick={(e) => handleUpdateQuantity(e, -1)} className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center">
-                                        <Minus className="h-3.5 w-3.5 stroke-[4]" />
+                                <div className="w-full h-8 bg-[#119AB8] rounded-[4px] flex items-center justify-between px-2 text-white shadow-sm">
+                                    <button
+                                        onClick={(e) => handleUpdateQuantity(e, -1)}
+                                        className="w-5 h-5 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors"
+                                    >
+                                        <Minus className="h-2.5 w-2.5 stroke-[4]" />
                                     </button>
-                                    <span className="text-[13px] font-black">{quantityInCart}</span>
-                                    <button onClick={(e) => handleUpdateQuantity(e, 1)} className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center">
-                                        <Plus className="h-3.5 w-3.5 stroke-[4]" />
+                                    <span className="text-[12px] font-bold">{quantityInCart}</span>
+                                    <button
+                                        onClick={(e) => handleUpdateQuantity(e, 1)}
+                                        disabled={stock !== undefined && quantityInCart >= stock}
+                                        className="w-5 h-5 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                        <Plus className="h-2.5 w-2.5 stroke-[4]" />
                                     </button>
                                 </div>
                             )}

@@ -33,8 +33,13 @@ export default function AddReturnPage() {
         salesService.getBoughtProducts()
             .then(data => {
                 const now = new Date();
-                const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-                const filtered = data.filter((item: any) => new Date(item.purchased_at) >= twentyFourHoursAgo);
+                // 30-Day Window from Delivery
+                const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                
+                const filtered = data.filter((item: any) => {
+                    const deliveryDate = new Date(item.delivered_at || item.purchased_at);
+                    return deliveryDate >= thirtyDaysAgo;
+                });
                 setBoughtProducts(filtered);
             })
             .catch(() => toast.error('Failed to load purchase history'))
@@ -94,7 +99,7 @@ export default function AddReturnPage() {
                 <div>
                     <h1 className="text-3xl font-normal text-[#111]">Request a Return</h1>
                     <p className="text-sm text-gray-600 mt-1 italic">
-                        Select an item purchased and <span className="font-bold text-[#111]">delivered</span> within the last 24 hours to initiate a return request.
+                        Select an item purchased and <span className="font-bold text-[#111]">delivered</span> within the last 30 days to initiate a return request.
                     </p>
                 </div>
             </div>
@@ -111,7 +116,7 @@ export default function AddReturnPage() {
                                 {boughtProducts.length === 0 ? (
                                     <div className="text-center py-10">
                                         <Package className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                                        <p className="text-gray-500 font-medium">No items purchased within the last 24 hours were found.</p>
+                                        <p className="text-gray-500 font-medium">No items purchased and delivered within the last 30 days were found.</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">

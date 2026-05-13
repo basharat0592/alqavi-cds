@@ -86,7 +86,7 @@ export default function NotificationPanel({
                             const Icon = item.icon;
                             return (
                                 <Link key={item.id} href={item.href}
-                                    onClick={() => { onMarkRead(item.id); onClose(); }}
+                                    onClick={() => onClose()}
                                     className={`flex items-start gap-4 px-5 py-4 hover:bg-[#f3f7f7] transition-all group border-l-2 ${!item.read ? 'border-[#e77600] bg-amber-50/30' : 'border-transparent'}`}>
                                     <div className={`w-10 h-10 rounded-[2px] flex items-center justify-center flex-shrink-0 border border-zinc-100 bg-white shadow-sm group-hover:border-[#e77600]/30 transition-colors`}>
                                         <Icon className={`h-4 w-4 ${item.color}`} strokeWidth={2.5} />
@@ -105,9 +105,16 @@ export default function NotificationPanel({
                                             <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-zinc-100 text-[#565959] rounded-[2px] border border-zinc-200 group-hover:bg-[#f3f7f7] transition-colors">
                                                 ID: {item.id.slice(0, 8)}
                                             </span>
-                                            <span className="text-[11px] text-[#007185] font-medium group-hover:underline flex items-center gap-1">
-                                                Manage <ChevronRight size={10} />
-                                            </span>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    onMarkRead(item.id);
+                                                }}
+                                                className="text-[11px] text-[#007185] font-bold hover:text-[#c45500] hover:underline flex items-center gap-1 transition-colors"
+                                            >
+                                                Mark as read
+                                            </button>
                                         </div>
                                     </div>
                                 </Link>
@@ -118,12 +125,17 @@ export default function NotificationPanel({
             </div>
 
             {/* Advanced Footer */}
-            <div className="border-t border-[#ddd] bg-[#fcfdff] px-5 py-3 flex items-center justify-between">
-                <button onClick={onMarkAllRead} className="text-[11px] font-bold text-[#007185] hover:text-[#c45500] hover:underline">
-                    Mark All as Noted
-                </button>
+            <div className="border-t border-[#ddd] bg-[#fcfdff] px-5 py-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                    <button onClick={onMarkAllRead} className="text-[11px] font-bold text-[#007185] hover:text-[#c45500] hover:underline">
+                        Mark All as Noted
+                    </button>
+                    <Link href="/admin/notifications" onClick={onClose} className="text-[11px] font-bold text-[#007185] hover:text-[#c45500] hover:underline">
+                        View All Activity
+                    </Link>
+                </div>
                 <Link href="/admin/settings" onClick={onClose}
-                    className="h-[25px] px-3 bg-white border border-zinc-300 rounded-[2px] text-[11px] font-medium text-[#565959] hover:bg-zinc-50 flex items-center gap-1.5 transition-all">
+                    className="h-[25px] w-full justify-center px-3 bg-white border border-zinc-300 rounded-[2px] text-[11px] font-medium text-[#565959] hover:bg-zinc-50 flex items-center gap-1.5 transition-all">
                     <Settings size={12} /> Configure Alerts
                 </Link>
             </div>

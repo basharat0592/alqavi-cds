@@ -52,11 +52,11 @@ export function formatDate(
  */
 export function formatDateTime(
     dateStr: string | number | undefined | null,
-    options: Intl.DateTimeFormatOptions = { 
-        month: 'short', 
-        day: 'numeric', 
+    options: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric',
         year: 'numeric',
-        hour: '2-digit', 
+        hour: '2-digit',
         minute: '2-digit'
     }
 ): string {

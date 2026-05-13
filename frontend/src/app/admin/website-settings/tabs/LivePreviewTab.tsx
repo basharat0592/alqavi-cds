@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
     Play, Image as ImageIcon, Package, Tag, Star, MessageSquare,
     HelpCircle, Mail, ChevronDown, ChevronUp, Eye, EyeOff,
-    ExternalLink, Edit3, Film, Layers, Globe, Monitor
+    ExternalLink, Edit3, Film, Layers, Globe, Monitor, Layout
 } from 'lucide-react';
 import { getImageUrl, cn } from '@/lib/utils';
 import { SiteSettings, WebsiteSection } from '@/services/cms.service';
@@ -101,24 +101,26 @@ function SectionCard({ title, icon: Icon, badge, count, children, defaultOpen = 
     );
 }
 
+const SECTION_TYPE_ICONS = {
+    hero: Film,
+    products: Package,
+    search_hero: Globe,
+    categories: Tag,
+    about: Layout,
+    faq: HelpCircle,
+    newsletter: Mail,
+    social: MessageSquare,
+    gallery: ImageIcon,
+};
+
 export default function LivePreviewTab({ products, categories, media, sections, settings }: Props) {
-    const [activeSlide, setActiveSlide] = useState(0);
     const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-    // Deduplicate products
-    const uniqueProducts = (() => {
-        const groups = new Map();
-        products.forEach(p => {
-            const key = `${(p.product_name || p.name || '').toLowerCase()}_${parseFloat(p.selling_price || p.price || 0)}`;
-            if (!groups.has(key) || (!groups.get(key).image && (p.image || p.catalog_image))) {
-                groups.set(key, p);
-            }
-        });
-        return Array.from(groups.values());
-    })();
+    // Filter to show only visible sections for a true "live" feel
+    const activeSections = sections.filter(s => s.is_visible);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 text-left">
+        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 text-left">
 
             {/* Header / Info Bar */}
             <div className="bg-[#f0f2f2] border border-[#ddd] rounded-[4px] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
@@ -127,227 +129,252 @@ export default function LivePreviewTab({ products, categories, media, sections, 
                         <Monitor size={24} className="text-[#c45500]" />
                     </div>
                     <div>
-                        <h3 className="text-[15px] font-bold text-[#111]">Interactive Content Audit</h3>
-                        <p className="text-[12px] text-[#565959]">A read-only snapshot of what customers see on the <span className="font-bold">Al-Qavi Hub</span> storefront.</p>
+                        <h3 className="text-[15px] font-bold text-[#111]">Live Content Preview</h3>
+                        <p className="text-[12px] text-[#565959]">A real-time visual representation of your active sections. <span className="font-bold text-[#c45500]">{activeSections.length} visible sections</span>.</p>
                     </div>
                 </div>
-                <AmazonBtn href="/" variant="secondary">
-                    <ExternalLink size={14} /> View Live Website
-                </AmazonBtn>
+                <div className="flex gap-2">
+                    <AmazonBtn href="/" variant="secondary">
+                        <ExternalLink size={14} /> View Live Website
+                    </AmazonBtn>
+                </div>
             </div>
 
-            {/* ── 1. HERO SLIDER ───────────────────────────────────────────────── */}
-            <SectionCard title="Interactive Hero Banner" icon={Film} badge="Main storefront gateway" defaultOpen={true}>
-                <div className="space-y-6">
-                    {/* Mini slide preview */}
-                    <div className="relative rounded-[4px] overflow-hidden bg-[#0F172A] aspect-[21/9] shadow-inner border border-[#ddd]">
-                        <video
-                            key={HERO_SLIDES[activeSlide].video}
-                            src={HERO_SLIDES[activeSlide].video}
-                            autoPlay muted playsInline loop
-                            className="w-full h-full object-cover opacity-60"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#000000a0] via-[#00000040] to-transparent flex flex-col justify-center pl-12">
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-[#f0c14b] mb-2">{HERO_SLIDES[activeSlide].subtitle}</span>
-                            <h3 className="text-4xl font-bold text-white max-w-lg leading-tight">{HERO_SLIDES[activeSlide].title}</h3>
-                            <p className="text-[14px] text-[#eee] mt-2 max-w-sm font-medium">{HERO_SLIDES[activeSlide].description}</p>
-                            <div className="mt-6 flex gap-4">
-                                <button className="h-[35px] px-6 bg-[#f0c14b] text-[#111] rounded-[3px] text-[13px] font-bold flex items-center gap-2 hover:bg-[#e2b03a] transition-all">
-                                    <Play size={12} fill="currentColor" /> {HERO_SLIDES[activeSlide].cta}
-                                </button>
-                            </div>
-                        </div>
-                        {/* Slide indicators */}
-                        <div className="absolute bottom-6 left-12 flex gap-2">
-                            {HERO_SLIDES.map((_, i) => (
-                                <button key={i} onClick={() => setActiveSlide(i)}
-                                    className={`h-1.5 rounded-full transition-all ${i === activeSlide ? 'w-10 bg-[#f0c14b]' : 'w-4 bg-white/40 hover:bg-white/60'}`} />
-                            ))}
-                        </div>
-                    </div>
-                    {/* Slide list */}
-                    <div className="grid grid-cols-3 gap-4">
-                        {HERO_SLIDES.map((s, i) => (
-                            <button key={i} onClick={() => setActiveSlide(i)}
-                                className={cn(
-                                    "p-4 rounded-[4px] border text-left transition-all relative overflow-hidden group",
-                                    activeSlide === i ? "border-[#e77600] bg-[#fff9e6] ring-1 ring-[#e77600]" : "border-[#ddd] hover:border-[#888c8e] bg-white"
-                                )}>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Film size={12} className={activeSlide === i ? "text-[#c45500]" : "text-[#565959]"} />
-                                    <span className={cn("text-[11px] font-bold uppercase", activeSlide === i ? "text-[#c45500]" : "text-[#565959]")}>Slide {i + 1}</span>
-                                </div>
-                                <p className="text-[13px] font-bold text-[#111] truncate">{s.title}</p>
-                                <p className="text-[11px] text-[#565959] truncate">{s.subtitle}</p>
-                                {activeSlide === i && <div className="absolute top-0 right-0 w-8 h-8 bg-[#e77600] text-white flex items-center justify-center rounded-bl-xl"><Play size={10} fill="currentColor" /></div>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </SectionCard>
-
-            {/* ── 2. CATEGORIES ───────────────────────────────────────────────── */}
-            <SectionCard title="Product Discovery Bar" icon={Tag} badge="Category-based navigation" count={categories.length}>
-                <div className="flex flex-wrap gap-2">
-                    <div className="px-5 py-2 rounded-[3px] bg-[#111] text-white text-[13px] font-bold border border-[#111]">Browse All</div>
-                    {categories.length === 0 ? (
-                        <p className="text-[13px] text-[#565959] py-2 italic">Waiting for category data sync...</p>
-                    ) : (
-                        categories.map((cat) => (
-                            <div key={cat.id} className="px-5 py-2 rounded-[3px] bg-white border border-[#adb1b8] text-[#111] text-[13px] font-medium hover:bg-[#f7f8fa] cursor-default transition-all shadow-sm">
-                                {cat.name}
-                            </div>
-                        ))
-                    )}
-                </div>
-            </SectionCard>
-
-            {/* ── 3. PRODUCT GRID ─────────────────────────────────────────────── */}
-            <SectionCard title="Merchandising Grid" icon={Package} badge="Featured product inventory" count={uniqueProducts.length}>
-                {uniqueProducts.length === 0 ? (
-                    <div className="text-center py-12 bg-[#f7f8fa] border border-dashed border-[#ddd] rounded-[4px]">
-                        <Package size={32} className="mx-auto text-[#ccc] mb-2" />
-                        <p className="text-[14px] font-bold text-[#565959]">Storefront inventory is empty</p>
+            {/* ── DYNAMIC SECTIONS RENDERER ── */}
+            <div className="space-y-4">
+                {activeSections.length === 0 ? (
+                    <div className="text-center py-20 bg-white border border-dashed border-[#ddd] rounded-[8px]">
+                        <Layers size={48} className="mx-auto text-[#ccc] mb-4" strokeWidth={1} />
+                        <h4 className="text-lg font-bold text-[#111]">No Visible Sections</h4>
+                        <p className="text-[14px] text-[#565959] max-w-sm mx-auto mt-2">Add or enable sections in the <span className="font-bold">Page Builder</span> tab to see them appear here in real-time.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {uniqueProducts.slice(0, 10).map((p) => {
-                            const title = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
-                            const img = getImageUrl(p.image || p.catalog_image || p.image_url);
-                            const price = parseFloat(p.selling_price || p.price || 0);
-                            return (
-                                <div key={p.id} className="bg-white border border-[#ddd] rounded-[3px] overflow-hidden hover:shadow-md transition-all group">
-                                    <div className="aspect-square bg-[#f0f2f2] relative overflow-hidden flex items-center justify-center">
-                                        {img ? (
-                                            <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" />
-                                        ) : (
-                                            <Package size={24} className="text-[#ccc]" />
-                                        )}
-                                        <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-white/90 border border-[#ddd] rounded-[2px] text-[9px] font-black uppercase text-[#c45500]">In Stock</div>
-                                    </div>
-                                    <div className="p-3">
-                                        <p className="text-[13px] font-medium text-[#111] line-clamp-2 leading-tight min-h-[32px]">{title}</p>
-                                        <div className="flex items-center gap-1.5 mt-2">
-                                            <div className="flex text-[#e77600]">
-                                                {[...Array(5)].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
-                                            </div>
-                                            <span className="text-[11px] text-[#007185] font-medium">84</span>
-                                        </div>
-                                        <p className="text-[16px] font-bold text-[#111] mt-1">
-                                            <span className="text-[11px] align-top mt-0.5 mr-0.5 font-medium">Rs.</span>
-                                            {price.toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-                {uniqueProducts.length > 10 && (
-                    <div className="mt-6 pt-4 border-t border-[#eee] text-center">
-                        <AmazonBtn variant="secondary" className="w-fit mx-auto">Load All {uniqueProducts.length} Items</AmazonBtn>
-                    </div>
-                )}
-            </SectionCard>
-
-            {/* ── 4. BRAND LOGOS ─────────────────────────────────────────────── */}
-            <SectionCard title="Authorized Brands" icon={Layers} badge="Partner distribution network">
-                <div className="flex flex-wrap items-center justify-center gap-10 opacity-70 grayscale hover:grayscale-0 transition-all">
-                    {BRANDS.map((brand, i) => (
-                        <span key={i} className="text-lg font-black text-[#888c8e] tracking-tighter uppercase whitespace-nowrap hover:text-[#111] cursor-default transition-colors">
-                            {brand}
-                        </span>
-                    ))}
-                </div>
-            </SectionCard>
-
-            {/* ── 5. TESTIMONIALS ─────────────────────────────────────────────── */}
-            <SectionCard title="Customer Reviews" icon={Star} badge="Verified social proof">
-                <div className="grid md:grid-cols-3 gap-6">
-                    {TESTIMONIALS.map((t, i) => (
-                        <div key={i} className="bg-white p-5 border border-[#ddd] rounded-[4px] shadow-sm flex flex-col">
-                            <div className="flex gap-0.5 mb-2">
-                                {[...Array(5)].map((_, s) => <Star key={s} size={13} className="text-[#e77600] fill-[#e77600]" />)}
+                    activeSections.map((section, idx) => (
+                        <SectionCard 
+                            key={section.id || idx} 
+                            title={`${idx + 1}. ${section.name}`} 
+                            icon={SECTION_TYPE_ICONS[section.section_type as keyof typeof SECTION_TYPE_ICONS] || Layers} 
+                            badge={`Type: ${section.section_type.replace('_', ' ')}`}
+                            defaultOpen={false}
+                        >
+                            <div className="bg-white border border-[#eee] rounded-[8px] overflow-hidden">
+                                {renderSection(section, products, categories, openFaq, setOpenFaq)}
                             </div>
-                            <p className="text-[13px] font-bold text-[#111] mb-1">Verified Purchase</p>
-                            <p className="text-[13px] text-[#565959] italic flex-1">"{t.text}"</p>
-                            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#eee]">
-                                <div className="w-10 h-10 bg-[#f0f2f2] border border-[#ddd] rounded-full flex items-center justify-center text-[#565959] font-bold text-[14px]">{t.name[0]}</div>
-                                <div>
-                                    <p className="text-[13px] font-bold text-[#111]">{t.name}</p>
-                                    <p className="text-[11px] text-[#007185] font-medium">{t.role}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </SectionCard>
+                        </SectionCard>
+                    ))
+                )}
+            </div>
 
-            {/* ── 6. FAQ ──────────────────────────────────────────────────────── */}
-            <SectionCard title="Help & Support Center" icon={HelpCircle} badge="Frequently asked questions">
-                <div className="space-y-3">
-                    {FAQS.map((faq, i) => (
-                        <div key={i} className="border border-[#ddd] rounded-[4px] overflow-hidden shadow-sm">
-                            <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                                className="w-full flex items-center justify-between px-6 py-3 bg-white hover:bg-[#f7f8fa] transition-colors text-left group">
-                                <span className="text-[14px] font-bold text-[#111] group-hover:text-[#c45500]">{faq.q}</span>
-                                {openFaq === i ? <ChevronUp size={16} className="text-[#565959]" /> : <ChevronDown size={16} className="text-[#565959]" />}
-                            </button>
-                            {openFaq === i && (
-                                <div className="px-6 py-4 text-[13px] text-[#565959] border-t border-[#ddd] bg-[#fcfcfc] leading-relaxed">
-                                    {faq.a}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </SectionCard>
-
-            {/* ── 7. NEWSLETTER ───────────────────────────────────────────────── */}
-            <SectionCard title="Newsletter Hub" icon={Mail} badge="Customer retention system">
-                <div className="bg-[#111] rounded-[4px] p-10 text-center relative overflow-hidden shadow-xl">
-                    <div className="absolute -top-20 -right-20 h-64 w-64 bg-[#e77600]/10 blur-[80px] rounded-full" />
-                    <div className="absolute -bottom-20 -left-20 h-64 w-64 bg-[#e77600]/10 blur-[80px] rounded-full" />
-                    
-                    <div className="relative z-10">
-                        <span className="inline-block px-4 py-1 text-[11px] font-bold tracking-[2px] uppercase rounded-full bg-[#e77600]/20 text-[#e77600] border border-[#e77600]/30 mb-4">
-                            Subscriber Perks
-                        </span>
-                        <h3 className="text-3xl font-bold text-white mb-3">Join our beauty community</h3>
-                        <p className="text-[#ccc] text-[15px] mb-8 max-w-lg mx-auto">Get exclusive offers, first access to new arrivals, and personalized beauty advice.</p>
-                        
-                        <div className="flex gap-2 max-w-md mx-auto">
-                            <input readOnly placeholder="your@email.com" className="flex-1 h-[45px] px-4 rounded-[3px] bg-white text-[14px] outline-none border-none shadow-inner" />
-                            <button className="h-[45px] px-8 bg-[#f0c14b] text-[#111] rounded-[3px] text-[15px] font-bold hover:bg-[#e2b03a] transition-all whitespace-nowrap shadow-md">
-                                Sign Up
-                            </button>
-                        </div>
-                        <p className="text-[11px] text-[#888] mt-6">By signing up, you agree to our <span className="underline cursor-pointer">Privacy Policy</span> and <span className="underline cursor-pointer">Terms of Service</span>.</p>
-                    </div>
-                </div>
-            </SectionCard>
-
-            {/* Final Footer Context */}
-            <div className="bg-[#fcfcfc] border border-[#ddd] rounded-[4px] p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            {/* Final Summary Card */}
+            <div className="bg-[#fcfcfc] border border-[#ddd] rounded-[8px] p-8 flex flex-col md:flex-row items-center justify-between gap-8 mt-12">
                 <div className="flex gap-12">
                     <div className="text-left">
-                        <p className="text-[28px] font-bold text-[#111]">{uniqueProducts.length}</p>
-                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Live Items</p>
+                        <p className="text-[32px] font-bold text-[#111]">{products.length}</p>
+                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Inventory</p>
                     </div>
                     <div className="text-left border-l border-[#ddd] pl-12">
-                        <p className="text-[28px] font-bold text-[#111]">{media.length}</p>
-                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Media Assets</p>
+                        <p className="text-[32px] font-bold text-[#111]">{media.length}</p>
+                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Media</p>
                     </div>
                     <div className="text-left border-l border-[#ddd] pl-12">
-                        <p className="text-[28px] font-bold text-[#111]">{sections.length}</p>
-                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Dynamic Blocks</p>
+                        <p className="text-[32px] font-bold text-[#111]">{sections.length}</p>
+                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Layout Blocks</p>
                     </div>
                 </div>
-                <div className="flex gap-4">
-                    <AmazonBtn href="/customer/shop" variant="secondary" className="h-[40px] px-8">Preview Customer View</AmazonBtn>
-                    <AmazonBtn href="/" className="h-[40px] px-10">Launch Storefront</AmazonBtn>
+                <div className="flex gap-3">
+                    <AmazonBtn href="/customer/shop" variant="secondary" className="h-[40px] px-8">Full Shop Preview</AmazonBtn>
+                    <AmazonBtn href="/" className="h-[40px] px-10 font-bold">Go Live Now</AmazonBtn>
                 </div>
             </div>
         </div>
     );
+}
+
+// ── SECTION RENDERER LOGIC ──────────────────────────────────────────────────
+function renderSection(section: WebsiteSection, products: any[], categories: any[], openFaq: number | null, setOpenFaq: any) {
+    const { section_type, content } = section;
+
+    switch (section_type) {
+        case 'hero':
+            const slides = content.slides || [];
+            return (
+                <div className="relative aspect-[21/9] bg-[#0F172A] overflow-hidden">
+                    {slides.length > 0 ? (
+                        <>
+                            <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
+                            <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
+                                <p className="text-[#f0c14b] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <h3 className="text-4xl md:text-6xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
+                                <p className="text-slate-300 mt-4 max-w-lg text-sm md:text-base leading-relaxed">{slides[0].description}</p>
+                                <div className="mt-8 flex gap-4">
+                                    <AmazonBtn className="h-11 px-8 rounded-full font-bold">Explore Now</AmazonBtn>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3">
+                            <ImageIcon size={48} strokeWidth={1} />
+                            <p className="text-sm font-bold uppercase tracking-widest">No Slides Configured</p>
+                        </div>
+                    )}
+                </div>
+            );
+
+        case 'products':
+            const gridProds = products.filter(p => (content.product_ids || []).includes(p.id));
+            return (
+                <div className="p-8 space-y-6">
+                    <div className="flex flex-col gap-1">
+                        <h4 className="text-2xl font-bold text-[#111]">{content.title}</h4>
+                        {content.subtitle && <p className="text-slate-500 text-sm">{content.subtitle}</p>}
+                    </div>
+                    {gridProds.length > 0 ? (
+                        <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${content.per_row || 4}, minmax(0, 1fr))` }}>
+                            {gridProds.map(p => (
+                                <div key={p.id} className="bg-white border border-[#eee] rounded-lg overflow-hidden group">
+                                    <div className="aspect-square bg-[#f8f9fa] flex items-center justify-center">
+                                        <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="p-3">
+                                        <p className="text-[13px] font-bold text-[#111] line-clamp-1">{p.name || p.product_name}</p>
+                                        <p className="text-[#c45500] font-black mt-1">Rs. {Number(p.selling_price || p.price).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 bg-slate-50 rounded-lg text-center text-slate-400">
+                            <Package size={24} className="mx-auto mb-2 opacity-30" />
+                            <p className="text-[12px] font-bold uppercase tracking-widest">No Products Selected</p>
+                        </div>
+                    )}
+                </div>
+            );
+
+        case 'search_hero':
+            return (
+                <div className="py-20 px-8 bg-slate-900 text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#c4550010] via-transparent to-transparent" />
+                    <div className="relative z-10 max-w-2xl mx-auto space-y-8">
+                        <h3 className="text-3xl md:text-5xl font-black text-white tracking-tight">{content.title}</h3>
+                        <div className="flex gap-2 p-1 bg-white rounded-full shadow-2xl">
+                            <input readOnly placeholder={content.placeholder} className="flex-1 h-12 px-6 rounded-full outline-none text-sm" />
+                            <button className="h-12 w-12 bg-[#c45500] text-white rounded-full flex items-center justify-center shadow-lg"><Star size={18} /></button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+        case 'categories':
+            const catItems = content.items || [];
+            return (
+                <div className="p-8 space-y-8">
+                    <h4 className="text-2xl font-bold text-[#111] text-center">{content.title}</h4>
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-6">
+                        {catItems.map((cat: any, i: number) => (
+                            <div key={i} className="flex flex-col items-center gap-4 group cursor-pointer">
+                                <div className="w-20 h-20 md:w-28 md:h-28 bg-[#f0f2f2] rounded-full border border-[#ddd] overflow-hidden shadow-sm group-hover:border-[#c45500] group-hover:shadow-lg transition-all duration-300">
+                                    <img src={getImageUrl(cat.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                </div>
+                                <span className="text-[13px] font-bold text-[#111] group-hover:text-[#c45500] transition-colors uppercase tracking-tight">{cat.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        case 'about':
+            return (
+                <div className="grid md:grid-cols-2 gap-12 p-12 items-center">
+                    <div className="space-y-6">
+                        <div className="w-12 h-1.5 bg-[#c45500] rounded-full" />
+                        <h3 className="text-4xl font-black text-[#111] tracking-tighter leading-tight">{content.title}</h3>
+                        <p className="text-[#565959] leading-relaxed text-[15px] whitespace-pre-wrap">{content.body}</p>
+                        <AmazonBtn variant="secondary" className="w-fit h-10 px-8 rounded-full font-bold">Learn More Our Story</AmazonBtn>
+                    </div>
+                    <div className="relative aspect-square rounded-3xl overflow-hidden shadow-2xl border border-[#eee]">
+                        <img src={getImageUrl(content.image)} className="w-full h-full object-cover" />
+                    </div>
+                </div>
+            );
+
+        case 'faq':
+            const items = content.items || [];
+            return (
+                <div className="p-8 md:p-16 bg-[#f7f8fa] space-y-10">
+                    <div className="text-center space-y-2">
+                        <h4 className="text-3xl font-black text-[#111] tracking-tight">{content.title}</h4>
+                        <p className="text-slate-400 text-sm uppercase font-bold tracking-[0.2em]">Support Center</p>
+                    </div>
+                    <div className="max-w-3xl mx-auto space-y-3">
+                        {items.map((item: any, i: number) => (
+                            <div key={i} className="bg-white border border-[#ddd] rounded-xl overflow-hidden shadow-sm">
+                                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                    className="w-full flex items-center justify-between px-6 py-4 text-left group">
+                                    <span className="text-[15px] font-bold text-[#111] group-hover:text-[#c45500]">{item.q}</span>
+                                    <ChevronDown size={18} className={cn("text-[#888] transition-transform duration-300", openFaq === i && "rotate-180")} />
+                                </button>
+                                {openFaq === i && (
+                                    <div className="px-6 pb-6 pt-2 text-[14px] text-[#565959] border-t border-[#f0f2f2] leading-relaxed">
+                                        {item.a}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        case 'newsletter':
+            return (
+                <div className="p-16 bg-[#111] text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#c4550020] via-transparent to-transparent" />
+                    <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
+                        <Mail size={40} className="mx-auto text-[#f0c14b] mb-4" />
+                        <h3 className="text-3xl font-black text-white">{content.title}</h3>
+                        <p className="text-slate-400">{content.subtitle}</p>
+                        <div className="flex gap-2 max-w-md mx-auto pt-4">
+                            <input readOnly placeholder={content.placeholder} className="flex-1 h-12 px-6 rounded-[4px] bg-white/10 border border-white/20 text-white outline-none" />
+                            <AmazonBtn className="h-12 px-8 font-bold">Subscribe</AmazonBtn>
+                        </div>
+                    </div>
+                </div>
+            );
+
+        case 'banner_split':
+            return (
+                <div className={cn("grid md:grid-cols-2 bg-white", content.reversed && "md:flex-row-reverse")}>
+                    <div className={cn("p-12 md:p-20 flex flex-col justify-center space-y-6", content.reversed ? "order-2" : "order-1")}>
+                        <h3 className="text-4xl font-black text-[#111] tracking-tight leading-tight">{content.title}</h3>
+                        <p className="text-[#565959] leading-relaxed text-[15px]">{content.body}</p>
+                        <AmazonBtn variant="secondary" className="w-fit h-10 px-8 font-bold uppercase tracking-widest text-[11px]">View Details</AmazonBtn>
+                    </div>
+                    <div className={cn("aspect-square bg-slate-50", content.reversed ? "order-1" : "order-2")}>
+                        <img src={getImageUrl(content.image)} className="w-full h-full object-cover" />
+                    </div>
+                </div>
+            );
+
+        case 'marquee':
+            return (
+                <div className="bg-[#111] py-4 overflow-hidden border-y border-white/10">
+                    <div className="whitespace-nowrap flex items-center animate-marquee">
+                        {[...Array(4)].map((_, i) => (
+                            <span key={i} className="text-white font-black text-sm uppercase tracking-[0.3em] flex items-center shrink-0">
+                                {content.text}
+                                <Star size={14} className="mx-8 text-[#f0c14b] fill-[#f0c14b]" />
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        default:
+            return (
+                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#ddd] m-4 rounded-xl">
+                    <Layers size={24} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Preview Placeholder for {section_type}</p>
+                </div>
+            );
+    }
 }

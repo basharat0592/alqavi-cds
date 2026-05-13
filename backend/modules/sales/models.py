@@ -50,6 +50,8 @@ class Order(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    is_reserved = models.BooleanField(default=False)
 
     # WhatsApp Integration
     whatsapp_number = models.CharField(max_length=20, null=True, blank=True)

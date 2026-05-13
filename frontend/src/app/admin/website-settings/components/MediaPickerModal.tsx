@@ -105,13 +105,27 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
-                                <label className="cursor-pointer">
-                                    <input type="file" className="hidden" accept="image/*,video/*" 
-                                        onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])} />
-                                    <AmazonBtn variant="secondary" loading={uploading} className="bg-white">
-                                        <Upload size={14} /> Upload New
-                                    </AmazonBtn>
-                                </label>
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    id="media-upload-input"
+                                    accept="image/*,video/*" 
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            handleUpload(file);
+                                            e.target.value = ''; // Reset for same file re-upload
+                                        }
+                                    }} 
+                                />
+                                <AmazonBtn 
+                                    variant="secondary" 
+                                    loading={uploading} 
+                                    className="bg-white"
+                                    onClick={() => document.getElementById('media-upload-input')?.click()}
+                                >
+                                    <Upload size={14} /> Upload New
+                                </AmazonBtn>
                             </div>
                         </div>
 

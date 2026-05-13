@@ -1,89 +1,75 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
-import { User, Building2, ShieldCheck, ChevronRight } from 'lucide-react';
+import { User, Building2, ShieldCheck, ChevronRight, ArrowLeft } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
 export default function RegisterChoicePage() {
     return (
-        <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
-            {/* Simple Top Bar */}
-            <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
-                <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-2xl text-[#F59E0B] tracking-tighter">AL-QAVI</span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Cosmetics Distributor</span>
-                </Link>
-            </header>
-
-            <main className="flex-1 flex flex-col items-center justify-center p-4">
-                <div className="w-full max-w-3xl bg-white border border-[#ddd] rounded shadow-sm overflow-hidden">
-                    <div className="bg-[#f6f6f6] px-6 py-4 border-b border-[#ddd]">
-                        <h1 className="text-xl font-bold text-slate-800">Join the Network</h1>
-                        <p className="text-xs text-gray-600 font-medium">Please select your primary activity on the platform</p>
-                    </div>
-
-                    <div className="p-8 grid md:grid-cols-3 gap-6">
-                        {/* Customer Choice */}
-                        <Link href="/register/customer" 
-                            className="group p-6 border border-[#ddd] rounded hover:border-[#F59E0B] hover:shadow-md transition-all flex flex-col gap-4 focus:ring-2 focus:ring-[#F59E0B] outline-none text-left">
-                            <div className="w-12 h-12 bg-white border border-[#ddd] rounded flex items-center justify-center group-hover:border-[#F59E0B]">
-                                <User className="h-6 w-6 text-gray-700" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800 flex items-center justify-between">
-                                    Customer 
-                                    <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#F59E0B]" />
-                                </h2>
-                                <p className="text-xs text-gray-500 mt-1 leading-relaxed">Shop for personal or retail use from our extensive catalog.</p>
-                            </div>
-                        </Link>
-
-                        {/* Supplier Choice */}
-                        <Link href="/register/supplier" 
-                            className="group p-6 border border-[#ddd] rounded hover:border-[#F59E0B] hover:shadow-md transition-all flex flex-col gap-4 focus:ring-2 focus:ring-[#F59E0B] outline-none text-left">
-                            <div className="w-12 h-12 bg-white border border-[#ddd] rounded flex items-center justify-center group-hover:border-[#F59E0B]">
-                                <Building2 className="h-6 w-6 text-gray-700" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800 flex items-center justify-between">
-                                    Supplier
-                                    <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#F59E0B]" />
-                                </h2>
-                                <p className="text-xs text-gray-500 mt-1 leading-relaxed">List and wholesale your brand products across Pakistan.</p>
-                            </div>
-                        </Link>
-
-                        {/* Admin Choice */}
-                        <Link href="/register/admin" 
-                            className="group p-6 border border-[#ddd] rounded hover:border-red-600 hover:shadow-md transition-all flex flex-col gap-4 focus:ring-2 focus:ring-red-600 outline-none text-left">
-                            <div className="w-12 h-12 bg-white border border-[#ddd] rounded flex items-center justify-center group-hover:border-red-600">
-                                <ShieldCheck className="h-6 w-6 text-gray-700" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800 flex items-center justify-between">
-                                    Admin
-                                    <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-600" />
-                                </h2>
-                                <p className="text-xs text-gray-500 mt-1 leading-relaxed">Manage system operations, users, and distributor analytics.</p>
-                            </div>
-                        </Link>
-                    </div>
-
-                    <div className="px-8 pb-8 text-center pt-2">
-                        <hr className="border-[#eee] mb-6" />
-                        <p className="text-sm text-gray-600">
-                            Already registered?{' '}
-                            <Link href="/login" className="text-[#0066c0] hover:text-[#F59E0B] hover:underline underline-offset-2">
-                                Sign In
-                            </Link>
-                        </p>
-                    </div>
+        <div className="h-screen bg-[#fcfcfc] flex flex-col items-center justify-center font-sans overflow-hidden px-6">
+            <div className="max-w-4xl w-full animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                <div className="mb-6 text-center">
+                    <Link href="/" className="inline-block mb-4 opacity-80 hover:opacity-100 transition-opacity">
+                        <Logo size="lg" />
+                    </Link>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-none mb-4">
+                        Account <span className="text-[#13B0D1]">Selection</span>
+                    </h1>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
+                        Choose your primary business role to continue with the registration process
+                    </p>
                 </div>
-                
-                {/* Minimal Footer */}
-                <div className="mt-8 text-center">
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Al-Qavi Cosmetics Distributor Network © 2026</p>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                    {/* Customer */}
+                    <Link href="/register/customer"
+                        className="group relative block p-8 bg-white border border-slate-200 rounded-2xl hover:border-[#13B0D1] hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#13B0D1]/10 group-hover:text-[#13B0D1] transition-colors">
+                                <User className="h-6 w-6 text-slate-400 group-hover:text-[#13B0D1]" />
+                            </div>
+                            <h2 className="text-lg font-bold text-slate-800 mb-2">Customer</h2>
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Shop Pakistan's finest collection for personal or retail use.</p>
+                        </div>
+                    </Link>
+
+                    {/* Supplier */}
+                    <Link href="/register/supplier"
+                        className="group relative block p-8 bg-white border border-slate-200 rounded-2xl hover:border-[#13B0D1] hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#13B0D1]/10 group-hover:text-[#13B0D1] transition-colors">
+                                <Building2 className="h-6 w-6 text-slate-400 group-hover:text-[#13B0D1]" />
+                            </div>
+                            <h2 className="text-lg font-bold text-slate-800 mb-2">Supplier</h2>
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Wholesale your brand products across the national network.</p>
+                        </div>
+                    </Link>
+
+                    {/* Authority */}
+                    <Link href="/register/admin"
+                        className="group relative block p-8 bg-white border border-slate-200 rounded-2xl hover:border-[#13B0D1] hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#13B0D1]/10 group-hover:text-[#13B0D1] transition-colors">
+                                <ShieldCheck className="h-6 w-6 text-slate-400 group-hover:text-[#13B0D1]" />
+                            </div>
+                            <h2 className="text-lg font-bold text-slate-800 mb-2">Authority</h2>
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">System operations, analytics, and distributor management.</p>
+                        </div>
+                    </Link>
                 </div>
-            </main>
+
+                <div className="mt-12 text-center">
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
+                        Registered User? <Link href="/login" className="text-[#13B0D1] hover:underline ml-1">Sign In</Link>
+                    </p>
+                </div>
+            </div>
+
+            <footer className="absolute bottom-8 text-[9px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center">
+                © 2026 Al-Qavi Hub Distribution • Secure Network
+            </footer>
         </div>
+
     );
 }

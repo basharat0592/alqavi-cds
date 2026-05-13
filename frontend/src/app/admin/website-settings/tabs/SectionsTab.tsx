@@ -1,6 +1,11 @@
 'use client';
 import { useState } from 'react';
-import { Plus, Eye, EyeOff, Trash2, Copy, GripVertical, ChevronDown, ChevronUp, ChevronRight, Edit3, X, Save, Loader2, Layout, Settings, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import {
+    Plus, Eye, EyeOff, Trash2, Copy, GripVertical, ChevronDown, ChevronUp,
+    ChevronRight, Edit3, X, Save, Loader2, Layout, Settings,
+    Image as ImageIcon, CheckCircle, Monitor, Package, Star, Layers,
+    Film, Globe, Mail, MessageSquare, HelpCircle, Tag
+} from 'lucide-react';
 import cmsService, { WebsiteSection } from '@/services/cms.service';
 import toast from 'react-hot-toast';
 import { cn, getImageUrl } from '@/lib/utils';
@@ -9,34 +14,14 @@ import MediaPickerModal from '../components/MediaPickerModal';
 const SECTION_TYPES = [
     { type: 'hero', label: 'Hero / Slider', icon: '🎯', desc: 'Main banner with slides' },
     { type: 'products', label: 'Product Grid', icon: '🛍️', desc: 'Showcase products' },
-    { type: 'search_hero', label: 'Search Hero', icon: '🔍', desc: 'Large centered search bar' },
-    { type: 'spotlight', label: 'Product Spotlight', icon: '🔦', desc: 'Featured single item' },
-    { type: 'model_3d', label: '3D Product Viewer', icon: '📦', desc: 'Interactive 3D model' },
-    { type: 'brands', label: 'Brand Logos', icon: '🏢', desc: 'Marquee of partners' },
     { type: 'categories', label: 'Categories', icon: '🗂️', desc: 'Category cards' },
-    { type: 'collections', label: 'Collection Grid', icon: '🎨', desc: 'Visual collection cards' },
     { type: 'about', label: 'About / Text', icon: '📝', desc: 'Rich text block' },
-    { type: 'parallax', label: 'Parallax Banner', icon: '🌌', desc: 'Scroll-effect background' },
-    { type: 'features', label: 'Core Features', icon: '✨', desc: 'Icon with text boxes' },
-    { type: 'steps', label: 'Process Steps', icon: '🔢', desc: '1-2-3 How it works' },
-    { type: 'quiz', label: 'Product Finder Quiz', icon: '🧪', desc: 'Help users choose products' },
-    { type: 'stats', label: 'Live Statistics', icon: '📊', desc: 'Animated counters' },
     { type: 'testimonials', label: 'Reviews', icon: '⭐', desc: 'Customer testimonials' },
     { type: 'faq', label: 'FAQ', icon: '❓', desc: 'Accordion questions' },
     { type: 'newsletter', label: 'Newsletter', icon: '📧', desc: 'Email signup' },
     { type: 'gallery', label: 'Gallery', icon: '🖼️', desc: 'Media grid' },
     { type: 'video', label: 'Video', icon: '🎬', desc: 'Video embed' },
     { type: 'promotion', label: 'Promotion', icon: '🏷️', desc: 'Promo banner' },
-    { type: 'countdown', label: 'Countdown Timer', icon: '⏰', desc: 'Flash sale clock' },
-    { type: 'banner_split', label: 'Split Banner', icon: '🌓', desc: '50/50 Image & Text' },
-    { type: 'marquee', label: 'Scrolling Text', icon: '↔️', desc: 'Moving announcement' },
-    { type: 'comparison', label: 'Before/After', icon: '🔄', desc: 'Image comparison slider' },
-    { type: 'tabs', label: 'Tabbed Content', icon: '📑', desc: 'Switchable info blocks' },
-    { type: 'contact', label: 'Contact Info', icon: '📞', desc: 'Location & Phone' },
-    { type: 'map', label: 'Store Map', icon: '🗺️', desc: 'Interactive Google Map' },
-    { type: 'social', label: 'Social Feed', icon: '📱', desc: 'Instagram grid' },
-    { type: 'pricing', label: 'Pricing Table', icon: '💰', desc: 'Service plan cards' },
-    { type: 'html', label: 'Custom HTML', icon: '💻', desc: 'Embed custom scripts' },
 ];
 
 const DEFAULT_CONTENT: Record<string, any> = {
@@ -59,7 +44,7 @@ const DEFAULT_CONTENT: Record<string, any> = {
     newsletter: { title: 'Stay Updated', subtitle: 'Subscribe to get the latest deals', placeholder: 'Enter your email' },
     gallery: { title: 'Our Gallery', items: [] },
     video: { title: 'Watch Our Story', url: '' },
-    promotion: { title: 'Special Offer', subtitle: '50% Off Selected Items', cta_text: 'Grab Deal', cta_link: '/sale' },
+    promotion: { title: 'Special Offer', subtitle: '50% Off Selected Items', cta_text: 'Grab Deal', cta_link: '/sale', discount_percent: 50, product_ids: [] },
     countdown: { title: 'Flash Sale Ending Soon', end_date: '', bg_color: '#f3a847' },
     banner_split: { title: 'Premium Collection', body: 'Experience the luxury of organic beauty.', image: null, reversed: false },
     marquee: { text: 'FREE SHIPPING ON ALL ORDERS OVER RS. 5000 • NEW SUMMER COLLECTION OUT NOW • SHOP TODAY AND GET 10% OFF', speed: 'medium' },
@@ -93,14 +78,28 @@ interface Props {
     setSections: (s: WebsiteSection[]) => void;
     products?: any[];
     categories?: any[];
+    media?: any[];
 }
 
-export default function SectionsTab({ sections, setSections, products = [], categories = [] }: Props) {
+export default function SectionsTab({ sections, setSections, products = [], categories = [], media = [] }: Props) {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [previewId, setPreviewId] = useState<number | null>(null);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState<number | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+    const handleSync = () => {
+        setIsSyncing(true);
+        localStorage.setItem('cms-sync-reload', Date.now().toString());
+        setTimeout(() => {
+            setIsSyncing(false);
+            toast.success('Website Synchronized Successfully!');
+        }, 2000);
+    };
 
     const addSection = async (type: string) => {
         const meta = SECTION_TYPES.find(t => t.type === type)!;
@@ -128,12 +127,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
     };
 
     const deleteSection = async (id: number) => {
-        if (!confirm('Permanently remove this layout section?')) return;
+        setLoading(id);
         try {
             await cmsService.deleteSection(id);
             setSections(sections.filter(s => s.id !== id));
-            toast.success('Deleted');
+            setDeletingId(null);
+            toast.success('Section removed');
         } catch { toast.error('Delete failed'); }
+        finally { setLoading(null); }
     };
 
     const duplicateSection = async (id: number) => {
@@ -176,7 +177,24 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                 </AmazonBtn>
             </div>
 
-            <div className="bg-[#f7f8fa] border border-[#ddd] rounded-[4px] p-0 shadow-sm overflow-hidden">
+            <div className="bg-[#f7f8fa] border border-[#ddd] rounded-[4px] p-0 shadow-sm overflow-hidden relative min-h-[400px]">
+                {/* ── SYNCHRONIZING OVERLAY (FIXED VIEWPORT CENTER - DARK BG) ── */}
+                {isSyncing && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+                        <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-300">
+                            <div className="relative">
+                                <Loader2 className="w-20 h-20 text-[#119AB8] animate-spin opacity-40" strokeWidth={1} />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <Globe className="w-8 h-8 text-[#c45500] animate-pulse" />
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-3xl font-black text-white uppercase tracking-[0.3em] drop-shadow-2xl">Synchronizing</h3>
+                                <p className="text-[12px] text-zinc-300 font-black uppercase tracking-widest mt-2">Broadcasting live update to storefront...</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div className="grid grid-cols-12 px-6 py-3 border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider bg-[#f7f8fa]">
                     <div className="col-span-1">Order</div>
                     <div className="col-span-1">Type</div>
@@ -195,107 +213,159 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         sections.map((s: WebsiteSection, idx: number) => {
                             const meta = SECTION_TYPES.find(t => t.type === s.section_type);
                             return (
-                                <div key={s.id}
-                                    draggable
-                                    onDragStart={(e) => {
-                                        setDragIndex(idx);
-                                        e.dataTransfer.effectAllowed = 'move';
-                                        // Create a slight delay for the ghost image effect
-                                        setTimeout(() => {
+                                <div key={s.id}>
+                                    <div
+                                        draggable
+                                        onDragStart={(e) => {
+                                            setDragIndex(idx);
+                                            e.dataTransfer.effectAllowed = 'move';
+                                            setTimeout(() => {
+                                                const target = e.target as HTMLElement;
+                                                target.style.opacity = '0.4';
+                                            }, 0);
+                                        }}
+                                        onDragEnd={(e) => {
+                                            setDragIndex(null);
+                                            setDragOverIndex(null);
                                             const target = e.target as HTMLElement;
-                                            target.style.opacity = '0.4';
-                                        }, 0);
-                                    }}
-                                    onDragEnd={(e) => {
-                                        setDragIndex(null);
-                                        setDragOverIndex(null);
-                                        const target = e.target as HTMLElement;
-                                        target.style.opacity = '1';
-                                    }}
-                                    onDragOver={(e) => {
-                                        e.preventDefault();
-                                        setDragOverIndex(idx);
-                                    }}
-                                    onDrop={() => {
-                                        if (dragIndex === null || dragIndex === idx) return;
-                                        const newList = [...sections];
-                                        const [moved] = newList.splice(dragIndex, 1);
-                                        newList.splice(idx, 0, moved);
-                                        handleDragEnd(newList);
-                                        setDragIndex(null);
-                                        setDragOverIndex(null);
-                                    }}
-                                    className={cn(
-                                        'grid grid-cols-12 items-center px-6 py-4 hover:bg-[#fcfcfc] transition-all group relative border-l-4 border-transparent',
-                                        !s.is_visible && 'opacity-60 bg-slate-50/50',
-                                        dragIndex === idx && 'bg-blue-50 border-blue-500 shadow-inner scale-[0.98]',
-                                        dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50'
-                                    )}>
+                                            target.style.opacity = '1';
+                                        }}
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            setDragOverIndex(idx);
+                                        }}
+                                        onDrop={() => {
+                                            if (dragIndex === null || dragIndex === idx) return;
+                                            const newList = [...sections];
+                                            const [moved] = newList.splice(dragIndex, 1);
+                                            newList.splice(idx, 0, moved);
+                                            handleDragEnd(newList);
+                                            setDragIndex(null);
+                                            setDragOverIndex(null);
+                                        }}
+                                        className={cn(
+                                            'grid grid-cols-12 items-center px-6 py-4 hover:bg-[#fcfcfc] transition-all group relative border-l-4 border-transparent',
+                                            !s.is_visible && 'opacity-60 bg-slate-50/50',
+                                            dragIndex === idx && 'bg-blue-50 border-blue-500 shadow-inner scale-[0.98]',
+                                            dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50',
+                                            previewId === s.id && 'bg-[#fff9e6] border-l-[#e77600]'
+                                        )}>
 
-                                    {/* Drop Indicator */}
-                                    {dragOverIndex === idx && dragIndex !== idx && (
-                                        <div className={cn(
-                                            "absolute left-0 w-full h-1 bg-[#13B0D1] z-50 rounded-full animate-pulse",
-                                            dragIndex! < idx ? "bottom-0" : "top-0"
-                                        )} />
+                                        {/* Drop Indicator */}
+                                        {dragOverIndex === idx && dragIndex !== idx && (
+                                            <div className={cn(
+                                                "absolute left-0 w-full h-1 bg-[#13B0D1] z-50 rounded-full animate-pulse",
+                                                dragIndex! < idx ? "bottom-0" : "top-0"
+                                            )} />
+                                        )}
+
+                                        <div className="col-span-1 flex items-center gap-1.5">
+                                            <div className="cursor-grab active:cursor-grabbing text-[#ddd] group-hover:text-[#aaa]">
+                                                <GripVertical size={14} />
+                                            </div>
+                                            <div className="flex flex-col -space-y-1">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
+                                                    disabled={idx === 0}
+                                                    className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                >
+                                                    <ChevronUp size={16} strokeWidth={3} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
+                                                    disabled={idx === sections.length - 1}
+                                                    className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                >
+                                                    <ChevronDown size={16} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                            <span className="text-[13px] font-black text-[#111] min-w-[14px] text-center">{idx + 1}</span>
+                                        </div>
+
+                                        <div className="col-span-1">
+                                            <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
+                                                {meta?.icon || '📄'}
+                                            </div>
+                                        </div>
+
+                                        <div className="col-span-6">
+                                            <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
+                                            <p className="text-[12px] text-[#565959]">{meta?.label} • {meta?.desc}</p>
+                                        </div>
+
+                                        <div className="col-span-2">
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => toggleVisibility(s)}
+                                                    className={cn(
+                                                        "relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                                                        s.is_visible ? "bg-green-600" : "bg-gray-300"
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                                            s.is_visible ? "translate-x-4" : "translate-x-0"
+                                                        )}
+                                                    />
+                                                </button>
+                                                <span className={cn(
+                                                    "text-[10px] font-black uppercase tracking-tight",
+                                                    s.is_visible ? "text-green-700" : "text-gray-400"
+                                                )}>
+                                                    {s.is_visible ? 'Live' : 'Hidden'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-span-2 flex items-center justify-end gap-3">
+                                            <button
+                                                onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
+                                                className={cn(
+                                                    "p-1.5 rounded-full transition-all",
+                                                    previewId === s.id ? "bg-[#111] text-white" : "text-[#565959] hover:bg-slate-100"
+                                                )}
+                                                title="Toggle Preview"
+                                            >
+                                                {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                            <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#007185] hover:underline">Edit</button>
+                                            <span className="text-[#ddd]">|</span>
+                                            <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                        </div>
+                                    </div>
+
+                                    {/* Inline Preview Area */}
+                                    {previewId === s.id && (
+                                        <div className="bg-[#f8f9fa] border-t border-b border-[#eee] p-6 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-white border border-[#ddd] rounded-[8px] overflow-hidden shadow-xl max-w-5xl mx-auto">
+                                                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 py-2 flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-[#565959] uppercase tracking-widest flex items-center gap-2">
+                                                        <Monitor size={12} /> Live Render Simulation
+                                                    </span>
+                                                    <button onClick={() => setPreviewId(null)} className="text-[#565959] hover:text-[#c40000]"><X size={14} /></button>
+                                                </div>
+                                                <div className="transform scale-[0.95] origin-top">
+                                                    {renderPreview(s, products, categories, openFaq, setOpenFaq)}
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
-
-                                    <div className="col-span-1 flex items-center gap-1.5">
-                                        <div className="cursor-grab active:cursor-grabbing text-[#ddd] group-hover:text-[#aaa]">
-                                            <GripVertical size={14} />
-                                        </div>
-                                        <div className="flex flex-col -space-y-1">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
-                                                disabled={idx === 0}
-                                                className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
-                                            >
-                                                <ChevronUp size={16} strokeWidth={3} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
-                                                disabled={idx === sections.length - 1}
-                                                className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
-                                            >
-                                                <ChevronDown size={16} strokeWidth={3} />
-                                            </button>
-                                        </div>
-                                        <span className="text-[13px] font-black text-[#111] min-w-[14px] text-center">{idx + 1}</span>
-                                    </div>
-
-                                    <div className="col-span-1">
-                                        <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
-                                            {meta?.icon || '📄'}
-                                        </div>
-                                    </div>
-
-                                    <div className="col-span-6">
-                                        <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
-                                        <p className="text-[12px] text-[#565959]">{meta?.label} • {meta?.desc}</p>
-                                    </div>
-
-                                    <div className="col-span-2">
-                                        <button onClick={() => toggleVisibility(s)}
-                                            className={cn(
-                                                "text-[11px] font-bold uppercase px-2.5 py-1 rounded-full border",
-                                                s.is_visible
-                                                    ? "text-green-700 bg-green-50 border-green-200"
-                                                    : "text-[#565959] bg-[#eee] border-[#ddd]"
-                                            )}>
-                                            {s.is_visible ? 'Live' : 'Hidden'}
-                                        </button>
-                                    </div>
-
-                                    <div className="col-span-2 flex items-center justify-end gap-2">
-                                        <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#007185] hover:underline">Edit</button>
-                                        <span className="text-[#ddd]">|</span>
-                                        <button onClick={() => deleteSection(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
-                                    </div>
                                 </div>
                             );
                         })
                     )}
                 </div>
+            </div>
+
+            {/* ── FOOTER ACTIONS ── */}
+            <div className="mt-8 flex justify-end pb-12 pr-6">
+                <AmazonBtn 
+                    className="w-[280px] h-[48px] !text-[16px] !font-black !rounded-[4px] shadow-md border-[#888c8e]"
+                    onClick={handleSync}
+                >
+                    <CheckCircle size={20} /> SAVE ALL CHANGES
+                </AmazonBtn>
             </div>
 
             {showAddModal && (
@@ -339,8 +409,203 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                     categories={categories}
                 />
             )}
+
+            {deletingId && (
+                <div className="fixed inset-0 bg-[#000000a0] z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200 text-left">
+                    <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-[380px] overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-[#fcfcfc] px-6 py-4 border-b border-[#eee] flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+                                <Trash2 size={18} />
+                            </div>
+                            <h3 className="font-bold text-[#111] text-[16px]">Permanently Delete?</h3>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-[13px] text-[#565959] leading-relaxed">
+                                Are you sure you want to remove <span className="font-bold text-[#111]">"{sections.find(s => s.id === deletingId)?.name}"</span>?
+                                <br /><br />
+                                This will erase all configured content for this section. This action <span className="text-[#c40000] font-bold">cannot be undone</span>.
+                            </p>
+                        </div>
+                        <div className="bg-[#f7f8fa] px-6 py-4 flex justify-end gap-2 border-t border-[#eee]">
+                            <button
+                                onClick={() => setDeletingId(null)}
+                                className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border border-[#adb1b8] bg-white hover:bg-slate-50 text-[#111] transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => deleteSection(deletingId)}
+                                disabled={loading === deletingId}
+                                className="h-[31px] px-4 rounded-[3px] text-[13px] font-bold bg-[#c40000] text-white hover:bg-[#a00000] transition-all flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {loading === deletingId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                Delete Section
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
+}
+
+// ── PREVIEW RENDERER (Ported from LivePreviewTab) ───────────────────────────
+function renderPreview(section: WebsiteSection, products: any[], categories: any[], openFaq: number | null, setOpenFaq: any) {
+    const { section_type, content } = section;
+
+    switch (section_type) {
+        case 'hero':
+            const slides = content.slides || [];
+            return (
+                <div className="relative aspect-[21/9] bg-[#0F172A] overflow-hidden">
+                    {slides.length > 0 ? (
+                        <>
+                            <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
+                            <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
+                                <p className="text-[#f0c14b] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <h3 className="text-4xl md:text-5xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
+                                <p className="text-slate-300 mt-4 max-w-lg text-sm leading-relaxed">{slides[0].description}</p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3">
+                            <ImageIcon size={48} strokeWidth={1} />
+                            <p className="text-sm font-bold uppercase tracking-widest">No Slides Configured</p>
+                        </div>
+                    )}
+                </div>
+            );
+
+        case 'products':
+            const gridProds = products.filter(p => (content.product_ids || []).includes(p.id));
+            return (
+                <div className="p-8 space-y-6">
+                    <div className="flex flex-col gap-1">
+                        <h4 className="text-xl font-bold text-[#111]">{content.title}</h4>
+                        {content.subtitle && <p className="text-slate-500 text-xs">{content.subtitle}</p>}
+                    </div>
+                    {gridProds.length > 0 ? (
+                        <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${content.per_row || 4}, minmax(0, 1fr))` }}>
+                            {gridProds.map(p => (
+                                <div key={p.id} className="bg-white border border-[#eee] rounded-lg overflow-hidden group">
+                                    <div className="aspect-square bg-[#f8f9fa] flex items-center justify-center">
+                                        <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="p-3">
+                                        <p className="text-[12px] font-bold text-[#111] line-clamp-1">{p.name || p.product_name}</p>
+                                        <p className="text-[#c45500] font-black mt-1 text-sm">Rs. {Number(p.selling_price || p.price).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 bg-slate-50 rounded-lg text-center text-slate-400">
+                            <Package size={24} className="mx-auto mb-2 opacity-30" />
+                            <p className="text-[12px] font-bold uppercase tracking-widest">No Products Selected</p>
+                        </div>
+                    )}
+                </div>
+            );
+
+        case 'categories':
+            const catItems = content.items || [];
+            return (
+                <div className="p-8 space-y-8">
+                    <h4 className="text-xl font-bold text-[#111] text-center">{content.title}</h4>
+                    <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
+                        {catItems.map((cat: any, i: number) => (
+                            <div key={i} className="flex flex-col items-center gap-2 group cursor-pointer">
+                                <div className="w-16 h-16 bg-[#f0f2f2] rounded-full border border-[#ddd] overflow-hidden shadow-sm group-hover:border-[#c45500] transition-all">
+                                    <img src={getImageUrl(cat.image)} className="w-full h-full object-cover" />
+                                </div>
+                                <span className="text-[11px] font-bold text-[#111] uppercase tracking-tight text-center">{cat.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        case 'about':
+            return (
+                <div className="grid md:grid-cols-2 gap-8 p-8 items-center">
+                    <div className="space-y-4">
+                        <h3 className="text-3xl font-black text-[#111] tracking-tighter leading-tight">{content.title}</h3>
+                        <p className="text-[#565959] leading-relaxed text-sm whitespace-pre-wrap">{content.body}</p>
+                    </div>
+                    <div className="relative aspect-square rounded-2xl overflow-hidden shadow-xl border border-[#eee]">
+                        <img src={getImageUrl(content.image)} className="w-full h-full object-cover" />
+                    </div>
+                </div>
+            );
+
+        case 'faq':
+            const items = content.items || [];
+            return (
+                <div className="p-8 bg-[#f7f8fa] space-y-6">
+                    <h4 className="text-xl font-black text-[#111] text-center tracking-tight">{content.title}</h4>
+                    <div className="max-w-2xl mx-auto space-y-2">
+                        {items.map((item: any, i: number) => (
+                            <div key={i} className="bg-white border border-[#ddd] rounded-lg overflow-hidden shadow-sm">
+                                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-left group">
+                                    <span className="text-sm font-bold text-[#111] group-hover:text-[#c45500]">{item.q}</span>
+                                    <ChevronDown size={14} className={cn("text-[#888] transition-transform", openFaq === i && "rotate-180")} />
+                                </button>
+                                {openFaq === i && (
+                                    <div className="px-4 pb-4 pt-1 text-xs text-[#565959] border-t border-[#f0f2f2] leading-relaxed">
+                                        {item.a}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        case 'promotion':
+            return (
+                <div className="flex bg-white border border-[#ddd] rounded-xl overflow-hidden h-[300px]">
+                    <div className="flex-1 p-8 flex flex-col justify-center space-y-4">
+                        <div className="flex items-center gap-2">
+                            <div className="h-[1px] w-4 bg-[#119AB8]" />
+                            <span className="text-[8px] font-bold text-[#119AB8] uppercase tracking-[0.2em]">Elite Collection</span>
+                        </div>
+                        <h3 className="text-2xl font-bold text-[#111] leading-tight">{content.title}</h3>
+                        <p className="text-[#565959] text-[10px] leading-relaxed max-w-xs">{content.subtitle}</p>
+                        <div className="pt-2">
+                            <div className="inline-block px-6 py-2 bg-[#119AB8] text-white rounded-full text-[10px] font-bold uppercase tracking-widest">
+                                {content.cta_text || "Shop Now"}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex-1 relative">
+                        <img src={getImageUrl(content.image)} className="absolute inset-0 w-full h-full object-cover" />
+                    </div>
+                </div>
+            );
+
+        case 'marquee':
+            return (
+                <div className="bg-[#111] py-3 overflow-hidden">
+                    <div className="whitespace-nowrap flex items-center animate-marquee">
+                        {[...Array(4)].map((_, i) => (
+                            <span key={i} className="text-white font-black text-[10px] uppercase tracking-[0.3em] flex items-center shrink-0">
+                                {content.text}
+                                <Star size={10} className="mx-8 text-[#f0c14b] fill-[#f0c14b]" />
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        default:
+            return (
+                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#ddd] m-4 rounded-xl">
+                    <Layers size={24} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Quick Preview: {section_type}</p>
+                </div>
+            );
+    }
 }
 
 function SectionEditor({ section, onSave, onClose, products = [], categories = [] }: { section: WebsiteSection; onSave: (d: any) => Promise<void>; onClose: () => void; products?: any[]; categories?: any[] }) {
@@ -465,6 +730,9 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             <option value="list">List View</option>
                                             <option value="minimal">Minimal Grid</option>
                                             <option value="split">Banner & Grid</option>
+                                            <option value="luxury">Luxury Gallery</option>
+                                            <option value="masonry">Dynamic Mosaic</option>
+                                            <option value="highlight">Featured Spotlight</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
@@ -544,7 +812,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                             </div>
                         )}
 
-                        {['search_hero', 'spotlight', 'parallax', 'newsletter', 'promotion'].includes(section.section_type) && (
+                        {['search_hero', 'spotlight', 'parallax', 'newsletter'].includes(section.section_type) && (
                             <div className="space-y-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Main Title</label>
@@ -622,6 +890,85 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {section.section_type === 'promotion' && (
+                            <div className="space-y-8">
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Promotion Heading</label>
+                                        <input value={form.content.title} onChange={e => updateContent('title', e.target.value)} className={inputCls} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Discount Percentage (%)</label>
+                                        <input type="number" value={form.content.discount_percent} onChange={e => updateContent('discount_percent', parseInt(e.target.value))} className={inputCls} />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
+                                    </div>
+                                    <div className="md:col-span-2 space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Subheading / Offer Text</label>
+                                        <input value={form.content.subtitle} onChange={e => updateContent('subtitle', e.target.value)} className={inputCls} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Button Label</label>
+                                        <input value={form.content.cta_text} onChange={e => updateContent('cta_text', e.target.value)} className={inputCls} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Button Link</label>
+                                        <input value={form.content.cta_link} onChange={e => updateContent('cta_link', e.target.value)} className={inputCls} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t border-[#eee]">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex-1">
+                                            <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
+                                            <p className="text-[11px] text-[#565959]">Link specific products to this promotion.</p>
+                                        </div>
+                                        <div className="w-48 relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search products..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className={inputCls + " pr-8"}
+                                            />
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[#888]">
+                                                <Settings size={12} className="animate-spin-slow" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
+                                        {products.filter(p => (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase())).map(p => {
+                                            const isSelected = (form.content.product_ids || []).includes(p.id);
+                                            return (
+                                                <button key={p.id}
+                                                    onClick={() => {
+                                                        const current = form.content.product_ids || [];
+                                                        const next = isSelected ? current.filter((id: any) => id !== p.id) : [...current, p.id];
+                                                        updateContent('product_ids', next);
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center gap-3 p-2 border rounded-[4px] text-left transition-all",
+                                                        isSelected ? "border-[#e77600] bg-[#fff9e6]" : "border-[#ddd] hover:border-[#888]"
+                                                    )}>
+                                                    <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] overflow-hidden flex-shrink-0">
+                                                        <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[12px] font-bold text-[#111] truncate">{p.name || p.product_name}</p>
+                                                        <p className="text-[10px] text-[#565959]">
+                                                            Rs. {p.selling_price || p.price || p.sale_price}
+                                                        </p>
+                                                    </div>
+                                                    {isSelected && <div className="ml-auto text-[#e77600]"><CheckCircle size={14} /></div>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -750,21 +1097,39 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     }} className="text-red-600 hover:bg-red-50 p-1 rounded-[3px]"><Trash2 size={14} /></button>
                                                 </div>
                                                 <div className="grid md:grid-cols-2 gap-4">
-                                                    <input placeholder="Title / Label" value={item.title || item.name || item.q || ''} onChange={e => {
-                                                        const key = form.content.items ? 'items' : (form.content.reviews ? 'reviews' : 'plans');
-                                                        const list = [...form.content[key]];
-                                                        if (item.title !== undefined) list[i].title = e.target.value;
-                                                        else if (item.name !== undefined) list[i].name = e.target.value;
-                                                        else if (item.q !== undefined) list[i].q = e.target.value;
-                                                        updateContent(key, list);
+                                                    <input placeholder="Customer Name" value={item.name || ''} onChange={e => {
+                                                        const list = [...form.content.reviews];
+                                                        list[i].name = e.target.value;
+                                                        updateContent('reviews', list);
                                                     }} className={inputCls} />
-                                                    <textarea placeholder="Description / Content" rows={2} value={item.text || item.content || item.a || ''} onChange={e => {
-                                                        const key = form.content.items ? 'items' : (form.content.reviews ? 'reviews' : 'plans');
-                                                        const list = [...form.content[key]];
-                                                        if (item.text !== undefined) list[i].text = e.target.value;
-                                                        else if (item.content !== undefined) list[i].content = e.target.value;
-                                                        else if (item.a !== undefined) list[i].a = e.target.value;
-                                                        updateContent(key, list);
+                                                    
+                                                    <input placeholder="Role / Tagline (e.g. Verified Customer)" value={item.role || ''} onChange={e => {
+                                                        const list = [...form.content.reviews];
+                                                        list[i].role = e.target.value;
+                                                        updateContent('reviews', list);
+                                                    }} className={inputCls} />
+
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[11px] font-bold text-[#111] uppercase tracking-tight">Rating</label>
+                                                        <select value={item.rating || 5} onChange={e => {
+                                                            const list = [...form.content.reviews];
+                                                            list[i].rating = parseInt(e.target.value);
+                                                            updateContent('reviews', list);
+                                                        }} className={inputCls}>
+                                                            {[5,4,3,2,1].map(num => <option key={num} value={num}>{num} Stars</option>)}
+                                                        </select>
+                                                    </div>
+
+                                                    <MediaField label="Customer Photo" value={item.image} onChange={(url: string) => {
+                                                        const list = [...form.content.reviews];
+                                                        list[i].image = url;
+                                                        updateContent('reviews', list);
+                                                    }} />
+
+                                                    <textarea placeholder="Testimonial Text" rows={3} value={item.text || ''} onChange={e => {
+                                                        const list = [...form.content.reviews];
+                                                        list[i].text = e.target.value;
+                                                        updateContent('reviews', list);
                                                     }} className="md:col-span-2 w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
                                                 </div>
                                             </div>

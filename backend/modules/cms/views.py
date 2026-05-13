@@ -47,6 +47,26 @@ class CmsConfigViewSet(viewsets.ViewSet):
         serializer = SiteSettingsSerializer(settings)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def submit_review(self, request):
+        name = request.data.get('name', 'Anonymous')
+        rating = request.data.get('rating', 5)
+        text = request.data.get('text', '')
+        
+        # Trigger System Notification via Activity Log
+        from modules.users.models import UserActivityLog
+        UserActivityLog.objects.create(
+            user=None, # Unauthenticated Guest Action
+            action='other',
+            description=f"New Customer Review: {name} gave {rating} Stars. \"{text[:60]}...\"",
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        return Response({
+            "status": "success", 
+            "message": "Review submitted and admin notified."
+        })
 
 class WebsiteSectionViewSet(viewsets.ModelViewSet):
     queryset = WebsiteSection.objects.all().order_by('order')

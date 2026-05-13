@@ -64,7 +64,8 @@ class Product(BaseModel):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     cost_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
-    total_quantity = models.IntegerField(null=True, blank=True)
+    total_quantity = models.IntegerField(null=True, blank=True) # Physical Stock
+    reserved_quantity = models.IntegerField(default=0)          # Ordered but not delivered
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)
@@ -75,6 +76,11 @@ class Product(BaseModel):
     weight = models.CharField(max_length=50, null=True, blank=True)
     size = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, default='ACTIVE')
+
+    @property
+    def available_quantity(self):
+        """Net stock visible to customers"""
+        return max(0, (self.total_quantity or 0) - self.reserved_quantity)
 
     class Meta:
         db_table = 'products'

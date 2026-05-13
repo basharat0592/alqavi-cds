@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -14,16 +14,17 @@
     --popover-foreground: 15, 23, 42;
     --primary: 15, 23, 42;
     --primary-foreground: 255, 255, 255;
-    --secondary: 248, 250, 252;
+    --secondary: 19, 176, 209;
     --secondary-foreground: 15, 23, 42;
     --muted: 241, 245, 249;
     --muted-foreground: 100, 116, 139;
-    --accent: 212, 175, 55;
-    /* Gold Accent */
+    --accent: 19, 176, 209;
+    /* Cyan Blue Accent */
     --accent-foreground: 255, 255, 255;
     --border: 226, 232, 240;
     --input: 226, 232, 240;
-    --ring: 212, 175, 55;
+    --ring: 19, 176, 209;
+
     --radius: 1.5rem;
 
     --gold-primary: #D4AF37;
@@ -52,14 +53,14 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Outfit', sans-serif;
   }
 
   h1,
   h2,
   h3,
   .font-display {
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Outfit', sans-serif;
   }
 }
 

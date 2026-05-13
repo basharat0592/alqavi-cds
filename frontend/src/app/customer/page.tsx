@@ -8,7 +8,8 @@ import {
     ArrowRight, ChevronRight, ChevronLeft, Star, ShoppingCart,
     Search, MapPin, Phone, MessageCircle, UtensilsCrossed,
     Flame, Soup, Pizza, Coffee, Menu, X, Plus, Minus, Package,
-    Truck, ShieldCheck, Clock, CreditCard, Check, Quote, AlertTriangle
+    Truck, ShieldCheck, Clock, CreditCard, Check, Quote, AlertTriangle,
+    Sparkles, Image as ImageIcon
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -18,6 +19,8 @@ import { productService, categoryService } from "@/lib/api";
 import cmsService from "@/services/cms.service";
 import ProductCard from "@/components/ui/ProductCard";
 import Hero from "@/components/ui/Hero";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from 'react-hot-toast';
 
 export default function Home() {
     const [sections, setSections] = useState<any[]>([]);
@@ -30,6 +33,33 @@ export default function Home() {
     const { addToCart } = useCart();
     const [openFaq, setOpenFaq] = useState<number | null>(null);
     const [maxItems, setMaxItems] = useState(12);
+    const [isReviewOpen, setIsReviewOpen] = useState(false);
+    const [rating, setRating] = useState(5);
+    const [reviewName, setReviewName] = useState("");
+    const [reviewText, setReviewText] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleReviewSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            await cmsService.submitReview({
+                name: reviewName,
+                rating: rating,
+                text: reviewText
+            });
+            toast.success("Review submitted! Admin has been notified.");
+            setIsReviewOpen(false);
+            setReviewName("");
+            setReviewText("");
+            setRating(5);
+        } catch (error) {
+            console.error("Submission failed", error);
+            toast.error("Failed to submit review. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     useEffect(() => {
         const updateMax = () => {
@@ -51,7 +81,7 @@ export default function Home() {
                     console.error("CMS Load Failed", err);
                     return { sections: [], settings: null };
                 });
-                
+
                 setSections(cmsData.sections || []);
                 setSettings(cmsData.settings || null);
 
@@ -73,6 +103,16 @@ export default function Home() {
         };
 
         fetchData();
+        const interval = setInterval(fetchData, 1000); // 1-second sync
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const handleSync = (e: StorageEvent) => {
+            if (e.key === 'cms-sync-reload') window.location.reload();
+        };
+        window.addEventListener('storage', handleSync);
+        return () => window.removeEventListener('storage', handleSync);
     }, []);
 
     const filtered = (() => {
@@ -118,163 +158,296 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-500">
             <Navbar settings={settings} />
-            
+
             <main className="pb-20">
                 {activeSections.map((section) => {
                     const content = section.content || {};
-                    
+
                     switch (section.section_type) {
                         case 'hero':
                             return <Hero key={section.id} slides={content.slides} />;
-                        
-                        case 'categories':
+
+                        case 'floating_canvas':
+                            const canvasProducts = allProducts.filter(p => {
+                                const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
+                                return searchIds.some((sid: string | number) => String(sid) === String(p.id));
+                            });
                             return (
-                                <section key={section.id} className="sticky top-[64px] z-40 bg-white/80 backdrop-blur-md border-b border-slate-100">
-                                    <div className="w-full px-4 md:px-8 lg:px-12 py-5">
-                                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-                                            <button
-                                                onClick={() => setActiveCategory('All')}
-                                                className={cn(
-                                                    "px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.15em] transition-all shrink-0 border",
-                                                    activeCategory === 'All'
-                                                        ? "bg-[#111] border-[#111] text-white shadow-lg shadow-black/10"
-                                                        : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
-                                                )}
-                                            >
-                                                All Items
-                                            </button>
-                                            {((content.items && content.items.length > 0) ? content.items : categories).map((cat: any) => (
-                                                <button
-                                                    key={cat.id}
-                                                    onClick={() => setActiveCategory(cat.name)}
-                                                    className={cn(
-                                                        "px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.15em] transition-all shrink-0 border",
-                                                        activeCategory === cat.name
-                                                            ? "bg-[#111] border-[#111] text-white shadow-lg shadow-black/10"
-                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
-                                                    )}
-                                                >
-                                                    {cat.name}
-                                                </button>
-                                            ))}
+                                <section key={section.id} className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden bg-white mt-10 md:mt-20">
+                                    <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
+                                        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#13B0D1]/20 blur-[120px] rounded-full animate-pulse" />
+                                        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#F59E0B]/10 blur-[120px] rounded-full animate-pulse" />
+                                    </div>
+
+                                    <div className="relative z-10 h-full flex flex-col items-center justify-center pointer-events-none px-6 text-center max-w-7xl mx-auto">
+                                        <div className="space-y-6">
+                                            <span className="px-4 py-2 bg-[#13B0D1]/10 text-[#13B0D1] rounded-full text-[10px] font-black uppercase tracking-[0.3em] border border-[#13B0D1]/20">
+                                                Interactive Discovery
+                                            </span>
+                                            <h2 className="text-3xl md:text-5xl font-extrabold text-[#111] tracking-tight leading-none uppercase">
+                                                {content.title || "Floating Collection"}
+                                            </h2>
+                                            <p className="text-slate-500 text-sm md:text-lg font-medium max-w-xl mx-auto">
+                                                {content.subtitle || "Drag and discover our premium products in this interactive spatial gallery."}
+                                            </p>
                                         </div>
+                                    </div>
+
+                                    <div className="absolute inset-0 z-20 overflow-hidden">
+                                        {canvasProducts.map((p, idx) => {
+                                            const randomX = Math.random() * 80 + 10;
+                                            const randomY = Math.random() * 80 + 10;
+                                            const randomRotate = Math.random() * 20 - 10;
+
+                                            return (
+                                                <motion.div
+                                                    key={p.id}
+                                                    drag
+                                                    dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                                                    dragElastic={0.6}
+                                                    whileHover={{ scale: 1.1, rotate: 0, zIndex: 50 }}
+                                                    whileTap={{ scale: 0.9, cursor: "grabbing" }}
+                                                    initial={{
+                                                        x: `${randomX}vw`,
+                                                        y: `${randomY}vh`,
+                                                        rotate: randomRotate,
+                                                        opacity: 0,
+                                                        scale: 0.5
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        scale: 1,
+                                                        y: [`${randomY}vh`, `${randomY + (Math.random() * 2 - 1)}vh`, `${randomY}vh`]
+                                                    }}
+                                                    transition={{
+                                                        opacity: { duration: 1, delay: idx * 0.1 },
+                                                        scale: { duration: 1, delay: idx * 0.1 },
+                                                        y: {
+                                                            duration: 4 + Math.random() * 2,
+                                                            repeat: Infinity,
+                                                            ease: "easeInOut"
+                                                        }
+                                                    }}
+                                                    className="absolute w-24 md:w-48 group cursor-grab active:cursor-grabbing pointer-events-auto"
+                                                    style={{
+                                                        left: 0,
+                                                        top: 0,
+                                                        transform: `translate(-50%, -50%)`
+                                                    }}
+                                                >
+                                                    <div className="relative p-3 md:p-6 bg-white/10 backdrop-blur-md rounded-[32px] md:rounded-[40px] border border-white/20 shadow-2xl transition-all duration-500 group-hover:bg-white/40 group-hover:border-white/40">
+                                                        <img
+                                                            src={getImageUrl(p.image || p.catalog_image || p.image_url)}
+                                                            className="w-full h-full object-contain drop-shadow-[0_15px_40px_rgba(0,0,0,0.15)] group-hover:drop-shadow-[0_20px_50px_rgba(19,176,209,0.3)] transition-all duration-500"
+                                                            alt={p.name}
+                                                        />
+
+                                                        {/* Quick Add Button - Floating Overlay */}
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.1 }}
+                                                            whileTap={{ scale: 0.9 }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleAdd(p);
+                                                                toast.success('Added to bag!');
+                                                            }}
+                                                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 md:w-12 md:h-12 bg-[#111] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl pointer-events-auto"
+                                                        >
+                                                            <Plus size={16} className="md:w-5 md:h-5" />
+                                                        </motion.button>
+                                                    </div>
+                                                </motion.div>
+                                            );
+                                        })}
                                     </div>
                                 </section>
                             );
 
+
                         case 'products':
                             return (
-                                <div key={section.id} className="w-full px-4 md:px-8 lg:px-12 py-8 bg-[#FBFBFB]">
+                                <div key={section.id} className="w-full px-4 md:px-12 xl:px-20 pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB]">
                                     <div className="animate-in fade-in duration-700">
-                                        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                                            <div className="space-y-1">
-                                                <h2 className="text-4xl font-black text-[#111] tracking-tighter leading-none">
-                                                    {content.title || (activeCategory === 'All' ? "Full Collection" : activeCategory)}
-                                                </h2>
-                                                {content.subtitle && <p className="text-sm text-slate-500 font-medium">{content.subtitle}</p>}
-                                                <p className="text-[13px] text-slate-400 font-bold">
-                                                    Showing <span className="text-[#111]">{(content.product_ids && content.product_ids.length > 0) ? content.product_ids.length : filtered.length}</span> premium products
-                                                </p>
-                                            </div>
-                                            
-                                            <div className="flex flex-col items-end gap-3">
-                                                <Link
-                                                    href="/customer/shop"
-                                                    className="group flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#F59E0B] hover:text-[#111] transition-all"
-                                                >
-                                                    View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                                </Link>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const isFullCollection = !content.title || content.title === 'Full Collection';
+
+                                            if (isFullCollection) {
+                                                return (
+                                                    <div className="mb-8 md:mb-12 space-y-2 md:space-y-3">
+                                                        {/* Top Row: Title & Filters */}
+                                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                            <div className="space-y-1 md:space-y-2 text-center md:text-left">
+                                                                <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] tracking-tight leading-tight uppercase">
+                                                                    {content.title || (activeCategory === 'All' ? "Full Collection" : activeCategory)}
+                                                                </h2>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                                                                <button
+                                                                    onClick={() => setActiveCategory('All')}
+                                                                    className={cn(
+                                                                        "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                                                                        activeCategory === 'All'
+                                                                            ? "bg-[#111] border-[#111] text-white shadow-lg"
+                                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                                    )}
+                                                                >
+                                                                    All Items
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setActiveCategory('Skin Care')}
+                                                                    className={cn(
+                                                                        "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                                                                        activeCategory === 'Skin Care'
+                                                                            ? "bg-[#111] border-[#111] text-white shadow-lg"
+                                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                                    )}
+                                                                >
+                                                                    Skin Care
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setActiveCategory('Trending')}
+                                                                    className={cn(
+                                                                        "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                                                                        activeCategory === 'Trending'
+                                                                            ? "bg-[#111] border-[#111] text-white shadow-lg"
+                                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                                    )}
+                                                                >
+                                                                    Trending
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Bottom Row: Filters & Stats */}
+                                                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                                                            <p className="text-[11px] md:text-[13px] text-slate-400 font-bold uppercase tracking-widest">
+                                                                Showing <span className="text-[#111]">{filtered.length}</span> of premium products
+                                                            </p>
+
+                                                            {/* View All removed from here as per request */}
+                                                            <div className="hidden md:block w-24" /> {/* Spacer to keep layout balanced */}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Default Header for other product sections
+                                            return (
+                                                <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
+                                                    <div className="space-y-1 md:space-y-2 text-center md:text-left">
+                                                        <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] tracking-tight leading-tight uppercase">
+                                                            {content.title}
+                                                        </h2>
+                                                        {content.subtitle && <p className="text-[12px] md:text-sm text-slate-500 font-medium">{content.subtitle}</p>}
+                                                        <p className="text-[11px] md:text-[13px] text-slate-400 font-bold uppercase tracking-widest">
+                                                            Showing <span className="text-[#111]">{(() => {
+                                                                const baseList = (content.product_ids && content.product_ids.length > 0)
+                                                                    ? allProducts.filter(p => {
+                                                                        const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
+                                                                        return searchIds.some((sid: string | number) => String(sid) === String(p.id));
+                                                                    })
+                                                                    : allProducts;
+                                                                return baseList.length;
+                                                            })()}</span> of premium products
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex justify-center md:justify-end">
+                                                        <Link
+                                                            href="/customer/shop"
+                                                            className="group flex items-center gap-2 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#13B0D1] hover:text-[#111] transition-all"
+                                                        >
+                                                            View Full Collection <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
 
                                         {error ? (
-                                            <div className="py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-rose-100">
+                                            <div className="py-20 md:py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-rose-100">
                                                 <AlertTriangle size={48} className="mx-auto text-rose-200 mb-4" />
                                                 <h3 className="text-xl font-bold text-rose-500">Connection Error</h3>
                                                 <p className="text-sm text-slate-500 mt-2">Could not connect to the product database.</p>
                                             </div>
                                         ) : (content.product_ids && content.product_ids.length > 0) || filtered.length > 0 ? (
                                             <div className={cn(
-                                                content.layout_type === 'carousel' 
-                                                    ? "flex overflow-x-auto pb-4 gap-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0" 
-                                                    : content.layout_type === 'list'
-                                                        ? "flex flex-col gap-4"
-                                                        : content.layout_type === 'billboard'
-                                                            ? "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6"
-                                                            : content.layout_type === 'split'
-                                                                ? "flex flex-col lg:flex-row gap-8"
-                                                                : "grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6",
-                                                content.layout_type === 'grid' && content.per_row === 2 && "lg:grid-cols-2",
-                                                content.layout_type === 'grid' && content.per_row === 3 && "lg:grid-cols-3",
-                                                content.layout_type === 'grid' && content.per_row === 4 && "lg:grid-cols-4",
-                                                content.layout_type === 'grid' && content.per_row === 5 && "lg:grid-cols-5",
-                                                content.layout_type === 'grid' && content.per_row === 6 && "lg:grid-cols-6",
-                                                content.layout_type === 'grid' && !content.per_row && "lg:grid-cols-4 xl:grid-cols-5",
-                                                content.layout_type === 'minimal' && "grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+                                                content.layout_type === 'split'
+                                                    ? "lg:w-2/3 xl:w-3/4 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4"
+                                                    : (content.layout_type === 'carousel'
+                                                        ? "flex overflow-x-auto pb-4 gap-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0"
+                                                        : content.layout_type === 'list'
+                                                            ? "flex flex-col gap-4"
+                                                            : content.layout_type === 'billboard'
+                                                                ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
+                                                                : content.layout_type === 'luxury'
+                                                                    ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
+                                                                    : content.layout_type === 'masonry'
+                                                                        ? "columns-2 md:columns-4 lg:columns-5 gap-4 space-y-4"
+                                                                        : content.layout_type === 'highlight'
+                                                                            ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
+                                                                            : "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6")
                                             )}>
-                                                {content.layout_type === 'split' && (
-                                                    <div className="lg:w-1/3 xl:w-1/4 h-[400px] lg:h-auto relative rounded-[40px] overflow-hidden group shadow-2xl">
-                                                        <img src={getImageUrl(content.banner_image || content.image) || '/images/category-placeholder.jpg'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="Banner" />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-10 flex flex-col justify-end">
-                                                            <h3 className="text-white text-3xl font-black uppercase tracking-tighter mb-2">{content.title}</h3>
-                                                            <p className="text-white/80 text-sm font-medium leading-relaxed">{content.subtitle || "Explore our premium curated collection."}</p>
+                                                {(() => {
+                                                    const baseList = (content.product_ids && content.product_ids.length > 0)
+                                                        ? allProducts.filter(p => {
+                                                            const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
+                                                            return searchIds.some((sid: string | number) => String(sid) === String(p.id));
+                                                        })
+                                                        : allProducts;
+
+                                                    const categoryFiltered = activeCategory === 'All'
+                                                        ? baseList
+                                                        : baseList.filter(p => {
+                                                            const target = activeCategory.toLowerCase().trim();
+                                                            const name1 = (p.category_name || '').toLowerCase().trim();
+                                                            const name2 = (p.category?.name || '').toLowerCase().trim();
+                                                            return name1 === target || name2 === target;
+                                                        });
+
+                                                    return categoryFiltered.slice(0, content.layout_type === 'billboard' ? 5 : maxItems);
+                                                })().map((p: any, i: number) => {
+                                                    const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
+                                                    const isBillboardFirst = content.layout_type === 'billboard' && i === 0;
+
+                                                    return (
+                                                        <div key={p.id} className={cn(
+                                                            content.layout_type === 'carousel' && "w-[200px] md:w-[240px] flex-shrink-0",
+                                                            content.layout_type === 'list' && "w-full",
+                                                            isBillboardFirst && "col-span-2 md:col-span-2 lg:col-span-2 xl:col-span-2 md:row-span-2 h-full",
+                                                            content.layout_type === 'highlight' && i === 0 && "col-span-2 md:col-span-2 h-full",
+                                                            content.layout_type === 'masonry' && "break-inside-avoid mb-4"
+                                                        )}>
+                                                            <ProductCard
+                                                                id={String(p.id)}
+                                                                title={displayTitle}
+                                                                description={p.description}
+                                                                image={getImageUrl(p.images?.[0]?.image || p.image || p.catalog_image || p.image_url) || undefined}
+                                                                price={parseFloat(p.selling_price || p.price || 0)}
+                                                                category={p.category_name || 'Cosmetics'}
+                                                                stock={p.total_quantity || p.quantity_in_stock}
+                                                                batch={p.batch || p.batch_number}
+                                                                badge={p.badge || p.status}
+                                                                weight={p.weight || p.volume_weight}
+                                                                size={p.size || p.type}
+                                                                onAddToCart={(qty) => handleAdd(p, qty)}
+                                                                layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst || (content.layout_type === 'highlight' && i === 0) ? 'vertical' : 'vertical')}
+                                                                variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : 'default')}
+                                                            />
                                                         </div>
-                                                    </div>
-                                                )}
-                                                
-                                                <div className={cn(
-                                                    content.layout_type === 'split' ? "lg:w-2/3 xl:w-3/4 grid grid-cols-2 md:grid-cols-3 gap-4" : "contents"
-                                                )}>
-                                                    {(() => {
-                                                        const baseList = (content.product_ids && content.product_ids.length > 0)
-                                                            ? allProducts.filter(p => content.product_ids.includes(p.id))
-                                                            : allProducts;
-                                                        
-                                                        const categoryFiltered = activeCategory === 'All'
-                                                            ? baseList
-                                                            : baseList.filter(p => p.category_name === activeCategory);
-                                                            
-                                                        return categoryFiltered.slice(0, content.layout_type === 'billboard' ? 5 : maxItems);
-                                                    })().map((p: any, i: number) => {
-                                                        const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
-                                                        const isBillboardFirst = content.layout_type === 'billboard' && i === 0;
-                                                        
-                                                        return (
-                                                            <div key={p.id} className={cn(
-                                                                content.layout_type === 'carousel' && "w-[240px] flex-shrink-0",
-                                                                content.layout_type === 'list' && "w-full",
-                                                                isBillboardFirst && "md:col-span-2 lg:col-span-2 xl:col-span-2 md:row-span-2 h-full"
-                                                            )}>
-                                                                <ProductCard
-                                                                    id={String(p.id)}
-                                                                    title={displayTitle}
-                                                                    description={p.description}
-                                                                    image={getImageUrl(p.image || p.catalog_image || p.image_url) || undefined}
-                                                                    price={parseFloat(p.selling_price || p.price || 0)}
-                                                                    category={p.category_name || 'Cosmetics'}
-                                                                    stock={p.total_quantity || p.quantity_in_stock}
-                                                                    batch={p.batch || p.batch_number}
-                                                                    badge={p.badge || p.status}
-                                                                    weight={p.weight || p.volume_weight}
-                                                                    size={p.size || p.type}
-                                                                    onAddToCart={(qty) => handleAdd(p, qty)}
-                                                                    layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst ? 'vertical' : 'vertical')}
-                                                                    variant={content.layout_type === 'minimal' ? 'minimal' : (isBillboardFirst ? 'default' : 'default')}
-                                                                    // For billboard, the first card should be extra special
-                                                                    className={cn(
-                                                                        isBillboardFirst && "h-full scale-[1.02] shadow-2xl ring-2 ring-[#13B0D1]/20"
-                                                                    )}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
+                                                    );
+                                                })}
                                             </div>
                                         ) : (
-                                            <div className="py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
+                                            <div className="py-20 md:py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
                                                 <Package size={48} className="mx-auto text-slate-200 mb-4" />
-                                                <h3 className="text-xl font-bold text-slate-400">Inventory update in progress.</h3>
-                                                <p className="text-sm text-slate-500 mt-2">Please check back shortly for new arrivals.</p>
+                                                <h3 className="text-xl font-bold text-slate-400">
+                                                    {allProducts.length === 0 ? "No products available at the moment." : "Inventory update in progress."}
+                                                </h3>
+                                                <p className="text-sm text-slate-500 mt-2">
+                                                    {allProducts.length === 0 ? "Our team is currently stocking the catalog." : "Please check back shortly for new arrivals."}
+                                                </p>
                                             </div>
                                         )}
                                     </div>
@@ -282,13 +455,33 @@ export default function Home() {
                             );
 
                         case 'spotlight':
-                            const spotlightProduct = allProducts.find(p => p.id === content.product_id);
+                            const spotlightProduct = allProducts.find(p => String(p.id) === String(content.product_id));
                             return (
-                                <section key={section.id} className="mt-20 px-4 md:px-8 lg:px-12">
-                                    <div className="max-w-6xl mx-auto bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-xl flex flex-col md:flex-row items-center">
+                                <section key={section.id} className="mt-10 md:mt-20 px-4 md:px-8 lg:px-12">
+                                    <div className="max-w-7xl mx-auto bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-xl flex flex-col md:flex-row items-center">
                                         <div className="w-full md:w-1/2 aspect-square relative group overflow-hidden">
                                             <img src={getImageUrl(content.image || spotlightProduct?.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Spotlight" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                                            {/* Permanent Product Identity Overlay on Image */}
+                                            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-20">
+                                                <h3 className="text-white text-xl md:text-3xl font-black uppercase tracking-tighter leading-tight drop-shadow-2xl">
+                                                    {content.title || spotlightProduct?.name}
+                                                </h3>
+                                                <p className="text-white/70 text-[10px] md:text-[12px] font-bold uppercase tracking-widest mt-2 line-clamp-2 drop-shadow-md max-w-md">
+                                                    {content.description || spotlightProduct?.description}
+                                                </p>
+                                            </div>
+
+                                            {/* Floating Price Badge - Positioned to the right edge */}
+                                            <div className="absolute top-8 -right-2 z-20">
+                                                <div className="px-5 py-2 bg-[#13B0D1] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20">
+                                                    <span className="text-[14px] font-black uppercase tracking-widest">
+                                                        Rs. {parseFloat(spotlightProduct?.selling_price || spotlightProduct?.price || 0).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+
                                             {spotlightProduct?.batch && (
                                                 <div className="absolute top-4 left-4 z-20">
                                                     <div className="px-3 py-1.5 bg-[#111]/80 backdrop-blur-md rounded-xl shadow-lg flex items-center gap-2 border border-white/20">
@@ -299,53 +492,40 @@ export default function Home() {
                                                     </div>
                                                 </div>
                                             )}
-                                            {spotlightProduct && (
-                                                <div className="absolute bottom-8 left-8">
-                                                    <span className="px-3 py-1 bg-[#F59E0B] text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
-                                                        {spotlightProduct.badge || spotlightProduct.status || "Spotlight Item"}
-                                                    </span>
-                                                </div>
-                                            )}
                                         </div>
-                                        <div className="w-full md:w-1/2 p-10 lg:p-16 space-y-6">
-                                            <h2 className="text-4xl lg:text-5xl font-black text-[#111] leading-[0.9] tracking-tighter">
+                                        <div className="w-full md:w-1/2 p-6 md:p-10 lg:p-16 space-y-4 md:space-y-6 text-center md:text-left">
+                                            <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] leading-[0.9] tracking-tight uppercase">
                                                 {content.title || spotlightProduct?.name}
                                             </h2>
-                                            <p className="text-slate-500 text-lg leading-relaxed">
+                                            <p className="text-slate-500 text-sm md:text-lg leading-relaxed">
                                                 {content.description || spotlightProduct?.description}
                                             </p>
-                                            {spotlightProduct && (spotlightProduct.weight || spotlightProduct.size || spotlightProduct.type || spotlightProduct.batch) && (
-                                                <div className="flex flex-wrap gap-4 pt-2">
+                                            {spotlightProduct && (spotlightProduct.weight || spotlightProduct.size || spotlightProduct.type) && (
+                                                <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4 pt-2">
                                                     {spotlightProduct.weight && (
-                                                        <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
-                                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Weight</p>
-                                                            <p className="text-sm font-bold text-[#111]">{spotlightProduct.weight}</p>
+                                                        <div className="bg-slate-50 px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-slate-100">
+                                                            <p className="text-[9px] md:text-[10px] text-slate-400 font-black uppercase tracking-widest">Weight</p>
+                                                            <p className="text-xs md:text-sm font-bold text-[#111]">{spotlightProduct.weight}</p>
                                                         </div>
                                                     )}
                                                     {(spotlightProduct.size || spotlightProduct.type) && (
-                                                        <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
-                                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Type</p>
-                                                            <p className="text-sm font-bold text-[#111]">{spotlightProduct.size || spotlightProduct.type}</p>
-                                                        </div>
-                                                    )}
-                                                    {spotlightProduct.batch && (
-                                                        <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
-                                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Batch</p>
-                                                            <p className="text-sm font-bold text-[#111]">{spotlightProduct.batch}</p>
+                                                        <div className="bg-slate-50 px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-slate-100">
+                                                            <p className="text-[9px] md:text-[10px] text-slate-400 font-black uppercase tracking-widest">Type</p>
+                                                            <p className="text-xs md:text-sm font-bold text-[#111]">{spotlightProduct.size || spotlightProduct.type}</p>
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
-                                            <div className="pt-4 flex items-center gap-6">
+                                            <div className="pt-4 flex flex-col sm:flex-row items-center gap-4 md:gap-8">
                                                 {spotlightProduct && (
-                                                    <div>
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Retail Price</p>
-                                                        <p className="text-3xl font-black text-[#111]">Rs. {parseFloat(spotlightProduct.selling_price || spotlightProduct.price || 0).toLocaleString()}</p>
+                                                    <div className="flex-1">
+                                                        <p className="text-[9px] md:text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Retail Price</p>
+                                                        <p className="text-3xl md:text-4xl font-black text-[#111]">Rs. {parseFloat(spotlightProduct.selling_price || spotlightProduct.price || 0).toLocaleString()}</p>
                                                     </div>
                                                 )}
-                                                <button 
+                                                <button
                                                     onClick={() => spotlightProduct && handleAdd(spotlightProduct)}
-                                                    className="px-10 py-4 bg-[#111] hover:bg-[#333] text-white rounded-full font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-black/20"
+                                                    className="w-full sm:w-auto px-8 md:px-10 py-3.5 md:py-4 bg-[#111] hover:bg-[#333] text-white rounded-full font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-black/20 text-[11px] md:text-[13px]"
                                                 >
                                                     Add To Cart
                                                 </button>
@@ -357,20 +537,21 @@ export default function Home() {
 
                         case 'about':
                             return (
-                                <section key={section.id} className="mt-20 px-4 md:px-8 lg:px-12">
-                                    <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-                                        <div className="space-y-6">
-                                            <h2 className="text-4xl font-black text-[#111] leading-tight">{content.title}</h2>
-                                            <p className="text-slate-600 leading-relaxed text-lg">{content.body}</p>
+                                <section key={section.id} className="mt-16 md:mt-24 px-4 md:px-8 lg:px-12">
+                                    <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+                                        <div className="space-y-4 md:space-y-6 text-center md:text-left order-2 md:order-1">
+                                            <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] leading-tight uppercase tracking-tight">{content.title}</h2>
+                                            <p className="text-slate-600 leading-relaxed text-sm md:text-lg font-medium">{content.body}</p>
                                             {content.cta_text && (
-                                                <Link href={content.cta_link || '#'} className="inline-block px-8 py-3 bg-[#111] text-white rounded-full font-bold uppercase tracking-widest hover:bg-[#333] transition-all">
+                                                <Link href={content.cta_link || '#'} className="inline-block px-8 md:px-10 py-3 md:py-4 bg-[#111] text-white rounded-full font-black uppercase tracking-widest hover:bg-[#333] transition-all text-[11px] md:text-[13px] shadow-lg">
                                                     {content.cta_text}
                                                 </Link>
                                             )}
                                         </div>
                                         {content.image && (
-                                            <div className="relative aspect-square rounded-[32px] overflow-hidden shadow-2xl">
+                                            <div className="relative aspect-[4/3] md:aspect-square rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl order-1 md:order-2">
                                                 <img src={getImageUrl(content.image)} className="w-full h-full object-cover" alt="About" />
+                                                <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent" />
                                             </div>
                                         )}
                                     </div>
@@ -379,25 +560,56 @@ export default function Home() {
 
                         case 'testimonials':
                             return (
-                                <section key={section.id} className="mt-20 px-4 md:px-8 lg:px-12">
-                                    <div className="text-center mb-16">
-                                        <h2 className="text-2xl lg:text-3xl font-black text-slate-900 uppercase tracking-tight">{content.title || "What Our Customers Say"}</h2>
-                                        <div className="w-12 h-1 bg-[#F59E0B] mx-auto mt-4 rounded-full" />
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-10 md:py-20 bg-[#FBFBFB] border-y border-slate-100 mt-10 md:mt-16">
+                                    <div className="mb-10 md:mb-16">
+                                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                            <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 uppercase tracking-tight">{content.title || "Elite Feedback"}</h2>
+                                            <button
+                                                onClick={() => setIsReviewOpen(true)}
+                                                className="px-6 py-2.5 bg-[#111] text-white rounded-[8px] font-bold uppercase tracking-widest text-[10px] md:text-[11px] hover:bg-[#119AB8] transition-all shadow-lg flex items-center gap-2 group"
+                                            >
+                                                Write a Review <Plus size={16} className="group-hover:rotate-90 transition-transform" />
+                                            </button>
+                                        </div>
+                                        <p className="text-slate-500 font-medium text-sm md:text-base max-w-2xl">
+                                            {content.subtitle || "Hear from the professionals and clients who rely on Al-Qavi Hub for authentic, premium cosmetics distribution."}
+                                        </p>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                                         {(content.reviews && content.reviews.length > 0 ? content.reviews : [
                                             { name: "Ayesha Khan", role: "Verified Customer", text: "The quality of the products is amazing. I've been using their skincare line for 3 months and the results are visible!" },
                                             { name: "Sarah Ahmed", role: "Professional Makeup Artist", text: "As a professional, I need reliable distributors. Al-Qavi always delivers authentic products on time." },
                                             { name: "Zainab Malik", role: "Frequent Buyer", text: "Best customer service in Pakistan! Their WhatsApp support helped me choose the right foundation shade perfectly." }
                                         ]).map((item: any, idx: number) => (
-                                            <div key={idx} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-[#F59E0B] transition-all">
-                                                <Quote className="absolute top-6 right-6 text-slate-100 group-hover:text-[#F59E0B]/10 transition-colors" size={40} />
-                                                <p className="text-slate-600 mb-6 font-medium relative z-10 italic">"{item.text}"</p>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-[#F59E0B]">{item.name?.[0]}</div>
+                                            <div key={idx} className="bg-white p-8 rounded-[12px] border border-[#D5D9D9] shadow-sm relative group hover:border-[#119AB8] transition-all duration-300 flex flex-col h-full">
+                                                <div className="flex gap-0.5 mb-4">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            size={14}
+                                                            className={cn(
+                                                                i < (item.rating || 5) ? "fill-[#119AB8] text-[#119AB8]" : "text-slate-200"
+                                                            )}
+                                                        />
+                                                    ))}
+                                                </div>
+
+                                                <p className="text-[#0f1111] mb-8 font-medium text-[14px] md:text-[15px] leading-relaxed flex-1">
+                                                    "{item.text}"
+                                                </p>
+
+                                                <div className="flex items-center gap-4 pt-6 border-t border-slate-50">
+                                                    <div className="w-10 h-10 rounded-full bg-[#f7f8fa] border border-[#D5D9D9] flex items-center justify-center font-bold text-[#119AB8] text-[13px] overflow-hidden">
+                                                        {item.image ? (
+                                                            <img src={getImageUrl(item.image)} className="w-full h-full object-cover" alt={item.name} />
+                                                        ) : (
+                                                            item.name?.[0]
+                                                        )}
+                                                    </div>
                                                     <div>
-                                                        <h5 className="text-sm font-black text-slate-900">{item.name}</h5>
-                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.role}</p>
+                                                        <h5 className="text-[13px] font-bold text-[#0f1111] uppercase tracking-tight">{item.name}</h5>
+                                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{item.role}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -408,29 +620,35 @@ export default function Home() {
 
                         case 'faq':
                             return (
-                                <section key={section.id} className="mt-20 px-4 md:px-8 lg:px-12">
-                                    <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm max-w-4xl mx-auto">
+                                <section key={section.id} className="mt-20 md:mt-32 px-4 md:px-8 lg:px-12">
+                                    <div className="bg-white rounded-[32px] md:rounded-[48px] border border-slate-100 p-6 md:p-12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] max-w-4xl mx-auto">
                                         <div className="mb-10 text-center">
-                                            <span className="inline-block px-4 py-2 text-xs font-semibold tracking-[0.2em] uppercase rounded-full bg-slate-100 text-slate-600 mb-4">
-                                                FAQ
+                                            <span className="inline-block px-5 py-2 text-[10px] font-black tracking-[0.3em] uppercase rounded-full bg-slate-50 text-slate-400 border border-slate-100 mb-4">
+                                                Assistance
                                             </span>
-                                            <h2 className="text-3xl font-bold text-slate-900 mb-3">{content.title || "Common Questions"}</h2>
-                                            <p className="text-slate-500">Everything you need to know about shopping with Al-Qavi Hub.</p>
+                                            <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight uppercase leading-none">{content.title || "Client Queries"}</h2>
+                                            <p className="text-slate-500 font-medium text-sm md:text-base">Everything you need to know about our professional distribution.</p>
                                         </div>
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             {(content.items && content.items.length > 0 ? content.items : [
                                                 { q: "Are your products 100% authentic?", a: "Yes, we source all products directly from authorized distributors and manufacturers." },
                                                 { q: "How long does delivery take?", a: "Major cities usually take 2-3 business days. Remote areas 4-5 business days." },
                                                 { q: "Do you offer cash on delivery?", a: "Yes, Cash on Delivery is available across Pakistan." }
                                             ]).map((faq: any, idx: number) => (
-                                                <div key={idx} className="rounded-2xl border border-slate-200 overflow-hidden">
-                                                    <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full px-5 py-4 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-all">
-                                                        <span className="font-semibold text-slate-800 text-sm text-left">{faq.q}</span>
-                                                        <Plus size={16} className={`text-slate-400 transition-transform duration-300 ${openFaq === idx ? "rotate-45" : ""}`} />
+                                                <div key={idx} className="rounded-2xl md:rounded-3xl border border-slate-50 overflow-hidden transition-all duration-300">
+                                                    <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className={cn(
+                                                        "w-full px-6 py-5 flex items-center justify-between transition-all duration-300",
+                                                        openFaq === idx ? "bg-[#111] text-white" : "bg-slate-50/50 hover:bg-slate-50 text-slate-700"
+                                                    )}>
+                                                        <span className="font-black text-xs md:text-sm text-left uppercase tracking-tight">{faq.q}</span>
+                                                        <Plus size={18} className={`transition-transform duration-500 ${openFaq === idx ? "rotate-45 text-white" : "text-slate-300"}`} />
                                                     </button>
-                                                    <div className={`grid transition-all duration-300 ${openFaq === idx ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                                                    <div className={cn(
+                                                        "grid transition-all duration-500 ease-in-out",
+                                                        openFaq === idx ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                                                    )}>
                                                         <div className="overflow-hidden">
-                                                            <div className="px-5 py-4 text-sm text-slate-600 leading-relaxed border-t border-slate-100">{faq.a}</div>
+                                                            <div className="px-6 py-5 text-sm md:text-[15px] text-slate-500 font-medium leading-relaxed bg-white border-x border-b border-slate-50">{faq.a}</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -442,62 +660,432 @@ export default function Home() {
 
                         case 'newsletter':
                             return (
-                                <section key={section.id} className="mt-20 px-4 md:px-8 lg:px-12">
-                                    <div className="relative overflow-hidden rounded-3xl bg-[#111] p-8 lg:p-10 shadow-xl max-w-5xl mx-auto text-center">
-                                        <div className="absolute top-0 right-0 h-40 w-40 bg-[#F59E0B]/10 blur-3xl rounded-full" />
-                                        <div className="absolute bottom-0 left-0 h-32 w-32 bg-white/5 blur-3xl rounded-full" />
-                                        <div className="relative z-10">
-                                            <span className="inline-block px-4 py-2 text-xs font-semibold tracking-[0.2em] uppercase rounded-full bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 mb-5">Newsletter</span>
-                                            <h2 className="text-3xl font-bold text-white leading-tight mb-4">{content.title || "Stay Updated With Latest Offers"}</h2>
-                                            <p className="text-slate-400 mb-8 leading-relaxed max-w-lg mx-auto">{content.subtitle || "Subscribe to receive discounts, beauty tips, and new arrivals directly in your inbox."}</p>
-                                            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                                                <input type="email" placeholder={content.placeholder || "Enter your email"} className="flex-1 px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-[#F59E0B]" />
-                                                <button className="px-8 py-4 bg-[#F59E0B] hover:bg-[#e69008] text-white rounded-2xl font-semibold transition-all duration-300 active:scale-95">Subscribe</button>
+                                <section key={section.id} className="mt-20 md:mt-32 px-4 md:px-8 lg:px-12">
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        whileInView={{ opacity: 1, scale: 1 }}
+                                        viewport={{ once: true }}
+                                        className="relative overflow-hidden rounded-[32px] md:rounded-[48px] bg-white border border-[#D5D9D9] p-8 md:p-24 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.05)] max-w-7xl mx-auto text-center"
+                                    >
+                                        <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
+                                            <Sparkles size={240} />
+                                        </div>
+                                        <div className="relative z-10 space-y-8">
+                                            <div className="inline-flex items-center gap-3 px-6 py-2 bg-[#f7f8fa] border border-[#D5D9D9] rounded-full">
+                                                <div className="w-2 h-2 rounded-full bg-[#119AB8] animate-pulse" />
+                                                <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#119AB8]">Elite Access</span>
                                             </div>
+
+                                            <div className="space-y-4">
+                                                <h2 className="text-3xl md:text-5xl font-bold text-[#0F172A] tracking-tight leading-none uppercase italic">{content.title || "Join the Hub"}</h2>
+                                                <p className="text-[#565959] text-base md:text-lg font-medium max-w-xl mx-auto leading-relaxed">
+                                                    {content.subtitle || "Receive professional collection reveals and exclusive distribution insights directly in your inbox."}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto pt-4">
+                                                <input
+                                                    type="email"
+                                                    placeholder={content.placeholder || "Professional Email"}
+                                                    className="flex-1 px-6 py-4 rounded-xl bg-[#f7f8fa] border border-[#D5D9D9] text-[#111] placeholder:text-[#888] font-bold focus:outline-none focus:border-[#119AB8] focus:bg-white transition-all shadow-inner"
+                                                />
+                                                <button className="px-10 py-4 bg-[#119AB8] hover:bg-[#13B0D1] text-white rounded-xl font-bold uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-[#119AB8]/20">
+                                                    Subscribe
+                                                </button>
+                                            </div>
+
+                                            <p className="text-[10px] text-[#888] uppercase tracking-widest font-medium">Join 10,000+ industry professionals already subscribed</p>
+                                        </div>
+                                    </motion.div>
+                                </section>
+                            );
+
+                        case 'gallery':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-20 md:mt-32">
+                                    <div className="mb-10 md:mb-16 text-center md:text-left">
+                                        <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] tracking-tight uppercase leading-none">{content.title || "Visual Showcase"}</h2>
+                                        <p className="text-slate-500 mt-3 font-medium text-sm md:text-base max-w-2xl">
+                                            {content.subtitle || "A cinematic display of our most prestigious collections and distribution excellence across the region."}
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 h-[400px] md:h-[600px]">
+                                        {(content.items || []).slice(0, 4).map((img: any, idx: number) => (
+                                            <div key={idx} className={cn(
+                                                "relative rounded-[8px] md:rounded-[12px] overflow-hidden group shadow-xl",
+                                                idx === 0 && "md:col-span-2 md:row-span-2",
+                                                idx === 1 && "md:col-span-2",
+                                            )}>
+                                                <img src={getImageUrl(img.image || img.url)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="Gallery" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
+                                                    <p className="text-white font-black uppercase tracking-widest text-[10px] md:text-xs">{img.title || "View Detail"}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            );
+
+                        case 'video':
+                            return (
+                                <section key={section.id} className="mt-20 md:mt-32 px-4 md:px-8 lg:px-12">
+                                    <div className="relative aspect-video max-w-7xl mx-auto rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl group">
+                                        {content.url ? (
+                                            <iframe
+                                                src={content.url.replace('watch?v=', 'embed/')}
+                                                className="w-full h-full border-0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                                                <div className="text-center space-y-4">
+                                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg">
+                                                        <Coffee className="text-[#13B0D1]" size={32} />
+                                                    </div>
+                                                    <p className="text-slate-400 font-bold uppercase tracking-widest">Video Experience Coming Soon</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="absolute top-8 left-8 z-10">
+                                            <h2 className="text-2xl md:text-4xl font-extrabold text-white uppercase tracking-tight drop-shadow-lg">{content.title}</h2>
                                         </div>
                                     </div>
                                 </section>
                             );
 
-                        case 'gallery':
                         case 'promotion':
+                            const promoProductIds = Array.isArray(content.product_ids) ? content.product_ids : (content.product_id ? [content.product_id] : []);
+                            const promoProducts = allProducts.filter(p => promoProductIds.some((sid: any) => String(sid) === String(p.id)));
+                            const promoProduct = promoProducts[0];
+
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-10 bg-[#FBFBFB] border-y border-slate-100 -mt-8 md:-mt-16 overflow-hidden">
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        whileInView={{ opacity: 1 }}
+                                        viewport={{ once: true }}
+                                        className="grid md:grid-cols-2 overflow-hidden group min-h-[220px] md:min-h-[340px]"
+                                    >
+                                        <div className="relative overflow-hidden bg-white flex items-center justify-center p-4">
+                                            <div className="absolute inset-0 opacity-[0.02] flex items-center justify-center pointer-events-none">
+                                                <Sparkles size={300} className="text-[#119AB8]" />
+                                            </div>
+
+                                            {promoProducts.length > 1 ? (
+                                                <div className="grid grid-cols-2 gap-3 w-full h-full relative z-10">
+                                                    {promoProducts.slice(0, 4).map((p, idx) => (
+                                                        <motion.div
+                                                            key={p.id}
+                                                            whileHover={{ scale: 1.05 }}
+                                                            className="relative aspect-square bg-slate-50 rounded-xl overflow-hidden border border-slate-100 shadow-sm"
+                                                        >
+                                                            <img
+                                                                src={getImageUrl(p.image || p.catalog_image || p.image_url)}
+                                                                className="w-full h-full object-contain p-3"
+                                                                alt={p.name}
+                                                            />
+                                                            <div className="absolute bottom-1 right-1 bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg text-[8px] font-black text-[#111] shadow-sm">
+                                                                Rs. {parseFloat(p.selling_price || p.price || 0).toLocaleString()}
+                                                            </div>
+                                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                                <p className="text-[7px] text-white font-bold truncate uppercase">{p.name}</p>
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="relative w-full h-full flex items-center justify-center group/promo">
+                                                    <motion.img
+                                                        whileHover={{ scale: 1.05 }}
+                                                        transition={{ duration: 1.5 }}
+                                                        src={getImageUrl(content.image || promoProduct?.image || promoProduct?.catalog_image || promoProduct?.image_url) || 'https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=1200&auto=format&fit=crop'}
+                                                        className="absolute inset-0 w-full h-full object-cover"
+                                                        alt={content.title || promoProduct?.product_name || "Promotion"}
+                                                        onError={(e: any) => {
+                                                            e.target.src = 'https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=1200&auto=format&fit=crop';
+                                                        }}
+                                                    />
+
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-8 opacity-0 group-hover/promo:opacity-100 transition-all duration-500 transform translate-y-4 group-hover/promo:translate-y-0">
+                                                        <h3 className="text-white text-2xl md:text-3xl font-black uppercase tracking-tighter drop-shadow-2xl mb-1">
+                                                            {promoProduct?.product_name || content.title}
+                                                        </h3>
+                                                        <p className="text-[#D4AF37] text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] line-clamp-2">
+                                                            {promoProduct?.description || content.subtitle}
+                                                        </p>
+                                                    </div>
+
+                                                    {promoProduct && promoProducts.length === 1 && (
+                                                        <div className="absolute top-8 -right-2 z-20">
+                                                            <div className="px-5 py-2 bg-[#13B0D1] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20">
+                                                                <span className="text-[14px] font-black uppercase tracking-widest">
+                                                                    Rs. {parseFloat(promoProduct.selling_price || promoProduct.price || 0).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
+                                        </div>
+
+                                        <div className="p-6 md:p-12 lg:p-16 flex flex-col justify-center space-y-6 relative bg-white md:bg-transparent">
+                                            <div className="absolute top-4 right-16 md:right-24 z-40 flex flex-col items-center min-h-[200px]">
+                                                <motion.div
+                                                    initial={{ y: -100, rotate: -40 }}
+                                                    whileInView={{ y: 0 }}
+                                                    animate={{
+                                                        rotate: 40,
+                                                        y: [0, 2, 0]
+                                                    }}
+                                                    transition={{
+                                                        rotate: { duration: 2.5, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" },
+                                                        y: { duration: 1.25, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" },
+                                                        initial: { duration: 0.8, ease: "easeOut" }
+                                                    }}
+                                                    style={{ originX: "50%", originY: "0px" }}
+                                                    className="mt-[6px] flex flex-col items-center pointer-events-none group z-40"
+                                                >
+                                                    <div className="w-[1.5px] h-12 bg-slate-400 shadow-sm" />
+                                                    <div className="relative w-24 md:w-32 aspect-square drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]">
+                                                        <div className="absolute inset-0 bg-[#D4AF37] shadow-xl"
+                                                            style={{
+                                                                clipPath: 'polygon(50% 0%, 64% 6%, 78% 0%, 82% 14%, 96% 18%, 91% 32%, 100% 45%, 91% 58%, 96% 72%, 82% 76%, 78% 90%, 64% 84%, 50% 100%, 36% 84%, 22% 90%, 18% 76%, 4% 72%, 9% 58%, 0% 45%, 9% 32%, 4% 18%, 18% 14%, 22% 0%, 36% 6%)'
+                                                            }}>
+                                                            <div className="absolute inset-[4px] bg-[#C41E3A] rounded-full border-2 border-white/20 flex flex-col items-center justify-center p-2 text-center">
+                                                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,215,0,0.2),transparent)]" />
+                                                                <span className="text-[#FFD700] text-[7px] md:text-[9px] font-black uppercase tracking-[0.3em] leading-none mb-1">
+                                                                    Limited Time
+                                                                </span>
+                                                                <span className="text-white text-[10px] md:text-[14px] font-black uppercase tracking-tighter leading-tight drop-shadow-lg">
+                                                                    Special<br />Offer
+                                                                </span>
+                                                                <div className="mt-1 h-[1px] w-6 bg-[#FFD700]/50" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 bg-gradient-to-br from-slate-300 via-slate-500 to-slate-700 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.3)] border border-slate-400 z-50">
+                                                    <div className="absolute top-0.5 left-0.5 w-1 h-1 bg-white/30 rounded-full" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-[2px] w-8 bg-[#119AB8]" />
+                                                    <span className="text-[9px] font-bold text-[#119AB8] uppercase tracking-[0.4em]">
+                                                        {promoProducts.length > 1 ? `Selective Portfolio (${promoProducts.length})` : "Featured Essential"}
+                                                    </span>
+                                                </div>
+
+                                                <h2 className="text-2xl md:text-4xl lg:text-5xl font-extrabold text-[#0F172A] leading-tight tracking-tighter uppercase">
+                                                    {content.title || (promoProducts.length > 1 ? "Premium Series" : promoProduct?.product_name) || "Special Offer"}
+                                                </h2>
+
+                                                <p className="text-[#565959] text-xs md:text-base font-medium leading-relaxed border-l-4 border-[#119AB8]/20 pl-4 line-clamp-2">
+                                                    {content.subtitle || (promoProducts.length > 1 ? "A curated collection of our most requested professional products." : promoProduct?.description) || "Experience professional-grade quality with our curated collection."}
+                                                </p>
+
+                                                {/* Write a Review Modal */}
+                                                <AnimatePresence>
+                                                    {isReviewOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                                                        >
+                                                            <motion.div
+                                                                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                                                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                                                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                                                                className="bg-white w-full max-w-xl rounded-[16px] overflow-hidden shadow-2xl"
+                                                            >
+                                                                <div className="bg-[#119AB8] p-6 text-white flex items-center justify-between">
+                                                                    <div>
+                                                                        <h3 className="text-xl font-bold uppercase tracking-tight">Submit Your Review</h3>
+                                                                        <p className="text-white/80 text-[10px] uppercase tracking-widest font-bold">We value your professional feedback</p>
+                                                                    </div>
+                                                                    <button onClick={() => setIsReviewOpen(false)} className="text-white/80 hover:text-white transition-all">
+                                                                        <X size={24} />
+                                                                    </button>
+                                                                </div>
+
+                                                                <form className="p-6 space-y-5" onSubmit={handleReviewSubmit}>
+                                                                    <div className="space-y-4">
+                                                                        <div className="grid grid-cols-2 gap-4">
+                                                                            <div className="space-y-1.5">
+                                                                                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Rating</label>
+                                                                                <div className="flex gap-1">
+                                                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                                                        <button key={star} type="button" onClick={() => setRating(star)} disabled={isSubmitting}>
+                                                                                            <Star size={20} className={cn(star <= rating ? "fill-[#119AB8] text-[#119AB8]" : "text-slate-200")} />
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="space-y-1.5">
+                                                                                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Full Name</label>
+                                                                                <input
+                                                                                    required
+                                                                                    value={reviewName}
+                                                                                    onChange={(e) => setReviewName(e.target.value)}
+                                                                                    placeholder="Name"
+                                                                                    disabled={isSubmitting}
+                                                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#119AB8] transition-all text-[13px]"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="space-y-1.5">
+                                                                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Your Experience</label>
+                                                                            <textarea
+                                                                                required
+                                                                                value={reviewText}
+                                                                                onChange={(e) => setReviewText(e.target.value)}
+                                                                                rows={3}
+                                                                                placeholder="Write your review here..."
+                                                                                disabled={isSubmitting}
+                                                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#119AB8] transition-all text-[13px] resize-none"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className="space-y-1.5">
+                                                                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Upload Photo</label>
+                                                                            <label htmlFor="review-photo" className="flex items-center justify-center gap-2 p-2.5 border border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-[#119AB8] hover:bg-[#119AB8]/5 transition-all group">
+                                                                                <input type="file" className="hidden" id="review-photo" accept="image/*" disabled={isSubmitting} />
+                                                                                <ImageIcon size={16} className="text-slate-400 group-hover:text-[#119AB8]" />
+                                                                                <span className="text-[11px] font-bold text-slate-500 group-hover:text-[#119AB8] uppercase tracking-tight">Click to select image</span>
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <button
+                                                                        type="submit"
+                                                                        disabled={isSubmitting}
+                                                                        className="w-full py-3.5 bg-[#119AB8] text-white rounded-lg font-bold uppercase tracking-widest text-[11px] hover:bg-[#0e7e96] transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2"
+                                                                    >
+                                                                        {isSubmitting ? (
+                                                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                                        ) : null}
+                                                                        {isSubmitting ? "Submitting..." : "Submit Review"}
+                                                                    </button>
+                                                                </form>
+                                                            </motion.div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                {promoProducts.length === 1 && promoProduct && (
+                                                    <div className="flex flex-wrap gap-3 pt-1">
+                                                        {promoProduct.weight && (
+                                                            <div className="bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                                                                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Weight</p>
+                                                                <p className="text-[10px] font-black text-[#111]">{promoProduct.weight}</p>
+                                                            </div>
+                                                        )}
+                                                        {(promoProduct.size || promoProduct.type) && (
+                                                            <div className="bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                                                                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Type</p>
+                                                                <p className="text-[10px] font-black text-[#111]">{promoProduct.size || promoProduct.type}</p>
+                                                            </div>
+                                                        )}
+                                                        <div className="bg-[#119AB8]/5 px-3 py-1 rounded-lg border border-[#119AB8]/10">
+                                                            <p className="text-[8px] text-[#119AB8] font-bold uppercase tracking-widest">Category</p>
+                                                            <p className="text-[10px] font-black text-[#111]">{promoProduct.category_name || "Cosmetics"}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center gap-4">
+                                                    {content.discount_percent && (
+                                                        <div className="px-3 py-1 bg-[#e77600] text-white font-black text-[9px] uppercase tracking-widest rounded-full shadow-lg">
+                                                            {content.discount_percent}% OFF
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-2 flex flex-col sm:flex-row items-center gap-4">
+                                                <button
+                                                    onClick={() => {
+                                                        if (promoProduct) {
+                                                            addToCart({
+                                                                id: promoProduct.id,
+                                                                name: promoProduct.product_name,
+                                                                price: promoProduct.selling_price || promoProduct.price,
+                                                                quantity: 1,
+                                                                image: promoProduct.image || promoProduct.catalog_image || promoProduct.image_url,
+                                                                category: promoProduct.category_name || 'Promotion'
+                                                            });
+                                                            router.push('/customer/checkout');
+                                                        } else {
+                                                            router.push('/customer/shop');
+                                                        }
+                                                    }}
+                                                    className="w-full sm:w-auto h-12 px-10 bg-[#131921] text-white rounded-[4px] font-bold uppercase tracking-widest text-[10px] transition-all hover:bg-[#119AB8] hover:shadow-xl hover:shadow-[#119AB8]/20 active:scale-95 group/btn flex items-center justify-center"
+                                                >
+                                                    {content.cta_text || "Avail Deal"}
+                                                </button>
+
+                                                {promoProducts.length > 1 && (
+                                                    <div className="flex -space-x-2">
+                                                        {promoProducts.slice(0, 3).map((p, i) => (
+                                                            <div key={p.id} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-sm">
+                                                                <img src={getImageUrl(p.image || p.catalog_image)} className="w-full h-full object-cover" alt="Selected" />
+                                                            </div>
+                                                        ))}
+                                                        {promoProducts.length > 3 && (
+                                                            <div className="w-8 h-8 rounded-full border-2 border-white bg-[#119AB8] flex items-center justify-center text-[9px] text-white font-bold">
+                                                                +{promoProducts.length - 3}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </section>
+                            );
+
                         case 'brands':
                             return (
-                                <section key={section.id} className="bg-white border-y border-slate-100 overflow-hidden py-12 mt-20 relative">
+                                <section key={section.id} className="bg-white border-y border-slate-50 overflow-hidden py-10 md:py-20 mt-20 md:mt-32 relative">
                                     <style dangerouslySetInnerHTML={{
                                         __html: `
                                             @keyframes marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
-                                            .marquee-inner { display: flex; width: max-content; animation: marquee-scroll 40s linear infinite; }
+                                            .marquee-inner { display: flex; width: max-content; animation: marquee-scroll 30s linear infinite; }
                                             .marquee-inner:hover { animation-play-state: paused; }
                                         `}} />
                                     <div className="relative flex">
                                         <div className="marquee-inner whitespace-nowrap">
                                             {[1, 2, 3].map((loop) => (
-                                                <div key={loop} className="flex items-center gap-24 px-12">
+                                                <div key={loop} className="flex items-center gap-12 md:gap-24 px-6 md:px-12">
                                                     <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-2xl font-black tracking-tighter text-[#111] border-b-4 border-[#A38B5D] transition-colors group-hover:text-[#A38B5D]">L'OREAL</span>
-                                                        <span className="text-[10px] font-black text-[#A38B5D] uppercase tracking-[0.3em]">PARIS</span>
+                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#111] border-b-4 border-[#A38B5D] transition-colors group-hover:text-[#A38B5D]">L'OREAL</span>
+                                                        <span className="text-[8px] md:text-[10px] font-black text-[#A38B5D] uppercase tracking-[0.3em]">PARIS</span>
                                                     </div>
                                                     <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-2xl font-black tracking-tighter text-[#000] transition-colors group-hover:text-slate-600">MAYBELLINE</span>
-                                                        <span className="text-[10px] font-black text-[#111] uppercase tracking-[0.3em]">NEW YORK</span>
+                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#000] transition-colors group-hover:text-slate-600">MAYBELLINE</span>
+                                                        <span className="text-[8px] md:text-[10px] font-black text-[#111] uppercase tracking-[0.3em]">NEW YORK</span>
                                                     </div>
                                                     <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-2xl font-black tracking-tighter text-[#C20000] transition-transform group-hover:scale-105">REVLON</span>
-                                                        <div className="h-1 w-full bg-[#C20000]" />
+                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#C20000] transition-transform group-hover:scale-105">REVLON</span>
+                                                        <div className="h-0.5 md:h-1 w-full bg-[#C20000]" />
                                                     </div>
                                                     <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <div className="bg-[#0032A0] px-5 py-1.5 rounded-sm transition-all group-hover:bg-[#002880] shadow-sm">
-                                                            <span className="text-2xl font-black tracking-tighter text-white">NIVEA</span>
+                                                        <div className="bg-[#0032A0] px-3 md:px-5 py-1 md:py-1.5 rounded-sm transition-all group-hover:bg-[#002880] shadow-sm">
+                                                            <span className="text-xl md:text-3xl font-black tracking-tighter text-white">NIVEA</span>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-2xl font-bold tracking-tight text-[#003E7E] transition-colors group-hover:text-[#002d5c]">Dove</span>
-                                                        <div className="h-0.5 w-10 bg-[#E7BC71] group-hover:w-full transition-all" />
+                                                        <span className="text-xl md:text-3xl font-bold tracking-tight text-[#003E7E] transition-colors group-hover:text-[#002d5c]">Dove</span>
+                                                        <div className="h-0.5 w-6 md:w-10 bg-[#E7BC71] group-hover:w-full transition-all" />
                                                     </div>
                                                     <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-2xl font-black tracking-tighter text-[#111] transition-colors group-hover:text-[#BFA885]">PANTENE</span>
-                                                        <span className="text-[10px] font-black text-[#BFA885] uppercase tracking-[0.3em]">PRO-V</span>
+                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#111] transition-colors group-hover:text-[#BFA885]">PANTENE</span>
+                                                        <span className="text-[8px] md:text-[10px] font-black text-[#BFA885] uppercase tracking-[0.3em]">PRO-V</span>
                                                     </div>
                                                 </div>
                                             ))}

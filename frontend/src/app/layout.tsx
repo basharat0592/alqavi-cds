@@ -13,6 +13,7 @@ export const metadata = {
 
 import { Toaster } from 'react-hot-toast';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
+import CartDrawer from '@/components/layout/CartDrawer';
 
 export default function RootLayout({
     children,
@@ -26,6 +27,7 @@ export default function RootLayout({
                 <WhatsAppButton />
                 <CartProvider>
                     <WishlistProvider>
+                        <CartDrawer />
                         {children}
                     </WishlistProvider>
                 </CartProvider>

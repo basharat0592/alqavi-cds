@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-    Package, 
-    ShoppingBag, 
-    Heart, 
-    ShieldCheck, 
+import {
+    Package,
+    ShoppingBag,
+    Heart,
+    ShieldCheck,
     ChevronRight,
     Clock
 } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function CustomerDashboard() {
         setUser(authService.getUser());
         salesService.getOrders()
             .then(data => {
-                const activeOrders = data.filter((o: any) => 
+                const activeOrders = data.filter((o: any) =>
                     !['DELIVERED', 'CANCELLED'].includes(o.status.toUpperCase())
                 );
                 setOrders(activeOrders.slice(0, 5));
@@ -80,13 +80,13 @@ export default function CustomerDashboard() {
                                                 <p className="text-xs text-gray-500 uppercase font-black tracking-tighter mt-0.5">Placed on {formatDate(order.created_at)}</p>
                                             </div>
                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
-                                                ${order.status === 'DELIVERED' 
-                                                    ? 'bg-[#007600] text-white' 
+                                                ${order.status === 'DELIVERED'
+                                                    ? 'bg-[#007600] text-white'
                                                     : order.status === 'CANCELLED'
-                                                    ? 'bg-red-50 text-red-700'
-                                                    : order.status === 'CANCEL_REQUESTED'
-                                                    ? 'bg-amber-50 text-amber-700'
-                                                    : 'bg-[#FFD814]/20 text-[#111]'}`}>
+                                                        ? 'bg-red-50 text-red-700'
+                                                        : order.status === 'CANCEL_REQUESTED'
+                                                            ? 'bg-amber-50 text-amber-700'
+                                                            : 'bg-[#FFD814]/20 text-[#111]'}`}>
                                                 {order.status_display || order.status}
                                             </span>
                                         </div>
@@ -102,13 +102,13 @@ export default function CustomerDashboard() {
                                         </div>
                                     </div>
                                     <div className="border-t sm:border-t-0 sm:border-l border-[#D5D9D9] p-4 flex flex-col gap-2 shrink-0 sm:w-48 justify-center bg-[#F7FAFA]">
-                                        <Link 
+                                        <Link
                                             href={`/customer/dashboard/track?tid=${order.tracking_id}`}
                                             className="w-full py-1.5 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] rounded-md text-xs font-medium text-center text-[#111]"
                                         >
                                             Track Package
                                         </Link>
-                                        <button 
+                                        <button
                                             onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
                                             className="w-full py-1.5 bg-white hover:bg-gray-50 border border-[#D5D9D9] rounded-md text-xs font-medium text-center text-[#111]"
                                         >
@@ -141,33 +141,6 @@ export default function CustomerDashboard() {
                 )}
             </section>
 
-            {/* Account Insights Placeholder */}
-            <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-[#E7F4F5] border border-[#D5D9D9] rounded-lg p-6 flex items-center gap-6">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                        <Heart className="h-8 w-8 text-[#C45500]" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-[#111]">Your Wishlist</h3>
-                        <p className="text-sm text-gray-600 mt-1 mb-4">You have items saved in your wishlist. Take another look!</p>
-                        <Link href="/customer/dashboard/wishlist" className="text-sm font-bold text-[#007185] hover:text-[#C45500] hover:underline">
-                            Explore Wishlist &rarr;
-                        </Link>
-                    </div>
-                </div>
-                <div className="bg-[#FEF5EE] border border-[#D5D9D9] rounded-lg p-6 flex items-center gap-6">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                        <ShieldCheck className="h-8 w-8 text-[#008296]" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-[#111]">Privacy & Security</h3>
-                        <p className="text-sm text-gray-600 mt-1 mb-4">Manage your data and security settings at any time.</p>
-                        <Link href="/customer/dashboard/profile" className="text-sm font-bold text-[#007185] hover:text-[#C45500] hover:underline">
-                            Security Settings &rarr;
-                        </Link>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }

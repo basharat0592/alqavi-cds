@@ -40,6 +40,8 @@ urlpatterns = [
     # Activity Logs
     path('<str:user_id>/activity-logs/', views.user_activity_log, name='user-activity-logs'),
     path('Admin/all-activity-logs/', views.all_activity_logs, name='all-activity-logs'),
+    path('activity-logs/<int:log_id>/mark-read/', views.mark_activity_read, name='mark-activity-read'),
+    path('activity-logs/mark-all-read/', views.mark_all_activities_read, name='mark-all-activities-read'),
     
     # Role Management
     path('roles/', views.list_roles, name='role-list'),

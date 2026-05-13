@@ -554,10 +554,35 @@ def all_activity_logs(request):
     if action:
         logs = logs.filter(action=action)
 
+    is_read = request.query_params.get('is_read')
+    if is_read is not None:
+        logs = logs.filter(is_read=is_read.lower() == 'true')
+
     limit = int(request.query_params.get('limit', 100))
     logs = logs[:limit]
     serializer = UserActivityLogSerializer(logs, many=True)
     return Response({'results': serializer.data, 'count': logs.count()})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_activity_read(request, log_id):
+    """Mark a specific activity log as read."""
+    log, err = get_or_404_response(UserActivityLog, id=log_id)
+    if err:
+        return err
+    
+    log.is_read = True
+    log.save()
+    return Response({'message': 'Log marked as read'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_all_activities_read(request):
+    """Mark all unread activity logs for the current user as read."""
+    UserActivityLog.objects.filter(is_read=False).update(is_read=True)
+    return Response({'message': 'All logs marked as read'})
 
 
 # ==================== ROLE MANAGEMENT ====================

@@ -171,6 +171,7 @@ class UserActivityLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
     
     class Meta:
         ordering = ['-timestamp']

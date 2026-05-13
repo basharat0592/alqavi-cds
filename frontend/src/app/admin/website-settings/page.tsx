@@ -5,7 +5,7 @@ import {
     Globe, Layout, Image as ImageIcon, Phone, Settings, Menu,
     Palette, CheckCircle, Loader2, Eye, RefreshCw, ChevronRight
 } from 'lucide-react';
-import cmsService, { SiteSettings, WebsiteSection, MediaAsset, NavigationMenu } from '@/services/cms.service';
+import cmsService, { SiteSettings, WebsiteSection, MediaAsset } from '@/services/cms.service';
 import { productService, categoryService } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -13,17 +13,14 @@ import toast from 'react-hot-toast';
 import BrandingTab from './tabs/BrandingTab';
 import SectionsTab from './tabs/SectionsTab';
 import MediaTab from './tabs/MediaTab';
-import NavigationTab from './tabs/NavigationTab';
 import SeoTab from './tabs/SeoTab';
 import ContactTab from './tabs/ContactTab';
 import LivePreviewTab from './tabs/LivePreviewTab';
 
 const TABS = [
-    { id: 'live', label: 'Live Preview', icon: Eye, desc: 'Current State' },
     { id: 'sections', label: 'Page Builder', icon: Layout, desc: 'Edit Layout' },
     { id: 'branding', label: 'Site Identity', icon: Palette, desc: 'Logo & Colors' },
     { id: 'media', label: 'Media Assets', icon: ImageIcon, desc: 'Library' },
-    { id: 'navigation', label: 'Menus', icon: Menu, desc: 'Header/Footer' },
     { id: 'contact', label: 'Business Info', icon: Phone, desc: 'Socials' },
     { id: 'seo', label: 'SEO Settings', icon: Globe, desc: 'Analytics' },
 ];
@@ -53,12 +50,11 @@ const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className 
 };
 
 export default function WebsiteSettingsPage() {
-    const [activeTab, setActiveTab] = useState('live');
+    const [activeTab, setActiveTab] = useState('sections');
     const [loading, setLoading] = useState(true);
     const [settings, setSettings] = useState<SiteSettings | null>(null);
     const [sections, setSections] = useState<WebsiteSection[]>([]);
     const [media, setMedia] = useState<MediaAsset[]>([]);
-    const [menus, setMenus] = useState<NavigationMenu[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [saving, setSaving] = useState(false);
@@ -69,18 +65,16 @@ export default function WebsiteSettingsPage() {
     const loadAll = async () => {
         setLoading(true);
         try {
-            const [state, sec, med, nav, prods, cats] = await Promise.all([
+            const [state, sec, med, prods, cats] = await Promise.all([
                 cmsService.getFullState().catch(() => ({ settings: null, sections: [], menus: [] })),
                 cmsService.getSections().catch(() => []),
                 cmsService.getMedia().catch(() => []),
-                cmsService.getMenus().catch(() => []),
                 productService.getAll({ no_pagination: 'true' }).catch(() => []),
                 categoryService.getAll().catch(() => []),
             ]);
             setSettings(state.settings || defaultSettings);
             setSections(sec);
             setMedia(med);
-            setMenus(nav);
             const p = Array.isArray(prods) ? prods : (prods as any).results || [];
             setProducts(p);
             const c = Array.isArray(cats) ? cats : (cats as any).results || [];
@@ -171,11 +165,9 @@ export default function WebsiteSettingsPage() {
 
                 {/* ── CONTENT AREA ── */}
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {activeTab === 'live' && <LivePreviewTab products={products} categories={categories} media={media} sections={sections} settings={settings || defaultSettings} />}
-                    {activeTab === 'sections' && <SectionsTab sections={sections} setSections={setSections} products={products} categories={categories} />}
+                    {activeTab === 'sections' && <SectionsTab sections={sections} setSections={setSections} products={products} categories={categories} media={media} />}
                     {activeTab === 'branding' && settings && <BrandingTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
                     {activeTab === 'media' && <MediaTab media={media} setMedia={setMedia} />}
-                    {activeTab === 'navigation' && <NavigationTab menus={menus} setMenus={setMenus} />}
                     {activeTab === 'contact' && settings && <ContactTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
                     {activeTab === 'seo' && settings && <SeoTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
                 </div>

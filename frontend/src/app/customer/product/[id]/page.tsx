@@ -202,19 +202,50 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                             {inStock && (
                                 <div className="space-y-3 pt-2">
                                     <div className="flex items-center gap-2 mb-4 bg-[#f0f2f2] border border-[#d5d9d9] rounded-[7px] p-1 w-fit">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors"><Minus size={14} /></button>
+                                        <button 
+                                            onClick={() => setQuantity(Math.max(1, quantity - 1))} 
+                                            className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors disabled:opacity-30"
+                                            disabled={quantity <= 1}
+                                        >
+                                            <Minus size={14} />
+                                        </button>
                                         <span className="w-8 text-center text-[14px] font-bold">{quantity}</span>
-                                        <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors"><Plus size={14} /></button>
+                                        <button 
+                                            onClick={() => setQuantity(Math.min(product.total_quantity || 999, quantity + 1))} 
+                                            className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors disabled:opacity-30"
+                                            disabled={quantity >= (product.total_quantity || 0)}
+                                        >
+                                            <Plus size={14} />
+                                        </button>
                                     </div>
 
                                     <button
-                                        onClick={() => addToCart({ ...product, quantity, image: product.image, selling_price: price })}
+                                        onClick={() => addToCart({ 
+                                            id: String(product.id),
+                                            name: product.product_name || product.name,
+                                            price: price,
+                                            quantity: quantity,
+                                            image: product.image || product.catalog_image,
+                                            category: product.category_name || 'Cosmetics',
+                                            stock: product.total_quantity
+                                        })}
                                         className="w-full h-[35px] bg-[#ffd814] hover:bg-[#f7ca00] border border-[#fcd200] rounded-[20px] text-[13px] font-medium shadow-sm transition-all"
                                     >
                                         Add to Cart
                                     </button>
                                     <button
-                                        onClick={() => { addToCart({ ...product, quantity, image: product.image, selling_price: price }); router.push('/checkout'); }}
+                                        onClick={() => { 
+                                            addToCart({ 
+                                                id: String(product.id),
+                                                name: product.product_name || product.name,
+                                                price: price,
+                                                quantity: quantity,
+                                                image: product.image || product.catalog_image,
+                                                category: product.category_name || 'Cosmetics',
+                                                stock: product.total_quantity
+                                            }); 
+                                            router.push('/customer/checkout'); 
+                                        }}
                                         className="w-full h-[35px] bg-[#ffa41c] hover:bg-[#f3a847] border border-[#ff9900] rounded-[20px] text-[13px] font-medium shadow-sm transition-all"
                                     >
                                         Buy Now

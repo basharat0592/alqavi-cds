@@ -16,6 +16,7 @@ import { authService } from '@/lib/auth';
 import { productService, orderService, userService, settingsService } from '@/lib/api';
 import { getImageUrl, cn } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
+import toast from 'react-hot-toast';
 
 /* ═══════════════════════════════════════════════
    MOBILE TOP BAR (CLEAN LIGHT THEME)
@@ -136,7 +137,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         window.addEventListener('settingsUpdated', loadSettings);
         document.addEventListener('mousedown', handleClickOutside);
 
+        const pollInterval = setInterval(fetchActivity, 5000); // Poll every 5 seconds
+
         return () => {
+            clearInterval(pollInterval);
             window.removeEventListener('profileUpdated', handleUpdate);
             window.removeEventListener('settingsUpdated', loadSettings);
             document.removeEventListener('mousedown', handleClickOutside);
@@ -146,7 +150,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const fetchActivity = async () => {
         setActLoading(true);
         try {
-            const res = await userService.getAllActivityLogs(10);
+            const res = await userService.getAllActivityLogs(10, false); // Fetch only unread
             setActivities(res.map((log: any) => {
                 const isOrder = log.action_type?.includes('ORDER') || log.description?.toLowerCase().includes('order');
                 const isUser = log.action_type?.includes('USER') || log.description?.toLowerCase().includes('user');
@@ -154,19 +158,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                 return {
                     id: String(log.id),
-                    type: isOrder ? 'order' : isUser ? 'user' : isSecurity ? 'alert' : 'alert', // Changed to 'alert' to match type definition
+                    type: isOrder ? 'order' : isUser ? 'user' : isSecurity ? 'alert' : 'alert',
                     title: log.action_type || 'System Event',
                     desc: log.description || 'No details provided.',
-                    time: log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Recently',
-                    timeRaw: log.created_at ? new Date(log.created_at).getTime() : Date.now(),
-                    href: isOrder ? '/admin/sales' : isUser ? '/admin/users' : '/admin/dashboard',
-                    read: false,
+                    time: new Date(log.timestamp || Date.now()).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }),
+                    timeRaw: log.timestamp ? new Date(log.timestamp).getTime() : Date.now(),
+                    href: isOrder ? '/admin/sales' : isUser ? '/admin/users' : '/admin/notifications',
+                    read: log.is_read || false,
                     icon: isOrder ? ShoppingBag : isUser ? Users : isSecurity ? Shield : Bell,
                     color: isOrder ? 'text-blue-600' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
                     bg: isOrder ? 'bg-blue-50' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
                 };
             }));
         } catch { } finally { setActLoading(false); }
+    };
+
+    const handleMarkRead = async (id: string) => {
+        try {
+            await userService.markActivityRead(id);
+            fetchActivity();
+        } catch { toast.error("Failed to mark as read"); }
+    };
+
+    const handleMarkAllRead = async () => {
+        try {
+            await userService.markAllActivitiesRead();
+            fetchActivity();
+        } catch { toast.error("Failed to mark all as read"); }
     };
 
     const toggleTheme = () => {
@@ -210,10 +228,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="flex flex-1 min-h-0 print:block print:overflow-visible overflow-hidden">
                     <div className="hidden md:flex flex-col flex-shrink-0 z-[60] print:hidden">
                         <div className="h-full overflow-hidden shadow-2xl transition-all duration-300">
-                             <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+                            <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
                         </div>
                     </div>
- 
+
                     <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
                         {/* ═══ MODERN GLASS COMMAND NAVBAR ═══ */}
                         <div className="hidden md:flex bg-white/70 dark:bg-[#1a2235]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/5 px-8 py-2 items-center justify-between gap-6 flex-shrink-0 z-[50] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] sticky top-0 transition-all duration-300 print:hidden">
@@ -255,7 +273,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <Bell className="h-5 w-5" />
                                         {unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#c45500] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
                                     </button>
-                                    {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={() => { }} onMarkRead={() => { }} onRefresh={fetchActivity} />}
+                                    {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
                                 </div>
 
                                 <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
