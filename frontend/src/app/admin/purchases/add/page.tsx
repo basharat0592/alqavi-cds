@@ -97,7 +97,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                         </div>
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-baseline gap-1 truncate leading-tight">
-                                <span className="text-[12px] font-bold text-[#111]">{selected.name}</span>
+                                <span className="text-[12px] font-bold text-[#111]">{selected.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                 {(selected.weight || selected.size) && (
                                     <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
                                         - {selected.weight}{selected.weight && selected.size ? ' • ' : ''}{selected.size}
@@ -149,7 +149,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                     <div className="flex-1 flex justify-between gap-4 min-w-0">
                                         <div className="flex flex-col min-w-0">
                                             <div className="flex items-baseline gap-1 leading-[1.2] group-hover:text-[#e77600]">
-                                                <span className="text-[13px] font-bold text-[#111] group-hover:underline line-clamp-1">{p.name}</span>
+                                                <span className="text-[13px] font-bold text-[#111] group-hover:underline line-clamp-1">{p.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                                 {(p.weight || p.size) && (
                                                     <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
                                                         - {p.weight}{p.weight && p.size ? ' • ' : ''}{p.size}

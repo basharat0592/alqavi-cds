@@ -3,82 +3,174 @@
 import Link from 'next/link';
 import {
     Facebook, Instagram, Twitter, Youtube,
-    Phone, Mail, ShoppingBag, Star, ShieldCheck, Truck, Globe
+    Send, ShieldCheck, Truck, ChevronRight,
+    Sparkles
 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
-export default function Footer() {
+const FOOTER_LINKS = [
+    {
+        title: "Collections",
+        links: [
+            { name: "Skincare", href: "/customer/shop?category=skincare" },
+            { name: "Makeup", href: "/customer/shop?category=makeup" },
+            { name: "Best Sellers", href: "/customer/shop?filter=best-sellers" },
+            { name: "New Arrivals", href: "/customer/shop?filter=new-arrivals" }
+        ]
+    },
+    {
+        title: "Company",
+        links: [
+            { name: "About Us", href: "/about" },
+            { name: "Partners", href: "/partners" },
+            { name: "Distribution", href: "/distribution" },
+            { name: "Careers", href: "/careers" }
+        ]
+    },
+    {
+        title: "Support",
+        links: [
+            { name: "Track Order", href: "/customer/orders" },
+            { name: "Shipping", href: "/shipping" },
+            { name: "Returns", href: "/returns" },
+            { name: "Contact", href: "/contact" }
+        ]
+    }
+];
+
+const SOCIAL_LINKS = [
+    { icon: <Facebook size={24} />, href: "#", brand: "Facebook", color: "hover:text-[#1877F2] hover:drop-shadow-[0_0_10px_rgba(24,119,242,0.4)]" },
+    { icon: <Instagram size={24} />, href: "#", brand: "Instagram", color: "hover:text-[#E4405F] hover:drop-shadow-[0_0_10px_rgba(228,64,95,0.4)]" },
+    { icon: <Twitter size={24} />, href: "#", brand: "Twitter", color: "hover:text-[#1DA1F2] hover:drop-shadow-[0_0_10px_rgba(29,161,242,0.4)]" },
+    { icon: <Youtube size={24} />, href: "#", brand: "Youtube", color: "hover:text-[#FF0000] hover:drop-shadow-[0_0_10px_rgba(255,0,0,0.4)]" }
+];
+
+import { getImageUrl } from '@/lib/utils';
+
+export default function Footer({ settings }: { settings?: any }) {
+    const siteLogo = settings?.footer_logo || settings?.logo;
+    const siteName = settings?.site_name || "AL-QAVI";
+
+    const socialLinks = [
+        { icon: <Facebook size={24} />, href: settings?.facebook_url || "#", brand: "Facebook", color: "hover:text-[#1877F2]" },
+        { icon: <Instagram size={24} />, href: settings?.instagram_url || "#", brand: "Instagram", color: "hover:text-[#E4405F]" },
+        { icon: <Twitter size={24} />, href: settings?.tiktok_url || "#", brand: "TikTok", color: "hover:text-[#000000]" }, // Using tiktok_url for twitter slot if needed
+        { icon: <Youtube size={24} />, href: settings?.youtube_url || "#", brand: "Youtube", color: "hover:text-[#FF0000]" }
+    ].filter(s => s.href !== "#" || true); // Show all for now
+
     return (
-        <footer className="bg-slate-900 text-white font-sans border-t border-white/5">
+        <footer className="relative bg-white text-slate-900 border-t border-slate-100 overflow-hidden font-sans">
+            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-12 py-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-20 mb-8">
 
-
-            <div className="w-full px-4 md:px-8 lg:px-10 pt-16 pb-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 pb-16 border-b border-white/5">
-                    <div className="space-y-6">
-                        <Link href="/customer" className="flex items-center gap-2 group transition-all hover:opacity-80">
-                            <Logo size="sm" className="scale-[1.1] grayscale brightness-[5] hover:grayscale-0 hover:brightness-100 transition-all duration-500" />
-                        </Link>
-                        <p className="text-sm text-slate-400 leading-relaxed font-medium">
-                            Experience the authentic taste of Gilgit-Baltistan inspired Chinese cuisine. Freshly prepared, traditional recipes, delivered to your doorstep.
-                        </p>
-                        <div className="flex gap-4">
-                            <Link href="#" className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center hover:bg-accent hover:text-white transition-all"><Facebook className="h-4 w-4" /></Link>
-                            <Link href="#" className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center hover:bg-accent hover:text-white transition-all"><Instagram className="h-4 w-4" /></Link>
-                            <Link href="#" className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center hover:bg-accent hover:text-white transition-all"><Twitter className="h-4 w-4" /></Link>
+                    {/* Brand Section */}
+                    <div className="lg:col-span-4 space-y-1">
+                        <div className="relative inline-block group/logo">
+                            <Link href="/customer" className="relative block transition-transform duration-500 hover:scale-[1.02]">
+                                {siteLogo ? (
+                                    <img src={getImageUrl(siteLogo)} alt={siteName} className="h-16 w-auto object-contain mix-blend-multiply" />
+                                ) : (
+                                    <Logo size="lg" className="mix-blend-multiply" />
+                                )}
+                            </Link>
                         </div>
+                        <p className="text-slate-500 text-[15px] leading-relaxed max-w-sm font-medium">
+                            <span className="text-accent font-black tracking-widest uppercase text-[10px] block mb-2">Professional Distribution</span>
+                            Redefining beauty standards in Pakistan with <span className="text-slate-900 font-bold">authentic global collections</span> and service excellence.
+                        </p>
                     </div>
 
-                    <div>
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">Explore</h3>
-                        <ul className="space-y-3 text-sm font-medium text-slate-400">
-                            <li><Link href="/customer/shop" className="hover:text-white transition-colors">Catalog</Link></li>
-                            <li><Link href="/customer/shop?cat=New Arrivals" className="hover:text-white transition-colors">New Arrivals</Link></li>
-                            <li><Link href="/customer/shop?cat=Skincare" className="hover:text-white transition-colors">Skincare Registry</Link></li>
-                            <li><Link href="/customer/shop?cat=Makeup" className="hover:text-white transition-colors">Makeup Collection</Link></li>
-                        </ul>
+                    {/* Links Sections */}
+                    <div className="lg:col-span-5 grid grid-cols-2 sm:grid-cols-3 gap-10">
+                        {FOOTER_LINKS.map((section, idx) => (
+                            <div key={section.title} className="space-y-8">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
+                                    <span className="w-1.5 h-px bg-accent/30" />
+                                    {section.title}
+                                </h4>
+                                <ul className="space-y-4">
+                                    {section.links.map((link) => (
+                                        <li key={link.name}>
+                                            <Link
+                                                href={link.href}
+                                                className="text-[14px] font-bold text-slate-500 hover:text-slate-900 transition-all duration-300 flex items-center group/link"
+                                            >
+                                                <ChevronRight size={12} className="mr-0 w-0 opacity-0 transition-all duration-500 group-hover/link:w-4 group-hover/link:mr-2 group-hover/link:opacity-100 text-accent" />
+                                                <span className="relative pb-0.5 overflow-hidden">
+                                                    {link.name}
+                                                    <span className="absolute bottom-0 left-0 w-full h-px bg-slate-200 translate-x-[-105%] group-hover/link:translate-x-0 transition-transform duration-500" />
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
                     </div>
 
-                    <div>
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">Partnership</h3>
-                        <ul className="space-y-3 text-sm font-medium text-slate-400">
-                            <li><Link href="/contact" className="hover:text-white transition-colors">Wholesale Portal</Link></li>
-                            <li><Link href="/contact" className="hover:text-white transition-colors">Distribution Access</Link></li>
-                            <li><Link href="/contact" className="hover:text-white transition-colors">Bulk Procurement</Link></li>
-                            <li><Link href="/contact" className="hover:text-white transition-colors">Partner Registry</Link></li>
-                        </ul>
-                    </div>
+                    {/* Social Hub */}
+                    <div className="lg:col-span-3 space-y-8">
+                        <div className="space-y-3">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
+                                <span className="w-1.5 h-px bg-accent/30" />
+                                Connect With Us
+                            </h4>
+                            <p className="text-slate-500 text-[13px] font-medium italic">
+                                Stay updated with our latest professional collections and industry insights.
+                            </p>
+                        </div>
 
-                    <div>
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">Contact Support</h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 text-sm font-medium text-slate-400">
-                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-accent"><Phone className="h-4 w-4" /></div>
-                                <span>0347-7001241</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm font-medium text-slate-400">
-                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-accent"><Mail className="h-4 w-4" /></div>
-                                <span>support@alqavi.com</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm font-medium text-slate-400">
-                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-accent"><Globe className="h-4 w-4" /></div>
-                                <span>Karachi, Pakistan</span>
-                            </div>
+                        <div className="flex flex-row gap-6">
+                            {socialLinks.map((social, i) => (
+                                <Link
+                                    key={i}
+                                    href={social.href}
+                                    aria-label={social.brand}
+                                    className={`text-slate-400 transition-all duration-300 hover:scale-125 group/icon ${social.color}`}
+                                >
+                                    <span className="relative z-10">{social.icon}</span>
+                                </Link>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                        <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-                        <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-                        <Link href="/cookies" className="hover:text-white transition-colors">Security</Link>
+                {/* Bottom Bar */}
+                <div className="pt-12 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-10">
+                    <div className="flex flex-col gap-1.5 group/dev">
+                        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-300">Architecture & Design</span>
+                        <Link
+                            href="https://zulqarnain-ali.vercel.app/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group/link flex items-center gap-2.5"
+                        >
+                            <span className="text-[14px] font-black text-blue-600 hover:text-blue-800 tracking-tight transition-colors underline decoration-blue-600/30 underline-offset-4">Zulqarnain Ali</span>
+                            <div className="flex w-6 h-6 items-center justify-center rounded-full border border-blue-100 bg-blue-50 transition-all duration-500 group-hover/link:border-blue-600 group-hover/link:bg-blue-600 group-hover/link:text-white group-hover/link:translate-x-1 group-hover/link:-translate-y-1">
+                                <ChevronRight size={12} className="rotate-[-45deg] text-blue-600 group-hover/link:text-white" />
+                            </div>
+                        </Link>
                     </div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                        © 2026 Al-Qavi Distributor. All Rights Reserved.
-                    </p>
+
+                    <div className="flex flex-col items-center md:items-end gap-5">
+                        <div className="flex gap-10 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                            <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
+                            <Link href="/privacy" className="hover:text-slate-900 transition-colors">Privacy</Link>
+                            <Link href="/contact" className="hover:text-slate-900 transition-colors">Contact</Link>
+                        </div>
+                        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-[0.4em] flex items-center gap-3">
+                            © 2026 {siteName} <span className="w-1 h-1 rounded-full bg-slate-200" /> Professional Service Excellence
+                        </p>
+                    </div>
                 </div>
             </div>
         </footer>
     );
 }
+
+
+
+
+
+
 

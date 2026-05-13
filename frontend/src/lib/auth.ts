@@ -24,6 +24,17 @@ export const authService = {
     // Registration API
     register: async (userData: any): Promise<User> => {
         try {
+            const hasFile = Object.values(userData).some(v => v instanceof File);
+            if (hasFile) {
+                const fd = new FormData();
+                Object.entries(userData).forEach(([k, v]) => {
+                    if (v !== null && v !== undefined) fd.append(k, v as any);
+                });
+                const { data } = await api.post('/v1/users/register/', fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                return data as User;
+            }
             const { data } = await api.post('/v1/users/register/', userData);
             return data as User;
         } catch (error: any) {
@@ -33,6 +44,17 @@ export const authService = {
 
     registerSupplier: async (userData: any): Promise<User> => {
         try {
+            const hasFile = Object.values(userData).some(v => v instanceof File);
+            if (hasFile) {
+                const fd = new FormData();
+                Object.entries(userData).forEach(([k, v]) => {
+                    if (v !== null && v !== undefined) fd.append(k, v as any);
+                });
+                const { data } = await api.post('/v1/users/register/supplier/', fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                return data as User;
+            }
             const { data } = await api.post('/v1/users/register/supplier/', userData);
             return data as User;
         } catch (error: any) {
@@ -79,7 +101,7 @@ export const authService = {
             const token = data.access;
             const refreshToken = data.refresh;
             const safeUser = data.user as User;
-            authService.setSession(safeUser, token, refreshToken);
+            authService.setSession(token, refreshToken, safeUser);
             return { user: safeUser, token };
         } catch (error: any) {
             const isNetworkError = !error.response;
@@ -92,6 +114,7 @@ export const authService = {
     },
 
     logout: () => {
+        if (typeof window === 'undefined') return;
         sessionStorage.removeItem(STORAGE_KEY_USER);
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
@@ -99,9 +122,6 @@ export const authService = {
 
     getUser: (): User | null => {
         if (typeof window === 'undefined') return null;
-        const token = sessionStorage.getItem('accessToken');
-        if (!token) return null;
-
         const userStr = sessionStorage.getItem(STORAGE_KEY_USER);
         if (!userStr || userStr === 'undefined') return null;
         try {
@@ -111,10 +131,11 @@ export const authService = {
         }
     },
 
-    setSession: (user: User, token: string, refreshToken?: string) => {
-        sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
+    setSession: (token: string, refreshToken?: string, user?: User) => {
+        if (typeof window === 'undefined') return;
         sessionStorage.setItem('accessToken', token);
         if (refreshToken) sessionStorage.setItem('refreshToken', refreshToken);
+        if (user) sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
     },
 
     isAuthenticated: (): boolean => {
@@ -122,11 +143,26 @@ export const authService = {
         return !!sessionStorage.getItem('accessToken');
     },
 
+    getToken: () => {
+        if (typeof window === 'undefined') return null;
+        return sessionStorage.getItem('accessToken');
+    },
+
+    getRefreshToken: () => {
+        if (typeof window === 'undefined') return null;
+        return sessionStorage.getItem('refreshToken');
+    },
+
     updateProfile: async (userId: string, updates: Partial<User>): Promise<User> => {
+        // Mock update for now
         await new Promise((resolve) => setTimeout(resolve, 800));
         const currentUser = authService.getUser() || {} as User;
         const updatedUser = { ...currentUser, ...updates };
-        authService.setSession(updatedUser, sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '');
+        authService.setSession(
+            sessionStorage.getItem('accessToken') || '',
+            sessionStorage.getItem('refreshToken') || '',
+            updatedUser
+        );
         return updatedUser;
     }
 };

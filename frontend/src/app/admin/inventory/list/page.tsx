@@ -191,7 +191,7 @@ export default function InventoryListPage() {
             if (whData.status === 'fulfilled') setWarehouses(whData.value || []);
 
             const fromUsers = userRes.status === 'fulfilled' ? (Array.isArray(userRes.value) ? userRes.value : []).filter((u: any) => (u.role_name || '').toLowerCase().includes('supplier')).map((u: any) => ({
-                id: u.id, name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username
+                id: u.id, name: u.business_name || u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username
             })) : [];
             const fromCompany = supRes.status === 'fulfilled' ? (Array.isArray(supRes.value) ? supRes.value : []).map((s: any) => ({
                 id: s.id, name: s.company || s.name
@@ -288,9 +288,15 @@ export default function InventoryListPage() {
         }
     };
 
+    const getSupplierName = useCallback((id: any, fallback: string) => {
+        const sup = suppliers.find(s => String(s.id) === String(id));
+        return sup ? sup.name : fallback;
+    }, [suppliers]);
+
     const filtered = React.useMemo(() => {
         const raw = (stocks || []).filter(i => {
-            const matchesSearch = `${i.product_name} ${i.supplier_name}`.toLowerCase().includes(search.toLowerCase());
+            const resolvedSupplierName = getSupplierName(i.supplier, i.supplier_name);
+            const matchesSearch = `${i.product_name} ${resolvedSupplierName}`.toLowerCase().includes(search.toLowerCase());
             const matchesSupplier = !selectedSupplier || String(i.supplier) === String(selectedSupplier);
             const matchesWarehouse = !selectedWarehouse || String(i.warehouse) === String(selectedWarehouse);
             return matchesSearch && matchesSupplier && matchesWarehouse;
@@ -313,6 +319,12 @@ export default function InventoryListPage() {
                 // If warehouses are different, mark as 'Multiple'
                 if (g.warehouse_name !== item.warehouse_name) {
                     g.warehouse_name = 'Multiple';
+                }
+
+                // If suppliers are different, mark as 'Multiple'
+                if (g.supplier_name !== item.supplier_name) {
+                    g.supplier_name = 'Multiple';
+                    g.supplier = null;
                 }
 
                 // Update date to latest arrival in this batch group
@@ -453,7 +465,9 @@ export default function InventoryListPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-baseline gap-1.5 group-hover:text-[#007185] cursor-pointer" onClick={() => setViewingStock(s)}>
-                                                        <div className="text-[14px] font-bold text-[#111] group-hover:text-[#007185] group-hover:underline">{s.product_name}</div>
+                                                        <div className="text-[14px] font-bold text-[#111] group-hover:text-[#007185] group-hover:underline">
+                                                            {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
+                                                        </div>
                                                         {(s.weight || s.size) && (
                                                             <div className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
                                                                 — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
@@ -473,7 +487,7 @@ export default function InventoryListPage() {
                                                     <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">Single Unit Cost</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-[12px]">
-                                                    <div className="text-[#111] font-bold flex items-center gap-1.5"><Truck size={14} className="text-[#adb1b8]" /> {s.supplier_name}</div>
+                                                    <div className="text-[#111] font-bold flex items-center gap-1.5"><Truck size={14} className="text-[#adb1b8]" /> {getSupplierName(s.supplier, s.supplier_name)}</div>
                                                     <div className="text-[#565959] flex items-center gap-1.5 mt-1.5">
                                                         <MapPin size={12} className="text-[#adb1b8]" />
                                                         {s.warehouse_name ? (
@@ -597,7 +611,9 @@ export default function InventoryListPage() {
                                                     />
                                                     <datalist id="catalog-products">
                                                         {allProducts.filter(p => p.status === 'ACTIVE').map(p => (
-                                                            <option key={p.id} value={p.name}>{p.sku ? `${p.name} (${p.sku})` : p.name}</option>
+                                                            <option key={p.id} value={p.name}>
+                                                                {p.sku ? `${(p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()} (${p.sku})` : (p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                            </option>
                                                         ))}
                                                     </datalist>
                                                 </div>
@@ -699,7 +715,7 @@ export default function InventoryListPage() {
                 onClose={() => setDeleteModal({ open: false, ids: [], name: '' })}
                 onConfirm={handleDelete}
                 loading={isSubmitting}
-                title={`Delete '${deleteModal.name}'?`}
+                title={`Delete '${deleteModal.name.replace(/\s*\(.*?\)\s*$/, '')}'?`}
                 message={`Yeh product TAMAM (allover) warehouses se khatam ho jayega. Are you sure you want to permanently remove this product from the entire global inventory?`}
             />
 
@@ -720,7 +736,7 @@ export default function InventoryListPage() {
                             <div className="flex items-center gap-3">
                                 <Package size={20} className="text-[#565959]" />
                                 <div>
-                                    <h3 className="text-[16px] font-bold text-[#111]">{viewingStock.product_name}</h3>
+                                    <h3 className="text-[16px] font-bold text-[#111]">{viewingStock.product_name.replace(/\s*\(.*?\)\s*$/, '')}</h3>
                                     <p className="text-[11px] text-[#565959] font-medium uppercase tracking-wider">{viewingStock.category_name || 'General Inventory'}</p>
                                 </div>
                             </div>
@@ -752,84 +768,120 @@ export default function InventoryListPage() {
                                     </div>
                                 </div>
 
-                                {/* 2. Distribution & Details */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <h4 className="text-[13px] font-bold text-[#111] border-b border-[#eee] pb-2">Location Breakdown</h4>
-                                        <div className="space-y-2">
-                                            {Object.entries((viewingStock.items || []).reduce((acc: any, curr: any) => {
-                                                const name = curr.warehouse_name || 'Unassigned';
-                                                acc[name] = (acc[name] || 0) + curr.total_quantity;
-                                                return acc;
-                                            }, {})).map(([whName, whTotal]: [string, any]) => (
-                                                <div key={whName} className="flex items-center justify-between text-[13px] py-1">
-                                                    <div className="flex items-center gap-2 text-[#565959]">
-                                                        <MapPin size={14} />
-                                                        <span>{whName}</span>
-                                                    </div>
-                                                    <span className="font-bold text-[#111]">{whTotal.toLocaleString()} units</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                 {/* 2. Distribution & Details */}
+                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                     <div className="space-y-4">
+                                         <h4 className="text-[13px] font-bold text-[#111] border-b border-[#eee] pb-2">Location Breakdown</h4>
+                                         <div className="space-y-2">
+                                             {Object.entries((viewingStock.items || []).reduce((acc: any, curr: any) => {
+                                                 const name = curr.warehouse_name || 'Unassigned';
+                                                 acc[name] = (acc[name] || 0) + curr.total_quantity;
+                                                 return acc;
+                                             }, {})).map(([whName, whTotal]: [string, any]) => (
+                                                 <div key={whName} className="flex items-center justify-between text-[13px] py-1">
+                                                     <div className="flex items-center gap-2 text-[#565959]">
+                                                         <MapPin size={14} />
+                                                         <span>{whName}</span>
+                                                     </div>
+                                                     <span className="font-bold text-[#111]">{whTotal.toLocaleString()} units</span>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
 
-                                    <div className="space-y-4">
-                                        <h4 className="text-[13px] font-bold text-[#111] border-b border-[#eee] pb-2">Technical Specs</h4>
-                                        <div className="grid grid-cols-2 gap-4 text-[12px]">
-                                            <div>
-                                                <p className="text-[#565959] mb-0.5">Weight</p>
-                                                <p className="font-bold text-[#111]">{viewingStock.weight || '---'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[#565959] mb-0.5">Variant / Type</p>
-                                                <p className="font-bold text-[#111]">{viewingStock.size || '---'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[#565959] mb-0.5">SKU</p>
-                                                <p className="font-bold text-[#111]">{viewingStock.sku || '---'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[#565959] mb-0.5">Barcode</p>
-                                                <p className="font-bold text-[#111]">{viewingStock.barcode || '---'}</p>
-                                            </div>
-                                            <div className="col-span-full">
-                                                <p className="text-[#565959] mb-0.5">Supplier</p>
-                                                <p className="font-bold text-[#111]">{viewingStock.supplier_name}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[#565959] mb-0.5">Date Added</p>
-                                                <p className="font-bold text-[#111]">{new Date(viewingStock.date).toLocaleDateString()}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                     <div className="space-y-4">
+                                         <h4 className="text-[13px] font-bold text-[#111] border-b border-[#eee] pb-2">Partner Breakdown</h4>
+                                         <div className="space-y-2">
+                                             {Object.entries((viewingStock.items || []).reduce((acc: any, curr: any) => {
+                                                 const name = getSupplierName(curr.supplier, curr.supplier_name) || 'Unknown';
+                                                 acc[name] = (acc[name] || 0) + curr.total_quantity;
+                                                 return acc;
+                                             }, {})).map(([supName, supTotal]: [string, any]) => (
+                                                 <div key={supName} className="flex items-center justify-between text-[13px] py-1">
+                                                     <div className="flex items-center gap-2 text-[#565959]">
+                                                         <Truck size={14} />
+                                                         <span>{supName}</span>
+                                                     </div>
+                                                     <span className="font-bold text-[#007600]">{supTotal.toLocaleString()} units</span>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
 
-                                {/* 3. Arrival Log */}
-                                <div className="space-y-4">
-                                    <h4 className="text-[13px] font-bold text-[#111] border-b border-[#eee] pb-2">Arrival History</h4>
-                                    <div className="border border-[#ddd] rounded-[4px] overflow-hidden">
-                                        <table className="w-full text-left text-[12px] border-collapse">
-                                            <thead>
-                                                <tr className="bg-[#f7f8fa] border-b border-[#ddd] font-bold text-[#565959] uppercase">
-                                                    <th className="px-4 py-2">Date</th>
-                                                    <th className="px-4 py-2">Location</th>
-                                                    <th className="px-4 py-2 text-right">Quantity</th>
-                                                    <th className="px-4 py-2 text-right">Unit Price</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-[#eee]">
-                                                {(viewingStock.items || [viewingStock]).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any, idx: number) => (
-                                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                        <td className="px-4 py-3 text-[#111] font-medium">{new Date(item.date).toLocaleDateString()}</td>
-                                                        <td className="px-4 py-3 text-[#565959]">{item.warehouse_name}</td>
-                                                        <td className="px-4 py-3 text-right font-bold text-[#007600]">+{item.total_quantity.toLocaleString()}</td>
-                                                        <td className="px-4 py-3 text-right font-bold text-[#111]">{formatCurrency(item.price_per_item)}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                     <div className="space-y-4">
+                                         <h4 className="text-[13px] font-bold text-[#111] border-b border-[#eee] pb-2">Technical Specs</h4>
+                                         <div className="grid grid-cols-2 gap-4 text-[12px]">
+                                             <div>
+                                                 <p className="text-[#565959] mb-0.5">Weight</p>
+                                                 <p className="font-bold text-[#111]">{viewingStock.weight || '---'}</p>
+                                             </div>
+                                             <div>
+                                                 <p className="text-[#565959] mb-0.5">Variant / Type</p>
+                                                 <p className="font-bold text-[#111]">{viewingStock.size || '---'}</p>
+                                             </div>
+                                             <div>
+                                                 <p className="text-[#565959] mb-0.5">SKU</p>
+                                                 <p className="font-bold text-[#111]">{viewingStock.sku || '---'}</p>
+                                             </div>
+                                             <div>
+                                                 <p className="text-[#565959] mb-0.5">Barcode</p>
+                                                 <p className="font-bold text-[#111]">{viewingStock.barcode || '---'}</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 {/* 3. Arrival Log */}
+                                 <div className="space-y-4">
+                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
+                                         <h4 className="text-[13px] font-bold text-[#111]">Source & Arrival Log</h4>
+                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Global Traceability</span>
+                                     </div>
+                                     <div className="border border-[#ddd] rounded-[4px] overflow-hidden shadow-sm">
+                                         <table className="w-full text-left text-[12px] border-collapse">
+                                             <thead>
+                                                 <tr className="bg-[#f7f8fa] border-b border-[#ddd] font-bold text-[#565959] uppercase tracking-tighter">
+                                                     <th className="px-4 py-3">Arrival Date & Time</th>
+                                                     <th className="px-4 py-3">Source Supplier</th>
+                                                     <th className="px-4 py-3">Destination</th>
+                                                     <th className="px-4 py-3 text-right">Batch Qty</th>
+                                                     <th className="px-4 py-3 text-right">Unit Price</th>
+                                                 </tr>
+                                             </thead>
+                                             <tbody className="divide-y divide-[#eee]">
+                                                 {(viewingStock.items || [viewingStock]).sort((a: any, b: any) => new Date(b.updated_at || b.date).getTime() - new Date(a.updated_at || a.date).getTime()).map((item: any, idx: number) => (
+                                                     <tr key={idx} className="hover:bg-[#fcfdff] transition-colors group">
+                                                         <td className="px-4 py-3">
+                                                             <div className="font-bold text-[#111]">{new Date(item.updated_at || item.date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                                             <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
+                                                                 {new Date(item.updated_at || item.date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                             </div>
+                                                         </td>
+                                                         <td className="px-4 py-3 font-medium text-[#007185] group-hover:underline cursor-default">
+                                                             <div className="flex items-center gap-2">
+                                                                 <Truck size={14} className="text-slate-300" />
+                                                                 {getSupplierName(item.supplier, item.supplier_name)}
+                                                             </div>
+                                                         </td>
+                                                         <td className="px-4 py-3 text-[#565959]">
+                                                             <div className="flex items-center gap-2 font-medium">
+                                                                 <MapPin size={12} className="text-slate-300" />
+                                                                 {item.warehouse_name}
+                                                             </div>
+                                                         </td>
+                                                         <td className="px-4 py-3 text-right">
+                                                             <div className="font-black text-[#007600]">+{item.total_quantity.toLocaleString()}</div>
+                                                             <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Units</div>
+                                                         </td>
+                                                         <td className="px-4 py-3 text-right font-black text-[#111]">
+                                                             {formatCurrency(item.price_per_item)}
+                                                         </td>
+                                                     </tr>
+                                                 ))}
+                                             </tbody>
+                                         </table>
+                                     </div>
+                                 </div>
                             </div>
                         </div>
 

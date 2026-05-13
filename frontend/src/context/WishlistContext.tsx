@@ -56,7 +56,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
             const backendItems = rawData.map((item: any) => ({
                 id: item.product_details?.id,
-                name: item.product_details?.product_name || 'Unknown Product',
+                name: (item.product_details?.product_name || 'Unknown Product').replace(/\s*\(.*?\)\s*$/, '').trim(),
                 price: item.product_details?.selling_price || 0,
                 image: item.product_details?.image,
                 category: item.product_details?.category_name,

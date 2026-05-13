@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus } from 'lucide-react';
+import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
     id?: string;
@@ -24,6 +26,7 @@ interface ProductCardProps {
     stock?: number;
     onAddToCart?: (qty: number) => void;
     onWishlist?: () => void;
+    layout?: 'vertical' | 'horizontal';
 }
 
 export default function ProductCard({
@@ -43,7 +46,9 @@ export default function ProductCard({
     stock,
     onAddToCart,
     onWishlist,
-}: ProductCardProps) {
+    layout = 'vertical',
+    variant = 'default',
+}: ProductCardProps & { variant?: 'default' | 'minimal' | 'overlay' }) {
     const { items, addToCart, updateQuantity } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
@@ -88,175 +93,167 @@ export default function ProductCard({
         onWishlist?.();
     };
 
-    const renderStars = (r: number) =>
-        Array.from({ length: 5 }).map((_, i) => (
-            <Star
-                key={i}
-                className={`h-3 w-3 ${i < Math.floor(r) ? 'fill-[#F59E0B] text-[#F59E0B]' : i < r ? 'fill-[#F59E0B]/50 text-[#F59E0B]' : 'fill-gray-200 text-gray-200'}`}
-            />
-        ));
+    const isHorizontal = layout === 'horizontal';
+    const isMinimal = variant === 'minimal';
+    const isOverlay = variant === 'overlay';
 
     return (
-        <div className="group relative bg-white dark:bg-[#1a252f] rounded-2xl border border-gray-100 dark:border-white/5 hover:border-[#F59E0B]/30 hover:shadow-xl hover:shadow-[#F59E0B]/8 transition-all duration-400 overflow-hidden flex flex-col">
+        <div className={cn(
+            "group relative bg-white rounded-[40px] shadow-[0_10px_30px_-5px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.15)] transition-all duration-500 flex border border-slate-50 overflow-hidden",
+            isHorizontal ? "flex-row h-[180px] md:h-[220px]" : "flex-col",
+            isOverlay && "aspect-square"
+        )}>
 
-            {/* Badges Row */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-                {batch && (
-                    <span className="px-2.5 py-1 bg-[#F59E0B] text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md">
-                        {batch}
-                    </span>
-                )}
-                {badge && (
-                    <span className="px-2.5 py-1 bg-[#131921] text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md border border-white/10">
-                        {badge}
-                    </span>
-                )}
-                {discount && (
-                    <span className="px-2.5 py-1 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-md">
-                        -{discount}%
-                    </span>
-                )}
-                {stock !== undefined && stock < 5 && stock > 0 && (
-                    <span className="px-2.5 py-1 bg-orange-100 text-orange-700 text-[9px] font-black uppercase tracking-widest rounded-lg border border-orange-200">
-                        Only {stock} left
-                    </span>
-                )}
-                {stock === 0 && (
-                    <span className="px-2.5 py-1 bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white/40 text-[9px] font-black uppercase tracking-widest rounded-lg">
-                        Out of Stock
-                    </span>
-                )}
-            </div>
-
-            {/* Wishlist Button */}
-            <button
-                onClick={handleWishlist}
-                className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm border
-                    ${isWishlisted
-                        ? 'bg-red-500 border-red-400 text-white scale-110'
-                        : 'bg-white/90 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/40 hover:border-red-300 hover:text-red-400'
-                    }`}
-                title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
-            >
-                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-white' : ''} transition-transform duration-200 ${isWishlisted ? 'scale-110' : ''}`} />
-            </button>
-
-            {/* Image Area */}
-            <Link href={`/customer/product/${id}`} className="block relative overflow-hidden bg-gray-100 dark:bg-white/[0.03]" style={{ aspectRatio: '3/2' }}>
-                <img
-                    src={image || '/images/logo.png'}
-                    alt={title}
-                    className="w-full h-full object-contain p-0 group-hover:scale-105 transition-transform duration-700"
-                />
-                {/* Quick View Overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-400 flex items-center justify-center">
-                    <span className="px-6 py-2.5 bg-white/90 dark:bg-[#1a252f]/90 backdrop-blur-sm rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 border border-white/50 dark:border-white/10 shadow-lg">
-                        <Eye className="h-4 w-4" /> Quick View
-                    </span>
-                </div>
-            </Link>
-
-            {/* Content Area */}
-            <div className="p-4 flex flex-col flex-1">
-
-                {/* Category + Rating */}
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-black text-[#F59E0B] uppercase tracking-[0.18em]">{category}</span>
-                    <div className="flex items-center gap-1.5">
-                        <div className="flex items-center gap-0.5">{renderStars(rating)}</div>
-                        <span className="text-[10px] font-black text-slate-400 dark:text-white/30">({reviews})</span>
-                    </div>
-                </div>
-
-                {/* Title */}
-                <Link href={`/customer/product/${id}`} className="block mb-1">
-                    <h3 className="text-[14px] font-black text-gray-900 dark:text-white line-clamp-2 group-hover:text-[#F59E0B] transition-colors tracking-tight leading-tight">
-                        {title}
-                        {(weight || size) && (
-                            <span className="text-[11px] text-[#F59E0B] font-black ml-1.5 inline-flex items-center gap-1.5">
-                                <span className="opacity-20 text-slate-400 font-normal">—</span>
-                                {weight}{weight && size ? ' • ' : ''}{size}
+            {/* 1. IMAGE PORTAL - ZERO PADDING */}
+            <div className={cn(
+                "relative bg-[#F0F7FF] flex items-center justify-center overflow-hidden group/img",
+                isHorizontal ? "w-1/3 aspect-square" : "aspect-[1.4/1] w-full",
+                isOverlay && "w-full h-full aspect-square absolute inset-0"
+            )}>
+                {/* Badges Stack - Top Left */}
+                <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+                    {batch && (
+                        <div className="px-3 py-1.5 bg-[#111]/80 backdrop-blur-md rounded-xl shadow-lg flex items-center gap-2 border border-white/20">
+                            <Package className="h-3 w-3 text-white" />
+                            <span className="text-white text-[9px] font-black uppercase tracking-widest">
+                                Batch: {batch}
                             </span>
-                        )}
-                    </h3>
+                        </div>
+                    )}
+                    {badge && (
+                        <div className="px-3 py-1.5 bg-red-600 rounded-xl shadow-[0_8px_20px_rgba(220,38,38,0.4)] flex items-center gap-2 border border-white/20">
+                            <Sparkles className="h-3 w-3 text-white fill-white animate-pulse" />
+                            <span className="text-white text-[10px] font-black uppercase tracking-widest">
+                                {badge}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Wishlist Icon - Top Right on Image */}
+                {!isOverlay && (
+                    <button
+                        onClick={handleWishlist}
+                        className={`absolute top-4 right-4 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/50
+                            ${isWishlisted
+                                ? 'bg-[#13B0D1] text-white shadow-lg'
+                                : 'bg-white/80 text-[#13B0D1] hover:bg-white shadow-sm'
+                            }`}
+                    >
+                        <Heart className={`h-4.5 w-4.5 ${isWishlisted ? 'fill-white' : ''}`} />
+                    </button>
+                )}
+
+                <Link href={`/customer/product/${id}`} className="block w-full h-full">
+                    <img
+                        src={image || '/images/logo.png'}
+                        alt={title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                    />
                 </Link>
 
-                {/* Description */}
-                {description && (
-                    <p className="text-[12px] text-slate-500 line-clamp-2 mt-1 leading-relaxed">
-                        {description}
-                    </p>
+                {isOverlay && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end">
+                        <h3 className="text-white text-xl font-black uppercase tracking-tighter leading-none mb-1">{title}</h3>
+                        <p className="text-[#13B0D1] font-black text-lg">Rs.{price.toLocaleString()}</p>
+                    </div>
                 )}
+            </div>
 
-                {/* Spacer */}
-                <div className="flex-1" />
+            {/* 2. CONTENT AREA - WITH PADDING */}
+            {!isOverlay && (
+                <div className={cn(
+                    "p-5 flex flex-col flex-1",
+                    isHorizontal && "justify-center"
+                )}>
+                    {/* Product Info */}
+                    <div className="mb-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <Link href={`/customer/product/${id}`} className="flex-1">
+                                <h3 className={cn(
+                                    "font-black text-[#1E1B4B] leading-tight line-clamp-1 uppercase tracking-tight group-hover:text-[#0891B2] transition-colors",
+                                    isHorizontal ? "text-lg md:text-xl" : "text-[13px]"
+                                )}>
+                                    {title}
+                                </h3>
+                            </Link>
+                            {!isHorizontal && (
+                                <span className={cn(
+                                    "font-black text-[#0891B2] whitespace-nowrap tracking-tighter",
+                                    "text-[15px]"
+                                )}>
+                                    Rs.{price.toLocaleString()}
+                                </span>
+                            )}
+                            {isHorizontal && (
+                                <span className="text-xl md:text-2xl font-black text-[#0891B2] whitespace-nowrap tracking-tighter">
+                                    Rs.{price.toLocaleString()}
+                                </span>
+                            )}
+                        </div>
+                        {!isMinimal && (weight || size || batch) && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+                                    {weight} {weight && (size || batch) ? '•' : ''} {size} {(size && batch) ? '•' : ''} {batch && `Batch: ${batch}`}
+                                </span>
+                            </div>
+                        )}
 
-                {/* Price Row */}
-                <div className="flex items-end justify-between mb-4">
-                    <div>
-                        <p className="text-[9px] text-slate-400 dark:text-white/25 font-black uppercase tracking-[0.2em] mb-1">Price</p>
-                        <div className="flex items-baseline gap-1.5">
-                            <p className="text-[16px] font-black text-gray-900 dark:text-white tracking-tighter leading-none">
-                                Rs.{(price || 0).toLocaleString()}
-                            </p>
-                            {originalPrice && originalPrice > price && (
-                                <p className="text-sm text-slate-400 dark:text-white/25 font-bold line-through leading-none">
-                                    Rs.{originalPrice.toLocaleString()}
+                        {/* Description */}
+                        {!isMinimal && description && (
+                            <div className="mt-2.5 relative group/desc">
+                                <p className={cn(
+                                    "text-[#475569] leading-relaxed font-medium pr-1",
+                                    isHorizontal ? "text-sm line-clamp-3" : "text-[11px] line-clamp-2"
+                                )}>
+                                    {description}
                                 </p>
+                                {!isHorizontal && (
+                                    <Link 
+                                        href={`/customer/product/${id}`} 
+                                        className="absolute bottom-0 right-0 pl-8 bg-gradient-to-r from-transparent via-white/80 to-white text-[#0891B2] font-black text-[11px] hover:underline cursor-pointer"
+                                    >
+                                        more
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 3. ACTION ROW */}
+                    <div className={cn(
+                        "flex items-center mt-auto",
+                        isHorizontal ? "max-w-[200px]" : "w-full"
+                    )}>
+                        {/* Add to Cart Button - Full Width */}
+                        <div className="w-full">
+                            {quantityInCart === 0 ? (
+                                <button
+                                    onClick={handleAddToCart}
+                                    disabled={stock === 0}
+                                    className={`w-full h-11 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center justify-center transition-all duration-300
+                                        ${stock === 0
+                                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                            : 'bg-[#13B0D1] text-white hover:bg-[#119ab8] hover:shadow-lg shadow-[#13B0D1]/20 active:scale-95'
+                                        }`}
+                                >
+                                    Add To Cart
+                                </button>
+                            ) : (
+                                <div className="w-full h-11 bg-[#13B0D1] rounded-full flex items-center justify-between px-2.5 text-white shadow-lg">
+                                    <button onClick={(e) => handleUpdateQuantity(e, -1)} className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center">
+                                        <Minus className="h-3.5 w-3.5 stroke-[4]" />
+                                    </button>
+                                    <span className="text-[13px] font-black">{quantityInCart}</span>
+                                    <button onClick={(e) => handleUpdateQuantity(e, 1)} className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center">
+                                        <Plus className="h-3.5 w-3.5 stroke-[4]" />
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
-                    {/* Stock indicator */}
-                    {stock !== undefined && stock > 5 && (
-                        <div className="flex items-center gap-1 text-emerald-500">
-                            <Package className="h-3 w-3" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">In Stock</span>
-                        </div>
-                    )}
                 </div>
-
-                {/* Add to Cart Button */}
-                <div className="relative h-10">
-                    {quantityInCart === 0 ? (
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={stock === 0}
-                            className={`w-full h-full rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all duration-300 border
-                                ${stock === 0
-                                    ? 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/20 cursor-not-allowed'
-                                    : 'bg-[#131921] dark:bg-white/10 border-[#131921] dark:border-white/10 text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] hover:shadow-lg hover:shadow-[#F59E0B]/20 active:scale-95'
-                                }`}
-                        >
-                            {stock === 0 ? (
-                                'Out of Stock'
-                            ) : (
-                                <>
-                                    <ShoppingCart className="h-4 w-4" />
-                                    Add to Cart
-                                </>
-                            )}
-                        </button>
-                    ) : (
-                        <div className="w-full h-full bg-[#F59E0B] rounded-xl flex items-center justify-between px-3 text-white animate-in zoom-in duration-300 overflow-hidden shadow-lg shadow-[#F59E0B]/20">
-                            <button
-                                onClick={(e) => handleUpdateQuantity(e, -1)}
-                                title="Decrease"
-                                className="w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
-                            >
-                                <Minus className="h-5 w-5" />
-                            </button>
-                            <span className="text-[12px] font-black">{quantityInCart} in Cart</span>
-                            <button
-                                onClick={(e) => handleUpdateQuantity(e, 1)}
-                                title="Increase"
-                                className="w-10 h-10 rounded-lg hover:bg-white/20 flex items-center justify-center font-black transition-colors"
-                            >
-                                <Plus className="h-5 w-5" />
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
+            )}
         </div>
     );
 }

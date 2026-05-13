@@ -195,7 +195,9 @@ export default function StockManagementOverview() {
                                             <ShoppingBag size={14} className="text-emerald-500" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#F59E0B] transition-colors">{m.product_name}</p>
+                                            <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#F59E0B] transition-colors">
+                                                {(m.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                            </p>
                                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1 mt-0.5">
                                                 <MapPin size={10} /> {m.warehouse_name || 'Central Hub'}
                                             </p>

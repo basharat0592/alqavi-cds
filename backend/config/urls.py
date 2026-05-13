@@ -16,6 +16,7 @@ urlpatterns = [
     path('api/v1/company/', include('modules.company.urls')),
     path('api/v1/company/', include('modules.supplier.urls')),
     path('api/v1/company/customers/', include('modules.customer.urls')),
+    path('api/v1/cms/', include('modules.cms.urls')),
 ]
 
 if settings.DEBUG:

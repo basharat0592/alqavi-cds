@@ -8,6 +8,7 @@ import {
     User, CreditCard, ShoppingBag, Package, Boxes, TrendingUp, RotateCcw,
     Truck, Building2, Tag, DollarSign
 } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -63,7 +64,7 @@ const SUB_OPTIONS: Record<string, string[]> = {
 
 const MODES: Record<string, string[]> = {
     'Offline Sales': ['By Date Range', 'By Invoice No', 'By Customer', 'By Salesman'],
-    'Online Sales': ['By Date Range', 'By Invoice No', 'By Customer', 'By Salesman'],
+    'Online Sales': ['By Date Range', 'By Invoice No', 'By Customer', 'By Salesman', 'Pending', 'Delivered', 'Cancelled'],
     'Walk-in Customer': ['All Customers', 'By Registration Date', 'By Area', 'Top Buyers'],
     'Registered Customer': ['All Customers', 'By Registration Date', 'By Area', 'Top Buyers'],
     'Sales Returns': ['By Date Range', 'By Original Invoice', 'By Reason'],
@@ -90,6 +91,9 @@ const VIEW_FIELDS: Record<string, string[]> = {
     'By Reason': ['reasonSearch'],
     'Purchase Order By Date': ['dateRange'],
     'Purchase Order By Invoice': ['invoiceNo'],
+    'Pending': ['dateRange'],
+    'Delivered': ['dateRange'],
+    'Cancelled': ['dateRange'],
 };
 
 function ReportsEngineInner() {
@@ -154,12 +158,14 @@ function ReportsEngineInner() {
                 supplier: filters.supplierId || undefined,
                 start_date: filters.dateFrom,
                 end_date: filters.dateTo,
-                search: ((filters.subView !== 'Low Stock' && filters.subView !== 'Out of Stock' ? filters.subView : '') ||
-                    filters.areaSearch || filters.invoiceNo ||
+                search: (filters.areaSearch || filters.invoiceNo ||
                     filters.salesmanSearch || filters.brandSearch || filters.customerId ||
                     filters.reasonSearch || filters.accountSearch).trim() || undefined,
                 status: (filters.subView === 'Low Stock' || filters.view === 'Low Stock') ? 'LOW' :
-                    (filters.subView === 'Out of Stock' || filters.view === 'Out of Stock') ? 'OUT' : undefined,
+                    (filters.subView === 'Out of Stock' || filters.view === 'Out of Stock') ? 'OUT' :
+                    (filters.subView === 'Pending') ? 'pending' :
+                    (filters.subView === 'Delivered') ? 'delivered' :
+                    (filters.subView === 'Cancelled') ? 'cancelled' : undefined,
                 market: filters.view === 'Offline Sales' ? 'POS' : filters.view === 'Online Sales' ? 'Online' : undefined,
                 payment_type: filters.view === 'Sales Payment' ? 'sale' : filters.view === 'Purchase Payment' ? 'purchase' : undefined,
                 user_type: filters.view === 'Walk-in Customer' ? 'guest' : filters.view === 'Registered Customer' ? 'registered' : undefined,
@@ -353,66 +359,212 @@ function ReportsEngineInner() {
 
                 {reportResult.length > 0 ? (
                     <div className="animate-in fade-in duration-700">
-                        <div className="flex items-center justify-between px-2 mb-4">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="text-green-600 h-4 w-4" />
-                                <p className="text-[13px] text-[#565959] font-medium">
-                                    Report Summary: <span className="font-bold text-[#111]">{reportResult.length} Items Found</span>
+                        <div className="flex items-center justify-between px-2 mb-4 no-print">
+                             <div className="flex items-center gap-2">
+                                 <CheckCircle className="text-green-600 h-4 w-4" />
+                                 <p className="text-[13px] text-[#565959] font-medium">
+                                     Report Summary: <span className="font-bold text-[#111]">{reportResult.length} Items Found</span>
+                                 </p>
+                             </div>
+                             <div className="flex items-center gap-4">
+                                 <div className="text-[13px] text-[#565959] font-medium">
+                                     Total Amount: <span className="text-[#B12704] font-black">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.price_per_item || r.total_amount || r.total_refund_amount || r.price || 0), 0))}</span>
+                                 </div>
+                                 <div className="text-[13px] text-[#565959] font-medium">
+                                     Total Quantity: <span className="text-[#111] font-black">{reportResult.reduce((s, r) => s + Number(r.total_quantity || r.stock_quantity || r.quantity || 0), 0)}</span>
+                                 </div>
+                             </div>
+                         </div>
+ 
+                         <div className="bg-white border border-[#e1e4e8] rounded-[2px] shadow-sm overflow-hidden no-print">
+                             <table className="w-full text-left border-collapse">
+                                 <thead>
+                                     <tr className="bg-[#f6f8fa] border-b border-[#e1e4e8] text-[9.5px] font-bold text-[#57606a] uppercase tracking-wider">
+                                         <th className="px-4 py-2.5 w-16">ID</th>
+                                         <th className="px-4 py-2.5 w-28">Date</th>
+                                         <th className="px-4 py-2.5">Details / Description</th>
+                                         <th className="px-4 py-2.5 text-center w-20">Status</th>
+                                         <th className="px-4 py-2.5 text-right w-32">Amount</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-[#f0f2f5]">
+                                     {reportResult.map((row, idx) => (
+                                         <tr key={idx} className="hover:bg-[#f8f9fa] transition-colors group text-[10px]">
+                                             <td className="px-4 py-2 font-bold text-[#0052cc]">
+                                                 #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
+                                             </td>
+                                             <td className="px-4 py-2 text-[#57606a] font-medium">
+                                                 {formatDate(row.created_at || row.order_date || row.date_joined || row.updated_at)}
+                                             </td>
+                                             <td className="px-4 py-2">
+                                                 <div className="text-[#1a1d23] font-bold uppercase tracking-tight text-[10.5px]">{row.product_name || row.company || row.name || row.customer_name || row.supplier_name || row.full_name || row.username || 'Record'}</div>
+                                                 <div className="text-[9px] text-[#8c959f] mt-0.5 font-medium italic">
+                                                     {row.return_number || row.order_number || (row.warehouse_name ? `Warehouse: ${row.warehouse_name}` : row.reason || row.tracking_id || filters.category)}
+                                                 </div>
+                                             </td>
+                                             <td className="px-4 py-2 text-center">
+                                                 <span className={`px-2 py-0.5 rounded-[1px] text-[8.5px] font-black uppercase ${row.status === 'Completed' || row.status === 'Paid' || row.is_active ? 'bg-[#dafbe1] text-[#1a7f37]' : 'bg-[#f6f8fa] text-[#57606a]'
+                                                     }`}>
+                                                     {row.status || (row.is_active ? 'Active' : 'Pending')}
+                                                 </span>
+                                             </td>
+                                             <td className="px-4 py-2 text-right">
+                                                 <div className="font-black text-[#cf222e] text-[11px]">{formatCurrency(row.price_per_item || row.total_amount || row.total_refund_amount || row.price || row.selling_price || 0)}</div>
+                                                 {(row.total_quantity !== undefined || row.stock_quantity !== undefined || row.quantity !== undefined || (row.items && row.items.length > 0)) && (
+                                                     <div className="text-[8.5px] text-[#57606a] font-bold uppercase tracking-tighter mt-0.5 italic">Qty: {row.total_quantity || row.stock_quantity || row.quantity || row.items?.length || 0}</div>
+                                                 )}
+                                             </td>
+                                         </tr>
+                                     ))}
+                                 </tbody>
+                             </table>
+                         </div>
+ 
+                        {/* ── PRINT ONLY INVOICE STYLE REPORT ── */}
+                        <div className="hidden print:block bg-white p-2">
+                            {/* Visual Header */}
+                            <div className="flex justify-between items-start mb-10">
+                                <div className="w-1/3">
+                                    <Logo size="lg" className="!items-start" />
+                                </div>
+
+                                <div className="w-1/3 text-center">
+                                    <h1 className="text-[32px] font-bold leading-[1.8] mb-1 text-[#111] urdu-text">
+                                        القوی ٹریڈرز
+                                    </h1>
+                                    <p className="text-[11px] font-bold text-[#565959] uppercase tracking-widest urdu-text">
+                                        کاسمیٹکس ڈیلر گلگت بلتستان
+                                    </p>
+                                </div>
+
+                                <div className="w-1/3 text-right">
+                                    <h2 className="text-[20px] font-black uppercase tracking-tighter text-[#111]">Report Console</h2>
+                                    <div className="text-[11px] text-gray-500 mt-2 space-y-0.5 font-medium">
+                                        <p>Syed Sakhawat & Associates</p>
+                                        <p>0313-8692190 | 0335-1240190</p>
+                                    </div>
+                                    <p className="text-[13px] text-[#111] font-bold mt-4 tracking-tight uppercase">Category: {filters.category}</p>
+                                    <p className="text-[11px] text-[#565959] font-medium">Generated: {formatDate(new Date().toISOString())}</p>
+                                </div>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="grid grid-cols-4 gap-8 mb-10 border-y-2 border-black py-6">
+                                <div className="col-span-2">
+                                    <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Report Logic</h3>
+                                    <p className="text-[16px] font-black text-black leading-none">{filters.view} {filters.subView ? `/ ${filters.subView}` : ''}</p>
+                                    <p className="text-[11px] text-gray-400 mt-2 italic">Official distribution summary for {filters.category} department.</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Report Period</h3>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-[#565959] font-bold">Timeline Coverage</p>
+                                        <p className="text-[12px] font-black text-black">{filters.dateFrom} TO {filters.dateTo}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Dataset Status</h3>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-[#565959] font-bold">Volume Found</p>
+                                        <div className="inline-block px-3 py-1 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-full">
+                                            {reportResult.length} RECORDS
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Main Report Table */}
+                            <div className="mb-10 overflow-hidden">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b-[1px] border-black text-[8.5px] font-black uppercase tracking-[0.2em] text-black bg-gray-50">
+                                            <th className="py-3 px-2 w-12 text-center">#</th>
+                                            <th className="py-3 px-3 w-28">Date</th>
+                                            <th className="py-3 px-3">Description of Record</th>
+                                            <th className="py-3 px-3 text-center w-20">Status</th>
+                                            <th className="py-3 px-3 text-right w-32">Total Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-[9px]">
+                                        {reportResult.map((row, i) => (
+                                            <tr key={i} className="border-b-[0.5px] border-gray-100">
+                                                <td className="py-2 px-1 text-center text-gray-500 font-bold">{i + 1}</td>
+                                                <td className="py-2 px-2 font-bold">{formatDate(row.created_at || row.order_date || row.date_joined || row.updated_at)}</td>
+                                                <td className="py-2 px-2">
+                                                    <div className="font-black text-black uppercase text-[10px] tracking-tight">{row.product_name || row.company || row.name || row.customer_name || row.supplier_name || row.full_name || row.username || 'Record'}</div>
+                                                    <div className="text-[8.5px] text-gray-500 mt-1 font-bold">
+                                                        {row.return_number || row.order_number || (row.warehouse_name ? `Warehouse: ${row.warehouse_name}` : row.reason || filters.category.toUpperCase())}
+                                                    </div>
+                                                </td>
+                                                <td className="py-2 px-2 text-center">
+                                                    <span className="font-black uppercase text-[7.5px] bg-gray-100 px-2 py-0.5">
+                                                        {row.status || (row.is_active ? 'Active' : 'N/A')}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2 px-2 text-right font-black text-black text-[11px]">
+                                                    {formatCurrency(row.price_per_item || row.total_amount || row.total_refund_amount || row.price || row.selling_price || 0)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {/* Grand Total Row */}
+                                        <tr className="border-t-[1px] border-black font-black text-black bg-gray-50/30">
+                                            <td colSpan={4} className="py-5 px-4 text-right text-[9px] uppercase tracking-[0.3em]">Aggregate Total</td>
+                                            <td className="py-5 px-2 text-right text-[14px]">
+                                                {formatCurrency(reportResult.reduce((s, r) => s + Number(r.price_per_item || r.total_amount || r.total_refund_amount || r.price || 0), 0))}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Urdu Footer Note */}
+                            <div className="mb-12 px-1">
+                                <p className="text-[10px] leading-[2.1] text-justify text-[#444] urdu-text" dir="rtl">
+                                    <span className="font-black border-b-2 ml-3 text-[14px]">نوٹ:-</span>
+                                    یہ رپورٹ القوی ٹریڈرز کے آفیشل ڈیٹا بیس سے تیار کی گئی ہے۔ تمام دکاندار اور سپلائرز حضرات بل یا رپورٹ میں کسی بھی قسم کی کمی بیشی کی صورت میں فوری طور پر ہیڈ آفس سے رابطہ کریں۔ بغیر دستخط اور مہر کے یہ رپورٹ قانونی طور پر قابلِ قبول نہیں ہوگی۔ القوی ٹریڈرز گلگت کے ساتھ تعاون کا شکریہ--
                                 </p>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-[13px] text-[#565959] font-medium">
-                                    Total Amount: <span className="text-[#B12704] font-black">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.price_per_item || r.total_amount || r.total_refund_amount || r.price || 0), 0))}</span>
+
+                            {/* Signatures */}
+                            <div className="mt-20 pt-12 border-t-2 border-dashed border-black">
+                                <div className="flex justify-between items-start gap-32">
+                                    <div className="flex-1 space-y-3">
+                                        <p className="text-[12px] font-bold text-gray-500">Authorized Distribution Signature</p>
+                                        <div className="w-full border-b border-black pt-8"></div>
+                                        <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Reports In-charge</p>
+                                    </div>
+                                    <div className="flex-1 space-y-3 text-right">
+                                        <p className="text-[12px] font-bold text-gray-500">Managing Director Stamp</p>
+                                        <div className="w-full border-b border-black pt-8"></div>
+                                        <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Verification Area</p>
+                                    </div>
                                 </div>
-                                <div className="text-[13px] text-[#565959] font-medium">
-                                    Total Quantity: <span className="text-[#111] font-black">{reportResult.reduce((s, r) => s + Number(r.total_quantity || r.stock_quantity || r.quantity || 0), 0)}</span>
+
+                                <div className="mt-16 text-center border-t border-slate-100 pt-6">
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">
+                                        System Generated Official Report • Al-Qavi Traders Gilgit
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
-                                        <th className="px-6 py-3">ID</th>
-                                        <th className="px-6 py-3">Date</th>
-                                        <th className="px-6 py-3">Details</th>
-                                        <th className="px-6 py-3 text-center">Status</th>
-                                        <th className="px-6 py-3 text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#eee]">
-                                    {reportResult.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
-                                            <td className="px-6 py-4 font-bold text-[#007185]">
-                                                #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
-                                            </td>
-                                            <td className="px-6 py-4 text-[#565959] font-medium">
-                                                {formatDate(row.created_at || row.order_date || row.date_joined || row.updated_at)}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-[#111] font-bold uppercase">{row.product_name || row.company || row.name || row.customer_name || row.supplier_name || row.full_name || row.username || 'Record'}</div>
-                                                <div className="text-[11px] text-[#565959] mt-0.5">
-                                                    {row.reason || row.tracking_id || (row.warehouse_name ? `Warehouse: ${row.warehouse_name}` : row.city && row.country ? `${row.city}, ${row.country}` : filters.category)}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-black uppercase border ${row.status === 'Completed' || row.status === 'Paid' || row.is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-600 border-slate-200'
-                                                    }`}>
-                                                    {row.status || (row.is_active ? 'Active' : 'Pending')}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="font-black text-[#B12704]">{formatCurrency(row.price_per_item || row.total_amount || row.total_refund_amount || row.price || row.selling_price || 0)}</div>
-                                                {(row.total_quantity !== undefined || row.stock_quantity !== undefined || row.quantity !== undefined || (row.items && row.items.length > 0)) && (
-                                                    <div className="text-[10px] text-[#565959] font-bold uppercase">Qty: {row.total_quantity || row.stock_quantity || row.quantity || row.items?.length || 0}</div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <style jsx global>{`
+                            @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
+                            
+                            @media print {
+                                .no-print { display: none !important; }
+                                html, body { height: auto !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; background: white !important; }
+                                .max-w-[1440px] { max-width: 100% !important; padding: 0 !important; margin: 0 !important; height: auto !important; overflow: visible !important; }
+                                @page { margin: 1.5cm; }
+                                .hidden.print\\:block { display: block !important; height: auto !important; overflow: visible !important; }
+                            }
+
+                            .urdu-text {
+                                font-family: 'Noto Nastaliq Urdu', serif;
+                                font-weight: 700;
+                                line-height: 2.4;
+                            }
+                        `}</style>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-28 bg-white border border-[#ddd] rounded-[4px] text-center px-10 shadow-sm">

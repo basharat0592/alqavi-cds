@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     User, ShieldCheck, MapPin, Building, CreditCard, Bell,
     ChevronRight, Camera, Loader2, LogOut, Package, BarChart3, HelpCircle, Key, Headphones,
-    Settings, Shield, Info, Lock
+    Settings, Shield, Info, Lock, X, Eye
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import api from '@/lib/axios';
@@ -21,8 +21,11 @@ export default function SupplierProfile() {
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const [updating, setUpdating] = useState(false);
     const [formData, setFormData] = useState<any>({});
+    const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+    const [viewingAvatar, setViewingAvatar] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     const fetchProfile = async () => {
         try {
@@ -40,6 +43,14 @@ export default function SupplierProfile() {
     useEffect(() => {
         setUser(authService.getUser());
         fetchProfile();
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowAvatarMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -49,6 +60,8 @@ export default function SupplierProfile() {
             await api.patch(`v1/users/${profile.id}/update/`, formData);
             toast.success("Profile updated successfully.");
             fetchProfile();
+            // Trigger layout sync
+            window.dispatchEvent(new Event('supplier_profile_updated'));
             setActiveSection(null);
         } catch {
             toast.error("Update failed.");
@@ -70,6 +83,8 @@ export default function SupplierProfile() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             fetchProfile();
+            // Trigger layout sync
+            window.dispatchEvent(new Event('supplier_profile_updated'));
             toast.success("Profile picture updated.");
         } catch {
             toast.error("Upload failed.");
@@ -80,12 +95,12 @@ export default function SupplierProfile() {
 
     const displayName = profile?.first_name
         ? `${profile.first_name} ${profile.last_name || ''}`.trim()
-        : user?.name || 'Partner Account';
+        : user?.name || 'My Account';
 
     const SECTIONS = [
-        { id: 'security', title: 'Login & Security', icon: Shield, desc: 'Update your name, email and basic info.' },
-        { id: 'personal', title: 'Business Profile', icon: Info, desc: 'Manage your company details and location.' },
-        { id: 'password', title: 'Password Settings', icon: Lock, desc: 'Reset your terminal access credentials.' }
+        { id: 'security', title: 'Personal Info', icon: User, desc: 'Update your name and email address.' },
+        { id: 'personal', title: 'Business Details', icon: Building, desc: 'Manage your company name, phone and address.' },
+        { id: 'password', title: 'Security', icon: Key, desc: 'Change your account password.' }
     ];
 
     const [passwordData, setPasswordData] = useState({
@@ -117,185 +132,218 @@ export default function SupplierProfile() {
     if (loading) {
         return (
             <div className="flex flex-col h-[70vh] items-center justify-center bg-white gap-4">
-                <Loader2 className="h-10 w-10 animate-spin text-[#F59E0B]" />
-                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">Authentication Registry...</span>
+                <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+                <span className="text-sm font-medium text-slate-500">Loading your profile...</span>
             </div>
         );
     }
 
     return (
-        <div className="max-w-[1000px] mx-auto animate-in fade-in duration-500 font-sans text-left">
+        <div className="max-w-[1200px] mx-auto animate-in fade-in duration-500 font-sans text-left p-6">
 
-            {/* ── Page Header ── */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-medium text-slate-900 mb-2">Partner Account</h1>
-                <p className="text-sm text-slate-500 font-medium">Manage your profile, security settings, and business credentials.</p>
-            </div>
-
-            {/* ── Master Profile Card ── */}
-            <div className="bg-white border border-gray-300 rounded-2xl overflow-hidden shadow-sm mb-10">
-                <div className="bg-[#f0f2f2] border-b border-gray-300 px-8 py-6 flex flex-col md:flex-row items-center gap-8">
-                    <div className="relative group shrink-0">
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
-                        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-gray-400 text-3xl font-bold overflow-hidden border-2 border-white shadow-xl flex-shrink-0 group-hover:scale-105 transition-transform duration-300 relative">
-                            {uploading ? (
-                                <Loader2 className="h-6 w-6 animate-spin text-[#F59E0B]" />
-                            ) : profile?.avatar ? (
-                                <img src={getImageUrl(profile.avatar) || undefined} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-gray-200 font-black">{displayName.charAt(0).toUpperCase()}</span>
-                            )}
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
-                            >
-                                <Camera size={20} />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="flex-1 text-center md:text-left">
-                        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{displayName}</h2>
-                            <span className="inline-flex max-w-fit mx-auto md:mx-0 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 shadow-sm">
-                                Verified Node
-                            </span>
-                        </div>
-                        <p className="text-[13px] text-slate-500 font-bold uppercase tracking-widest opacity-70">
-                            Partner ID: <span className="text-slate-900">#{(profile?.id || 0).toString().padStart(6, '0')}</span>
-                        </p>
-                        <div className="mt-6 flex flex-wrap justify-center md:justify-start gap-4">
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <ShieldCheck size={14} className="text-[#F59E0B]" />
-                                Security Active
-                            </div>
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                <Building size={14} className="text-[#F59E0B]" />
-                                {profile?.company || 'Business Unnamed'}
-                            </div>
-                        </div>
+            {/* ── Page Header (Same as Orders Page) ── */}
+            <div className="mb-6">
+                <div className="flex items-end justify-between mb-1">
+                    <div>
+                        <h1 className="text-3xl font-medium text-slate-900 leading-tight">Supplier Profile</h1>
+                        <p className="text-[13px] text-slate-500 mt-1 font-medium">Manage your personal information, business credentials, and security settings.</p>
                     </div>
                     <button
                         onClick={() => { authService.logout(); window.location.href = '/login'; }}
-                        className="px-8 py-2.5 bg-white border border-gray-300 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-rose-50 transition-all shadow-sm flex items-center gap-2"
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-rose-600 border border-gray-300 bg-white rounded-lg hover:bg-rose-50 transition-all shadow-sm"
                     >
-                        <LogOut size={14} /> Exit Console
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
                     </button>
                 </div>
             </div>
 
-            {/* ── Settings Grid ── */}
+            {/* ── Profile Snapshot Card ── */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-8 p-8">
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="relative shrink-0" ref={menuRef}>
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
+                        <button
+                            onClick={() => setShowAvatarMenu(!showAvatarMenu)}
+                            className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 text-3xl font-bold overflow-hidden border-4 border-white shadow-md hover:shadow-lg transition-all relative group"
+                        >
+                            {uploading ? (
+                                <Loader2 className="h-8 w-8 animate-spin text-[#F59E0B]" />
+                            ) : profile?.avatar ? (
+                                <img src={getImageUrl(profile.avatar) || undefined} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <span>{displayName.charAt(0).toUpperCase()}</span>
+                            )}
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <Camera size={20} />
+                            </div>
+                        </button>
+
+                        {/* Avatar Menu */}
+                        {showAvatarMenu && (
+                            <div className="absolute top-full left-0 mt-3 w-52 bg-white border border-gray-200 rounded-xl shadow-2xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button
+                                    onClick={() => { setViewingAvatar(true); setShowAvatarMenu(false); }}
+                                    className="w-full px-5 py-4 text-left text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                                >
+                                    <Eye size={16} className="text-slate-400" />
+                                    View Photo
+                                </button>
+                                <button
+                                    onClick={() => { fileInputRef.current?.click(); setShowAvatarMenu(false); }}
+                                    className="w-full px-5 py-4 text-left text-[13px] font-bold text-slate-700 hover:bg-slate-50 border-t border-gray-100 flex items-center gap-3 transition-colors"
+                                >
+                                    <Camera size={16} className="text-slate-400" />
+                                    Update Photo
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="flex-1 text-center md:text-left space-y-2">
+                        <div className="flex flex-col md:flex-row md:items-center gap-3">
+                            <h2 className="text-2xl font-bold text-slate-900">{displayName}</h2>
+                            <span className="inline-flex px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase rounded border border-emerald-200 tracking-widest">
+                                Active Account
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                            <div className="flex items-center gap-1.5 text-[13px] text-slate-500 font-medium">
+                                <Building size={14} className="text-slate-300" />
+                                {profile?.company || 'Distributor'}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[13px] text-slate-500 font-medium">
+                                <ShieldCheck size={14} className="text-emerald-500" />
+                                Verified Node
+                            </div>
+                            <div className="text-[13px] text-slate-400 font-bold">
+                                #{(profile?.id || 0).toString().slice(0, 8).toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Settings Navigation ── */}
             {!activeSection ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {SECTIONS.map((sec) => (
                         <button
                             key={sec.id}
                             onClick={() => setActiveSection(sec.id)}
-                            className="bg-white border border-gray-300 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-[#F59E0B] transition-all text-left flex items-start gap-5 group"
+                            className="bg-white border border-gray-200 p-8 rounded-2xl shadow-sm hover:border-[#F59E0B] hover:shadow-md transition-all text-left flex flex-col gap-6 group"
                         >
-                            <div className="p-4 bg-slate-50 group-hover:bg-amber-50 text-slate-400 group-hover:text-[#F59E0B] rounded-2xl transition-colors shrink-0">
+                            <div className="w-14 h-14 flex items-center justify-center bg-slate-50 group-hover:bg-amber-50 text-slate-400 group-hover:text-[#F59E0B] rounded-xl transition-all">
                                 <sec.icon size={28} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-slate-900 tracking-tight group-hover:text-[#F59E0B] transition-colors uppercase">{sec.title}</h3>
-                                <p className="text-[13px] text-slate-500 font-medium mt-1 leading-relaxed">{sec.desc}</p>
+                                <h3 className="text-[15px] font-bold text-slate-900 group-hover:text-[#F59E0B] transition-colors uppercase tracking-tight">{sec.title}</h3>
+                                <p className="text-[13px] text-slate-500 mt-2 leading-relaxed font-medium">{sec.desc}</p>
+                            </div>
+                            <div className="mt-2 flex items-center gap-1 text-[11px] font-black text-[#F59E0B] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                Configure <ChevronRight size={12} />
                             </div>
                         </button>
                     ))}
-                    <div className="bg-slate-900 rounded-2xl p-6 flex flex-col justify-center relative overflow-hidden group shadow-xl">
-                        <Settings className="absolute -right-4 -bottom-4 text-white opacity-10 group-hover:rotate-45 transition-transform" size={100} />
-                        <h3 className="text-white text-lg font-black uppercase tracking-widest mb-2 relative z-10">Advanced Config</h3>
-                        <p className="text-white/60 text-xs font-bold uppercase tracking-widest relative z-10">Restricted to Hub Admin</p>
-                    </div>
                 </div>
             ) : (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 bg-white border border-gray-300 rounded-3xl overflow-hidden shadow-2xl">
-                    <div className="px-8 py-6 bg-slate-50 border-b border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setActiveSection(null)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-gray-200"
-                            >
-                                <ChevronRight size={20} className="rotate-180" />
-                            </button>
-                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-md animate-in slide-in-from-top-4 duration-300">
+                    <div className="px-8 py-5 bg-slate-50 border-b border-gray-200 flex items-center gap-4">
+                        <button
+                            onClick={() => setActiveSection(null)}
+                            className="p-2 rounded-lg hover:bg-white text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-gray-200"
+                        >
+                            <ChevronRight size={20} className="rotate-180" />
+                        </button>
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
                                 {SECTIONS.find(s => s.id === activeSection)?.title}
                             </h3>
+                            <p className="text-[11px] text-slate-400 font-medium">Update your account settings</p>
                         </div>
                     </div>
 
                     <div className="p-10">
                         {activeSection === 'password' ? (
-                            <form onSubmit={handlePasswordChange} className="max-w-[400px] space-y-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Current Password</label>
+                            <form onSubmit={handlePasswordChange} className="max-w-md space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Current Password</label>
                                     <input
                                         type="password"
                                         required
                                         value={passwordData.old_password}
                                         onChange={e => setPasswordData({ ...passwordData, old_password: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">New Credentials</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        minLength={8}
-                                        value={passwordData.new_password}
-                                        onChange={e => setPasswordData({ ...passwordData, new_password: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">New Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            minLength={8}
+                                            value={passwordData.new_password}
+                                            onChange={e => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Confirm New</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={passwordData.new_password_confirm}
+                                            onChange={e => setPasswordData({ ...passwordData, new_password_confirm: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Verify New Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={passwordData.new_password_confirm}
-                                        onChange={e => setPasswordData({ ...passwordData, new_password_confirm: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
-                                    />
-                                </div>
-                                <div className="pt-6">
+                                <div className="pt-6 flex gap-4">
                                     <button
                                         type="submit"
                                         disabled={updating}
-                                        className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                                        className="flex-1 py-3 bg-slate-900 hover:bg-black text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-lg shadow-slate-900/10"
                                     >
-                                        {updating ? 'Processing...' : 'Authorize Password Reset'}
+                                        {updating ? 'Processing...' : 'Save Password'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveSection(null)}
+                                        className="px-6 py-3 border border-gray-200 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                                    >
+                                        Cancel
                                     </button>
                                 </div>
                             </form>
                         ) : (
-                            <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 max-w-3xl">
+                            <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl">
                                 {activeSection === 'security' ? (
                                     <>
                                         <div className="space-y-2">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">First Name</label>
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">First Name</label>
                                             <input
                                                 type="text"
                                                 value={formData.first_name || ''}
                                                 onChange={e => setFormData({ ...formData, first_name: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Last Name</label>
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Last Name</label>
                                             <input
                                                 type="text"
                                                 value={formData.last_name || ''}
                                                 onChange={e => setFormData({ ...formData, last_name: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
                                             />
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Primary Email Node</label>
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
                                             <input
                                                 type="email"
                                                 value={formData.email || ''}
-                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm font-bold text-slate-400 cursor-not-allowed"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-100 rounded-xl text-sm text-slate-400 cursor-not-allowed"
                                                 readOnly
                                             />
                                         </div>
@@ -303,30 +351,39 @@ export default function SupplierProfile() {
                                 ) : (
                                     <>
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Registered Business Entity</label>
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Company / Business Legal Name</label>
                                             <input
                                                 type="text"
                                                 value={formData.company || ''}
                                                 onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
                                             />
                                         </div>
-                                        <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Contact Terminal (Phone)</label>
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Primary Contact Number</label>
                                             <input
                                                 type="text"
                                                 value={formData.phone || ''}
                                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">City</label>
+                                            <input
+                                                type="text"
+                                                value={formData.city || ''}
+                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
                                             />
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Physical Distribution Node (Address)</label>
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Business Headquarters Address</label>
                                             <input
                                                 type="text"
                                                 value={formData.address || ''}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold focus:outline-none focus:border-[#F59E0B] transition-all"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#F59E0B] focus:bg-white transition-all"
                                             />
                                         </div>
                                     </>
@@ -336,16 +393,16 @@ export default function SupplierProfile() {
                                     <button
                                         type="submit"
                                         disabled={updating}
-                                        className="h-14 px-12 bg-[#F59E0B] text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-900/10 hover:shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+                                        className="px-10 py-3 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50"
                                     >
-                                        {updating ? 'Synchronizing...' : 'Save Registry Updates'}
+                                        {updating ? 'Saving Changes...' : 'Synchronize Profile'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setActiveSection(null)}
-                                        className="h-14 px-8 border border-gray-300 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                                        className="px-8 py-3 border border-gray-200 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all"
                                     >
-                                        Abort
+                                        Dismiss
                                     </button>
                                 </div>
                             </form>
@@ -354,15 +411,32 @@ export default function SupplierProfile() {
                 </div>
             )}
 
-            {/* Bottom Disclaimer */}
-            <div className="mt-20 pt-10 border-t border-gray-200 text-center">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.6em] mb-4">Partner Control Node Ledger v4.1</p>
-                <div className="flex justify-center gap-6 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
-                    <HelpCircle size={14} className="text-slate-400" />
-                    <Headphones size={14} className="text-slate-400" />
-                    <Shield size={14} className="text-slate-400" />
+            {/* ── View Avatar Modal ── */}
+            {viewingAvatar && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <button 
+                        onClick={() => setViewingAvatar(false)}
+                        className="absolute top-8 right-8 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-all border border-white/10"
+                    >
+                        <X size={24} />
+                    </button>
+                    
+                    <div className="max-w-xl w-full aspect-square bg-white rounded-[40px] overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300 border-8 border-white/10">
+                        {profile?.avatar ? (
+                            <img src={getImageUrl(profile.avatar) || undefined} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-200 text-9xl font-bold">
+                                {displayName.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                        
+                        <div className="absolute bottom-0 inset-x-0 p-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                            <h3 className="text-white text-2xl font-bold">{displayName}</h3>
+                            <p className="text-white/60 text-sm font-medium">Business Partner Profile</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

@@ -44,10 +44,18 @@ function ShopContent() {
         let r = [...products];
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
-            r = r.filter(p => (p.product_name || p.name)?.toLowerCase().includes(q) || p.category_name?.toLowerCase().includes(q));
+            r = r.filter(p => {
+                const pName = (p.product_name || p.name || '').toLowerCase();
+                const cName = (p.category_name || p.category?.name || '').toLowerCase();
+                return pName.includes(q) || cName.includes(q);
+            });
         }
         if (selectedCat) {
-            r = r.filter(p => p.category_name?.toLowerCase().includes(selectedCat.toLowerCase()));
+            const sq = selectedCat.toLowerCase();
+            r = r.filter(p => {
+                const cName = (p.category_name || p.category?.name || '').toLowerCase();
+                return cName.includes(sq);
+            });
         }
         if (mcatQuery) {
             const mq = mcatQuery.toLowerCase();
@@ -72,7 +80,7 @@ function ShopContent() {
             const name = (p.product_name || p.name || '').toLowerCase().trim();
             const price = parseFloat(p.selling_price || p.price || 0);
             const key = `${name}_${price}`;
-            
+
             if (!groups.has(key)) {
                 groups.set(key, p);
             } else {
@@ -85,16 +93,18 @@ function ShopContent() {
         setFiltered(Array.from(groups.values()));
     }, [products, searchQuery, selectedCat, mcatQuery, priceRange]);
 
-    const cats = Array.from(new Set(products.map(p => p.category_name).filter(Boolean))) as string[];
+    const cats = Array.from(new Set(products.map(p => p.category_name || p.category?.name).filter(Boolean))) as string[];
 
     const handleAddToCart = (p: any, qty: number = 1) => {
+        const catName = p.category_name || p.category?.name || 'Beauty';
+        const finalImage = p.image || p.catalog_image || p.image_url || '';
         addToCart({
             id: p.id,
             name: p.product_name || p.name,
             price: p.selling_price || p.price,
             quantity: qty,
-            image: p.image_url || p.image || p.catalog_image || '',
-            category: p.category_name || 'Beauty',
+            image: finalImage,
+            category: catName,
             stock: p.total_quantity || p.quantity_in_stock
         });
         setToastMsg(`${qty} x ${p.name} added to cart!`);
@@ -231,24 +241,27 @@ function ShopContent() {
                     <div className="flex-1">
                         {filtered.length > 0 ? (
                             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
-                                {filtered.map(p => (
-                                    <div key={p.id} className="animate-in fade-in duration-500">
-                                        <ProductCard
-                                            id={String(p.id)}
-                                            title={p.product_name || p.name}
-                                            description={p.description}
-                                            image={getImageUrl(p.image_url || p.image || p.catalog_image || '') || undefined}
-                                            price={parseFloat(p.selling_price || p.price || 0)}
-                                            category={p.category_name || 'Beauty'}
-                                            stock={p.quantity_in_stock || p.total_quantity}
-                                            rating={4.5}
-                                            reviews={p.reviews_count || 12}
-                                            weight={p.weight}
-                                            size={p.size}
-                                            onAddToCart={(qty) => handleAddToCart(p, qty)}
-                                        />
-                                    </div>
-                                ))}
+                                {filtered.map(p => {
+                                    const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
+                                    return (
+                                        <div key={p.id} className="animate-in fade-in duration-500">
+                                            <ProductCard
+                                                id={String(p.id)}
+                                                title={displayTitle}
+                                                description={p.description}
+                                                image={getImageUrl(p.image_url || p.image || p.catalog_image || '') || undefined}
+                                                price={parseFloat(p.selling_price || p.price || 0)}
+                                                category={p.category_name || 'Beauty'}
+                                                stock={p.quantity_in_stock || p.total_quantity}
+                                                rating={4.5}
+                                                reviews={p.reviews_count || 12}
+                                                weight={p.weight}
+                                                size={p.size}
+                                                onAddToCart={(qty) => handleAddToCart(p, qty)}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-32 bg-[#F8F8F8] border border-[#D5D9D9] border-dashed rounded-xl animate-in zoom-in-95 duration-500">

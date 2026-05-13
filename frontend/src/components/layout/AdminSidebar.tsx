@@ -37,14 +37,16 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 { name: 'Order List', href: '/admin/orders', icon: ShoppingBag },
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
+                { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },
             ],
         },
         {
             label: 'Inventory & Stock',
             items: [
-                { name: 'Categories', href: '/admin/products/categories', icon: Tag },
-                { name: 'Add Product', href: '/admin/products', icon: Package },
-                { name: 'Sections', href: '/admin/products/sections', icon: ListFilter },
+                { name: 'Product Categories', href: '/admin/products/categories', icon: Tag },
+                { name: 'Product List', href: '/admin/products', icon: LayoutDashboard },
+                { name: 'Add Product', href: '/admin/products/add', icon: Package },
+                { name: 'Product Sections', href: '/admin/products/sections', icon: ListFilter },
                 { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
             ],
@@ -52,7 +54,6 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
         {
             label: 'Procurement',
             items: [
-                { name: 'Supplier List', href: '/admin/company/suppliers', icon: UserCheck },
                 { name: 'New Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
                 { name: 'Purchase History', href: '/admin/purchases', icon: History },
                 { name: 'Supplier Catalog', href: '/admin/supplier-products', icon: Book },
@@ -65,14 +66,16 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 { name: 'Point of Sale', href: '/admin/sale', icon: Monitor },
                 { name: 'Invoices', href: '/admin/invoices', icon: FileText },
                 { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
-                { name: 'Account Holders', href: '/admin/company/customers', icon: Users },
+                { name: 'Company Categories', href: '/admin/company/categories', icon: Tag },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
         },
         {
             label: 'Security & Logs',
             items: [
-                { name: 'User Registry', href: '/admin/users', icon: User },
+                { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
+                { name: 'Internal Users', href: '/admin/users', icon: User },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
                 { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },
                 { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
@@ -132,11 +135,11 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
     })).filter(group => group.items.length > 0);
 
     return (
-        <div className={`h-screen flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-2xl overflow-hidden font-sans antialiased
+        <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-2xl overflow-hidden font-sans antialiased
             ${isCollapsed ? 'w-16 bg-[#232F3E]' : 'w-[250px] bg-[#232F3E]'}`}>
 
             {/* ── BRANDING AREA ── */}
-            <div className={`h-16 flex items-center px-6 border-b border-white/10 bg-[#1a252f] ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className={`h-16 flex items-center px-4 border-b border-white/10 bg-[#1a252f] ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
                 {!isCollapsed && (
                     <Link href="/admin/dashboard" className="flex flex-col group">
                         <span className="text-[10px] text-[#F3A847] font-bold uppercase tracking-[0.2em] leading-none mb-1">Central Console</span>
@@ -169,7 +172,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 {filteredGroups.map((group, gIdx) => (
                     <div key={group.label} className={gIdx !== 0 ? "mt-6" : ""}>
                         {!isCollapsed && (
-                            <h3 className="px-6 text-[11px] font-bold text-[#F3A847] mb-3 uppercase tracking-widest border-b border-white/5 pb-1 mx-2">
+                            <h3 className="px-4 text-[10px] font-black text-[#F3A847] mb-2 uppercase tracking-[0.15em] border-b border-white/5 pb-1 mx-2">
                                 {group.label}
                             </h3>
                         )}
@@ -178,7 +181,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                                 const active = isActive(item.href);
                                 return (
                                     <Link key={item.href} href={item.href}
-                                        className={`group relative flex items-center gap-3.5 px-6 py-2.5 transition-all
+                                        className={`group relative flex items-center gap-3 px-4 py-2 transition-all
                                             ${active
                                                 ? 'bg-[#1a252f] text-white font-bold border-l-[3px] border-[#F3A847]'
                                                 : 'text-zinc-100 hover:bg-white/5 hover:text-white font-medium'}`}>

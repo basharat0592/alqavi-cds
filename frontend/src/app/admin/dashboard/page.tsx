@@ -46,7 +46,7 @@ const formatK = (num: number) => {
 };
 
 const MetricCard = ({ label, value, subtext, icon: Icon, color = "#e47911", alert = false, prefix = "Rs. " }: any) => (
-    <div className="bg-white p-5 rounded-2xl border border-[#edf2f7] shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 group relative">
+    <div className="bg-white p-5 rounded-[2px] border border-[#edf2f7] shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 group relative">
         <div className="flex justify-between items-start mb-4">
             <div className="space-y-1">
                 <p className="text-[11px] font-bold text-[#718096] uppercase tracking-[0.05em]">{label}</p>
@@ -80,6 +80,8 @@ const MetricCard = ({ label, value, subtext, icon: Icon, color = "#e47911", aler
     </div>
 );
 
+// Dead code removed
+
 export default function AdminDashboard() {
     const router = useRouter();
     const [filterDate, setFilterDate] = useState<string>('');
@@ -107,7 +109,7 @@ export default function AdminDashboard() {
     const [updatingRow, setUpdatingRow] = useState<string | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [warehouses, setWarehouses] = useState<any[]>([]);
-    const [deliveryModal, setDeliveryModal] = useState<{orderId: string, status: string} | null>(null);
+    const [deliveryModal, setDeliveryModal] = useState<{ orderId: string, status: string, order?: any } | null>(null);
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
     const [allStocks, setAllStocks] = useState<any[]>([]);
@@ -145,32 +147,54 @@ export default function AdminDashboard() {
 
         setUpdatingRow(orderId);
         try {
-            await orderService.update(orderId, { status: newStatus.toUpperCase() });
-            toast.success('Status updated');
+            const data = await orderService.update(orderId, { status: newStatus.toUpperCase() });
+
+            if (newStatus.toUpperCase() === 'CONFIRMED') {
+                // Pre-calculate the message and number for direct redirection
+                const encodedMsg = encodeURIComponent(data.whatsapp_message || '');
+                let cleanNumber = (data.whatsapp_number || '').replace(/\D/g, '');
+                if (cleanNumber.startsWith('0') && cleanNumber.length === 11) {
+                    cleanNumber = '92' + cleanNumber.slice(1);
+                } else if (cleanNumber.length === 10) {
+                    cleanNumber = '92' + cleanNumber;
+                }
+
+                // Immediate Redirection to WhatsApp Desktop Application
+                window.open(`whatsapp://send/?phone=${cleanNumber}&text=${encodedMsg}`, '_blank');
+                toast.success('Order accepted! Opening WhatsApp Desktop...', { icon: '✅' });
+            } else {
+                toast.success('Status updated');
+            }
             refetch();
-        } catch { toast.error('Update failed'); } finally { setUpdatingRow(null); }
+        } catch (err: any) {
+            console.error("Order Update Error:", err);
+            const errorMsg = err.response?.data?.error || err.response?.data?.detail || 'Update failed';
+            toast.error(errorMsg);
+        } finally {
+            setUpdatingRow(null);
+        }
     };
 
     const confirmDelivery = async () => {
         if (!deliveryModal || !selectedWarehouse) return;
-        
+
         setIsSubmittingDelivery(true);
         setUpdatingRow(deliveryModal.orderId);
         try {
-            await orderService.update(deliveryModal.orderId, { 
+            await orderService.update(deliveryModal.orderId, {
                 status: 'DELIVERED',
-                warehouse_id: selectedWarehouse 
+                warehouse_id: selectedWarehouse
             });
             toast.success('Order delivered & stock deducted');
             setDeliveryModal(null);
             setSelectedWarehouse('');
             refetch();
-        } catch (err: any) { 
+        } catch (err: any) {
             const msg = err.response?.data?.error || 'Delivery update failed';
-            toast.error(msg); 
-        } finally { 
+            toast.error(msg);
+        } finally {
             setIsSubmittingDelivery(false);
-            setUpdatingRow(null); 
+            setUpdatingRow(null);
         }
     };
 
@@ -179,7 +203,7 @@ export default function AdminDashboard() {
         const items = deliveryModal.order.items || [];
         return items.map((item: any) => {
             // Find stock in selected warehouse matching name, weight, and size
-            const stock = allStocks.find(s => 
+            const stock = allStocks.find(s =>
                 (s.product_name || '').toLowerCase().trim() === (item.product_name || '').toLowerCase().trim() &&
                 s.warehouse?.toString() === selectedWarehouse.toString() &&
                 (s.weight || '') === (item.weight || '') &&
@@ -285,7 +309,7 @@ export default function AdminDashboard() {
 
                     {/* ── Orders Table ── */}
                     <div className="w-full space-y-8 animate-in fade-in duration-700 delay-150">
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
+                        <div className="bg-white border border-[#ddd] rounded-[2px] shadow-sm overflow-hidden text-left">
                             <div className="px-6 py-4 border-b border-[#ddd] flex items-center justify-between bg-[#f7f8fa]">
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-[17px] font-bold text-[#111]">Active Orders</h2>
@@ -416,7 +440,7 @@ export default function AdminDashboard() {
                     {/* ── Widgets ── */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-700 delay-300">
                         {/* Quick Links */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
+                        <div className="bg-white border border-[#ddd] rounded-[2px] p-5 shadow-sm">
                             <h3 className="text-[14px] font-bold text-[#111] mb-5 border-b border-[#f3f3f3] pb-2 uppercase tracking-wider">Quick Links</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 {[
@@ -430,7 +454,7 @@ export default function AdminDashboard() {
                                     <Link
                                         key={idx}
                                         href={item.href}
-                                        className="flex flex-col items-center gap-2 py-4 bg-[#fcfcfc] hover:bg-white hover:shadow-md border border-[#eee] rounded-[4px] transition-all group"
+                                        className="flex flex-col items-center gap-2 py-4 bg-[#fcfcfc] hover:bg-white hover:shadow-md border border-[#eee] rounded-[2px] transition-all group"
                                     >
                                         <item.icon size={20} className="text-[#adb1b8] group-hover:text-[#c45500] transition-colors" />
                                         <span className="text-[10px] font-bold text-[#565959] group-hover:text-[#111] uppercase tracking-tighter transition-colors text-center">{item.title}</span>
@@ -440,7 +464,7 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Daily Status */}
-                        <div className={`rounded-[4px] p-5 border ${(stats.pendingOrders || 0) > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'} shadow-sm flex items-center`}>
+                        <div className={`rounded-[2px] p-5 border ${(stats.pendingOrders || 0) > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'} shadow-sm flex items-center`}>
                             <div className="flex gap-4">
                                 <div className={`p-3 rounded-full ${(stats.pendingOrders || 0) > 0 ? 'bg-amber-100 text-[#c45500]' : 'bg-green-100 text-green-600'}`}>
                                     <Activity size={24} />
@@ -464,7 +488,7 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Recent Activity */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
+                        <div className="bg-white border border-[#ddd] rounded-[2px] shadow-sm overflow-hidden text-left">
                             <div className="bg-[#f7f8fa] px-5 py-3 border-b border-[#ddd]">
                                 <h3 className="text-[13px] font-bold text-[#111]">Recent Activity</h3>
                             </div>
@@ -499,7 +523,7 @@ export default function AdminDashboard() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Sales & Growth Chart */}
-                            <div className="bg-white p-6 rounded-2xl border border-[#edf2f7] shadow-sm hover:shadow-md transition-all">
+                            <div className="bg-white p-6 rounded-[2px] border border-[#edf2f7] shadow-sm hover:shadow-md transition-all">
                                 <div className="flex items-center justify-between mb-6">
                                     <div>
                                         <h3 className="text-[15px] font-bold text-[#111]">Sales Performance</h3>
@@ -544,7 +568,7 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Purchase vs Sales Comparison */}
-                            <div className="bg-white p-6 rounded-2xl border border-[#edf2f7] shadow-sm hover:shadow-md transition-all">
+                            <div className="bg-white p-6 rounded-[2px] border border-[#edf2f7] shadow-sm hover:shadow-md transition-all">
                                 <div className="flex items-center justify-between mb-6">
                                     <div>
                                         <h3 className="text-[15px] font-bold text-[#111]">Procurement vs Revenue</h3>
@@ -578,7 +602,7 @@ export default function AdminDashboard() {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {/* Inventory Distribution */}
-                            <div className="bg-white p-6 rounded-2xl border border-[#edf2f7] shadow-sm lg:col-span-1">
+                            <div className="bg-white p-6 rounded-[2px] border border-[#edf2f7] shadow-sm lg:col-span-1">
                                 <h3 className="text-[14px] font-bold text-[#111] mb-4">Stock Availability</h3>
                                 <div className="h-[240px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -606,7 +630,7 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Top Selling Products */}
-                            <div className="bg-white p-6 rounded-2xl border border-[#edf2f7] shadow-sm md:col-span-2">
+                            <div className="bg-white p-6 rounded-[2px] border border-[#edf2f7] shadow-sm md:col-span-2">
                                 <h3 className="text-[14px] font-bold text-[#111] mb-6">Top Selling Inventory</h3>
                                 <div className="space-y-4">
                                     {(topProducts || []).slice(0, 5).map((prod, idx) => (
@@ -616,7 +640,7 @@ export default function AdminDashboard() {
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex justify-between mb-1">
-                                                    <span className="text-[13px] font-bold text-[#111] truncate max-w-[200px]">{prod.name}</span>
+                                                    <span className="text-[13px] font-bold text-[#111] truncate max-w-[200px]">{(prod.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</span>
                                                     <span className="text-[12px] font-bold text-[#007185]">{prod.sales_count} sales</span>
                                                 </div>
                                                 <div className="w-full bg-[#f3f3f3] h-1.5 rounded-full overflow-hidden">
@@ -690,7 +714,9 @@ export default function AdminDashboard() {
                                             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-medium text-[#111]">{item.product_name}</span>
+                                                        <span className="font-medium text-[#111]">
+                                                            {(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                        </span>
                                                         {(item.weight || item.size) && (
                                                             <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight">
                                                                 — {item.weight}{item.weight && item.size ? ' • ' : ''}{item.size}
@@ -751,7 +777,7 @@ export default function AdminDashboard() {
                                 <X size={20} />
                             </button>
                         </div>
-                        
+
                         <div className="p-6 space-y-5">
                             <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-lg flex gap-3">
                                 <Info size={18} className="text-blue-500 shrink-0" />
@@ -782,7 +808,7 @@ export default function AdminDashboard() {
                                             {(selectedWarehouse ? warehouseStockInfo : deliveryModal.order?.items || []).map((item: any, idx: number) => (
                                                 <tr key={idx} className={item.insufficient ? 'bg-rose-50/30' : 'hover:bg-slate-50/50'}>
                                                     <td className="px-3 py-2">
-                                                        <p className="font-bold text-[#111] leading-tight">{item.product_name}</p>
+                                                        <p className="font-bold text-[#111] leading-tight">{(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</p>
                                                         {(item.weight || item.size) && (
                                                             <p className="text-[9px] text-[#e77600] font-black uppercase tracking-tighter mt-0.5">
                                                                 {item.weight}{item.weight && item.size ? ' • ' : ''}{item.size}
@@ -798,7 +824,7 @@ export default function AdminDashboard() {
                                         </tbody>
                                     </table>
                                 </div>
-                                
+
                                 {selectedWarehouse && !hasEnoughStock && (
                                     <p className="text-[11px] text-rose-600 font-bold bg-rose-50 p-3 rounded-lg border border-rose-100 flex items-center gap-2">
                                         <AlertTriangle size={14} /> Critical: Missing items in this warehouse.
@@ -825,13 +851,13 @@ export default function AdminDashboard() {
                         </div>
 
                         <div className="px-6 py-4 bg-[#f9fafb] border-t border-[#eee] flex gap-3">
-                            <button 
+                            <button
                                 onClick={() => setDeliveryModal(null)}
                                 className="flex-1 h-[40px] text-[13px] font-bold text-slate-600 hover:text-slate-800 transition-colors"
                             >
                                 Cancel
                             </button>
-                            <Btn 
+                            <Btn
                                 loading={isSubmittingDelivery}
                                 disabled={!selectedWarehouse || !hasEnoughStock}
                                 onClick={confirmDelivery}

@@ -45,7 +45,7 @@ export const PrintSlip = React.forwardRef<HTMLDivElement, PrintSlipProps>(({ ord
                 </div>
                 {order.items?.map((item: any) => (
                     <div key={item.id} className="flex justify-between">
-                        <span className="w-1/2 truncate">{item.product_name}</span>
+                        <span className="w-1/2 truncate">{(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</span>
                         <span className="w-1/4 text-center">{item.quantity}</span>
                         <span className="w-1/4 text-right">{parseFloat(item.price).toFixed(0)}</span>
                     </div>

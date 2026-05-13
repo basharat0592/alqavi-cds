@@ -21,24 +21,24 @@ urlpatterns = [
     path('', views.list_users, name='user-list'),
     path('profile/', views.get_profile, name='user-profile'),
     path('create/', views.create_user, name='user-create'),
-    path('<int:user_id>/', views.user_detail, name='user-detail'),
-    path('<int:user_id>/update/', views.update_user, name='user-update'),
-    path('<int:user_id>/delete/', views.delete_user, name='user-delete'),
+    path('<str:user_id>/', views.user_detail, name='user-detail'),
+    path('<str:user_id>/update/', views.update_user, name='user-update'),
+    path('<str:user_id>/delete/', views.delete_user, name='user-delete'),
     
     # Role Assignment
-    path('<int:user_id>/assign-role/', views.assign_role, name='user-assign-role'),
+    path('<str:user_id>/assign-role/', views.assign_role, name='user-assign-role'),
     
     # User Status Management
-    path('<int:user_id>/activate/', views.activate_user, name='user-activate'),
-    path('<int:user_id>/deactivate/', views.deactivate_user, name='user-deactivate'),
-    path('<int:user_id>/suspend/', views.suspend_user, name='user-suspend'),
+    path('<str:user_id>/activate/', views.activate_user, name='user-activate'),
+    path('<str:user_id>/deactivate/', views.deactivate_user, name='user-deactivate'),
+    path('<str:user_id>/suspend/', views.suspend_user, name='user-suspend'),
     
     # Password Management
-    path('<int:user_id>/change-password/', views.change_password, name='user-change-password'),
-    path('<int:user_id>/admin-reset-password/', views.admin_reset_password, name='user-admin-password-reset'),
+    path('<str:user_id>/change-password/', views.change_password, name='user-change-password'),
+    path('<str:user_id>/admin-reset-password/', views.admin_reset_password, name='user-admin-password-reset'),
     
     # Activity Logs
-    path('<int:user_id>/activity-logs/', views.user_activity_log, name='user-activity-logs'),
+    path('<str:user_id>/activity-logs/', views.user_activity_log, name='user-activity-logs'),
     path('Admin/all-activity-logs/', views.all_activity_logs, name='all-activity-logs'),
     
     # Role Management

@@ -18,24 +18,28 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     supplier_name = serializers.ReadOnlyField(source='supplier.name')
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
-    category_name = serializers.ReadOnlyField(source='category.name')
+    category_name = serializers.SerializerMethodField()
+    section_names = serializers.SerializerMethodField()
     additional_images = ProductImageSerializer(many=True, read_only=True)
     profit_margin = serializers.SerializerMethodField()
     catalog_image = serializers.SerializerMethodField()
-    total_quantity = serializers.IntegerField(source='live_stock_total', read_only=True)
+    total_quantity = serializers.IntegerField(read_only=True)
     sku = serializers.CharField(required=False, allow_null=True)
     barcode = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Product
         fields = [
-            'id', 'stock', 'product_name', 'category', 'category_name',
+            'id', 'stock', 'product_name', 'category', 'category_name', 'sections', 'section_names',
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
             'cost_price', 'total_quantity', 'image', 'additional_images', 'description', 'sku', 'barcode',
             'selling_price', 'batch', 'badge', 'weight', 'size', 'status', 'profit_margin', 'created_at',
             'catalog_image'
         ]
-        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'profit_margin', 'catalog_image']
+        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'section_names', 'profit_margin', 'catalog_image']
+
+    def get_section_names(self, obj):
+        return [s.name for s in obj.sections.all()]
 
     def get_catalog_image(self, obj):
         if obj.image:
@@ -45,6 +49,11 @@ class ProductSerializer(serializers.ModelSerializer):
         if sp and sp.image:
             return sp.image.url
         return None
+
+    def get_category_name(self, obj):
+        if obj.category:
+            return obj.category.name
+        return "Uncategorized"
 
     def get_profit_margin(self, obj):
         if obj.selling_price and obj.cost_price and obj.selling_price > 0:

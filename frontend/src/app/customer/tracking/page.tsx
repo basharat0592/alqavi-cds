@@ -229,7 +229,9 @@ export default function TrackingPage() {
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex justify-between items-start gap-4">
-                                                        <p className="text-[15px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer leading-tight">{item.product_name}</p>
+                                                        <p className="text-[15px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer leading-tight">
+                                                            {(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                        </p>
                                                         <p className="text-[15px] font-bold text-[#111]">{formatCurrency(item.price * item.quantity)}</p>
                                                     </div>
                                                     <div className="flex items-center gap-3 mt-2 text-[12px] text-[#565959] font-medium uppercase tracking-wider">

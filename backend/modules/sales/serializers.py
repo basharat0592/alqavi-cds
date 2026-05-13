@@ -36,16 +36,18 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
             'shipping_address', 'phone_number', 'customer_name', 'notes',
-            'items', 'created_at', 'updated_at'
+            'items', 'created_at', 'updated_at',
+            'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
         ]
         read_only_fields = ['id', 'tracking_id', 'order_number', 'created_at', 'updated_at']
 
 class CreateOrderSerializer(serializers.ModelSerializer):
     items = serializers.JSONField()
+    warehouse_id = serializers.CharField(required=False, write_only=True)
 
     class Meta:
         model = Order
-        fields = ['customer_name', 'shipping_address', 'phone_number', 'notes', 'items', 'payment_method', 'status']
+        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id']
 
     def create(self, validated_data):
         from django.db import transaction, IntegrityError
@@ -58,7 +60,14 @@ class CreateOrderSerializer(serializers.ModelSerializer):
         user_obj = None
         customer_obj = None
         
-        if request and hasattr(request, 'user') and request.user.is_authenticated:
+        # Manual Customer Selection (for POS/Admin)
+        manual_customer_id = validated_data.get('customer')
+        if manual_customer_id:
+            from modules.customer.models import Customer
+            customer_obj = Customer.objects.filter(id=manual_customer_id.id if hasattr(manual_customer_id, 'id') else manual_customer_id).first()
+            user_obj = None # Prefer linked Customer
+        
+        if not customer_obj and request and hasattr(request, 'user') and request.user.is_authenticated:
             # Audit log for debugging
             with open('scratch/user_log.txt', 'a') as f:
                 f.write(f"User: {request.user} | Class: {request.user.__class__.__name__} | ID: {getattr(request.user, 'id', 'NO_ID')} | Type: {type(request.user)}\n")
@@ -99,6 +108,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     'customer_name': validated_data.get('customer_name', ''),
                     'shipping_address': validated_data.get('shipping_address', ''),
                     'phone_number': validated_data.get('phone_number', ''),
+                    'whatsapp_number': validated_data.get('whatsapp_number', ''),
                     'notes': validated_data.get('notes', ''),
                     'payment_method': validated_data.get('payment_method', 'COD'),
                     'status': validated_data.get('status', 'PENDING')
@@ -131,18 +141,59 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         total_amount += (price * quantity)
                         
                         if status_val == 'DELIVERED':
-                            if product.stock:
-                                stock = product.stock
+                            warehouse_id = validated_data.get('warehouse_id')
+                            if warehouse_id and warehouse_id.strip():
+                                from modules.inventory.models import Stock
+                                import uuid
+                                
+                                # Validate UUID format to avoid DB errors
+                                try:
+                                    uuid.UUID(str(warehouse_id))
+                                except ValueError:
+                                    raise serializers.ValidationError(f"Invalid warehouse ID format: {warehouse_id}")
+
+                                # Deduct from Stock entry in SELECTED warehouse (Matching ALL specs)
+                                stock = Stock.objects.filter(
+                                    product_name__iexact=product.product_name,
+                                    weight=product.weight,
+                                    size=product.size,
+                                    warehouse_id=warehouse_id
+                                ).first()
+                                
+                                if not stock:
+                                    raise drf_serializers.ValidationError(f"Product '{product.product_name}' is not registered in the selected warehouse.")
+                                
+                                if stock.total_quantity < quantity:
+                                    raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}' in selected warehouse. (Available: {stock.total_quantity}, Required: {quantity})")
+                                
                                 stock.total_quantity = F('total_quantity') - quantity
                                 stock.save()
                                 
+                                # Deduct from Supplier Product
                                 if hasattr(stock, 'product') and stock.product:
                                     sp_prod = stock.product
                                     sp_prod.quantity = F('quantity') - quantity
                                     sp_prod.save()
+                                
+                                # Trigger Product re-aggregation
+                                product.save()
+                            else:
+                                # Fallback to default stock if no warehouse provided (though UI should prevent this)
+                                if product.stock:
+                                    stock = product.stock
+                                    if stock.total_quantity < quantity:
+                                        raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}'. (Available: {stock.total_quantity}, Required: {quantity})")
                                     
-                            product.total_quantity = F('total_quantity') - quantity
-                            product.save()
+                                    stock.total_quantity = F('total_quantity') - quantity
+                                    stock.save()
+                                    
+                                    if hasattr(stock, 'product') and stock.product:
+                                        sp_prod = stock.product
+                                        sp_prod.quantity = F('quantity') - quantity
+                                        sp_prod.save()
+                                        
+                                product.total_quantity = F('total_quantity') - quantity
+                                product.save()
 
                             # 4. Sync to CustomerBoughtProduct Table
                             from .models import CustomerBoughtProduct
@@ -164,10 +215,12 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                 order.save()
                 return order
                 
+        except serializers.ValidationError as e:
+            raise e
         except IntegrityError as e:
-            raise drf_serializers.ValidationError({"detail": f"Database Integrity Error: {str(e)}"})
+            raise serializers.ValidationError({"detail": f"Database Integrity Error: {str(e)}"})
         except Exception as e:
-            raise drf_serializers.ValidationError({"detail": f"Order Processing Error: {str(e)}"})
+            raise serializers.ValidationError({"detail": f"Order Processing Error: {str(e)}"})
 
     def to_representation(self, instance):
         return OrderSerializer(instance, context=self.context).data

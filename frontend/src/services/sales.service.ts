@@ -17,8 +17,8 @@ export const salesService = {
         const { data } = await api.patch(`v1/sales/orders/${id}/update_status/`, { status });
         return data;
     },
-    getAdminOrders: async () => {
-        const { data } = await api.get('v1/sales/orders/');
+    getAdminOrders: async (params?: any) => {
+        const { data } = await api.get('v1/sales/orders/', { params });
         return Array.isArray(data) ? data : data.results || [];
     },
     deleteOrder: async (id: string) => {

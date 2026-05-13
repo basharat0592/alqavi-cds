@@ -51,6 +51,16 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # WhatsApp Integration
+    whatsapp_number = models.CharField(max_length=20, null=True, blank=True)
+    whatsapp_sent = models.BooleanField(default=False)
+    whatsapp_status = models.CharField(max_length=20, default='PENDING', choices=[
+        ('PENDING', 'Pending'),
+        ('SENT', 'Sent'),
+        ('FAILED', 'Failed')
+    ])
+    whatsapp_sent_at = models.DateTimeField(null=True, blank=True)
+
     def save(self, *args, **kwargs):
         if not self.tracking_id:
             # Generate a new unique numeric tracking ID

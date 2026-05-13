@@ -14,7 +14,7 @@ import { authService, User as AuthUser } from '@/lib/auth';
 import { productService, sectionService } from '@/lib/api';
 import Logo from "@/components/ui/Logo";
 
-export default function Navbar() {
+export default function Navbar({ settings }: { settings?: any }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCat, setSelectedCat] = useState('All');
     const [catOpen, setCatOpen] = useState(false);
@@ -37,7 +37,6 @@ export default function Navbar() {
         setUser(authService.getUser());
         productService.getAll().then(data => {
             const apiArr = Array.isArray(data) ? data : (data as any).results || [];
-            // Remove strict status filter to ensure all database products show up
             setAllProducts(apiArr);
         }).catch(() => { });
 
@@ -87,6 +86,9 @@ export default function Navbar() {
         router.push('/');
     };
 
+    const siteLogo = settings?.logo ? getImageUrl(settings.logo) : null;
+    const siteName = settings?.site_name || "AL-QAVI";
+
     return (
         <header className={`z-50 sticky top-0 transition-all duration-500 ${scrolled ? 'py-1' : 'py-2'}`}>
             <div className="w-full px-4 md:px-8 lg:px-10">
@@ -95,7 +97,11 @@ export default function Navbar() {
 
                         {/* BRAND / LOGO */}
                         <Link href="/" className="flex items-center gap-2 group shrink-0 transition-all hover:opacity-90">
-                            <Logo size="sm" className="scale-[1.3] py-2" />
+                            {siteLogo ? (
+                                <img src={siteLogo} alt={siteName} className="h-10 w-auto object-contain" />
+                            ) : (
+                                <Logo size="sm" className="scale-[1.3] py-2" />
+                            )}
                         </Link>
 
                         {/* SEARCH SYSTEM */}
@@ -106,7 +112,7 @@ export default function Navbar() {
                                     <input
                                         type="text"
                                         className="w-full h-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 focus:border-[#F59E0B]/30 rounded-l-xl pl-11 pr-4 text-sm text-[#1d252c] dark:text-white outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                                        placeholder="Search products like Beauty Cream, Serum, etc..."
+                                        placeholder="Search products..."
                                         value={searchQuery}
                                         onChange={(e) => handleQueryChange(e.target.value)}
                                     />
@@ -125,7 +131,9 @@ export default function Navbar() {
                                                 <img src={getImageUrl(p.image_url || p.image) || ''} className="w-full h-full object-contain" alt="" />
                                             </div>
                                             <div className="flex-1">
-                                                <div className="text-sm font-bold text-[#1d252c] dark:text-white group-hover/res:text-[#F59E0B] transition-colors">{p.name || p.product_name}</div>
+                                                <div className="text-sm font-bold text-[#1d252c] dark:text-white group-hover/res:text-[#F59E0B] transition-colors">
+                                                    {(p.name || p.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                </div>
                                                 <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-black">{p.category_name || (typeof p.category === 'object' ? p.category?.name : p.category) || 'Product'}</div>
                                             </div>
                                             <div className="text-sm font-black text-[#F59E0B]">Rs. {p.selling_price || p.price}</div>
@@ -147,8 +155,18 @@ export default function Navbar() {
 
                             <div className="relative" ref={userRef}>
                                 <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer group" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                                    <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center font-bold text-[#1d252c] dark:text-white border border-slate-200 dark:border-white/10">
-                                        {!user ? <User className="h-5 w-5" /> : user.name[0]}
+                                    <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center font-bold text-[#1d252c] dark:text-white border border-slate-200 dark:border-white/10 overflow-hidden">
+                                        {!user ? (
+                                            <User size={18} />
+                                        ) : user.avatar ? (
+                                            <img
+                                                src={getImageUrl(user.avatar)}
+                                                alt={user.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            user.name[0]
+                                        )}
                                     </div>
                                     <div className="hidden md:flex flex-col leading-none">
                                         <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase mb-0.5 tracking-tighter">
@@ -232,10 +250,14 @@ export default function Navbar() {
                     <div className="absolute right-4 top-4 bottom-4 w-[280px] bg-white border border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
                         <div className="p-6 border-b border-slate-50 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-[#F59E0B] rounded-lg flex items-center justify-center">
-                                    <Star className="h-6 w-6 fill-white text-white" />
-                                </div>
-                                <span className="font-extrabold text-[#1d252c] text-lg tracking-tight uppercase">AL-QAVI</span>
+                                {siteLogo ? (
+                                    <img src={siteLogo} alt={siteName} className="h-10 w-auto" />
+                                ) : (
+                                    <div className="w-10 h-10 bg-[#F59E0B] rounded-lg flex items-center justify-center">
+                                        <Star className="h-6 w-6 fill-white text-white" />
+                                    </div>
+                                )}
+                                <span className="font-extrabold text-[#1d252c] text-lg tracking-tight uppercase">{siteName}</span>
                             </div>
                             <button onClick={() => setMobileOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-lg"><X className="h-6 w-6 text-slate-400" /></button>
                         </div>

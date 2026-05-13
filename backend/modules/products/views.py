@@ -54,6 +54,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 existing.selling_price = new_price
             
             # Update other metadata
+            existing.category = serializer.validated_data.get('category', existing.category)
             existing.cost_price = serializer.validated_data.get('cost_price', existing.cost_price)
             existing.stock = stock_obj or existing.stock
             existing.badge = serializer.validated_data.get('badge', existing.badge)
@@ -83,22 +84,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             ProductImage.objects.create(product=instance, image=img)
 
     def get_queryset(self):
-        from django.db.models import Sum, OuterRef, Subquery
-        from django.db.models.functions import Coalesce
-        from modules.inventory.models import Stock
-
-        # Sum batches matching ALL 4 keys: Name, Price, Weight, and Type
-        stock_sum = Stock.objects.filter(
-            product_name__iexact=OuterRef('product_name'),
-            price_per_item=OuterRef('cost_price'),
-            weight=OuterRef('weight'),
-            size=OuterRef('size')
-        ).order_by().values('product_name').annotate(
-            total=Sum('total_quantity')
-        ).values('total')
-
         queryset = Product.objects.exclude(status='ARCHIVED').annotate(
-            live_stock_total=Coalesce(Subquery(stock_sum[:1]), F('total_quantity')),
             profit_amount=ExpressionWrapper(
                 F('selling_price') - F('cost_price'),
                 output_field=DecimalField()
@@ -152,6 +138,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get('no_pagination') == 'true':
             return None
         return super().paginate_queryset(queryset)
+
+    def destroy(self, request, *args, **kwargs):
+        """Perform a soft-delete by marking the product as ARCHIVED"""
+        instance = self.get_object()
+        instance.status = 'ARCHIVED'
+        instance.save()
+        return Response({"message": "Product removed from registry"}, status=status.HTTP_200_OK)
 
 
 class WishlistViewSet(viewsets.ModelViewSet):

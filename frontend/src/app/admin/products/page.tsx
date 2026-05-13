@@ -227,7 +227,9 @@ export default function ProductsPage() {
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <div className="text-[14px] font-bold text-[#007185] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>{prod.product_name}</div>
+                                                                    <div className="text-[14px] font-bold text-[#007185] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
+                                                                        {prod.product_name.replace(/\s*\(.*?\)\s*$/, '')}
+                                                                    </div>
                                                                     {(prod.weight || prod.size) && (
                                                                         <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
                                                                             — {prod.weight}{prod.weight && prod.size ? ' • ' : ''}{prod.size}

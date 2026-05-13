@@ -62,7 +62,11 @@ export default function CartPage() {
                                         <div key={item.id} className="flex flex-col md:flex-row gap-6 pb-10 border-b border-gray-100 dark:border-slate-800 last:border-0">
                                             {/* Thumbnail */}
                                             <Link href={`/customer/product/${item.id}`} className="w-40 h-40 flex-shrink-0 bg-gray-50 dark:bg-slate-800 p-4 border border-gray-100 rounded group overflow-hidden">
-                                                <img src={getImageUrl(item.image) || ''} alt={item.name} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-transform group-hover:scale-105" />
+                                                <img 
+                                                    src={getImageUrl(item.image) || '/images/logo.png'} 
+                                                    alt={item.name} 
+                                                    className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal transform transition-transform group-hover:scale-105" 
+                                                />
                                             </Link>
 
                                             {/* Info */}

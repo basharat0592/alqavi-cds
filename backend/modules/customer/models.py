@@ -14,6 +14,7 @@ class Customer(models.Model):
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
+    avatar = models.ImageField(upload_to='customers/avatars/', null=True, blank=True)
     
     status = models.CharField(max_length=20, default='active')
     is_active = models.BooleanField(default=True)

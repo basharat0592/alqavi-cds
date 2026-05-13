@@ -25,6 +25,7 @@ class StockSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source='category.name')
     sku = serializers.ReadOnlyField(source='product.sku')
     barcode = serializers.ReadOnlyField(source='product.barcode')
+    description = serializers.ReadOnlyField(source='product.description')
     product_image = serializers.SerializerMethodField()
 
     weight = serializers.SerializerMethodField()
@@ -36,7 +37,7 @@ class StockSerializer(serializers.ModelSerializer):
             'id', 'product_name', 'product', 'category', 'category_name', 
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
             'purchase_type', 'cartons', 'items_per_carton', 'total_quantity', 
-            'price_per_carton', 'price_per_item', 'sku', 'barcode', 'product_image', 'date', 
+            'price_per_carton', 'price_per_item', 'sku', 'barcode', 'description', 'product_image', 'date', 
             'weight', 'size', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'supplier_name', 'warehouse_name', 'category_name']

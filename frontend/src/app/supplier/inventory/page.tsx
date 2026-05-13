@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { 
-    Boxes, AlertTriangle, CheckCircle2, Loader2, RefreshCw, Trash2, Search, Eye, X, AlertCircle, 
+import {
+    Boxes, AlertTriangle, CheckCircle2, Loader2, RefreshCw, Trash2, Search, Eye, X, AlertCircle,
     Archive, ChevronDown, Download, Activity, ExternalLink, ChevronLeft
 } from 'lucide-react';
 import api from '@/lib/axios';
@@ -19,7 +19,7 @@ export default function SupplierInventory() {
     const [inventory, setInventory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    
+
     // Modals & UI State
     const [viewItem, setViewItem] = useState<any>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -63,7 +63,7 @@ export default function SupplierInventory() {
         }
     };
 
-    useEffect(() => { 
+    useEffect(() => {
         fetchInventory().then(() => {
             const idsParam = searchParams.get('manifest_ids');
             if (idsParam) {
@@ -71,7 +71,7 @@ export default function SupplierInventory() {
                 setSelectedIds(new Set(ids));
                 setShowManifest(true);
             }
-        }); 
+        });
     }, [fetchInventory, searchParams]);
 
     // Live Telemetry: 2s Auto-sync
@@ -117,7 +117,7 @@ export default function SupplierInventory() {
         try {
             setLoading(true);
             await Promise.all(
-                Array.from(selectedIds).map(id => 
+                Array.from(selectedIds).map(id =>
                     api.patch(`/v1/inventory/${id}/`, { status: 'ARCHIVED' })
                 )
             );
@@ -134,7 +134,7 @@ export default function SupplierInventory() {
         try {
             setLoading(true);
             await Promise.all(
-                Array.from(selectedIds).map(id => 
+                Array.from(selectedIds).map(id =>
                     api.patch(`/v1/inventory/${id}/`, { status: 'ACTIVE' })
                 )
             );
@@ -234,7 +234,7 @@ export default function SupplierInventory() {
                             Deselect All
                         </button>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setShowBulkModal(true)}
@@ -258,7 +258,7 @@ export default function SupplierInventory() {
                                 <Archive size={14} /> Archive
                             </button>
                         )}
-                        
+
                         <div className="relative" ref={dropdownRef}>
                             <button
                                 onClick={() => setIsBulkDropdownOpen(!isBulkDropdownOpen)}
@@ -266,16 +266,16 @@ export default function SupplierInventory() {
                             >
                                 Actions <ChevronDown size={14} />
                             </button>
-                            
+
                             {isBulkDropdownOpen && (
                                 <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden py-1 z-50 animate-in slide-in-from-top-2 font-sans">
-                                    <button 
+                                    <button
                                         onClick={handleExportCSV}
                                         className="w-full px-4 py-2 text-left text-[10px] font-black text-slate-500 uppercase hover:bg-slate-50 hover:text-[#007185] transition-colors flex items-center gap-3 font-sans"
                                     >
                                         <Download size={14} /> Export Selection
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={handleShareSelection}
                                         className="w-full px-4 py-2 text-left text-[10px] font-black text-slate-500 uppercase hover:bg-slate-50 hover:text-[#007185] transition-colors flex items-center gap-3 font-sans"
                                     >
@@ -310,7 +310,7 @@ export default function SupplierInventory() {
                                     <td className="p-4"><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]" /></td>
                                     <td className="px-6 py-4 font-sans">
                                         <div className="flex flex-col">
-                                            <span className="text-[14px] font-black text-slate-800">{item.product_name}</span>
+                                            <span className="text-[14px] font-black text-slate-800">{(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</span>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-1.5 rounded font-sans">{item.batch_number}</span>
                                                 <span className="text-[9px] font-black text-[#F59E0B] italic font-sans">{item.sku}</span>
@@ -344,18 +344,18 @@ export default function SupplierInventory() {
             {/* ── View Modal ── */}
             {viewItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 font-sans text-left">
+                    <div className="bg-white w-full max-w-lg rounded-xl shadow-xl p-8 text-left">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-black text-slate-800">Batch Details</h3>
-                            <button onClick={() => setViewItem(null)} className="p-2 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
+                            <h3 className="text-xl font-bold text-slate-800">Item Details</h3>
+                            <button onClick={() => setViewItem(null)} className="p-2 hover:bg-slate-50 rounded-full transition-colors"><X size={20} className="text-slate-400" /></button>
                         </div>
                         <div className="grid grid-cols-2 gap-6 mb-8">
-                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Product</p><p className="text-sm font-black text-slate-800 font-sans">{viewItem.product_name}</p></div>
-                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Batch</p><p className="text-sm font-bold text-[#F59E0B] font-sans">{viewItem.batch_number}</p></div>
-                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Available</p><p className="text-sm font-black text-slate-900 font-sans">{viewItem.quantity_available} Units</p></div>
-                            <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Warehouse</p><p className="text-sm font-bold text-slate-600 font-sans">{viewItem.warehouse_name || 'Global Hub'}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Product</p><p className="text-sm font-medium text-slate-800">{(viewItem.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Batch Number</p><p className="text-sm font-bold text-[#F59E0B]">#{viewItem.batch_number}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quantity</p><p className="text-sm font-medium text-slate-900">{viewItem.quantity_available} Units</p></div>
+                            <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Storage</p><p className="text-sm font-medium text-slate-600">{viewItem.warehouse_name || 'Main Warehouse'}</p></div>
                         </div>
-                        <button onClick={() => setViewItem(null)} className="w-full py-3 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl font-sans">Close</button>
+                        <button onClick={() => setViewItem(null)} className="w-full py-3 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-all">Close</button>
                     </div>
                 </div>
             )}
@@ -363,13 +363,13 @@ export default function SupplierInventory() {
             {/* ── Delete Confirm ── */}
             {deleteConfirmId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center font-sans">
+                    <div className="bg-white w-full max-w-sm rounded-xl shadow-xl p-8 text-center">
                         <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><AlertCircle size={32} /></div>
-                        <h3 className="text-xl font-black text-slate-800 mb-2 font-sans">Purge Record?</h3>
-                        <p className="text-sm text-slate-500 mb-6 font-sans">This Batch will be removed from your active stock logs.</p>
+                        <h3 className="text-xl font-bold text-slate-800 mb-2">Delete Record?</h3>
+                        <p className="text-sm text-slate-500 mb-6">Are you sure you want to remove this item from your stock?</p>
                         <div className="flex gap-3">
-                            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-500 font-sans">Cancel</button>
-                            <button onClick={() => handleDelete(deleteConfirmId)} className="flex-1 py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl font-sans">Confirm</button>
+                            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-800 transition-all">Cancel</button>
+                            <button onClick={() => handleDelete(deleteConfirmId)} className="flex-1 py-3 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-all">Delete</button>
                         </div>
                     </div>
                 </div>
@@ -392,7 +392,7 @@ export default function SupplierInventory() {
             {/* ── MANIFEST OVERLAY (Same Tab) ── */}
             {showManifest && (
                 <div className="fixed inset-0 z-[1000] bg-white overflow-y-auto font-sans text-left animate-in fade-in duration-300">
-                    
+
                     {/* Official Action Bar (Integrated Style) */}
                     <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
                         <div className="flex items-center justify-between py-4 border-b border-[#eee]">
@@ -400,21 +400,21 @@ export default function SupplierInventory() {
                                 <span className="text-[#c45500]">Inventory Manifest Preview</span>
                             </div>
                             <div className="flex items-center gap-3">
-                                <button 
+                                <button
                                     onClick={() => setShowManifest(false)}
                                     className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm flex items-center gap-2"
                                 >
                                     <ChevronLeft size={14} /> Back
                                 </button>
                                 <div className="h-6 w-[1px] bg-[#eee] mx-1"></div>
-                                <button 
+                                <button
                                     onClick={async () => {
                                         const ids = Array.from(selectedIds).join(',');
                                         const baseUrl = window.location.origin + window.location.pathname;
                                         const shareUrl = `${baseUrl}?manifest_ids=${ids}`;
 
                                         if (navigator.share) {
-                                            try { await navigator.share({ title: 'Inventory Manifest', url: shareUrl }); } catch {}
+                                            try { await navigator.share({ title: 'Inventory Manifest', url: shareUrl }); } catch { }
                                         } else {
                                             navigator.clipboard.writeText(shareUrl);
                                             toast.success('Manifest link copied!');
@@ -424,7 +424,7 @@ export default function SupplierInventory() {
                                 >
                                     <ExternalLink size={14} /> Share
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => window.print()}
                                     className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm flex items-center gap-2"
                                 >
@@ -462,7 +462,7 @@ export default function SupplierInventory() {
                                 {inventory.filter(i => selectedIds.has(i.id)).map((item, idx) => (
                                     <tr key={idx} className="border-b border-gray-100 font-sans">
                                         <td className="py-4 px-2 text-center text-gray-400 font-sans">{idx + 1}</td>
-                                        <td className="py-4 px-3 font-sans"><div className="font-bold text-[#111] font-sans">{item.product_name}</div><div className="text-[10px] text-slate-400 font-mono font-sans">SKU: {item.sku}</div></td>
+                                        <td className="py-4 px-3 font-sans"><div className="font-bold text-[#111] font-sans">{(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</div><div className="text-[10px] text-slate-400 font-mono font-sans">SKU: {item.sku}</div></td>
                                         <td className="py-4 px-3 font-sans"><div className="text-[11px] font-black uppercase tracking-tighter font-sans">{item.batch_number}</div><div className="text-[10px] text-slate-400 font-sans">{item.warehouse_name || 'Main Hub'}</div></td>
                                         <td className="py-4 px-3 text-center font-black font-sans">{item.quantity_available}</td>
                                         <td className="py-4 px-3 text-right font-sans"><span className="text-[9px] font-black uppercase tracking-widest font-sans">{item.status}</span></td>

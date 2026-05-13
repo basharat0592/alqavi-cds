@@ -84,7 +84,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     <ChevronRight size={12} />
                     <span className="hover:text-[#c45500] hover:underline cursor-pointer">{product.category_name}</span>
                     <ChevronRight size={12} />
-                    <span className="text-[#565959] truncate max-w-[200px]">{product.product_name}</span>
+                    <span className="text-[#565959] truncate max-w-[200px]">
+                        {(product.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                    </span>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -105,7 +107,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                         </div>
 
                         <div className="flex-1 bg-white border border-[#eee] rounded-[4px] aspect-square flex items-center justify-center relative cursor-zoom-in group overflow-hidden">
-                            <img src={images[activeImage]} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" alt={product.product_name} />
+                        <img 
+                            src={images[activeImage]} 
+                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" 
+                            alt={(product.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()} 
+                        />
                             {discount > 0 && (
                                 <span className="absolute top-4 left-4 bg-[#cc0c39] text-white text-[11px] font-bold px-2 py-1 rounded-sm shadow-sm">-{discount}% Off</span>
                             )}
@@ -119,7 +125,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                 Brand: {product.supplier_name || 'Al-Qavi Distributor'}
                             </Link>
                             <h1 className="text-[24px] font-medium leading-tight text-[#0f1111]">
-                                {product.product_name}
+                                {(product.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
                             </h1>
                             <div className="flex items-center gap-2">
                                 <AmazonStars count={4} reviews={145} />
@@ -285,7 +291,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                     <div className="aspect-square bg-[#f8f8f8] rounded-[4px] p-4 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-[#eee] transition-all">
                                         <img src={getImageUrl(p.image || p.catalog_image) || '/images/logo.png'} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform" alt="" />
                                     </div>
-                                    <h3 className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline line-clamp-2 leading-snug font-medium">{p.product_name}</h3>
+                                    <h3 className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline line-clamp-2 leading-snug font-medium">
+                                        {(p.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                    </h3>
                                     <div className="text-[15px] font-bold text-[#B12704]">Rs. {parseFloat(p.selling_price || p.price).toLocaleString()}</div>
                                 </Link>
                             ))}

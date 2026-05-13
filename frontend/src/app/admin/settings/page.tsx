@@ -141,7 +141,7 @@ export default function SettingsPage() {
             fd.append('phone', profile.phone);
             if (selectedAvatar) fd.append('avatar', selectedAvatar);
             const updated = await settingsService.updateProfile(Number(currentUser.id), fd as any);
-            authService.setSession(updated, sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '');
+            authService.setSession(sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '', updated);
             window.dispatchEvent(new Event('profileUpdated'));
             toast.success('Profile updated');
         } catch { toast.error('Failed to update profile'); } finally { setProfileSaving(false); }
@@ -462,7 +462,8 @@ export default function SettingsPage() {
                                     {
                                         group: 'Main',
                                         items: [
-                                            { n: 'Dashboard', h: '/admin/dashboard' },
+                                            { n: 'Overview', h: '/admin/dashboard' },
+                                            { n: 'Customers', h: '/admin/company/customers' },
                                             { n: 'Recent Activity', h: '/admin/sales/recent' },
                                             { n: 'Order List', h: '/admin/orders' },
                                             { n: 'All Sales', h: '/admin/sales' },
@@ -472,9 +473,10 @@ export default function SettingsPage() {
                                     {
                                         group: 'Inventory',
                                         items: [
-                                            { n: 'Categories', h: '/admin/products/categories' },
-                                            { n: 'Products', h: '/admin/products' },
-                                            { n: 'Sections', h: '/admin/products/sections' },
+                                            { n: 'Product Categories', h: '/admin/products/categories' },
+                                            { n: 'Product List', h: '/admin/products' },
+                                            { n: 'Add Product', h: '/admin/products/add' },
+                                            { n: 'Product Sections', h: '/admin/products/sections' },
                                             { n: 'Current Stocks', h: '/admin/inventory/list' },
                                             { n: 'Warehouses', h: '/admin/inventory/warehouses' },
                                         ]
@@ -495,7 +497,7 @@ export default function SettingsPage() {
                                             { n: 'Point of Sale', h: '/admin/sale' },
                                             { n: 'Invoices', h: '/admin/invoices' },
                                             { n: 'Global Payments', h: '/admin/payments' },
-                                            { n: 'Account Holders', h: '/admin/company/customers' },
+                                            { n: 'Company Categories', h: '/admin/company/categories' },
                                             { n: 'Sale Returns', h: '/admin/sale-returns' },
                                         ]
                                     },
@@ -506,6 +508,7 @@ export default function SettingsPage() {
                                             { n: 'Staff Roles', h: '/admin/users/roles' },
                                             { n: 'Permissions', h: '/admin/users/permissions' },
                                             { n: 'System Alerts', h: '/admin/alerts' },
+                                            { n: 'Company Hub', h: '/admin/company' },
                                         ]
                                     },
                                     {

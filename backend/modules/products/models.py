@@ -86,19 +86,40 @@ class Product(BaseModel):
         if self.stock:
             if not self.product_name:
                 self.product_name = self.stock.product_name
-            self.category = self.stock.category
-            self.supplier = self.stock.supplier
-            self.warehouse = self.stock.warehouse
-            self.cost_price = self.stock.price_per_item
+            if not self.category:
+                self.category = self.stock.category
+            if not self.supplier:
+                self.supplier = self.stock.supplier
+            if not self.warehouse:
+                self.warehouse = self.stock.warehouse
+            if not self.cost_price:
+                self.cost_price = self.stock.price_per_item
             
-            # Fulfilling the 'not all' requirement: Only show the quantity of this specific product/batch
-            self.total_quantity = self.stock.total_quantity
-            
+            # Sync all metadata from linked stock
             if self.stock.product:
                 if not self.sku: self.sku = self.stock.product.sku
                 if not self.barcode: self.barcode = self.stock.product.barcode
+                if not self.description: self.description = self.stock.product.description
+            else:
+                # Fallback to name matching if no direct link
+                sp = SupplierProduct.objects.filter(name__iexact=self.product_name or self.stock.product_name).first()
+                if sp:
+                    if not self.sku: self.sku = sp.sku
+                    if not self.barcode: self.barcode = sp.barcode
+                    if not self.description: self.description = sp.description
             
-            # Sync weight and size from stock
+            # Aggregate total quantity across ALL warehouses/batches for this product identity
+            from django.db.models import Sum
+            total = Stock.objects.filter(
+                product_name__iexact=self.product_name or self.stock.product_name,
+                price_per_item=self.cost_price or self.stock.price_per_item,
+                weight=self.weight or self.stock.weight,
+                size=self.size or self.stock.size
+            ).aggregate(total=Sum('total_quantity'))['total'] or 0
+            
+            self.total_quantity = total
+            
+            # Sync weight and size from stock if not set
             if not self.weight: self.weight = self.stock.weight
             if not self.size: self.size = self.stock.size
         super().save(*args, **kwargs)

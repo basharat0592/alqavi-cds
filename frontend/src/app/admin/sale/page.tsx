@@ -7,7 +7,7 @@ import {
     ChevronRight, RefreshCw, Save, Search, ChevronDown, User, Banknote, CreditCard,
     Printer, Loader2, AlertTriangle, ShieldCheck
 } from 'lucide-react';
-import { productService, orderService, userService, companyService } from '@/lib/api';
+import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -82,7 +82,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                 <input
                     className={inputCls + " h-[42px] pl-10 pr-24 bg-white font-bold group-hover:bg-[#fcfdff] transition-all"}
                     placeholder="Type product name or scan..."
-                    value={open ? search : (selected ? (selected.product_name || selected.name) : '')}
+                    value={open ? search : (selected ? ((selected.product_name || selected.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()) : '')}
                     onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -121,8 +121,8 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                     className="flex items-center gap-4 p-3 hover:bg-[#f3f7f7] cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
                                 >
                                     <div className="w-10 h-10 bg-white flex items-center justify-center rounded border border-slate-200 shrink-0 overflow-hidden group-hover:border-[#e77600]/40 transition-colors">
-                                        {p.image ? (
-                                            <img src={p.image} className="max-w-full max-h-full object-cover" alt="" />
+                                        {(p.image || p.catalog_image) ? (
+                                            <img src={getImageUrl(p.image || p.catalog_image)} className="max-w-full max-h-full object-cover" alt="" />
                                         ) : (
                                             <Package size={18} className="text-slate-200" />
                                         )}
@@ -131,7 +131,12 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="min-w-0">
                                                 <p className="text-[13px] font-bold text-[#111] truncate group-hover:text-[#c45500] transition-colors">
-                                                    {p.product_name || p.name} 
+                                                    {(p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()} 
+                                                    {(p.weight || p.size) && (
+                                                        <span className="ml-1.5 text-[10px] text-slate-500 font-normal">
+                                                            ({p.weight || 'N/A'} - {p.size || 'N/A'})
+                                                        </span>
+                                                    )}
                                                     <span className={`ml-2 text-[11px] font-black ${(p.total_quantity || p.stock_quantity || 0) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                                         ({p.total_quantity || p.stock_quantity || 0})
                                                     </span>
@@ -157,6 +162,83 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     );
 };
 
+/* ─── Searchable Customer Selector (Custom) ─── */
+const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const filtered = customers.filter((c: any) =>
+        `${c.first_name} ${c.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
+        (c.phone && c.phone.includes(search)) ||
+        (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const selected = customers.find((c: any) => String(c.id) === String(selectedId));
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const getAvatarUrl = (path: string | null) => getImageUrl(path);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div className="relative group">
+                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#e77600]" />
+                <input
+                    className={inputCls + " pl-10 pr-10 cursor-pointer"}
+                    placeholder="Search customer account..."
+                    value={open ? search : (selected ? `${selected.first_name} ${selected.last_name}` : '')}
+                    onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+                    onClick={() => setOpen(!open)}
+                    readOnly={!open}
+                />
+                <ChevronDown size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </div>
+
+            {open && (
+                <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-300 rounded-[6px] shadow-2xl z-[1001] overflow-hidden">
+                    <div className="max-h-[300px] overflow-y-auto">
+                        <div 
+                            onClick={() => { onSelect(null); setOpen(false); }}
+                            className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex items-center gap-3"
+                        >
+                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"><X size={14} /></div>
+                            <span className="text-[13px] font-bold text-slate-500 italic">Walk-in Customer (No Account)</span>
+                        </div>
+                        {filtered.map((c: any) => (
+                            <div
+                                key={c.id}
+                                onClick={() => { onSelect(c); setOpen(false); }}
+                                className="flex items-center gap-3 p-3 hover:bg-[#f3f7f7] cursor-pointer border-b last:border-0 border-slate-100"
+                            >
+                                <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+                                    {c.avatar ? (
+                                        <img src={getAvatarUrl(c.avatar)} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-[12px] font-black text-slate-400">{c.first_name?.[0]}{c.last_name?.[0]}</span>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-bold text-[#111] truncate">{c.first_name} {c.last_name}</p>
+                                    <p className="text-[10px] text-slate-500 font-medium">Ph: {c.phone || 'N/A'} | {c.email}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function SaleEntryPage() {
     const router = useRouter();
     const [products, setProducts] = useState<any[]>([]);
@@ -170,11 +252,13 @@ export default function SaleEntryPage() {
     const [orderNumber, setOrderNumber] = useState(`SAL-${Date.now().toString().slice(-6)}`);
     const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
     const [customerId, setCustomerId] = useState<string>('');
-    const [warehouseId, setWarehouseId] = useState<string>('');
+const [warehouseId, setWarehouseId] = useState<string>('');
     const [guestName, setGuestName] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0 }]);
     
+    const [stockError, setStockError] = useState<string | null>(null);
+    const [warehouseStock, setWarehouseStock] = useState<any[]>([]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
 
     const loadData = useCallback(async (silent = false) => {
@@ -182,8 +266,8 @@ export default function SaleEntryPage() {
         try {
             const [p, u, w] = await Promise.all([
                 productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
-                userService.getAll?.().catch(() => []) ?? Promise.resolve([]),
-                companyService.getWarehouses?.().catch(() => []) ?? Promise.resolve([])
+                companyService.getCustomers().catch(() => []) ?? Promise.resolve([]),
+                inventoryService.getWarehouses().catch(() => [])
             ]);
             const prodArray = Array.isArray(p) ? p : (p as any)?.results || [];
             
@@ -193,7 +277,7 @@ export default function SaleEntryPage() {
             ));
             
             const userArray = Array.isArray(u) ? u : (u as any)?.results || [];
-            setUsers(userArray.filter((u: any) => !u.is_superuser && !u.is_staff));
+            setUsers(userArray);
 
             const whArray = Array.isArray(w) ? w : (w as any)?.results || [];
             setWarehouses(whArray);
@@ -206,6 +290,16 @@ export default function SaleEntryPage() {
     }, []);
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    useEffect(() => {
+        if (warehouseId) {
+            inventoryService.getInventory({ warehouse: warehouseId }).then(data => {
+                setWarehouseStock(data);
+            }).catch(() => setWarehouseStock([]));
+        } else {
+            setWarehouseStock([]);
+        }
+    }, [warehouseId]);
 
     // Live Telemetry: Auto-update catalog every 2 seconds
     useEffect(() => {
@@ -263,6 +357,7 @@ export default function SaleEntryPage() {
         setSaving(true);
         try {
             const payload = {
+                customer: customerId || null,
                 customer_name: customerId 
                     ? (users.find(u => String(u.id) === String(customerId))?.full_name || 'Registered Customer') 
                     : (guestName || 'Walk-in Customer'),
@@ -271,7 +366,7 @@ export default function SaleEntryPage() {
                 notes: `POS Gen: ${orderNumber}`,
                 status: 'DELIVERED',
                 payment_method: paymentMethod === 'cash' ? 'SHOP' : 'ONLINE',
-                warehouse: warehouseId,
+                warehouse_id: warehouseId,
                 items: items.map(i => ({ 
                     id: i.product, 
                     quantity: i.quantity, 
@@ -283,8 +378,20 @@ export default function SaleEntryPage() {
             toast.success('Sale finalized!');
         } catch (err: any) { 
             console.error(err);
-            const msg = err.response?.data?.error || err.response?.data?.message || 'Failed to save sale';
-            toast.error(msg); 
+            const data = err.response?.data;
+            let msg = 'Failed to save sale';
+            if (typeof data === 'string') msg = data;
+            else if (Array.isArray(data)) msg = data[0];
+            else if (typeof data === 'object' && data !== null) {
+                const val = data.detail || data.error || data.message || Object.values(data)[0];
+                msg = Array.isArray(val) ? val[0] : (typeof val === 'string' ? val : JSON.stringify(val));
+            }
+            
+            if (msg.toLowerCase().includes('stock') || msg.toLowerCase().includes('registered')) {
+                setStockError(msg);
+            } else {
+                toast.error(msg);
+            }
         } finally { setSaving(false); }
     };
 
@@ -353,28 +460,30 @@ export default function SaleEntryPage() {
                                         <input className={inputCls} value={orderNumber} onChange={e => setOrderNumber(e.target.value)} />
                                     </Field>
                                     <Field label="Customer Account">
-                                        <select className={selectCls} value={customerId} onChange={e => {setCustomerId(e.target.value); setGuestName('');}}>
-                                            <option value="">Walk-in Customer</option>
-                                            {users.map(u => (
-                                                <option key={u.id} value={u.id}>
-                                                    {u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || u.username}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </Field>
-                                    <Field label="Counter Date" required>
-                                        <input className={inputCls} type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
-                                    </Field>
-                                    <Field label="Source Warehouse" required>
-                                        <select className={selectCls} value={warehouseId} onChange={e => setWarehouseId(e.target.value)}>
-                                            <option value="">Select Location</option>
-                                            {warehouses.map(w => (
-                                                <option key={w.id} value={w.id}>{w.name}</option>
-                                            ))}
-                                        </select>
+                                        <CustomerSelector 
+                                            selectedId={customerId}
+                                            customers={users}
+                                            inputCls={inputCls}
+                                            onSelect={(c: any) => {
+                                                if (c) {
+                                                    setCustomerId(c.id.toString());
+                                                    setGuestName('');
+                                                } else {
+                                                    setCustomerId('');
+                                                }
+                                            }}
+                                        />
                                     </Field>
                                     <Field label="Walk-in Name">
                                         <input className={inputCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
+                                    </Field>
+                                    <Field label="Source Warehouse" required>
+                                        <select className={selectCls} value={warehouseId} onChange={e => setWarehouseId(e.target.value)}>
+                                            <option value="">Choose Warehouse...</option>
+                                            {warehouses.map(w => (
+                                                <option key={w.id} value={w.id}>{w.name} ({w.location})</option>
+                                            ))}
+                                        </select>
                                     </Field>
                                 </div>
                             </div>
@@ -402,7 +511,17 @@ export default function SaleEntryPage() {
                                             <div className="col-span-6">
                                                 <ProductSelector 
                                                     selectedId={item.product}
-                                                    products={products}
+                                                    products={products.map(p => {
+                                                        const ws = warehouseStock.find(s => 
+                                                            (s.product_name?.toLowerCase() === p.product_name?.toLowerCase()) &&
+                                                            (s.weight === p.weight || (!s.weight && !p.weight)) &&
+                                                            (s.size === p.size || (!s.size && !p.size))
+                                                        );
+                                                        return {
+                                                            ...p,
+                                                            total_quantity: ws ? ws.total_quantity : 0
+                                                        };
+                                                    })}
                                                     inputCls={selectCls}
                                                     onSelect={(p: any) => updateItem(i, p)}
                                                 />
@@ -440,34 +559,56 @@ export default function SaleEntryPage() {
                         </div>
 
                         {/* RIGHT: Bill Summary */}
-                        <div className="w-full lg:w-[320px] shrink-0 space-y-4 lg:sticky lg:top-4 animate-in slide-in-from-right-4 duration-500">
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-lg overflow-hidden transition-all hover:shadow-xl">
-                                <div className="px-6 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                                    <h3 className="text-[14px] font-black uppercase tracking-wider text-[#111]">Bill Summary</h3>
+                        <div className="w-full lg:w-[350px] shrink-0 animate-in slide-in-from-right-4 duration-500">
+                            <div className="bg-white border border-[#ddd] rounded-[8px] shadow-sm overflow-hidden sticky top-4">
+                                <div className="px-6 py-4 border-b border-[#eee] bg-slate-50/50">
+                                    <h3 className="text-[14px] font-bold uppercase tracking-widest text-[#111]">Bill Summary</h3>
                                 </div>
-                                <div className="p-6 space-y-5">
-                                    <Field label="Payment Status">
-                                        <div className="grid grid-cols-2 gap-2 h-[35px]">
-                                            <button onClick={() => setPaymentMethod('cash')} className={`flex items-center justify-center gap-2 rounded-[3px] border text-[11px] font-black uppercase tracking-widest transition-all ${paymentMethod==='cash'?'bg-[#f0c14b] border-[#a88734] text-[#111] shadow-inner':'bg-slate-50 border-[#ddd] text-slate-400 hover:border-[#aaa]'}`}><Banknote size={14} /> Cash</button>
-                                            <button onClick={() => setPaymentMethod('card')} className={`flex items-center justify-center gap-2 rounded-[3px] border text-[11px] font-black uppercase tracking-widest transition-all ${paymentMethod==='card'?'bg-[#f0c14b] border-[#a88734] text-[#111] shadow-inner':'bg-slate-50 border-[#ddd] text-slate-400 hover:border-[#aaa]'}`}><CreditCard size={14} /> Card</button>
-                                        </div>
-                                    </Field>
-
-                                    <div className="space-y-3 pt-2">
-                                        <div className="flex justify-between text-[13px] text-[#565959] font-bold">
-                                            <span>Subtotal ({items.reduce((a,b)=>a+(b.product?b.quantity:0), 0)} units)</span>
-                                            <span className="font-mono">{formatCurrency(totalBill)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-[11px] text-[#888] font-bold italic border-b border-[#eee] pb-2">
-                                            <span>Service Tax</span>
-                                            <span>{formatCurrency(0)}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pt-3">
-                                            <span className="text-[14px] font-black uppercase tracking-widest text-slate-900 leading-none">Grand Total</span>
-                                            <span className="text-[32px] font-black text-[#B12704] font-mono leading-none drop-shadow-xs">{formatCurrency(totalBill)}</span>
+                                
+                                <div className="p-6 space-y-6">
+                                    {/* Payment Method Selector */}
+                                    <div>
+                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-3">Payment Mode</label>
+                                        <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
+                                            <button 
+                                                onClick={() => setPaymentMethod('cash')}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-[12px] font-bold transition-all ${paymentMethod === 'cash' ? 'bg-white text-[#111] shadow-sm scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                <Banknote size={16} className={paymentMethod === 'cash' ? 'text-emerald-600' : ''} />
+                                                Cash
+                                            </button>
+                                            <button 
+                                                onClick={() => setPaymentMethod('card')}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-[12px] font-bold transition-all ${paymentMethod === 'card' ? 'bg-white text-[#111] shadow-sm scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                <CreditCard size={16} className={paymentMethod === 'card' ? 'text-blue-600' : ''} />
+                                                Card
+                                            </button>
                                         </div>
                                     </div>
 
+                                    {/* Financial Breakdown */}
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between text-[14px] text-slate-600">
+                                            <span>Subtotal ({items.reduce((a,b)=>a+(b.product?b.quantity:0), 0)} items)</span>
+                                            <span className="font-bold text-[#111]">{formatCurrency(totalBill)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[14px] text-slate-600">
+                                            <span>Service Tax</span>
+                                            <span className="text-slate-400">{formatCurrency(0)}</span>
+                                        </div>
+                                        <div className="h-px bg-slate-100 my-2" />
+                                        <div className="flex justify-between items-center pt-2">
+                                            <div>
+                                                <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Grand Total</p>
+                                                <p className="text-[24px] font-bold text-[#B12704]">
+                                                    {formatCurrency(totalBill)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Button */}
                                     <button 
                                         onClick={() => {
                                             if (items.some(i => !i.product)) return toast.error('Please select items for the sale');
@@ -476,20 +617,19 @@ export default function SaleEntryPage() {
                                             setShowConfirm(true);
                                         }} 
                                         disabled={items.some(i => !i.product) || items.length === 0 || saving} 
-                                        className="group relative w-full h-[45px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#111] rounded-[3px] font-black text-[14px] uppercase tracking-[0.15em] transition-all disabled:opacity-30 flex items-center justify-center gap-2 border border-[#a88734] shadow-[0_4px_0_#a88734] active:translate-y-[2px] active:shadow-none mt-4"
+                                        className="w-full py-3 px-4 bg-[#f0c14b] hover:bg-[#f7ca00] text-[#111] rounded-[4px] font-bold text-[14px] transition-all border border-[#a88734] flex items-center justify-center gap-2"
                                     >
-                                        {saving ? <RefreshCw className="animate-spin" size={20} /> : <>Finalize & Bill <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" /></>}
+                                        {saving ? <RefreshCw className="animate-spin" size={20} /> : "Finalize & Bill"}
                                     </button>
                                     
-                                    <div className="flex items-center gap-2 justify-center py-2 opacity-50">
-                                        <ShieldCheck size={14} className="text-emerald-600" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[#111]">Secure Payment</span>
+                                    <div className="flex items-center gap-2 justify-center py-2 bg-slate-50/50 rounded-lg border border-slate-100">
+                                        <ShieldCheck size={16} className="text-emerald-600" />
+                                        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Secure Store Checkout</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Warnings / Context */}
-                            <div className="bg-[#fff4e5] border border-[#ffb347]/30 rounded-[4px] p-5 shadow-sm animate-in fade-in duration-1000">
+                            <div className="bg-[#fff4e5] border border-[#ffb347]/30 rounded-[4px] p-5 shadow-sm animate-in fade-in duration-1000 mt-4">
                                 <div className="flex gap-3 items-start">
                                     <AlertTriangle className="text-[#e47911] shrink-0 mt-0.5" size={18} />
                                     <div className="text-[12px] leading-relaxed">
@@ -531,6 +671,51 @@ export default function SaleEntryPage() {
                                     className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline font-bold"
                                 >
                                     Cancel & Review
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ── Stock Error Modal ── */}
+            {stockError && (
+                <div className="fixed inset-0 bg-[#00000080] flex items-center justify-center z-[2000] p-4 backdrop-blur-[2px] animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[8px] w-full max-w-[440px] shadow-2xl border border-[#ddd] overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center text-orange-600 shrink-0">
+                                    <AlertTriangle size={24} />
+                                </div>
+                                <h3 className="text-[21px] font-medium text-[#111]">Inventory Issue</h3>
+                            </div>
+                            
+                            <div className="bg-[#fff4f4] border border-[#f5c2c2] rounded-[4px] p-4 mb-6">
+                                <p className="text-[14px] text-[#c40000] font-bold leading-relaxed">
+                                    {stockError}
+                                </p>
+                            </div>
+
+                            <p className="text-[13px] text-[#565959] mb-8">
+                                The current warehouse doesn't have enough units for this order. Please try selecting a different warehouse or adjust the quantities.
+                            </p>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#eee]">
+                                <button 
+                                    onClick={() => setStockError(null)}
+                                    className="px-6 py-2 text-[13px] font-medium text-[#111] bg-white border border-[#adb1b8] rounded-[3px] shadow-sm hover:bg-[#f7fafa] transition-colors active:bg-[#edf0f3]"
+                                >
+                                    Dismiss
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setStockError(null);
+                                        // Focus the warehouse selector if possible
+                                        const whSelect = document.querySelector('select[value="' + warehouseId + '"]');
+                                        (whSelect as any)?.focus();
+                                    }}
+                                    className="px-6 py-2 text-[13px] font-medium text-[#111] bg-[#ffd814] border border-[#fcd200] rounded-[3px] shadow-sm hover:bg-[#f7ca00] transition-colors active:bg-[#f0b800]"
+                                >
+                                    Change Warehouse
                                 </button>
                             </div>
                         </div>

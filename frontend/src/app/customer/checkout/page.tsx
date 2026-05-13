@@ -6,13 +6,27 @@ import { useRouter } from 'next/navigation';
 import {
     CheckCircle, CreditCard, Truck, ShieldCheck, Lock,
     Smartphone, Banknote, ShoppingCart, Copy, Check, MapPin, X, Package,
-    Camera, Upload, Image as ImageIcon
+    Camera, Upload, Image as ImageIcon, ChevronDown
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/utils';
 import { salesService, settingsService } from '@/lib/api';
 
 const STORAGE_KEY = 'alqavi_checkout_info';
+
+/* ═══════════════════════════════════════════════════════
+   PURE AMAZON COMPONENTS (Sourced from Admin Design)
+═══════════════════════════════════════════════════════ */
+const AmazonField = ({ label, required, id, children }: any) => (
+    <div className="space-y-2 group">
+        <label htmlFor={id} className="block text-[13px] font-bold text-[#111] cursor-pointer group-hover:text-[#e77600] transition-colors">
+            {label} {required && <span className="text-[#B12704] ml-0.5">*</span>}
+        </label>
+        <div className="relative">
+            {children}
+        </div>
+    </div>
+);
 
 export default function CheckoutPage() {
     const { items, cartTotal, clearCart, cartCount } = useCart();
@@ -23,6 +37,7 @@ export default function CheckoutPage() {
         lastName: '',
         email: '',
         phone: '',
+        whatsapp: '',
         address: '',
         city: '',
     });
@@ -46,20 +61,8 @@ export default function CheckoutPage() {
 
     // Load saved shipping info only for registered users
     useEffect(() => {
-        if (!isLoggedIn) {
-            // For non-registered users, ensure fields are blank
-            setShippingInfo({
-                firstName: '',
-                lastName: '',
-                email: '',
-                phone: '',
-                address: '',
-                city: '',
-            });
-            return;
-        }
+        if (!isLoggedIn) return;
 
-        // Only try to load saved info if logged in
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
@@ -76,6 +79,7 @@ export default function CheckoutPage() {
                     lastName: profile.last_name || '',
                     email: profile.email || '',
                     phone: profile.phone || profile.phone_number || '',
+                    whatsapp: profile.whatsapp || profile.phone || profile.phone_number || '',
                     address: profile.address || '',
                     city: profile.city || '',
                 });
@@ -96,24 +100,15 @@ export default function CheckoutPage() {
 
     const handlePlaceOrder = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Validate Payment Specifics
         if (payMethod === 'easypaisa') {
-            if (!selectedEasypaisaNum) {
-                alert('Please select an Easypaisa account number.');
-                return;
-            }
-            if (!receiptImage) {
-                alert('Please upload or capture your transaction receipt.');
-                return;
-            }
+            if (!selectedEasypaisaNum) { alert('Please select an Easypaisa account number.'); return; }
+            if (!receiptImage) { alert('Please upload or capture your transaction receipt.'); return; }
         } else if (payMethod === 'card') {
             if (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name) {
                 alert('Please fill in all credit card details.');
                 return;
             }
         }
-
         localStorage.setItem(STORAGE_KEY, JSON.stringify(shippingInfo));
         setShowReview(true);
     };
@@ -121,16 +116,17 @@ export default function CheckoutPage() {
     const processOrder = async () => {
         setIsProcessing(true);
         try {
-            const paymentNotes = payMethod === 'easypaisa' 
-                ? `Easypaisa: ${selectedEasypaisaNum}` 
-                : payMethod === 'card' 
-                ? `Card: ${cardDetails.number.slice(-4)}` 
-                : 'COD';
+            const paymentNotes = payMethod === 'easypaisa'
+                ? `Easypaisa: ${selectedEasypaisaNum}`
+                : payMethod === 'card'
+                    ? `Card: ${cardDetails.number.slice(-4)}`
+                    : 'COD';
 
             const payload = {
                 customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
                 shipping_address: `${shippingInfo.address}, ${shippingInfo.city}`,
                 phone_number: shippingInfo.phone,
+                whatsapp_number: shippingInfo.whatsapp,
                 payment_method: payMethod === 'cod' ? 'COD' : 'ONLINE',
                 notes: `Email: ${shippingInfo.email} | Auth: ${isLoggedIn ? 'User' : 'Guest'} | PayInfo: ${paymentNotes}`,
                 items: items.map((i: any) => ({
@@ -161,7 +157,6 @@ export default function CheckoutPage() {
                 </div>
                 <h1 className="text-3xl font-bold text-slate-900 mb-2">Order Placed, thank you!</h1>
                 <p className="text-slate-500 mb-8 max-w-md">Confirmation will be sent to your email. Your tracking ID is shown below.</p>
-
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-8 w-full max-w-sm flex items-center justify-between shadow-sm">
                     <div className="text-left">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Tracking ID</p>
@@ -171,14 +166,8 @@ export default function CheckoutPage() {
                         {copied ? <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1"><Check className="h-4 w-4" /> Copied</span> : <Copy className="h-4 w-4 text-gray-400" />}
                     </button>
                 </div>
-
                 <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-                    <Link 
-                        href={`/customer/tracking?tid=${placedOrderNumber}`} 
-                        className="flex-1 py-3 bg-[#f0c14b] text-[#111] font-bold rounded-xl border border-[#a88734] hover:bg-[#f0c14b]/90 transition-all text-center"
-                    >
-                        Track Order
-                    </Link>
+                    <Link href={`/customer/tracking?tid=${placedOrderNumber}`} className="flex-1 py-3 bg-[#f0c14b] text-[#111] font-bold rounded-xl border border-[#a88734] hover:bg-[#f0c14b]/90 transition-all text-center">Track Order</Link>
                     <Link href="/customer" className="flex-1 py-3 bg-white border border-gray-200 text-slate-700 font-bold rounded-xl hover:bg-gray-50 transition-all text-center">Back to Shop</Link>
                 </div>
             </div>
@@ -195,26 +184,14 @@ export default function CheckoutPage() {
         );
     }
 
-    /* ═══════════════════════════════════════════════════════
-       PURE AMAZON COMPONENTS (Sourced from Admin Design)
-    ═══════════════════════════════════════════════════════ */
     const cardCls = "bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden mb-5";
     const headerCls = "px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]";
-    const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] font-medium transition-all bg-white";
+    const inputCls = "w-full h-[44px] px-4 border border-[#888c8e] rounded-[4px] text-[15px] outline-none hover:border-[#555] focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.3)] font-medium transition-all bg-white cursor-text";
+    const selectCls = "w-full h-[44px] px-4 border border-[#888c8e] rounded-[4px] text-[15px] outline-none hover:border-[#555] focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.3)] font-medium transition-all bg-white cursor-pointer appearance-none";
     const btnPrimary = "w-full h-[32px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] text-[13px] font-medium text-[#111] shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2";
-
-    const AmazonField = ({ label, required, children }: any) => (
-        <div className="space-y-1">
-            <label className="block text-[13px] font-bold text-[#111]">
-                {label} {required && <span className="text-red-600 ml-0.5">*</span>}
-            </label>
-            {children}
-        </div>
-    );
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] font-sans pb-20 text-[#111]">
-            {/* Amazon Universal Header */}
             <header className="bg-[#131921] py-3 px-6 sticky top-0 z-[100] border-b border-black">
                 <div className="max-w-[1150px] mx-auto flex items-center justify-between">
                     <Link href="/customer" className="flex items-center gap-2">
@@ -230,47 +207,70 @@ export default function CheckoutPage() {
 
             <div className="max-w-[1100px] mx-auto px-6 py-8">
                 <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-6 items-start">
-
-                    {/* LEFT COLUMN: FULFILLMENT */}
                     <div className="flex-1 space-y-5 min-w-0 w-full">
-
-                        {/* 1. SHIPPING ADDRESS */}
                         <div className={cardCls}>
                             <div className={headerCls}>
                                 <h3 className="text-[14px] font-bold text-[#111]">1. Shipping Address</h3>
                                 <p className="text-[12px] text-[#565959]">Please enter the delivery destination.</p>
                             </div>
-                            <div className="p-6 grid grid-cols-2 gap-x-6 gap-y-4">
-                                <AmazonField label="First Name" required>
-                                    <input className={inputCls} required value={shippingInfo.firstName} onChange={(e: any) => setShippingInfo({ ...shippingInfo, firstName: e.target.value })} />
+                            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                <AmazonField label="First Name" id="firstName" required>
+                                    <input id="firstName" className={inputCls} required value={shippingInfo.firstName} onChange={(e: any) => setShippingInfo({ ...shippingInfo, firstName: e.target.value })} placeholder="Your First Name" />
                                 </AmazonField>
-                                <AmazonField label="Last Name" required>
-                                    <input className={inputCls} required value={shippingInfo.lastName} onChange={(e: any) => setShippingInfo({ ...shippingInfo, lastName: e.target.value })} />
+                                <AmazonField label="Last Name" id="lastName" required>
+                                    <input id="lastName" className={inputCls} required value={shippingInfo.lastName} onChange={(e: any) => setShippingInfo({ ...shippingInfo, lastName: e.target.value })} placeholder="Your Last Name" />
                                 </AmazonField>
-                                <AmazonField label="Phone Number" required>
-                                    <input className={inputCls} required value={shippingInfo.phone} onChange={(e: any) => setShippingInfo({ ...shippingInfo, phone: e.target.value })} placeholder="e.g. 0300 1234567" />
+                                <AmazonField label="Phone Number" id="phone" required>
+                                    <input id="phone" className={inputCls} required value={shippingInfo.phone} onChange={(e: any) => setShippingInfo({ ...shippingInfo, phone: e.target.value })} placeholder="e.g. 0300 1234567" />
                                 </AmazonField>
-                                <AmazonField label="Email Address (Optional)">
-                                    <input className={inputCls} type="email" value={shippingInfo.email} onChange={(e: any) => setShippingInfo({ ...shippingInfo, email: e.target.value })} />
+                                <AmazonField label="Email Address (Optional)" id="email">
+                                    <input id="email" className={inputCls} type="email" value={shippingInfo.email} onChange={(e: any) => setShippingInfo({ ...shippingInfo, email: e.target.value })} placeholder="email@example.com" />
                                 </AmazonField>
-                                <div className="col-span-2">
-                                    <AmazonField label="Street Address" required>
+                                <AmazonField label="WhatsApp Number" id="whatsapp" required>
+                                    <input id="whatsapp" className={inputCls} required value={shippingInfo.whatsapp} onChange={(e: any) => setShippingInfo({ ...shippingInfo, whatsapp: e.target.value })} placeholder="e.g. 923001234567" />
+                                    <p className="text-[10px] text-slate-500 mt-1">Order confirmation will be sent here.</p>
+                                </AmazonField>
+                                <div className="sm:col-span-2">
+                                    <AmazonField label="Full Street Address" id="address" required>
                                         <textarea
+                                            id="address"
                                             required
                                             rows={2}
                                             value={shippingInfo.address}
                                             onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })}
-                                            className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] font-medium transition-all"
+                                            className="w-full px-4 py-3 border border-[#888c8e] rounded-[4px] text-[15px] outline-none hover:border-[#555] focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.3)] font-medium transition-all min-h-[80px]"
+                                            placeholder="House #, Street Name, Area..."
                                         />
                                     </AmazonField>
                                 </div>
-                                <AmazonField label="City" required>
-                                    <input className={inputCls} required value={shippingInfo.city} onChange={(e: any) => setShippingInfo({ ...shippingInfo, city: e.target.value })} />
+                                <AmazonField label="City" id="city" required>
+                                    <div className="relative">
+                                        <select 
+                                            id="city" 
+                                            className={selectCls} 
+                                            required 
+                                            value={shippingInfo.city} 
+                                            onChange={(e: any) => setShippingInfo({ ...shippingInfo, city: e.target.value })}
+                                        >
+                                            <option value="">Select City</option>
+                                            <option value="Skardu">Skardu</option>
+                                            <option value="Gilgit">Gilgit</option>
+                                            <option value="Islamabad">Islamabad</option>
+                                            <option value="Rawalpindi">Rawalpindi</option>
+                                            <option value="Lahore">Lahore</option>
+                                            <option value="Karachi">Karachi</option>
+                                            <option value="Peshawar">Peshawar</option>
+                                            <option value="Quetta">Quetta</option>
+                                            <option value="Other">Other (Northern Areas)</option>
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                            <ChevronDown size={18} />
+                                        </div>
+                                    </div>
                                 </AmazonField>
                             </div>
                         </div>
 
-                        {/* 2. PAYMENT METHOD */}
                         <div className={cardCls}>
                             <div className={headerCls}>
                                 <h3 className="text-[14px] font-bold text-[#111]">2. Payment Method</h3>
@@ -293,7 +293,6 @@ export default function CheckoutPage() {
                                             </div>
                                         </label>
 
-                                        {/* Conditional Fields for Easypaisa */}
                                         {payMethod === 'easypaisa' && m.id === 'easypaisa' && (
                                             <div className="ml-8 p-4 border border-[#ddd] rounded-[4px] bg-white space-y-4 animate-in slide-in-from-top-2 duration-200">
                                                 <p className="text-[12px] font-bold text-[#565959] mb-2 uppercase tracking-wider">Select Account Number:</p>
@@ -313,7 +312,6 @@ export default function CheckoutPage() {
                                                         </button>
                                                     ))}
                                                 </div>
-
                                                 {selectedEasypaisaNum && (
                                                     <div className="pt-4 border-t border-dashed border-[#ddd] space-y-3">
                                                         <p className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Upload Transaction Receipt:</p>
@@ -343,13 +341,8 @@ export default function CheckoutPage() {
                                                                 />
                                                             </label>
                                                             <div className="flex-1 space-y-2">
-                                                                <p className="text-[11px] text-[#565959] leading-relaxed">
-                                                                    Please transfer the total amount to the selected number and upload a screenshot of the successful transaction.
-                                                                </p>
-                                                                <div className="flex items-center gap-2 text-[11px] font-bold text-[#007185]">
-                                                                    <ShieldCheck className="h-3 w-3" />
-                                                                    <span>Verified Account</span>
-                                                                </div>
+                                                                <p className="text-[11px] text-[#565959] leading-relaxed">Please transfer the total amount and upload screenshot.</p>
+                                                                <div className="flex items-center gap-2 text-[11px] font-bold text-[#007185]"><ShieldCheck className="h-3 w-3" /><span>Verified Account</span></div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -357,59 +350,23 @@ export default function CheckoutPage() {
                                             </div>
                                         )}
 
-                                        {/* Conditional Fields for Card */}
                                         {payMethod === 'card' && m.id === 'card' && (
                                             <div className="ml-8 p-6 border border-[#ddd] rounded-[4px] bg-white space-y-4 animate-in slide-in-from-top-2 duration-200">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <div className="flex gap-1">
-                                                        <div className="w-8 h-5 bg-gray-100 rounded border border-gray-200" />
-                                                        <div className="w-8 h-5 bg-gray-100 rounded border border-gray-200" />
-                                                        <div className="w-8 h-5 bg-gray-100 rounded border border-gray-200" />
-                                                    </div>
-                                                    <p className="text-[11px] text-[#565959]">Al-Qavi accepts all major credit and debit cards.</p>
-                                                </div>
-
-                                                <AmazonField label="Name on card" required>
-                                                    <input
-                                                        className={inputCls}
-                                                        value={cardDetails.name}
-                                                        onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })}
-                                                        placeholder="Full Name"
-                                                    />
+                                                <AmazonField label="Name on card" id="cardName" required>
+                                                    <input id="cardName" className={inputCls} value={cardDetails.name} onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })} placeholder="Full Name" />
                                                 </AmazonField>
-
-                                                <AmazonField label="Card number" required>
+                                                <AmazonField label="Card number" id="cardNumber" required>
                                                     <div className="relative">
-                                                        <input
-                                                            className={inputCls}
-                                                            value={cardDetails.number}
-                                                            onChange={(e) => setCardDetails({ ...cardDetails, number: e.target.value })}
-                                                            placeholder="0000 0000 0000 0000"
-                                                            maxLength={19}
-                                                        />
-                                                        <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                        <input id="cardNumber" className={inputCls} value={cardDetails.number} onChange={(e) => setCardDetails({ ...cardDetails, number: e.target.value })} placeholder="0000 0000 0000 0000" maxLength={19} />
+                                                        <CreditCard className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                                                     </div>
                                                 </AmazonField>
-
                                                 <div className="grid grid-cols-2 gap-4">
-                                                    <AmazonField label="Expiration date" required>
-                                                        <input
-                                                            className={inputCls}
-                                                            value={cardDetails.expiry}
-                                                            onChange={(e) => setCardDetails({ ...cardDetails, expiry: e.target.value })}
-                                                            placeholder="MM / YY"
-                                                            maxLength={5}
-                                                        />
+                                                    <AmazonField label="Expiration date" id="cardExpiry" required>
+                                                        <input id="cardExpiry" className={inputCls} value={cardDetails.expiry} onChange={(e) => setCardDetails({ ...cardDetails, expiry: e.target.value })} placeholder="MM / YY" maxLength={5} />
                                                     </AmazonField>
-                                                    <AmazonField label="Security code (CVV)" required>
-                                                        <input
-                                                            className={inputCls}
-                                                            type="password"
-                                                            value={cardDetails.cvv}
-                                                            onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })}
-                                                            placeholder="123"
-                                                            maxLength={4}
-                                                        />
+                                                    <AmazonField label="Security code (CVV)" id="cardCvv" required>
+                                                        <input id="cardCvv" className={inputCls} type="password" value={cardDetails.cvv} onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })} placeholder="123" maxLength={4} />
                                                     </AmazonField>
                                                 </div>
                                             </div>
@@ -419,7 +376,6 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
-                        {/* 3. REVIEW ITEMS */}
                         <div className={cardCls}>
                             <div className={headerCls}>
                                 <h3 className="text-[14px] font-bold text-[#111]">3. Items and Shipping</h3>
@@ -445,34 +401,18 @@ export default function CheckoutPage() {
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: SUMMARY */}
                     <div className="w-full lg:w-[320px] sticky top-[80px]">
                         <div className="bg-white border border-[#ddd] rounded-[4px] p-5 space-y-5">
-                            <button type="submit" className={btnPrimary + " h-[35px] text-[14px]"}>
-                                Use this payment method
-                            </button>
+                            <button type="submit" className={btnPrimary + " h-[35px] text-[14px]"}>Use this payment method</button>
                             <p className="text-[11px] text-[#565959] text-center px-2 leading-tight">By placing your order, you agree to Al-Qavi's <span className="text-[#007185] hover:underline cursor-pointer">privacy notice</span> and <span className="text-[#007185] hover:underline cursor-pointer">conditions of use</span>.</p>
-
                             <div className="pt-4 border-t border-[#eee] space-y-3">
                                 <h3 className="text-[16px] font-bold text-[#111]">Order Summary</h3>
                                 <div className="space-y-2 text-[12px] text-[#111]">
-                                    <div className="flex justify-between">
-                                        <span className="text-[#565959]">Items:</span>
-                                        <span>PKR {cartTotal.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[#565959]">Shipping & handling:</span>
-                                        <span>PKR {shipping.toLocaleString()}</span>
-                                    </div>
-                                    <div className="pt-2 flex justify-between">
-                                        <span className="w-full border-t border-[#eee]" />
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[#565959]">Total before tax:</span>
-                                        <span>PKR {total.toLocaleString()}</span>
-                                    </div>
+                                    <div className="flex justify-between"><span className="text-[#565959]">Items:</span><span>PKR {cartTotal.toLocaleString()}</span></div>
+                                    <div className="flex justify-between"><span className="text-[#565959]">Shipping & handling:</span><span>PKR {shipping.toLocaleString()}</span></div>
+                                    <div className="pt-2 flex justify-between"><span className="w-full border-t border-[#eee]" /></div>
+                                    <div className="flex justify-between"><span className="text-[#565959]">Total before tax:</span><span>PKR {total.toLocaleString()}</span></div>
                                 </div>
-
                                 <div className="pt-4 border-t border-[#eee]">
                                     <div className="flex justify-between items-center">
                                         <span className="text-[17px] font-bold text-[#B12704]">Order Total:</span>
@@ -481,7 +421,6 @@ export default function CheckoutPage() {
                                 </div>
                             </div>
                         </div>
-
                         <div className="mt-4 bg-[#f1f1f1] border border-[#ddd] rounded-[4px] p-4 flex gap-3">
                             <ShieldCheck className="h-5 w-5 text-[#565959] shrink-0" />
                             <p className="text-[11px] text-[#565959] leading-tight">Your data is encrypted and secure. We do not store full credit card details on our local servers.</p>
@@ -490,25 +429,24 @@ export default function CheckoutPage() {
                 </form>
             </div>
 
-            {/* REVIEW MODAL (High-Fidelity) */}
             {showReview && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]">
                     <div className="bg-white rounded-[4px] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-[#ddd] shadow-2xl animate-in zoom-in-95 duration-200">
-                        {/* Modal Header */}
                         <div className="bg-[#f7f8fa] border-b border-[#ddd] px-8 py-5 flex items-center justify-between">
                             <h2 className="text-[20px] font-medium text-[#111]">Review your order</h2>
                             <button onClick={() => setShowReview(false)} className="text-[#565959] hover:text-[#111] transition-colors"><X size={24} /></button>
                         </div>
-
                         <div className="p-8 space-y-8 overflow-y-auto max-h-[calc(90vh-140px)]">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                 <div className="space-y-2">
                                     <h3 className="text-[13px] font-bold text-[#111] uppercase tracking-tighter">Shipping Address</h3>
                                     <div className="text-[13px] text-[#111] space-y-0.5">
                                         <p className="font-bold">{shippingInfo.firstName} {shippingInfo.lastName}</p>
-                                        <p>{shippingInfo.address}</p>
-                                        <p>{shippingInfo.city}</p>
-                                        <p className="pt-1">Phone: {shippingInfo.phone}</p>
+                                        <p>{shippingInfo.address}</p><p>{shippingInfo.city}</p>
+                                        <div className="pt-2 space-y-0.5">
+                                            <p className="text-[11px] text-[#565959]">Phone: {shippingInfo.phone}</p>
+                                            <p className="text-[11px] text-[#565959]">WhatsApp: {shippingInfo.whatsapp}</p>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -517,19 +455,15 @@ export default function CheckoutPage() {
                                     <p className="text-[11px] text-[#565959]">Verification may be required upon delivery.</p>
                                 </div>
                             </div>
-
                             <div className="border border-[#ddd] rounded-[4px] overflow-hidden">
                                 <div className="bg-[#f7f8fa] px-4 py-2 border-b border-[#ddd] flex justify-between text-[11px] font-bold text-[#565959] uppercase tracking-widest">
-                                    <span>Shipment 1 of 1</span>
-                                    <span>Estimated Delivery: 2-3 Days</span>
+                                    <span>Shipment 1 of 1</span><span>Estimated Delivery: 2-3 Days</span>
                                 </div>
                                 <div className="divide-y divide-[#eee]">
                                     {items.map((item: any) => (
                                         <div key={item.id} className="px-5 py-4 flex justify-between items-center text-[13px]">
                                             <div className="flex gap-4 items-center min-w-0">
-                                                <div className="w-12 h-12 border border-[#eee] rounded-[2px] p-1 shrink-0 bg-white">
-                                                    <img src={getImageUrl(item.image)} className="w-full h-full object-contain" />
-                                                </div>
+                                                <div className="w-12 h-12 border border-[#eee] rounded-[2px] p-1 shrink-0 bg-white"><img src={getImageUrl(item.image)} className="w-full h-full object-contain" /></div>
                                                 <span className="font-bold text-[#007185] truncate">{item.name}</span>
                                             </div>
                                             <div className="flex items-center gap-10 shrink-0">
@@ -540,28 +474,18 @@ export default function CheckoutPage() {
                                     ))}
                                 </div>
                             </div>
-
                             <div className="flex justify-end pt-4" />
                             <div className="flex justify-end">
                                 <div className="w-[320px] space-y-2">
                                     <div className="flex justify-between text-[13px]"><span>Items:</span><span>PKR {cartTotal.toLocaleString()}</span></div>
                                     <div className="flex justify-between text-[13px]"><span>Shipping:</span><span>PKR {shipping.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-[18px] font-bold text-[#B12704] pt-3 border-t border-[#ddd]">
-                                        <span>Order Total:</span>
-                                        <span>PKR {total.toLocaleString()}</span>
-                                    </div>
+                                    <div className="flex justify-between text-[18px] font-bold text-[#B12704] pt-3 border-t border-[#ddd]"><span>Order Total:</span><span>PKR {total.toLocaleString()}</span></div>
                                 </div>
                             </div>
                         </div>
-
-                        {/* Modal Footer */}
                         <div className="bg-[#f7f8fa] border-t border-[#ddd] p-6 flex justify-between items-center">
                             <button onClick={() => setShowReview(false)} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline font-bold">Edit Details</button>
-                            <button
-                                onClick={processOrder}
-                                disabled={isProcessing}
-                                className="px-12 h-[38px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] text-[14px] font-bold text-[#111] shadow-sm disabled:opacity-50 active:scale-[0.98] transition-all"
-                            >
+                            <button onClick={processOrder} disabled={isProcessing} className="px-12 h-[38px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] text-[14px] font-bold text-[#111] shadow-sm disabled:opacity-50 active:scale-[0.98] transition-all">
                                 {isProcessing ? 'Placing Order...' : 'Place your order'}
                             </button>
                         </div>

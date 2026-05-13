@@ -1,4 +1,4 @@
-import os
+import os 
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'modules.company',
     'modules.supplier.apps.SupplierConfig',
     'modules.customer.apps.CustomerConfig',
+    'modules.cms.apps.CmsConfig',
 ]
 
 MIDDLEWARE = [
@@ -129,8 +130,8 @@ DATABASES = {
 
 # SIMPLE JWT Configuration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -146,5 +147,10 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
+
+# WhatsApp Cloud API Settings
+WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '')
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+WHATSAPP_API_VERSION = os.environ.get('WHATSAPP_API_VERSION', 'v17.0')
 
 # Authors: Antigravity  

@@ -60,7 +60,7 @@ export default function SupplierProductsPage() {
                                 items.map((it: any) => (
                                     <tr key={it.id} className="hover:bg-slate-50">
                                         <td className="px-4 py-3">{it.supplier_name}</td>
-                                        <td className="px-4 py-3">{it.product_name || '—'}</td>
+                                        <td className="px-4 py-3">{(it.product_name || '—').replace(/\s*\(.*?\)\s*$/, '')}</td>
                                         <td className="px-4 py-3">{it.supplier_sku || '—'}</td>
                                         <td className="px-4 py-3">{it.price ? formatCurrency(it.price) : '—'}</td>
                                         <td className="px-4 py-3">{it.lead_time_days ? `${it.lead_time_days} d` : '—'}</td>

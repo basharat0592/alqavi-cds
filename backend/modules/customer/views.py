@@ -25,14 +25,15 @@ class CustomerViewSet(viewsets.ModelViewSet):
             data['password'] = make_password(data['password'])
         
         if not data.get('username') and data.get('email'):
-            data['username'] = data.get('email').split('@')[0]
+            # Use email as username to ensure uniqueness, or fallback to prefix if email is missing
+            data['username'] = data.get('email')
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         customer = serializer.save(plain_password=request.data.get('password'))
         
-        # Return detail serializer output
-        return Response(CustomerSerializer(customer).data, status=status.HTTP_201_CREATED)
+        # Return detail serializer output with context for absolute URLs
+        return Response(CustomerSerializer(customer, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
@@ -54,4 +55,4 @@ class CustomerViewSet(viewsets.ModelViewSet):
         else:
             self.perform_update(serializer)
 
-        return Response(CustomerSerializer(instance).data)
+        return Response(CustomerSerializer(instance, context={'request': request}).data)
