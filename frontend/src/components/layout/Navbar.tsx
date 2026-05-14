@@ -19,6 +19,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [user, setUser] = useState<AuthUser | null>(null);
     const [allProducts, setAllProducts] = useState<any[]>([]);
+    const [siteSettings, setSiteSettings] = useState<any>(settings);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchOpen, setSearchOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,8 +35,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     const AMAZON_NAVY = "#131921";
     const AMAZON_LIGHT_NAVY = "#232f3e";
     const AMAZON_ORANGE = "#febd69";
-    const BRAND_ORANGE = "#f58220";
-    const BRAND_GREEN = "#227438";
+    const BRAND_ORANGE = siteSettings?.primary_color || "#f58220";
 
     useEffect(() => {
         setUser(authService.getUser());
@@ -43,7 +43,14 @@ export default function Navbar({ settings }: { settings?: any }) {
             const apiArr = Array.isArray(data) ? data : (data as any).results || [];
             setAllProducts(apiArr);
         }).catch(() => { });
-    }, []);
+
+        // Fetch settings if not provided
+        if (!settings) {
+            import('@/services/cms.service').then(m => m.default.getFullState()).then(state => {
+                setSiteSettings(state.settings);
+            });
+        }
+    }, [settings]);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -90,12 +97,27 @@ export default function Navbar({ settings }: { settings?: any }) {
 
     return (
         <header className="z-[9999] relative w-full font-sans">
+            {/* ── ANNOUNCEMENT BAR ── */}
+            {siteSettings?.show_announcement && (
+                <div
+                    className="w-full py-1.5 px-4 text-center transition-all duration-500"
+                    style={{ backgroundColor: siteSettings.primary_color || '#c45500' }}
+                >
+                    <Link
+                        href={siteSettings.announcement_link || "#"}
+                        className="text-[12px] font-black uppercase tracking-[0.2em] text-white hover:underline decoration-white/30 underline-offset-4"
+                    >
+                        {siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000!'}
+                    </Link>
+                </div>
+            )}
+
             {/* ── TOP HEADER (AMAZON NAVY) ── */}
             <div className="bg-[#131921] h-16 flex items-center px-2 gap-1 md:gap-4 lg:gap-8">
 
                 {/* Logo Section */}
                 <Link href="/" className="flex items-center shrink-0 p-1 rounded-sm cursor-pointer ml-2">
-                    <Logo size="sm" />
+                    <Logo size="sm" src={getImageUrl(settings?.logo)} />
                 </Link>
 
                 {/* Deliver To */}
@@ -116,7 +138,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                         <input
                             type="text"
                             className="flex-1 h-full px-4 text-sm text-black outline-none focus:ring-0 transition-all"
-                            placeholder="Search Alqavi Traders"
+                            placeholder={`Search ${siteSettings?.site_name || 'Alqavi Traders'}`}
                             value={searchQuery}
                             onChange={(e) => handleQueryChange(e.target.value)}
                         />
@@ -151,7 +173,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                             <div className="text-sm font-bold text-slate-900 line-clamp-1">
                                                 {(p.name || p.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
                                             </div>
-                                            <div className="text-[11px] text-slate-500 uppercase font-black tracking-widest">{p.category_name || 'Alqavi Traders'}</div>
+                                            <div className="text-[11px] text-slate-500 uppercase font-black tracking-widest">{p.category_name || siteSettings?.site_name || 'Alqavi Traders'}</div>
                                         </div>
                                         <div className="text-sm font-black text-[#b12704]">Rs. {p.selling_price || p.price}</div>
                                     </Link>
@@ -233,7 +255,7 @@ export default function Navbar({ settings }: { settings?: any }) {
 
 
                     {/* Cart Utility */}
-                    <div 
+                    <div
                         onClick={openCart}
                         className="flex items-end p-1 px-3 rounded-sm relative h-12 cursor-pointer"
                     >

@@ -13,6 +13,7 @@ class Order(models.Model):
         ('SHIPPED', 'Shipped'),
         ('DELIVERED', 'Delivered'),
         ('CANCELLED', 'Cancelled'),
+        ('REJECTED', 'Rejected'),
         ('CANCEL_REQUESTED', 'Cancel Requested'),
     ]
     PAYMENT_CHOICES = [

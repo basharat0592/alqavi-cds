@@ -140,7 +140,14 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         )
                         total_amount += (price * quantity)
                         
-                        if status_val == 'DELIVERED':
+                        # 3. Handle Reservation / Deduction based on initial status
+                        acceptance_statuses = ["CONFIRMED", "PROCESSING", "SHIPPED"]
+                        if status_val in acceptance_statuses:
+                            product.reserved_quantity = F("reserved_quantity") + quantity
+                            product.save()
+                            order.is_reserved = True
+                        
+                        elif status_val == 'DELIVERED':
                             warehouse_id = validated_data.get('warehouse_id')
                             if warehouse_id and warehouse_id.strip():
                                 from modules.inventory.models import Stock

@@ -57,6 +57,17 @@ class WebsiteSection(models.Model):
         ('gallery', 'Media Gallery'),
         ('video', 'Video Section'),
         ('promotion', 'Promotional Banner'),
+        ('brands', 'Brands Slider'),
+        ('stats', 'Impact Statistics'),
+        ('features', 'Core Features Grid'),
+        ('steps', 'How It Works / Steps'),
+        ('spotlight', 'Product Spotlight'),
+        ('marquee', 'Announcement Ticker'),
+        ('banner_split', 'Split Image/Text Banner'),
+        ('contact', 'Contact Information'),
+        ('map', 'Google Maps Embed'),
+        ('parallax', 'Parallax Scrolling'),
+        ('html', 'Custom HTML Widget'),
     ]
     
     name = models.CharField(max_length=255, help_text="Internal name for admin identification")

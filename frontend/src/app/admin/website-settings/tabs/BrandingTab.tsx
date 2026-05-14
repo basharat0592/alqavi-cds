@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, RefreshCw, Upload, RotateCcw, Image as ImageIcon, Search, Trash2, CheckCircle2, ChevronDown, History } from 'lucide-react';
 import { SiteSettings } from '@/services/cms.service';
 import cmsService from '@/services/cms.service';
@@ -11,6 +11,7 @@ interface Props {
     settings: SiteSettings;
     onSave: (data: Partial<SiteSettings>) => Promise<void>;
     saving: boolean;
+    setSettings?: (s: SiteSettings) => void;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -32,19 +33,25 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
-export default function BrandingTab({ settings, onSave, saving }: Props) {
+export default function BrandingTab({ settings, onSave, saving, setSettings }: Props) {
     const [form, setForm] = useState({ ...settings });
     const [uploading, setUploading] = useState<string | null>(null);
     const [picker, setPicker] = useState<{ open: boolean; field: string } | null>(null);
+
+    // Sync form with settings prop updates
+    useEffect(() => {
+        setForm({ ...settings });
+    }, [settings]);
 
     const handleSelectMedia = async (url: string) => {
         if (!picker) return;
         const field = picker.field;
         try {
-            await onSave({ [field]: url });
+            const updated = await cmsService.updateSettings({ [field]: url });
             setForm(f => ({ ...f, [field]: url }));
-            toast.success('Settings updated');
-        } catch { toast.error('Update failed'); }
+            setSettings?.(updated);
+            toast.success('Updated ' + field);
+        } catch { toast.error('Failed to update'); }
         finally { setPicker(null); }
     };
 
@@ -53,7 +60,8 @@ export default function BrandingTab({ settings, onSave, saving }: Props) {
         try {
             const updated = await cmsService.uploadBranding(field, file);
             setForm(f => ({ ...f, [field]: updated[field] }));
-            toast.success('Image updated');
+            setSettings?.(updated);
+            toast.success('Uploaded ' + field);
         } catch { toast.error('Upload failed'); }
         finally { setUploading(null); }
     };
@@ -64,7 +72,21 @@ export default function BrandingTab({ settings, onSave, saving }: Props) {
             <div className="relative border border-[#ddd] rounded-[4px] bg-white p-4 flex flex-col gap-3 shadow-sm">
                 <div className="relative h-24 w-full bg-[#f7f8fa] border border-[#eee] rounded-[3px] flex items-center justify-center p-2 group overflow-hidden">
                     {form[field] ? (
-                        <img src={getImageUrl(form[field] as string) || ''} alt={label} className="h-full w-full object-contain" />
+                        <img 
+                            key={form[field] as string}
+                            src={getImageUrl(form[field] as string)} 
+                            alt={label} 
+                            className="h-full w-full object-contain"
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                if (!target.src.includes('v=')) return; // Only retry our own local media
+                                if (target.src.includes('localhost')) {
+                                    target.src = target.src.replace('localhost', '127.0.0.1');
+                                } else if (target.src.includes('127.0.0.1')) {
+                                    target.src = target.src.replace('127.0.0.1', 'localhost');
+                                }
+                            }}
+                        />
                     ) : (
                         <ImageIcon size={32} className="text-[#ddd]" />
                     )}
@@ -100,14 +122,6 @@ export default function BrandingTab({ settings, onSave, saving }: Props) {
             {/* Page Header Aligned with Purchases */}
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-[21px] font-bold text-[#111]">Site Identity & Branding</h1>
-                <div className="flex items-center gap-2">
-                    <Btn variant="secondary" onClick={() => setForm({ ...settings })}>
-                        <RotateCcw size={14} /> Reset
-                    </Btn>
-                    <Btn onClick={() => onSave(form)} loading={saving} className="min-w-[120px]">
-                        Save Changes
-                    </Btn>
-                </div>
             </div>
 
             {/* Main Branding Section */}
@@ -168,10 +182,10 @@ export default function BrandingTab({ settings, onSave, saving }: Props) {
                     <div className="bg-[#f7f8fa] border-b border-[#ddd] px-5 py-3 flex items-center justify-between">
                         <h3 className="font-bold text-[#111] text-[15px]">Announcement Bar</h3>
                         <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" className="hidden" checked={form.show_announcement}
+                            <input type="checkbox" className="hidden" checked={!!form.show_announcement}
                                 onChange={() => setForm(f => ({ ...f, show_announcement: !f.show_announcement }))} />
                             <div className={`w-10 h-5 rounded-full transition-colors relative ${form.show_announcement ? 'bg-[#c45500]' : 'bg-[#ccc]'}`}>
-                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${form.show_announcement ? 'left-5.5' : 'left-0.5'}`} />
+                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${form.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
                             </div>
                         </label>
                     </div>

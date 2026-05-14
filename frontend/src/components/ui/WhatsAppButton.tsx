@@ -1,16 +1,25 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
+import cmsService, { SiteSettings } from '@/services/cms.service';
 
 const WhatsAppButton = () => {
     const pathname = usePathname();
     const isAdminPage = pathname?.startsWith('/admin');
+    const [settings, setSettings] = useState<SiteSettings | null>(null);
 
-    const phoneNumber = '923105855299';
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hi!%20I%20need%20help%20with%20my%20order.`;
+    useEffect(() => {
+        cmsService.getFullState().then(data => setSettings(data.settings));
+    }, []);
 
     if (isAdminPage) return null;
+
+    const phoneNumber = settings?.whatsapp_number || '923105855299';
+    // Clean number for link (remove +, -, spaces)
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    const whatsappUrl = `https://wa.me/${cleanNumber}?text=Hi!%20I%20need%20help%20with%20my%20order.`;
 
     return (
         <div className="fixed bottom-10 right-10 z-[50] print:hidden">

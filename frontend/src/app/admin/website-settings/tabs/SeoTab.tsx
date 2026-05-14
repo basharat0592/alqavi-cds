@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Loader2, Globe, Search, BarChart3, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 import { SiteSettings } from '@/services/cms.service';
 
@@ -10,7 +10,7 @@ interface Props {
 }
 
 // ── AMAZON STYLE COMPONENTS ──
-const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
         primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
         secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
@@ -29,11 +29,19 @@ const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[3px] tex
 export default function SeoTab({ settings, onSave, saving }: Props) {
     const [form, setForm] = useState({ ...settings });
 
+    useEffect(() => {
+        setForm({ ...settings });
+    }, [settings]);
+
     const titleLen = (form.meta_title || '').length;
     const descLen = (form.meta_description || '').length;
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Page Header */}
+            <div className="flex items-center justify-between mb-4">
+                <h1 className="text-[21px] font-bold text-[#111]">SEO & Search Settings</h1>
+            </div>
             
             {/* Search Preview */}
             <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
@@ -127,15 +135,15 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                 </div>
             </div>
 
-            {/* Save Actions */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm flex items-center justify-between">
+            {/* Footer Aligned Action */}
+            <div className="flex items-center justify-between bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm">
                 <div className="flex items-center gap-3 text-slate-400">
                     <RotateCcw size={18} />
-                    <p className="text-[13px] font-medium italic text-slate-500">SEO changes may take a few days to reflect in search engines.</p>
+                    <p className="text-[13px] font-medium italic">SEO changes may take a few days to reflect in search engines.</p>
                 </div>
-                <AmazonBtn onClick={() => onSave(form)} loading={saving}>
+                <Btn onClick={() => onSave(form)} loading={saving} className="min-w-[180px] h-[35px]">
                     Sync Meta Settings
-                </AmazonBtn>
+                </Btn>
             </div>
         </div>
     );

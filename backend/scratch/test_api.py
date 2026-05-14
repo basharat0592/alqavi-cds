@@ -1,12 +1,11 @@
 import requests
 
-def check_api():
-    try:
-        resp = requests.get('http://127.0.0.1:8000/api/v1/products/items/')
-        print(f"Status: {resp.status_code}")
-        print(f"Content: {resp.json()}")
-    except Exception as e:
-        print(f"Error: {e}")
+url = "http://localhost:8000/api/v1/cms/config/subscribe_newsletter/"
+data = {"email": "test-bot@example.com"}
 
-if __name__ == "__main__":
-    check_api()
+try:
+    response = requests.post(url, json=data)
+    print(f"Status: {response.status_code}")
+    print(f"Response: {response.json()}")
+except Exception as e:
+    print(f"Error: {e}")

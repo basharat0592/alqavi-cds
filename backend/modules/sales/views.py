@@ -291,12 +291,13 @@ class OrderViewSet(viewsets.ModelViewSet):
                 return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
             
             new_status = request.data.get("status", "").upper()
-            old_status = order.status
+            old_status = order.status.upper()
             warehouse_id = request.data.get("warehouse_id")
 
             with transaction.atomic():
-                # 1. RESERVE STOCK on Confirmation (Accept)
-                if new_status == "CONFIRMED" and not order.is_reserved:
+                # 1. RESERVE STOCK on Confirmation/Processing (Acceptance)
+                acceptance_statuses = ["CONFIRMED", "PROCESSING", "SHIPPED"]
+                if new_status in acceptance_statuses and not order.is_reserved:
                     for item in order.items.all():
                         if item.product:
                             item.product.reserved_quantity = F("reserved_quantity") + item.quantity
@@ -305,19 +306,19 @@ class OrderViewSet(viewsets.ModelViewSet):
                     order.save()
 
                 # 2. DEDUCT PHYSICAL STOCK on Delivery
-                if new_status == "DELIVERED" and order.status != "DELIVERED":
+                if new_status == "DELIVERED" and old_status != "DELIVERED":
                     if not warehouse_id:
                         return Response({"error": "Warehouse selection is required for delivery."}, status=status.HTTP_400_BAD_REQUEST)
                     
                     from modules.inventory.models import Stock
                     for item in order.items.all():
                         if item.product:
-                            # Release Reserved first
+                            # Release Reserved first if it was reserved
                             if order.is_reserved:
                                 item.product.reserved_quantity = F("reserved_quantity") - item.quantity
                                 item.product.save()
                             
-                            # Actual Deduction from Stock
+                            # Actual Deduction from Physical Stock (Master Stock Table)
                             stock = Stock.objects.filter(
                                 product_name__iexact=item.product.product_name,
                                 weight=item.product.weight,
@@ -328,15 +329,17 @@ class OrderViewSet(viewsets.ModelViewSet):
                             if stock:
                                 stock.total_quantity = F("total_quantity") - item.quantity
                                 stock.save()
+                                
+                                # Update Linked Supplier Product quantity if exists
                                 if hasattr(stock, "product") and stock.product:
                                     sp_prod = stock.product
                                     sp_prod.quantity = F("quantity") - item.quantity
                                     sp_prod.save()
                             
-                            # Trigger Master Product re-aggregation
+                            # Trigger re-aggregation of total_quantity in Admin Product record
                             item.product.save()
 
-                            # Sync to CustomerBoughtProduct Table
+                            # Log into CustomerBoughtProduct for history/analytics
                             from .models import CustomerBoughtProduct
                             CustomerBoughtProduct.objects.get_or_create(
                                 order=order,
@@ -352,8 +355,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                     order.delivered_at = timezone.now()
                     order.save()
 
-                # 3. RELEASE RESERVED on Cancellation
-                if new_status == "CANCELLED" and order.is_reserved:
+                # 3. RELEASE RESERVED on Cancellation or Rejection
+                release_statuses = ["CANCELLED", "REJECTED"]
+                if new_status in release_statuses and order.is_reserved:
                     for item in order.items.all():
                         if item.product:
                             item.product.reserved_quantity = F("reserved_quantity") - item.quantity

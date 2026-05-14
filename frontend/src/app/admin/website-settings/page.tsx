@@ -90,11 +90,18 @@ export default function WebsiteSettingsPage() {
     const handleSaveSettings = async (data: Partial<SiteSettings>) => {
         setSaving(true);
         try {
-            const updated = await cmsService.updateSettings(data);
+            // Cleanup: ensure we don't send system fields to avoid validation errors
+            const { id, updated_at, ...payload } = data as any;
+            
+            const updated = await cmsService.updateSettings(payload);
             setSettings(updated);
             setLastSaved(new Date());
             toast.success('Settings saved!');
-        } catch { toast.error('Failed to save'); }
+        } catch (error: any) {
+            console.error('Save failed:', error);
+            const msg = error.response?.data ? JSON.stringify(error.response.data) : 'Failed to save';
+            toast.error(msg);
+        }
         finally { setSaving(false); }
     };
 
@@ -166,7 +173,7 @@ export default function WebsiteSettingsPage() {
                 {/* ── CONTENT AREA ── */}
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {activeTab === 'sections' && <SectionsTab sections={sections} setSections={setSections} products={products} categories={categories} media={media} />}
-                    {activeTab === 'branding' && settings && <BrandingTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
+                    {activeTab === 'branding' && settings && <BrandingTab settings={settings} onSave={handleSaveSettings} saving={saving} setSettings={setSettings} />}
                     {activeTab === 'media' && <MediaTab media={media} setMedia={setMedia} />}
                     {activeTab === 'contact' && settings && <ContactTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
                     {activeTab === 'seo' && settings && <SeoTab settings={settings} onSave={handleSaveSettings} saving={saving} />}

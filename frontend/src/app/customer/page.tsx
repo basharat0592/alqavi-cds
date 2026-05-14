@@ -9,7 +9,7 @@ import {
     Search, MapPin, Phone, MessageCircle, UtensilsCrossed,
     Flame, Soup, Pizza, Coffee, Menu, X, Plus, Minus, Package,
     Truck, ShieldCheck, Clock, CreditCard, Check, Quote, AlertTriangle,
-    Sparkles, Image as ImageIcon
+    Sparkles, Image as ImageIcon, Zap, Users, Globe, Heart, Shield
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -38,6 +38,24 @@ export default function Home() {
     const [reviewName, setReviewName] = useState("");
     const [reviewText, setReviewText] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newsletterEmail, setNewsletterEmail] = useState("");
+    const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
+
+    const handleNewsletterSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newsletterEmail) return;
+        setIsNewsletterSubmitting(true);
+        try {
+            await cmsService.subscribeNewsletter(newsletterEmail);
+            toast.success("Your email has been submitted for the latest updates");
+            setNewsletterEmail("");
+        } catch (error) {
+            console.error("Subscription failed", error);
+            toast.error("Subscription failed. Please try again.");
+        } finally {
+            setIsNewsletterSubmitting(false);
+        }
+    };
 
     const handleReviewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -151,9 +169,35 @@ export default function Home() {
     if (loading) return <PageLoader />;
 
     // Use 'order' field from database and 'is_visible' boolean
-    const activeSections = sections
+    const rawActiveSections = sections
         .filter(s => s.is_visible)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Group FAQ and Newsletter if they are adjacent
+    const activeSections: any[] = [];
+    for (let i = 0; i < rawActiveSections.length; i++) {
+        const current = rawActiveSections[i];
+        const next = rawActiveSections[i + 1];
+
+        if (current.section_type === 'faq' && next?.section_type === 'newsletter') {
+            activeSections.push({
+                ...current,
+                section_type: 'faq_newsletter_combined',
+                newsletter_section: next
+            });
+            i++; // skip next
+        } else if (current.section_type === 'newsletter' && next?.section_type === 'faq') {
+            activeSections.push({
+                ...next,
+                section_type: 'faq_newsletter_combined',
+                newsletter_section: current,
+                reversed: true
+            });
+            i++; // skip next
+        } else {
+            activeSections.push(current);
+        }
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-500">
@@ -167,6 +211,98 @@ export default function Home() {
                         case 'hero':
                             return <Hero key={section.id} slides={content.slides} />;
 
+                        case 'faq_newsletter_combined':
+                            const faqSec = section.reversed ? section.newsletter_section : section;
+                            const newsSec = section.reversed ? section : section.newsletter_section;
+                            const faqContent = faqSec.content || {};
+                            const newsContent = newsSec.content || {};
+
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                    <div className="flex flex-col lg:flex-row gap-10 md:gap-16 items-start">
+                                        {/* Left: FAQ Section */}
+                                        <div className="flex-1 w-full animate-in fade-in duration-700">
+                                            <div className="mb-8 md:mb-12">
+                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none mb-4">
+                                                    {faqContent.title || "Common Questions"}
+                                                </h2>
+                                                <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
+                                                    {faqContent.subtitle || "Providing clarity for our professional partners and distribution network."}
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {(faqContent.items && faqContent.items.length > 0 ? faqContent.items : [
+                                                    { q: "Are your products 100% authentic?", a: "Every product in our inventory is sourced directly from original manufacturers or authorized global distributors, ensuring 100% verified authenticity." },
+                                                    { q: "What is the typical lead time for wholesale orders?", a: "Standard distribution orders are processed within 24 hours. Delivery typically takes 2-4 business days depending on your regional hub location." },
+                                                    { q: "Do you offer international shipping?", a: "Currently, we specialize in high-efficiency distribution across Pakistan, with specialized logistics for Gilgit-Baltistan and northern regions." }
+                                                ]).map((faq: any, idx: number) => (
+                                                    <div key={idx} className="bg-white rounded-[8px] border border-[#D5D9D9] shadow-sm overflow-hidden group hover:border-[#119AB8] transition-all duration-300">
+                                                        <button
+                                                            onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                                                            className={cn(
+                                                                "w-full px-6 py-5 flex items-center justify-between transition-all duration-300",
+                                                                openFaq === idx ? "bg-slate-50" : "bg-white"
+                                                            )}
+                                                        >
+                                                            <span className="font-bold text-[13px] md:text-[14px] text-left text-[#0f1111] uppercase tracking-tight">{faq.q}</span>
+                                                            <div className={cn(
+                                                                "w-6 h-6 rounded-md flex items-center justify-center transition-all duration-300",
+                                                                openFaq === idx ? "bg-[#119AB8] text-white rotate-45" : "bg-slate-50 text-slate-400"
+                                                            )}>
+                                                                <Plus size={16} className="stroke-[3]" />
+                                                            </div>
+                                                        </button>
+                                                        <div className={cn(
+                                                            "grid transition-all duration-300 ease-in-out",
+                                                            openFaq === idx ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                                                        )}>
+                                                            <div className="overflow-hidden">
+                                                                <div className="px-6 pb-6 text-[13px] md:text-[14px] text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 mx-6">
+                                                                    {faq.a}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Newsletter Section */}
+                                        <div className="w-full lg:w-[450px] animate-in fade-in duration-700 lg:sticky lg:top-32 text-center lg:text-left pt-6 lg:pt-0">
+                                            <div className="mb-8">
+                                                <h2 className="text-2xl md:text-3xl font-bold text-[#2D4059] tracking-tight mb-4">
+                                                    Join Our Newsletter
+                                                </h2>
+                                                <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-sm mx-auto lg:mx-0">
+                                                    Subscribe to our newsletter and receive the latest news about our products and services!
+                                                </p>
+                                            </div>
+
+                                            <div className="relative group max-w-md mx-auto lg:mx-0">
+                                                <div className="flex items-center bg-white rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1 md:p-1.5 border border-slate-50">
+                                                    <input
+                                                        type="email"
+                                                        value={newsletterEmail}
+                                                        onChange={(e) => setNewsletterEmail(e.target.value)}
+                                                        placeholder="Enter your email address"
+                                                        className="flex-1 bg-transparent px-6 py-1.5 outline-none text-[14px] text-[#2D4059] placeholder:text-slate-300 font-medium"
+                                                    />
+                                                    <button
+                                                        onClick={handleNewsletterSubmit}
+                                                        disabled={isNewsletterSubmitting}
+                                                        className="px-8 py-2 bg-[#56B8E6] hover:bg-[#45A7D5] text-white rounded-full font-bold text-[13px] transition-all active:scale-95 shadow-md shadow-[#56B8E6]/10 disabled:opacity-50 whitespace-nowrap"
+                                                    >
+                                                        {isNewsletterSubmitting ? "..." : "Subscribe"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <p className="mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest opacity-60">Trusted by 10,000+ Partners</p>
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
                         case 'floating_canvas':
                             const canvasProducts = allProducts.filter(p => {
                                 const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
@@ -179,15 +315,15 @@ export default function Home() {
                                         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#F59E0B]/10 blur-[120px] rounded-full animate-pulse" />
                                     </div>
 
-                                    <div className="relative z-10 h-full flex flex-col items-center justify-center pointer-events-none px-6 text-center max-w-7xl mx-auto">
+                                    <div className="relative z-10 h-full flex flex-col items-center justify-center pointer-events-none px-4 md:px-12 xl:px-20 text-center max-w-7xl mx-auto">
                                         <div className="space-y-6">
                                             <span className="px-4 py-2 bg-[#13B0D1]/10 text-[#13B0D1] rounded-full text-[10px] font-black uppercase tracking-[0.3em] border border-[#13B0D1]/20">
                                                 Interactive Discovery
                                             </span>
-                                            <h2 className="text-3xl md:text-5xl font-extrabold text-[#111] tracking-tight leading-none uppercase">
+                                            <h2 className="text-3xl md:text-5xl font-bold text-[#2D4059] tracking-tight leading-none">
                                                 {content.title || "Floating Collection"}
                                             </h2>
-                                            <p className="text-slate-500 text-sm md:text-lg font-medium max-w-xl mx-auto">
+                                            <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-xl mx-auto font-medium">
                                                 {content.subtitle || "Drag and discover our premium products in this interactive spatial gallery."}
                                             </p>
                                         </div>
@@ -277,7 +413,7 @@ export default function Home() {
                                                         {/* Top Row: Title & Filters */}
                                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                             <div className="space-y-1 md:space-y-2 text-center md:text-left">
-                                                                <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] tracking-tight leading-tight uppercase">
+                                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
                                                                     {content.title || (activeCategory === 'All' ? "Full Collection" : activeCategory)}
                                                                 </h2>
                                                             </div>
@@ -336,18 +472,18 @@ export default function Home() {
                                             return (
                                                 <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
                                                     <div className="space-y-1 md:space-y-2 text-center md:text-left">
-                                                        <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] tracking-tight leading-tight uppercase">
+                                                        <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
                                                             {content.title}
                                                         </h2>
-                                                        {content.subtitle && <p className="text-[12px] md:text-sm text-slate-500 font-medium">{content.subtitle}</p>}
+                                                        {content.subtitle && <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed font-medium">{content.subtitle}</p>}
                                                         <p className="text-[11px] md:text-[13px] text-slate-400 font-bold uppercase tracking-widest">
                                                             Showing <span className="text-[#111]">{(() => {
-                                                                const baseList = (content.product_ids && content.product_ids.length > 0)
-                                                                    ? allProducts.filter(p => {
+                                                                const baseList = (isFullCollection || !content.product_ids || content.product_ids.length === 0)
+                                                                    ? allProducts
+                                                                    : allProducts.filter(p => {
                                                                         const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
                                                                         return searchIds.some((sid: string | number) => String(sid) === String(p.id));
-                                                                    })
-                                                                    : allProducts;
+                                                                    });
                                                                 return baseList.length;
                                                             })()}</span> of premium products
                                                         </p>
@@ -390,12 +526,12 @@ export default function Home() {
                                                                             : "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6")
                                             )}>
                                                 {(() => {
-                                                    const baseList = (content.product_ids && content.product_ids.length > 0)
-                                                        ? allProducts.filter(p => {
+                                                    const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
+                                                        ? allProducts
+                                                        : allProducts.filter(p => {
                                                             const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
                                                             return searchIds.some((sid: string | number) => String(sid) === String(p.id));
-                                                        })
-                                                        : allProducts;
+                                                        });
 
                                                     const categoryFiltered = activeCategory === 'All'
                                                         ? baseList
@@ -457,8 +593,8 @@ export default function Home() {
                         case 'spotlight':
                             const spotlightProduct = allProducts.find(p => String(p.id) === String(content.product_id));
                             return (
-                                <section key={section.id} className="mt-10 md:mt-20 px-4 md:px-8 lg:px-12">
-                                    <div className="max-w-7xl mx-auto bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-xl flex flex-col md:flex-row items-center">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10 animate-in fade-in duration-700">
+                                    <div className="max-w-7xl mx-auto bg-white rounded-[12px] md:rounded-[16px] border border-slate-100 overflow-hidden shadow-xl flex flex-col md:flex-row items-center">
                                         <div className="w-full md:w-1/2 aspect-square relative group overflow-hidden">
                                             <img src={getImageUrl(content.image || spotlightProduct?.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Spotlight" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -494,10 +630,10 @@ export default function Home() {
                                             )}
                                         </div>
                                         <div className="w-full md:w-1/2 p-6 md:p-10 lg:p-16 space-y-4 md:space-y-6 text-center md:text-left">
-                                            <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] leading-[0.9] tracking-tight uppercase">
+                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] leading-[0.9] tracking-tight">
                                                 {content.title || spotlightProduct?.name}
                                             </h2>
-                                            <p className="text-slate-500 text-sm md:text-lg leading-relaxed">
+                                            <p className="text-[14px] md:text-[16px] text-[#565959] leading-relaxed font-medium">
                                                 {content.description || spotlightProduct?.description}
                                             </p>
                                             {spotlightProduct && (spotlightProduct.weight || spotlightProduct.size || spotlightProduct.type) && (
@@ -535,23 +671,35 @@ export default function Home() {
                                 </section>
                             );
 
+
                         case 'about':
                             return (
-                                <section key={section.id} className="mt-16 md:mt-24 px-4 md:px-8 lg:px-12">
-                                    <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-center">
-                                        <div className="space-y-4 md:space-y-6 text-center md:text-left order-2 md:order-1">
-                                            <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] leading-tight uppercase tracking-tight">{content.title}</h2>
-                                            <p className="text-slate-600 leading-relaxed text-sm md:text-lg font-medium">{content.body}</p>
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 md:gap-20 items-center">
+                                        <div className="space-y-6 md:space-y-8 text-center md:text-left order-2 md:order-1">
+                                            <div className="space-y-3">
+                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] leading-tight tracking-tight">{content.title}</h2>
+                                                <div className="h-1 w-12 bg-[#119AB8] rounded-full mx-auto md:mx-0" />
+                                            </div>
+                                            <p className="text-[#565959] leading-relaxed text-[15px] md:text-[17px] font-medium">{content.body}</p>
                                             {content.cta_text && (
-                                                <Link href={content.cta_link || '#'} className="inline-block px-8 md:px-10 py-3 md:py-4 bg-[#111] text-white rounded-full font-black uppercase tracking-widest hover:bg-[#333] transition-all text-[11px] md:text-[13px] shadow-lg">
-                                                    {content.cta_text}
+                                                <Link
+                                                    href={content.cta_link || '#'}
+                                                    className="inline-flex items-center gap-2 px-10 py-4 bg-[#111] text-white rounded-full font-bold uppercase tracking-widest hover:bg-[#119AB8] transition-all text-[12px] shadow-xl hover:shadow-[#119AB8]/20 group active:scale-95"
+                                                >
+                                                    {content.cta_text} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                                 </Link>
                                             )}
                                         </div>
                                         {content.image && (
-                                            <div className="relative aspect-[4/3] md:aspect-square rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl order-1 md:order-2">
-                                                <img src={getImageUrl(content.image)} className="w-full h-full object-cover" alt="About" />
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent" />
+                                            <div className="relative aspect-[4/3] rounded-[12px] md:rounded-[16px] overflow-hidden shadow-2xl order-1 md:order-2 group">
+                                                <img src={getImageUrl(content.image)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="About" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-[#2D4059]/40 via-transparent to-transparent opacity-60" />
+                                                {/* Floating badge for premium feel */}
+                                                <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl">
+                                                    <p className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Quality Excellence</p>
+                                                    <p className="text-white/80 text-[12px] font-medium mt-1">Sourcing only the world's most authentic cosmetic brands.</p>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -560,10 +708,10 @@ export default function Home() {
 
                         case 'testimonials':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-10 md:py-20 bg-[#FBFBFB] border-y border-slate-100 mt-10 md:mt-16">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
                                     <div className="mb-10 md:mb-16">
                                         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                                            <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 uppercase tracking-tight">{content.title || "Elite Feedback"}</h2>
+                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight">{content.title || "Elite Feedback"}</h2>
                                             <button
                                                 onClick={() => setIsReviewOpen(true)}
                                                 className="px-6 py-2.5 bg-[#111] text-white rounded-[8px] font-bold uppercase tracking-widest text-[10px] md:text-[11px] hover:bg-[#119AB8] transition-all shadow-lg flex items-center gap-2 group"
@@ -571,7 +719,7 @@ export default function Home() {
                                                 Write a Review <Plus size={16} className="group-hover:rotate-90 transition-transform" />
                                             </button>
                                         </div>
-                                        <p className="text-slate-500 font-medium text-sm md:text-base max-w-2xl">
+                                        <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
                                             {content.subtitle || "Hear from the professionals and clients who rely on Al-Qavi Hub for authentic, premium cosmetics distribution."}
                                         </p>
                                     </div>
@@ -620,35 +768,47 @@ export default function Home() {
 
                         case 'faq':
                             return (
-                                <section key={section.id} className="mt-20 md:mt-32 px-4 md:px-8 lg:px-12">
-                                    <div className="bg-white rounded-[32px] md:rounded-[48px] border border-slate-100 p-6 md:p-12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] max-w-4xl mx-auto">
-                                        <div className="mb-10 text-center">
-                                            <span className="inline-block px-5 py-2 text-[10px] font-black tracking-[0.3em] uppercase rounded-full bg-slate-50 text-slate-400 border border-slate-100 mb-4">
-                                                Assistance
-                                            </span>
-                                            <h2 className="text-2xl md:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight uppercase leading-none">{content.title || "Client Queries"}</h2>
-                                            <p className="text-slate-500 font-medium text-sm md:text-base">Everything you need to know about our professional distribution.</p>
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                    <div className="animate-in fade-in duration-700">
+                                        <div className="mb-8 md:mb-12">
+                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none mb-4">
+                                                {content.title || "Common Questions"}
+                                            </h2>
+                                            <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
+                                                {content.subtitle || "Everything you need to know about our professional distribution ecosystem."}
+                                            </p>
                                         </div>
-                                        <div className="space-y-3">
+
+                                        <div className="max-w-4xl space-y-3">
                                             {(content.items && content.items.length > 0 ? content.items : [
-                                                { q: "Are your products 100% authentic?", a: "Yes, we source all products directly from authorized distributors and manufacturers." },
-                                                { q: "How long does delivery take?", a: "Major cities usually take 2-3 business days. Remote areas 4-5 business days." },
-                                                { q: "Do you offer cash on delivery?", a: "Yes, Cash on Delivery is available across Pakistan." }
+                                                { q: "Are your products 100% authentic?", a: "Every single product in our catalog is sourced directly from original manufacturers or their authorized global distributors, ensuring a 100% verified authentic supply chain." },
+                                                { q: "How long does delivery take?", a: "Major metropolitan areas typically receive deliveries within 24-48 hours. Remote regional hubs may take up to 4 business days via our dedicated logistics network." },
+                                                { q: "Do you offer cash on delivery?", a: "Yes, we provide flexible Cash on Delivery (COD) services across all operational regions in Pakistan for both wholesale and retail orders." }
                                             ]).map((faq: any, idx: number) => (
-                                                <div key={idx} className="rounded-2xl md:rounded-3xl border border-slate-50 overflow-hidden transition-all duration-300">
-                                                    <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className={cn(
-                                                        "w-full px-6 py-5 flex items-center justify-between transition-all duration-300",
-                                                        openFaq === idx ? "bg-[#111] text-white" : "bg-slate-50/50 hover:bg-slate-50 text-slate-700"
-                                                    )}>
-                                                        <span className="font-black text-xs md:text-sm text-left uppercase tracking-tight">{faq.q}</span>
-                                                        <Plus size={18} className={`transition-transform duration-500 ${openFaq === idx ? "rotate-45 text-white" : "text-slate-300"}`} />
+                                                <div key={idx} className="bg-white rounded-[8px] border border-[#D5D9D9] shadow-sm overflow-hidden group hover:border-[#119AB8] transition-all duration-300">
+                                                    <button
+                                                        onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                                                        className={cn(
+                                                            "w-full px-6 py-5 flex items-center justify-between transition-all duration-300",
+                                                            openFaq === idx ? "bg-slate-50" : "bg-white"
+                                                        )}
+                                                    >
+                                                        <span className="font-bold text-[13px] md:text-[14px] text-left text-[#0f1111] uppercase tracking-tight">{faq.q}</span>
+                                                        <div className={cn(
+                                                            "w-6 h-6 rounded-md flex items-center justify-center transition-all duration-300",
+                                                            openFaq === idx ? "bg-[#119AB8] text-white rotate-45" : "bg-slate-50 text-slate-400"
+                                                        )}>
+                                                            <Plus size={16} className="stroke-[3]" />
+                                                        </div>
                                                     </button>
                                                     <div className={cn(
-                                                        "grid transition-all duration-500 ease-in-out",
+                                                        "grid transition-all duration-300 ease-in-out",
                                                         openFaq === idx ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                                                     )}>
                                                         <div className="overflow-hidden">
-                                                            <div className="px-6 py-5 text-sm md:text-[15px] text-slate-500 font-medium leading-relaxed bg-white border-x border-b border-slate-50">{faq.a}</div>
+                                                            <div className="px-6 pb-6 text-[13px] md:text-[14px] text-slate-500 font-medium leading-relaxed border-t border-slate-50 pt-4 mx-6">
+                                                                {faq.a}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -660,52 +820,46 @@ export default function Home() {
 
                         case 'newsletter':
                             return (
-                                <section key={section.id} className="mt-20 md:mt-32 px-4 md:px-8 lg:px-12">
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true }}
-                                        className="relative overflow-hidden rounded-[32px] md:rounded-[48px] bg-white border border-[#D5D9D9] p-8 md:p-24 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.05)] max-w-7xl mx-auto text-center"
-                                    >
-                                        <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
-                                            <Sparkles size={240} />
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 mt-6 md:mt-10">
+                                    <div className="animate-in fade-in duration-700">
+                                        <div className="max-w-4xl mx-auto text-center py-10">
+                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] mb-4">
+                                                Join Our Newsletter
+                                            </h2>
+                                            <p className="text-[14px] md:text-[16px] text-[#565959] leading-relaxed mb-12 max-w-2xl mx-auto font-medium">
+                                                Subscribe to our newsletter and receive the latest news about our products and services!
+                                            </p>
+
+                                            <div className="relative max-w-3xl mx-auto">
+                                                <div className="flex flex-col md:flex-row items-center bg-white rounded-[20px] md:rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1.5 md:p-2 border border-slate-50">
+                                                    <input
+                                                        type="email"
+                                                        value={newsletterEmail}
+                                                        onChange={(e) => setNewsletterEmail(e.target.value)}
+                                                        placeholder="Enter your email address"
+                                                        className="flex-1 w-full bg-transparent px-8 py-2 outline-none text-[16px] text-[#2D4059] placeholder:text-slate-300 font-medium"
+                                                    />
+                                                    <button
+                                                        onClick={handleNewsletterSubmit}
+                                                        disabled={isNewsletterSubmitting}
+                                                        className="w-full md:w-auto px-12 py-2.5 bg-[#56B8E6] hover:bg-[#45A7D5] text-white rounded-[15px] md:rounded-full font-bold text-[16px] transition-all active:scale-95 shadow-md shadow-[#56B8E6]/20 disabled:opacity-50 whitespace-nowrap"
+                                                    >
+                                                        {isNewsletterSubmitting ? "..." : "Subscribe"}
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="relative z-10 space-y-8">
-                                            <div className="inline-flex items-center gap-3 px-6 py-2 bg-[#f7f8fa] border border-[#D5D9D9] rounded-full">
-                                                <div className="w-2 h-2 rounded-full bg-[#119AB8] animate-pulse" />
-                                                <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#119AB8]">Elite Access</span>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <h2 className="text-3xl md:text-5xl font-bold text-[#0F172A] tracking-tight leading-none uppercase italic">{content.title || "Join the Hub"}</h2>
-                                                <p className="text-[#565959] text-base md:text-lg font-medium max-w-xl mx-auto leading-relaxed">
-                                                    {content.subtitle || "Receive professional collection reveals and exclusive distribution insights directly in your inbox."}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto pt-4">
-                                                <input
-                                                    type="email"
-                                                    placeholder={content.placeholder || "Professional Email"}
-                                                    className="flex-1 px-6 py-4 rounded-xl bg-[#f7f8fa] border border-[#D5D9D9] text-[#111] placeholder:text-[#888] font-bold focus:outline-none focus:border-[#119AB8] focus:bg-white transition-all shadow-inner"
-                                                />
-                                                <button className="px-10 py-4 bg-[#119AB8] hover:bg-[#13B0D1] text-white rounded-xl font-bold uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-[#119AB8]/20">
-                                                    Subscribe
-                                                </button>
-                                            </div>
-
-                                            <p className="text-[10px] text-[#888] uppercase tracking-widest font-medium">Join 10,000+ industry professionals already subscribed</p>
-                                        </div>
-                                    </motion.div>
+                                    </div>
                                 </section>
                             );
 
+
                         case 'gallery':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-20 md:mt-32">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10">
                                     <div className="mb-10 md:mb-16 text-center md:text-left">
-                                        <h2 className="text-2xl md:text-4xl font-extrabold text-[#111] tracking-tight uppercase leading-none">{content.title || "Visual Showcase"}</h2>
-                                        <p className="text-slate-500 mt-3 font-medium text-sm md:text-base max-w-2xl">
+                                        <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none">{content.title || "Visual Showcase"}</h2>
+                                        <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
                                             {content.subtitle || "A cinematic display of our most prestigious collections and distribution excellence across the region."}
                                         </p>
                                     </div>
@@ -728,27 +882,58 @@ export default function Home() {
 
                         case 'video':
                             return (
-                                <section key={section.id} className="mt-20 md:mt-32 px-4 md:px-8 lg:px-12">
-                                    <div className="relative aspect-video max-w-7xl mx-auto rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl group">
-                                        {content.url ? (
-                                            <iframe
-                                                src={content.url.replace('watch?v=', 'embed/')}
-                                                className="w-full h-full border-0"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-                                                <div className="text-center space-y-4">
-                                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg">
-                                                        <Coffee className="text-[#13B0D1]" size={32} />
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-10 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto">
+                                        <div className="mb-10 md:mb-16 text-center md:text-left space-y-4">
+                                            <div className="space-y-3">
+                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none">{content.title || "Watch Our Story"}</h2>
+                                                <div className="h-1 w-12 bg-[#119AB8] rounded-full mx-auto md:mx-0" />
+                                            </div>
+                                            <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
+                                                {content.subtitle || "A cinematic journey through our professional distribution network and our commitment to cosmetic excellence."}
+                                            </p>
+                                        </div>
+
+                                        <div className="relative aspect-video w-full rounded-[12px] md:rounded-[20px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] group border-4 border-white bg-slate-900">
+                                            {content.url ? (
+                                                <iframe
+                                                    src={content.url.replace('watch?v=', 'embed/')}
+                                                    className="w-full h-full border-0"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                                                    <div className="text-center space-y-4">
+                                                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg">
+                                                            <Coffee className="text-[#13B0D1]" size={32} />
+                                                        </div>
+                                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Video Experience Coming Soon</p>
                                                     </div>
-                                                    <p className="text-slate-400 font-bold uppercase tracking-widest">Video Experience Coming Soon</p>
+                                                </div>
+                                            )}
+
+                                            {/* Decorative Overlay Badge */}
+                                            <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl pointer-events-none z-10 transition-opacity duration-500 group-hover:opacity-0 hidden md:block">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                                        <Sparkles size={14} className="text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Cinematic Experience</p>
+                                                        <p className="text-white/80 text-[11px] font-medium mt-0.5">Discover the professional ecosystem of Al-Qavi Hub.</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
-                                        <div className="absolute top-8 left-8 z-10">
-                                            <h2 className="text-2xl md:text-4xl font-extrabold text-white uppercase tracking-tight drop-shadow-lg">{content.title}</h2>
+
+                                            {/* Play Overlay Decorator */}
+                                            {!content.url && (
+                                                <div className="absolute inset-0 bg-black/5 flex items-center justify-center pointer-events-none">
+                                                    <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                                                        <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[20px] border-l-white border-b-[10px] border-b-transparent ml-2" />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </section>
@@ -760,9 +945,10 @@ export default function Home() {
                             const promoProduct = promoProducts[0];
 
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-10 bg-[#FBFBFB] border-y border-slate-100 -mt-8 md:-mt-16 overflow-hidden">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 pb-8 md:pb-16 pt-2 md:pt-4 -mt-6 md:-mt-10 relative z-10 overflow-hidden">
                                     <motion.div
                                         initial={{ opacity: 0 }}
+
                                         whileInView={{ opacity: 1 }}
                                         viewport={{ once: true }}
                                         className="grid md:grid-cols-2 overflow-hidden group min-h-[220px] md:min-h-[340px]"
@@ -808,7 +994,7 @@ export default function Home() {
                                                     />
 
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-8 opacity-0 group-hover/promo:opacity-100 transition-all duration-500 transform translate-y-4 group-hover/promo:translate-y-0">
-                                                        <h3 className="text-white text-2xl md:text-3xl font-black uppercase tracking-tighter drop-shadow-2xl mb-1">
+                                                        <h3 className="text-white text-2xl md:text-3xl font-black tracking-tighter drop-shadow-2xl mb-1">
                                                             {promoProduct?.product_name || content.title}
                                                         </h3>
                                                         <p className="text-[#D4AF37] text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] line-clamp-2">
@@ -879,11 +1065,11 @@ export default function Home() {
                                                     </span>
                                                 </div>
 
-                                                <h2 className="text-2xl md:text-4xl lg:text-5xl font-extrabold text-[#0F172A] leading-tight tracking-tighter uppercase">
+                                                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#2D4059] leading-tight tracking-tight">
                                                     {content.title || (promoProducts.length > 1 ? "Premium Series" : promoProduct?.product_name) || "Special Offer"}
                                                 </h2>
 
-                                                <p className="text-[#565959] text-xs md:text-base font-medium leading-relaxed border-l-4 border-[#119AB8]/20 pl-4 line-clamp-2">
+                                                <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed border-l-4 border-[#119AB8]/20 pl-4 font-medium">
                                                     {content.subtitle || (promoProducts.length > 1 ? "A curated collection of our most requested professional products." : promoProduct?.description) || "Experience professional-grade quality with our curated collection."}
                                                 </p>
 
@@ -1049,48 +1235,470 @@ export default function Home() {
                                 </section>
                             );
 
-                        case 'brands':
+                        case 'categories':
                             return (
-                                <section key={section.id} className="bg-white border-y border-slate-50 overflow-hidden py-10 md:py-20 mt-20 md:mt-32 relative">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto">
+                                        <div className="mb-10 md:mb-16 text-center md:text-left">
+                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none">{content.title || "Shop by Department"}</h2>
+                                            <div className="h-1 w-12 bg-[#119AB8] rounded-full mx-auto md:mx-0 mt-4 mb-6" />
+                                            <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
+                                                {content.subtitle || "Discover our specialized categories curated for professional distribution and individual beauty needs."}
+                                            </p>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-8">
+                                            {(content.items || []).map((cat: any, idx: number) => (
+                                                <Link key={idx} href={`/customer/shop?category=${cat.name}`} className="group relative aspect-square rounded-[24px] overflow-hidden shadow-xl hover:shadow-[#119AB8]/20 transition-all active:scale-95 border-4 border-white">
+                                                    <img src={getImageUrl(cat.image)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={cat.name} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#111]/80 via-transparent to-transparent flex flex-col justify-end p-5">
+                                                        <h3 className="text-white text-sm font-black uppercase tracking-widest">{cat.name}</h3>
+                                                        <div className="h-0.5 w-0 group-hover:w-full bg-[#119AB8] transition-all duration-300" />
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+                        case 'brands':
+                            const brandLogos = content.logos || [];
+                            return (
+                                <section key={section.id} className="w-full mt-10 md:mt-16 py-12 md:py-16 bg-transparent border-y border-slate-200/50 overflow-hidden relative">
+                                    <div className="max-w-7xl mx-auto px-4 md:px-12 xl:px-20">
+                                        <div className="flex items-center justify-center gap-4 mb-10 md:mb-14">
+                                            <div className="h-px w-12 md:w-24 bg-gradient-to-r from-transparent to-slate-300" />
+                                            <h2 className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.5em]">{content.title || "OUR ELITE PARTNERS"}</h2>
+                                            <div className="h-px w-12 md:w-24 bg-gradient-to-l from-transparent to-slate-300" />
+                                        </div>
+                                    </div>
+
+                                    {/* Gradient Masks for smooth fading edges */}
+                                    <div className="absolute top-0 bottom-0 left-0 w-24 md:w-64 bg-gradient-to-r from-[#F8FAFC] dark:from-[#0F172A] to-transparent z-10 pointer-events-none" />
+                                    <div className="absolute top-0 bottom-0 right-0 w-24 md:w-64 bg-gradient-to-l from-[#F8FAFC] dark:from-[#0F172A] to-transparent z-10 pointer-events-none" />
+
                                     <style dangerouslySetInnerHTML={{
                                         __html: `
-                                            @keyframes marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
-                                            .marquee-inner { display: flex; width: max-content; animation: marquee-scroll 30s linear infinite; }
+                                            @keyframes marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-33.3333%); } }
+                                            .marquee-inner { display: flex; width: max-content; animation: marquee-scroll 35s linear infinite; }
                                             .marquee-inner:hover { animation-play-state: paused; }
                                         `}} />
                                     <div className="relative flex">
                                         <div className="marquee-inner whitespace-nowrap">
                                             {[1, 2, 3].map((loop) => (
-                                                <div key={loop} className="flex items-center gap-12 md:gap-24 px-6 md:px-12">
-                                                    <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#111] border-b-4 border-[#A38B5D] transition-colors group-hover:text-[#A38B5D]">L'OREAL</span>
-                                                        <span className="text-[8px] md:text-[10px] font-black text-[#A38B5D] uppercase tracking-[0.3em]">PARIS</span>
-                                                    </div>
-                                                    <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#000] transition-colors group-hover:text-slate-600">MAYBELLINE</span>
-                                                        <span className="text-[8px] md:text-[10px] font-black text-[#111] uppercase tracking-[0.3em]">NEW YORK</span>
-                                                    </div>
-                                                    <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#C20000] transition-transform group-hover:scale-105">REVLON</span>
-                                                        <div className="h-0.5 md:h-1 w-full bg-[#C20000]" />
-                                                    </div>
-                                                    <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <div className="bg-[#0032A0] px-3 md:px-5 py-1 md:py-1.5 rounded-sm transition-all group-hover:bg-[#002880] shadow-sm">
-                                                            <span className="text-xl md:text-3xl font-black tracking-tighter text-white">NIVEA</span>
+                                                <div key={loop} className="flex items-center justify-center gap-16 md:gap-32 px-8 md:px-16">
+                                                    {brandLogos.length > 0 ? brandLogos.map((logo: string, i: number) => (
+                                                        <div key={i} className="flex items-center justify-center w-32 md:w-48 h-16 group cursor-pointer">
+                                                            <img src={getImageUrl(logo)} className="max-h-full max-w-full object-contain opacity-40 grayscale group-hover:opacity-100 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" alt="Brand Logo" />
                                                         </div>
-                                                    </div>
-                                                    <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-xl md:text-3xl font-bold tracking-tight text-[#003E7E] transition-colors group-hover:text-[#002d5c]">Dove</span>
-                                                        <div className="h-0.5 w-6 md:w-10 bg-[#E7BC71] group-hover:w-full transition-all" />
-                                                    </div>
-                                                    <div className="flex flex-col items-center gap-1 group cursor-default">
-                                                        <span className="text-xl md:text-3xl font-black tracking-tighter text-[#111] transition-colors group-hover:text-[#BFA885]">PANTENE</span>
-                                                        <span className="text-[8px] md:text-[10px] font-black text-[#BFA885] uppercase tracking-[0.3em]">PRO-V</span>
-                                                    </div>
+                                                    )) : (
+                                                        <>
+                                                            <div className="flex items-center justify-center group cursor-pointer">
+                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-[#A38B5D]">L'OREAL</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-center group cursor-pointer">
+                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-slate-800">MAYBELLINE</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-center group cursor-pointer">
+                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-[#C20000] group-hover:scale-105">REVLON</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-center group cursor-pointer">
+                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-black">MAC</span>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
+                                </section>
+                            );
+
+                        case 'stats':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-10 md:mt-16">
+                                    <div className="max-w-7xl mx-auto bg-[#0d1117] rounded-[24px] md:rounded-[32px] overflow-hidden relative shadow-[0_40px_120px_-20px_rgba(0,0,0,0.2)] py-12 md:py-20 border border-slate-800">
+                                        {/* Decorative Background Elements */}
+                                        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#119AB8]/20 rounded-full blur-[100px] -translate-y-1/2 pointer-events-none" />
+                                        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#119AB8]/10 rounded-full blur-[100px] translate-y-1/2 pointer-events-none" />
+                                        
+                                        <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-y-12 gap-x-6 md:gap-8 px-6">
+                                            {(content.items || []).map((item: any, idx: number) => (
+                                                <div key={idx} className="text-center space-y-4 relative group">
+                                                    {/* Divider between columns (hidden on mobile for 2x2 grid, visible on desktop) */}
+                                                    {idx !== 0 && (
+                                                        <div className="hidden md:block absolute top-1/2 -left-4 md:-left-4 w-px h-16 bg-slate-800 -translate-y-1/2 group-hover:bg-[#119AB8]/50 transition-colors duration-500" />
+                                                    )}
+                                                    <motion.h3 
+                                                        initial={{ opacity: 0, y: 20 }}
+                                                        whileInView={{ opacity: 1, y: 0 }}
+                                                        viewport={{ once: true }}
+                                                        transition={{ delay: idx * 0.1, duration: 0.6 }}
+                                                        className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter group-hover:text-[#119AB8] transition-colors duration-300"
+                                                    >
+                                                        {item.value}
+                                                    </motion.h3>
+                                                    <p className="text-[9px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] group-hover:text-slate-200 transition-colors duration-300">
+                                                        {item.label}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+
+                        case 'features':
+                            const featureIconMap: Record<string, React.ReactNode> = {
+                                truck:    <Truck size={22} className="text-[#119AB8]" />,
+                                shield:   <ShieldCheck size={22} className="text-[#119AB8]" />,
+                                clock:    <Clock size={22} className="text-[#119AB8]" />,
+                                credit:   <CreditCard size={22} className="text-[#119AB8]" />,
+                                star:     <Star size={22} className="text-[#119AB8]" />,
+                                check:    <Check size={22} className="text-[#119AB8]" />,
+                                users:    <Users size={22} className="text-[#119AB8]" />,
+                                globe:    <Globe size={22} className="text-[#119AB8]" />,
+                                heart:    <Heart size={22} className="text-[#119AB8]" />,
+                                sparkles: <Sparkles size={22} className="text-[#119AB8]" />,
+                                zap:      <Zap size={22} className="text-[#119AB8]" />,
+                                default:  <ShieldCheck size={22} className="text-[#119AB8]" />,
+                            };
+                            const featItems = content.items || [];
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-10 md:py-16 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto">
+                                        <div className="grid lg:grid-cols-[400px_1fr] gap-12 md:gap-20 items-start">
+
+                                            {/* ── Left: Dark Info Panel ── */}
+                                            <div className="lg:sticky lg:top-24 space-y-10">
+                                                <div className="space-y-6">
+                                                    <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#119AB8]/10 text-[#119AB8] rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#119AB8]/20">
+                                                        <Sparkles size={10} /> The Al-Qavi Edge
+                                                    </span>
+                                                    <h2 className="text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-[1.05]">
+                                                        {content.title || 'Why Professionals Choose Us'}
+                                                    </h2>
+                                                    <p className="text-[#565959] text-[15px] leading-relaxed font-medium max-w-sm">
+                                                        Every feature we build is designed around one goal: making your business faster, safer, and more profitable.
+                                                    </p>
+                                                </div>
+
+                                                {/* Decorative divider */}
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-px flex-1 bg-gradient-to-r from-[#119AB8] to-transparent" />
+                                                    <div className="w-2 h-2 rounded-full bg-[#119AB8] shrink-0" />
+                                                </div>
+
+                                                {/* Trust Counters */}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    {[
+                                                        { value: '10K+', label: 'Happy Clients' },
+                                                        { value: '99%',  label: 'Satisfaction Rate' },
+                                                        { value: '500+', label: 'Product SKUs' },
+                                                        { value: '24h',  label: 'Order Processing' },
+                                                    ].map((stat, i) => (
+                                                        <div key={i} className="bg-slate-50 border border-slate-100 rounded-2xl p-5 hover:border-[#119AB8]/30 hover:bg-white transition-all group">
+                                                            <p className="text-2xl font-black text-[#111] group-hover:text-[#119AB8] transition-colors">{stat.value}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{stat.label}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* CTA */}
+                                                <Link
+                                                    href="/customer/shop"
+                                                    className="inline-flex items-center gap-3 px-8 py-4 bg-[#111] hover:bg-[#119AB8] text-white rounded-2xl font-black text-[12px] uppercase tracking-widest transition-all duration-300 shadow-xl shadow-black/10 group"
+                                                >
+                                                    Explore Our Store
+                                                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                                </Link>
+                                            </div>
+
+                                            {/* ── Right: Feature Cards ── */}
+                                            <div className="grid sm:grid-cols-2 gap-5 md:gap-6">
+                                                {featItems.map((item: any, idx: number) => {
+                                                    const iconKey = (item.icon || 'default').toLowerCase();
+                                                    const iconEl  = featureIconMap[iconKey] || featureIconMap['default'];
+                                                    return (
+                                                        <motion.div
+                                                            key={idx}
+                                                            initial={{ opacity: 0, y: 20 }}
+                                                            whileInView={{ opacity: 1, y: 0 }}
+                                                            viewport={{ once: true }}
+                                                            transition={{ delay: idx * 0.07, duration: 0.5 }}
+                                                            className={cn(
+                                                                "relative group p-7 md:p-8 rounded-[20px] border transition-all duration-300 overflow-hidden cursor-default",
+                                                                "bg-white border-slate-100 hover:border-[#119AB8]/40 hover:shadow-2xl hover:shadow-[#119AB8]/8",
+                                                                // Make the first card span full width if odd total
+                                                                idx === 0 && featItems.length % 2 !== 0 ? "sm:col-span-2" : ""
+                                                            )}
+                                                        >
+                                                            {/* Hover glow */}
+                                                            <div className="absolute inset-0 bg-gradient-to-br from-[#119AB8]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                                                            {/* Number badge */}
+                                                            <div className="absolute top-5 right-5 w-8 h-8 rounded-xl bg-slate-50 group-hover:bg-[#119AB8]/10 flex items-center justify-center transition-colors">
+                                                                <span className="text-[10px] font-black text-slate-300 group-hover:text-[#119AB8] transition-colors">
+                                                                    {String(idx + 1).padStart(2, '0')}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Icon */}
+                                                            <div className="w-12 h-12 rounded-2xl bg-[#119AB8]/8 border border-[#119AB8]/15 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                                                                {iconEl}
+                                                            </div>
+
+                                                            {/* Text */}
+                                                            <h3 className="text-[17px] font-black text-[#111] mb-3 tracking-tight leading-tight group-hover:text-[#119AB8] transition-colors">
+                                                                {item.title}
+                                                            </h3>
+                                                            <p className="text-[13px] text-[#565959] leading-relaxed font-medium">
+                                                                {item.text}
+                                                            </p>
+
+                                                            {/* Bottom accent line */}
+                                                            <div className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full bg-gradient-to-r from-[#119AB8] to-[#0d87a3] transition-all duration-500 rounded-b-full" />
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+                        case 'steps':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto">
+                                        <div className="text-center mb-12 md:mb-20">
+                                            <h2 className="text-3xl md:text-5xl font-bold text-[#2D4059] tracking-tight">{content.title || "How It Works"}</h2>
+                                            <div className="h-1 w-12 bg-[#119AB8] rounded-full mx-auto mt-4" />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                            {(content.items || []).map((item: any, idx: number) => (
+                                                <div key={idx} className="relative text-center">
+                                                    <div className="w-16 h-16 md:w-20 md:h-20 bg-[#111] text-white rounded-full flex items-center justify-center mx-auto text-xl md:text-2xl font-black mb-6 md:mb-8 shadow-2xl relative z-10 border-4 border-white">
+                                                        {idx + 1}
+                                                    </div>
+                                                    {idx < (content.items.length - 1) && (
+                                                        <div className="hidden md:block absolute top-10 left-[60%] w-full h-[2px] bg-slate-200 border-t-2 border-dashed border-slate-200 -z-0" />
+                                                    )}
+                                                    <h3 className="text-lg font-bold text-[#111] mb-3">{item.title}</h3>
+                                                    <p className="text-slate-500 text-[13px] px-4 leading-relaxed font-medium">{item.text}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+                        case 'banner_split':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10">
+                                    <div className={cn("max-w-7xl mx-auto flex flex-col md:flex-row min-h-[400px] md:min-h-[600px] rounded-[24px] md:rounded-[40px] overflow-hidden shadow-2xl", content.reversed && "md:flex-row-reverse")}>
+                                        <div className="flex-1 bg-[#111] p-10 md:p-16 flex flex-col justify-center space-y-6 md:space-y-8">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-[2px] w-8 bg-[#119AB8]" />
+                                                <span className="text-[9px] font-black text-[#119AB8] uppercase tracking-[0.5em]">Exclusive Series</span>
+                                            </div>
+                                            <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">{content.title}</h2>
+                                            <p className="text-slate-400 text-[15px] md:text-[17px] leading-relaxed max-w-xl font-medium">{content.body}</p>
+                                            <div className="pt-4">
+                                                <Link href="/customer/shop" className="px-10 py-4 bg-[#119AB8] text-white rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-[#111] transition-all inline-block shadow-2xl text-[12px]">
+                                                    Discover Collection
+                                                </Link>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 relative min-h-[300px]">
+                                            <img src={getImageUrl(content.image)} className="absolute inset-0 w-full h-full object-cover" alt="Banner" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+                        case 'parallax':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto relative h-[400px] md:h-[550px] overflow-hidden flex items-center justify-center rounded-[24px] md:rounded-[40px] shadow-2xl">
+                                        <motion.div 
+                                            className="absolute inset-0 z-0"
+                                            style={{ y: "-15%" }}
+                                        >
+                                            <img src={getImageUrl(content.bg_image)} className="w-full h-[130%] object-cover" alt="Parallax" />
+                                        </motion.div>
+                                        <div className="absolute inset-0 bg-black/50 z-10" />
+                                        <div className="relative z-20 text-center space-y-6 px-4">
+                                            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter drop-shadow-2xl">{content.title}</h2>
+                                            <p className="text-white/80 text-[16px] md:text-[18px] max-w-xl mx-auto font-medium leading-relaxed drop-shadow-lg">{content.subtitle}</p>
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+                        case 'marquee':
+                            const speedStr = (content.speed || 'medium').toLowerCase();
+                            const duration = speedStr === 'slow' ? '50s' : speedStr === 'fast' ? '15s' : '30s';
+                            return (
+                                <section key={section.id} className="w-full m-0 p-0 overflow-hidden bg-[#119AB8] relative z-[40]">
+                                    <style dangerouslySetInnerHTML={{
+                                        __html: `
+                                            @keyframes ticker-scroll-${section.id} { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+                                            .ticker-wrapper-${section.id} { display: flex; width: max-content; animation: ticker-scroll-${section.id} ${duration} linear infinite; }
+                                            .ticker-wrapper-${section.id}:hover { animation-play-state: paused; }
+                                        `}} />
+                                    <div className="py-3 md:py-4">
+                                        <div className={`ticker-wrapper-${section.id}`}>
+                                            {/* We render the content twice to allow seamless scrolling of 50% */}
+                                            {[1, 2].map((wrapperIdx) => (
+                                                <div key={wrapperIdx} className="flex items-center shrink-0">
+                                                    {[1, 2, 3, 4, 5].map((itemIdx) => (
+                                                        <div key={itemIdx} className="flex items-center gap-8 md:gap-12 px-4 md:px-8 whitespace-nowrap">
+                                                            <span className="text-white font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px] flex items-center gap-3">
+                                                                <Sparkles size={14} className="text-white/80" /> {content.text || "AUTHENTIC COSMETICS DISTRIBUTION"}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+
+                        case 'map':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-10 md:mt-20">
+                                    <div className="max-w-7xl mx-auto">
+
+                                        {/* ── Section Header ── */}
+                                        <div className="text-center mb-12 space-y-4">
+                                            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#119AB8]/10 text-[#119AB8] rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#119AB8]/20">
+                                                <MapPin size={10} /> Find Us In Person
+                                            </span>
+                                            {content.title && (
+                                                <h2 className="text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-tight">
+                                                    {content.title}
+                                                </h2>
+                                            )}
+                                            <div className="flex items-center justify-center gap-3">
+                                                <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#119AB8]" />
+                                                <div className="w-2 h-2 rounded-full bg-[#119AB8]" />
+                                                <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#119AB8]" />
+                                            </div>
+                                        </div>
+
+                                        {/* ── Main Card ── */}
+                                        <div className="relative rounded-[24px] md:rounded-[32px] overflow-hidden shadow-[0_40px_120px_-20px_rgba(0,0,0,0.2)] border border-slate-100">
+
+                                            {/* Info Sidebar + Map Grid */}
+                                            <div className="grid md:grid-cols-[320px_1fr]">
+
+                                                {/* Left: Info Panel */}
+                                                <div className="bg-[#0d1117] p-8 md:p-10 flex flex-col justify-between gap-8 relative overflow-hidden">
+                                                    {/* Decorative blobs */}
+                                                    <div className="absolute top-0 right-0 w-48 h-48 bg-[#119AB8]/10 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                                                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#119AB8]/5 rounded-full blur-[40px] pointer-events-none" />
+
+                                                    <div className="relative space-y-8">
+                                                        <div>
+                                                            <span className="text-[9px] font-black text-[#119AB8] uppercase tracking-[0.5em] block mb-3">Our Showroom</span>
+                                                            <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+                                                                {content.title || 'Visit Our Store'}
+                                                            </h3>
+                                                        </div>
+
+                                                        <div className="space-y-5">
+                                                            {/* Address */}
+                                                            <div className="flex items-start gap-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-[#119AB8]/10 border border-[#119AB8]/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                                    <MapPin size={16} className="text-[#119AB8]" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Address</p>
+                                                                    <p className="text-sm font-semibold text-slate-200 leading-relaxed">
+                                                                        {content.address || 'Pindora, Rawalpindi, Pakistan'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Hours */}
+                                                            <div className="flex items-start gap-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-[#119AB8]/10 border border-[#119AB8]/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#119AB8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Business Hours</p>
+                                                                    <p className="text-sm font-semibold text-slate-200">Mon – Sat: 9am – 7pm</p>
+                                                                    <p className="text-xs text-slate-500 mt-0.5">Sunday: Closed</p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Phone */}
+                                                            <div className="flex items-start gap-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-[#119AB8]/10 border border-[#119AB8]/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                                    <Phone size={16} className="text-[#119AB8]" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Call Us</p>
+                                                                    <p className="text-sm font-semibold text-slate-200">+92 300 000 0000</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* CTA Button */}
+                                                    <a
+                                                        href={`https://www.google.com/maps/search/${encodeURIComponent(content.address || 'Pindora Rawalpindi')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="relative inline-flex items-center justify-center gap-2 px-6 py-4 bg-[#119AB8] hover:bg-[#0d87a3] text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all duration-300 shadow-lg shadow-[#119AB8]/20 active:scale-95"
+                                                    >
+                                                        <MapPin size={14} />
+                                                        Get Directions
+                                                    </a>
+                                                </div>
+
+                                                {/* Right: Map */}
+                                                <div className="relative h-[360px] md:h-auto min-h-[400px]">
+                                                    {content.iframe_url ? (
+                                                        <iframe
+                                                            src={content.iframe_url}
+                                                            className="absolute inset-0 w-full h-full grayscale-[40%] hover:grayscale-0 transition-all duration-1000"
+                                                            style={{ border: 0 }}
+                                                            allowFullScreen={true}
+                                                            loading="lazy"
+                                                            referrerPolicy="no-referrer-when-downgrade"
+                                                        />
+                                                    ) : (
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-300 space-y-4">
+                                                            <MapPin size={56} strokeWidth={1} className="opacity-30" />
+                                                            <p className="text-xs font-black uppercase tracking-[0.3em] opacity-50">Map Not Configured</p>
+                                                            <p className="text-[10px] text-slate-400 opacity-40">Paste your Google Maps embed URL in the admin panel</p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Top overlay pin badge */}
+                                                    <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-white/40">
+                                                            <div className="w-2 h-2 rounded-full bg-[#119AB8] animate-pulse" />
+                                                            <span className="text-[9px] font-black text-[#111] uppercase tracking-widest">Live Location</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            );
+
+                        case 'html':
+                            return (
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10">
+                                    <div className="max-w-7xl mx-auto" dangerouslySetInnerHTML={{ __html: content.code }} />
                                 </section>
                             );
 

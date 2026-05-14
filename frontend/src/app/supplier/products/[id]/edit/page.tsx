@@ -132,13 +132,14 @@ export default function EditSupplierProductAmazon() {
             data.append('description', formData.description);
             if (formData.category) data.append('category', formData.category);
             data.append('retail_price', formData.price);
+            data.append('price', formData.price);
             data.append('cost_price', formData.cost || '0');
             data.append('quantity', formData.quantity_in_stock || '0');
-            data.append('sku', formData.sku);
-            data.append('barcode', formData.barcode);
+            if (formData.sku) data.append('sku', formData.sku);
+            if (formData.barcode) data.append('barcode', formData.barcode);
             data.append('is_supplier_only', formData.is_supplier_only);
-            data.append('weight', formData.weight);
-            data.append('size', formData.size);
+            if (formData.weight) data.append('weight', formData.weight);
+            if (formData.size) data.append('size', formData.size);
 
             if (mainImage) data.append('image', mainImage);
             additionalImages.forEach(file => data.append('upload_images', file));
@@ -147,7 +148,19 @@ export default function EditSupplierProductAmazon() {
             toast.success("Product updated successfully.");
             router.push('/supplier/products');
         } catch (err: any) {
-            toast.error(err.response?.data?.error || "Failed to update product.");
+            console.error("Submit error:", err.response?.data);
+            const errorData = err.response?.data;
+            if (errorData) {
+                if (errorData.error) {
+                    toast.error(errorData.error);
+                } else {
+                    const firstKey = Object.keys(errorData)[0];
+                    const firstError = Array.isArray(errorData[firstKey]) ? errorData[firstKey][0] : errorData[firstKey];
+                    toast.error(`${firstKey}: ${firstError}`);
+                }
+            } else {
+                toast.error("Failed to update product.");
+            }
         } finally {
             setSaving(false);
         }

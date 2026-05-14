@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
     Bell, Search, RefreshCw, Trash2, 
     AlertTriangle, Clock, ShoppingBag, 
-    Users, Shield, Package, ChevronRight, ListFilter
+    Users, Shield, Package, ChevronRight, ListFilter, Mail
 } from 'lucide-react';
 import { userService } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -64,7 +64,8 @@ export default function NotificationsPage() {
         
         if (filter === 'all') return matchesSearch;
         if (filter === 'users') return matchesSearch && (notif.action_type?.includes('USER') || notif.description?.toLowerCase().includes('user'));
-        if (filter === 'system') return matchesSearch && !(notif.action_type?.includes('USER'));
+        if (filter === 'system') return matchesSearch && !(notif.action_type?.includes('USER')) && !(notif.description?.toLowerCase().includes('newsletter'));
+        if (filter === 'newsletter') return matchesSearch && (notif.description?.toLowerCase().includes('newsletter'));
         
         return matchesSearch;
     });
@@ -77,15 +78,18 @@ export default function NotificationsPage() {
         if (action.includes('user') || desc.includes('user')) return Users;
         if (action.includes('login') || action.includes('password')) return Shield;
         if (action.includes('product') || desc.includes('product')) return Package;
+        if (desc.includes('newsletter')) return Mail;
         return Bell;
     };
 
     const getColor = (log: any) => {
         const action = (log.action_type || '').toLowerCase();
+        const desc = (log.description || '').toLowerCase();
         if (action.includes('error') || action.includes('fail')) return 'text-red-500 bg-red-50';
         if (action.includes('order')) return 'text-blue-500 bg-blue-50';
         if (action.includes('user')) return 'text-green-500 bg-green-50';
         if (action.includes('login')) return 'text-orange-500 bg-orange-50';
+        if (desc.includes('newsletter')) return 'text-[#119AB8] bg-teal-50';
         return 'text-[#c45500] bg-amber-50';
     };
 
@@ -139,7 +143,8 @@ export default function NotificationsPage() {
                     {[
                         { id: 'all', label: 'All Activity', icon: ListFilter },
                         { id: 'users', label: 'User Actions', icon: Users },
-                        { id: 'system', label: 'System Alerts', icon: AlertTriangle }
+                        { id: 'system', label: 'System Alerts', icon: AlertTriangle },
+                        { id: 'newsletter', label: 'Newsletter', icon: Mail }
                     ].map(tab => (
                         <button
                             key={tab.id}

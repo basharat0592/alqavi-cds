@@ -12,14 +12,41 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def to_internal_value(self, data):
-        # If image fields are provided as strings (URLs), remove them from validation
-        # so they don't trigger "The submitted data was not a file" error.
-        # This allows updating other settings while keeping existing images.
         data_copy = data.copy()
+        self._manual_images = {}
+        
+        # Handle images
         for field in ['logo', 'footer_logo', 'favicon', 'og_image']:
-            if field in data_copy and isinstance(data_copy[field], str):
-                data_copy.pop(field)
+            if field in data_copy:
+                val = data_copy[field]
+                if val == "" or val is None:
+                    data_copy[field] = None
+                elif isinstance(val, str) and (val.startswith('http') or val.startswith('/media/') or '/media/' in val):
+                    # Capture the path and remove from standard validation
+                    if 'media/' in val:
+                        self._manual_images[field] = val.split('media/')[-1]
+                    data_copy.pop(field)
+                
+        # Handle empty or invalid URLs
+        url_fields = ['google_maps_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url', 'announcement_link']
+        for field in url_fields:
+            if field in data_copy:
+                val = data_copy[field]
+                if val == "" or (isinstance(val, str) and val.lower() in ["none", "null", "undefined"]):
+                    data_copy[field] = None
+                elif isinstance(val, str) and not val.startswith(('http://', 'https://')):
+                    data_copy[field] = None
+                
         return super().to_internal_value(data_copy)
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Apply manual images after standard update to ensure persistence
+        if hasattr(self, '_manual_images') and self._manual_images:
+            for field, path in self._manual_images.items():
+                setattr(instance, field, path)
+            instance.save()
+        return instance
 
 class WebsiteSectionSerializer(serializers.ModelSerializer):
     class Meta:

@@ -10,10 +10,9 @@ import {
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
     ChevronDown, Truck, Book, FileText, AlertTriangle
 } from 'lucide-react';
+import cmsService, { SiteSettings } from '@/services/cms.service';
+import { getImageUrl } from '@/lib/utils';
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON ADMINISTRATIVE SIDEBAR
-   ───────────────────────────────────────────────────────────────────────────── */
 interface NavItem {
     name: string;
     href: string;
@@ -27,6 +26,11 @@ interface NavGroup {
 
 export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
     const pathname = usePathname();
+    const [settings, setSettings] = useState<SiteSettings | null>(null);
+
+    useEffect(() => {
+        cmsService.getFullState().then(data => setSettings(data.settings));
+    }, []);
 
     const menuGroups: NavGroup[] = [
         {
@@ -141,16 +145,31 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
             {/* ── BRANDING AREA ── */}
             <div className={`h-16 flex items-center px-4 border-b border-white/10 bg-[#1a252f] ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
                 {!isCollapsed && (
-                    <Link href="/admin/dashboard" className="flex flex-col group">
-                        <span className="text-[10px] text-[#F3A847] font-bold uppercase tracking-[0.2em] leading-none mb-1">Central Console</span>
-                        <h1 className="text-white font-bold text-[16px] tracking-tight flex items-center gap-1.5 uppercase">
-                            AL-QAVI <span className="text-[#F3A847]">HUB</span>
-                        </h1>
+                    <Link href="/admin/dashboard" className="flex items-center gap-3 group">
+                        <div className="w-8 h-8 rounded-sm overflow-hidden flex-shrink-0 bg-white/5 p-1 border border-white/10">
+                            {settings?.logo ? (
+                                <img src={getImageUrl(settings.logo)} alt="Logo" className="w-full h-full object-contain" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#F3A847] font-bold text-xs border border-[#F3A847]/30">
+                                    AQ
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[9px] text-[#F3A847] font-bold uppercase tracking-[0.2em] leading-none mb-0.5">Central Console</span>
+                            <h1 className="text-white font-bold text-[14px] tracking-tight uppercase leading-none">
+                                {settings?.site_name || 'AL-QAVI HUB'}
+                            </h1>
+                        </div>
                     </Link>
                 )}
                 {isCollapsed && (
-                    <div className="w-8 h-8 border-2 border-[#F3A847] rounded-[2px] flex items-center justify-center font-bold text-[#F3A847] text-[15px]">
-                        A
+                    <div className="w-8 h-8 border border-white/10 rounded-sm flex items-center justify-center bg-white/5 p-1">
+                        {settings?.logo ? (
+                            <img src={getImageUrl(settings.logo)} alt="L" className="w-full h-full object-contain" />
+                        ) : (
+                            <span className="font-bold text-[#F3A847] text-[12px]">AQ</span>
+                        )}
                     </div>
                 )}
                 {!isCollapsed && (

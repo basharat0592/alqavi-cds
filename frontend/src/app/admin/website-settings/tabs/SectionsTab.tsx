@@ -4,7 +4,8 @@ import {
     Plus, Eye, EyeOff, Trash2, Copy, GripVertical, ChevronDown, ChevronUp,
     ChevronRight, Edit3, X, Save, Loader2, Layout, Settings,
     Image as ImageIcon, CheckCircle, Monitor, Package, Star, Layers,
-    Film, Globe, Mail, MessageSquare, HelpCircle, Tag
+    Film, Globe, Mail, MessageSquare, HelpCircle, Tag, ShieldCheck,
+    Truck, Users, Sparkles, MapPin, Phone, Coffee, Zap, Heart, Globe2
 } from 'lucide-react';
 import cmsService, { WebsiteSection } from '@/services/cms.service';
 import toast from 'react-hot-toast';
@@ -22,6 +23,17 @@ const SECTION_TYPES = [
     { type: 'gallery', label: 'Gallery', icon: '🖼️', desc: 'Media grid' },
     { type: 'video', label: 'Video', icon: '🎬', desc: 'Video embed' },
     { type: 'promotion', label: 'Promotion', icon: '🏷️', desc: 'Promo banner' },
+    { type: 'brands', label: 'Brands Slider', icon: '💎', desc: 'Trusted partner logos' },
+    { type: 'stats', label: 'Impact Stats', icon: '📊', desc: 'Counter card grid' },
+    { type: 'features', label: 'Core Features', icon: '✨', desc: 'Icon-based value grid' },
+    { type: 'steps', label: 'How It Works', icon: '🛤️', desc: 'Numbered process steps' },
+    { type: 'spotlight', label: 'Product Spotlight', icon: '🔦', desc: 'Single featured product' },
+    { type: 'marquee', label: 'Ticker Bar', icon: '🎢', desc: 'Scrolling announcement' },
+    { type: 'banner_split', label: 'Split Banner', icon: '🌓', desc: 'Image & text split' },
+    { type: 'contact', label: 'Contact Info', icon: '📞', desc: 'Contact details block' },
+    { type: 'map', label: 'Store Location', icon: '📍', desc: 'Google Maps embed' },
+    { type: 'parallax', label: 'Parallax Experience', icon: '🌌', desc: 'Depth-based scrolling visual' },
+    { type: 'html', label: 'Custom HTML', icon: '💻', desc: 'Advanced code widget' },
 ];
 
 const DEFAULT_CONTENT: Record<string, any> = {
@@ -114,6 +126,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
             });
             setSections([...sections, created]);
             setShowAddModal(false);
+            setEditingId(created.id!); // Auto-open editor
             toast.success(`${meta.label} section added!`);
         } catch { toast.error('Failed to add section'); }
         finally { setLoading(null); }
@@ -584,16 +597,208 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 </div>
             );
 
+        case 'brands':
+            const logos = content.logos || [];
+            return (
+                <div className="p-8 space-y-6 text-center">
+                    <h4 className="text-sm font-black text-[#565959] uppercase tracking-[0.3em]">{content.title}</h4>
+                    <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 transition-all">
+                        {logos.length > 0 ? logos.map((logo: string, i: number) => (
+                            <img key={i} src={getImageUrl(logo)} className="h-8 md:h-10 w-auto object-contain" />
+                        )) : <p className="text-[10px] font-bold text-slate-300">No logos added</p>}
+                    </div>
+                </div>
+            );
+
+        case 'stats':
+            const statItems = content.items || [];
+            return (
+                <div className="p-8 md:p-12 bg-[#111] m-4 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {statItems.map((item: any, i: number) => (
+                            <div key={i} className="text-center space-y-1">
+                                <p className="text-3xl font-black text-white tracking-tighter">{item.value}</p>
+                                <p className="text-[9px] font-bold text-[#119AB8] uppercase tracking-widest">{item.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+
+        case 'features':
+            const featItems = content.items || [];
+            return (
+                <div className="p-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {featItems.map((item: any, i: number) => (
+                        <div key={i} className="space-y-4">
+                            <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center">
+                                <Sparkles size={20} className="text-[#119AB8]" />
+                            </div>
+                            <h5 className="font-bold text-[#111]">{item.title}</h5>
+                            <p className="text-[11px] text-[#565959] leading-relaxed">{item.text}</p>
+                        </div>
+                    ))}
+                </div>
+            );
+
+        case 'steps':
+            const stepItems = content.items || [];
+            return (
+                <div className="p-10 space-y-10">
+                    <h4 className="text-xl font-bold text-center text-[#111]">{content.title}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        {stepItems.map((item: any, i: number) => (
+                            <div key={i} className="relative text-center space-y-4">
+                                <div className="w-12 h-12 bg-white border-2 border-[#119AB8] rounded-full flex items-center justify-center mx-auto text-[#119AB8] font-black text-lg shadow-lg">
+                                    {i + 1}
+                                </div>
+                                <h5 className="font-bold text-[#111] text-sm">{item.title}</h5>
+                                <p className="text-[10px] text-[#565959] px-2">{item.text}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        case 'spotlight':
+            const spotProd = products.find(p => p.id === content.product_id);
+            return (
+                <div className="p-6 md:p-10">
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden grid md:grid-cols-2 items-center">
+                        <div className="aspect-square relative group overflow-hidden">
+                            <img src={getImageUrl(content.image || spotProd?.images?.[0]?.image)} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                            <div className="absolute bottom-4 left-4 right-4">
+                                <p className="text-white text-lg font-black uppercase leading-tight drop-shadow-lg">{content.title || spotProd?.name}</p>
+                            </div>
+                        </div>
+                        <div className="p-8 flex flex-col justify-center space-y-4">
+                            <span className="text-[8px] font-black text-[#119AB8] uppercase tracking-[0.4em]">Product Spotlight</span>
+                            <h4 className="text-2xl font-black text-[#111] tracking-tighter leading-none">{content.title || spotProd?.name}</h4>
+                            <p className="text-[11px] text-[#565959] leading-relaxed line-clamp-3">{content.description || spotProd?.description}</p>
+                            <div className="flex items-center gap-4 pt-2">
+                                <div className="px-6 py-2 bg-[#111] text-white rounded-full text-[9px] font-bold uppercase tracking-widest">Shop Now</div>
+                                {spotProd && <span className="font-black text-lg text-[#111]">Rs. {Number(spotProd.selling_price || spotProd.price).toLocaleString()}</span>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+
+        case 'contact':
+            return (
+                <div className="p-10 grid md:grid-cols-2 gap-8 items-center">
+                    <div className="space-y-6">
+                        <h4 className="text-3xl font-black text-[#111] tracking-tight">{content.title}</h4>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-[#119AB8]/10 rounded-full flex items-center justify-center text-[#119AB8]">
+                                    <Mail size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Email Us</p>
+                                    <p className="text-sm font-bold text-[#111]">{content.email || "support@alqavi.com"}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-[#119AB8]/10 rounded-full flex items-center justify-center text-[#119AB8]">
+                                    <Phone size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Call Us</p>
+                                    <p className="text-sm font-bold text-[#111]">{content.phone || "+92 300 1234567"}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-[#119AB8]/10 rounded-full flex items-center justify-center text-[#119AB8]">
+                                    <MapPin size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Visit Us</p>
+                                    <p className="text-sm font-bold text-[#111]">{content.address || "123 Beauty Lane, Karachi, Pakistan"}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-slate-100 rounded-2xl h-[300px] flex items-center justify-center border-2 border-dashed border-slate-200">
+                        <MessageSquare size={48} className="text-slate-300" />
+                    </div>
+                </div>
+            );
+
+        case 'map':
+            return (
+                <div className="p-8">
+                    {content.title && (
+                        <div className="text-center mb-6">
+                            <span className="text-[8px] font-black text-[#119AB8] uppercase tracking-[0.4em] block mb-1">Visit Store</span>
+                            <h4 className="text-xl font-bold text-[#111] tracking-tight">{content.title}</h4>
+                            <div className="h-0.5 w-8 bg-[#119AB8] mx-auto mt-2 rounded-full" />
+                        </div>
+                    )}
+                    <div className="aspect-[21/9] bg-slate-100 rounded-xl overflow-hidden border-4 border-white shadow-xl relative">
+                        {content.iframe_url ? (
+                            <iframe src={content.iframe_url} className="w-full h-full border-0 grayscale" allowFullScreen loading="lazy" />
+                        ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2">
+                                <MapPin size={32} strokeWidth={1} />
+                                <p className="text-[9px] font-bold uppercase tracking-widest">No Map URL Configured</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+
+
+        case 'banner_split':
+            return (
+                <div className={cn("flex flex-col md:flex-row min-h-[400px]", content.reversed && "md:flex-row-reverse")}>
+                    <div className="flex-1 bg-[#111] p-12 flex flex-col justify-center space-y-6">
+                        <h4 className="text-3xl font-bold text-white leading-tight">{content.title}</h4>
+                        <p className="text-slate-400 text-sm leading-relaxed">{content.body}</p>
+                    </div>
+                    <div className="flex-1 relative">
+                        <img src={getImageUrl(content.image)} className="absolute inset-0 w-full h-full object-cover" />
+                    </div>
+                </div>
+            );
+
+        case 'parallax':
+            return (
+                <div className="relative h-[300px] overflow-hidden flex items-center justify-center">
+                    <img src={getImageUrl(content.bg_image)} className="absolute inset-0 w-full h-[150%] object-cover -translate-y-1/4" />
+                    <div className="absolute inset-0 bg-black/40" />
+                    <div className="relative text-center space-y-4 px-6">
+                        <h4 className="text-4xl font-black text-white tracking-tighter">{content.title}</h4>
+                        <p className="text-white/80 text-sm max-w-md mx-auto">{content.subtitle}</p>
+                    </div>
+                </div>
+            );
+
         case 'marquee':
             return (
-                <div className="bg-[#111] py-3 overflow-hidden">
+                <div className="bg-[#119AB8] py-4 overflow-hidden">
                     <div className="whitespace-nowrap flex items-center animate-marquee">
                         {[...Array(4)].map((_, i) => (
                             <span key={i} className="text-white font-black text-[10px] uppercase tracking-[0.3em] flex items-center shrink-0">
-                                {content.text}
-                                <Star size={10} className="mx-8 text-[#f0c14b] fill-[#f0c14b]" />
+                                {content.text || "AUTHENTIC COSMETICS DISTRIBUTION"}
+                                <Star size={10} className="mx-8 text-white fill-white" />
                             </span>
                         ))}
+                    </div>
+                </div>
+            );
+
+        case 'html':
+            return (
+                <div className="p-10 border-2 border-dashed border-[#119AB8]/30 m-4 rounded-xl relative overflow-hidden">
+                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#119AB8] text-white text-[8px] font-black uppercase rounded tracking-widest">Custom HTML Widget</div>
+                    <div className="text-center py-12">
+                        <Zap size={32} className="mx-auto mb-4 text-[#119AB8] animate-pulse" />
+                        <h4 className="text-lg font-bold text-[#111] mb-1">{content.title || "Embedded Widget"}</h4>
+                        <p className="text-[10px] text-slate-500 font-mono opacity-60 truncate max-w-xs mx-auto">{content.code?.substring(0, 50)}...</p>
                     </div>
                 </div>
             );
@@ -613,6 +818,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
     const [saving, setSaving] = useState(false);
     const [picker, setPicker] = useState<{ open: boolean; onSelect: (url: string) => void; allowVideo?: boolean }>({ open: false, onSelect: () => { } });
     const [searchQuery, setSearchQuery] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     const save = async () => {
         setSaving(true);
@@ -760,55 +966,100 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pt-4 border-t border-[#eee]">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex-1">
-                                            <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
-                                            <p className="text-[11px] text-[#565959]">Select specific products to display in this grid.</p>
+                                {(!form.content.title || form.content.title === 'Full Collection' || form.name === 'Full Product Collection') ? (
+                                    <div className="pt-4 border-t border-[#eee]">
+                                        <div className="p-4 bg-[#f0f9ff] border border-[#bae0ff] rounded-[6px]">
+                                            <p className="text-[13px] font-bold text-[#0050b3]">Full Collection Mode Active</p>
+                                            <p className="text-[12px] text-[#0050b3] mt-1">This section automatically syncs with your product catalog and displays all active products. Manual selection is disabled.</p>
                                         </div>
-                                        <div className="w-48 relative">
-                                            <input
-                                                type="text"
-                                                placeholder="Search products..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className={inputCls + " pr-8"}
-                                            />
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[#888]">
-                                                <Settings size={12} className="animate-spin-slow" />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 pt-4 border-t border-[#eee]">
+                                    <div className="flex-1 mb-2">
+                                        <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
+                                        <p className="text-[11px] text-[#565959]">Search and select products to display in this grid.</p>
+                                    </div>
+                                    
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Search products by name to add..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onFocus={() => setIsDropdownOpen(true)}
+                                            onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                                            className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
+                                        />
+                                        
+                                        {/* Dropdown Results */}
+                                        {isDropdownOpen && (
+                                            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
+                                                {products.filter(p => 
+                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
+                                                    !(form.content.product_ids || []).includes(p.id)
+                                                ).map(p => (
+                                                    <button key={p.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = form.content.product_ids || [];
+                                                            updateContent('product_ids', [...current, p.id]);
+                                                            setSearchQuery(''); // Close dropdown
+                                                        }}
+                                                        className="w-full flex items-center gap-3 p-3 border-b border-[#f0f0f0] hover:bg-[#f2f8f9] text-left transition-colors last:border-0"
+                                                    >
+                                                        <div className="w-10 h-10 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0 shadow-sm">
+                                                            <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
+                                                            <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                        </div>
+                                                        <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
+                                                    </button>
+                                                ))}
+                                                {products.filter(p => 
+                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
+                                                    !(form.content.product_ids || []).includes(p.id)
+                                                ).length === 0 && (
+                                                    <div className="p-6 text-center text-[13px] font-medium text-[#888]">No additional products found.</div>
+                                                )}
                                             </div>
+                                        )}
+                                    </div>
+
+                                    {/* Grid of Selected Products */}
+                                    {(form.content.product_ids || []).length > 0 && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                            {(form.content.product_ids || []).map((id: any) => {
+                                                const p = products.find((prod: any) => prod.id === id);
+                                                if (!p) return null;
+                                                return (
+                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#e77600]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0">
+                                                            <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1 pr-8">
+                                                            <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
+                                                            <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const current = form.content.product_ids || [];
+                                                                updateContent('product_ids', current.filter((pid: any) => pid !== p.id));
+                                                            }}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-[6px] transition-all shadow-sm"
+                                                            title="Remove product"
+                                                        >
+                                                            <X size={14} className="stroke-[3px]" />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
-                                        {products.filter(p => (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase())).map(p => {
-                                            const isSelected = (form.content.product_ids || []).includes(p.id);
-                                            return (
-                                                <button key={p.id}
-                                                    onClick={() => {
-                                                        const current = form.content.product_ids || [];
-                                                        const next = isSelected ? current.filter((id: any) => id !== p.id) : [...current, p.id];
-                                                        updateContent('product_ids', next);
-                                                    }}
-                                                    className={cn(
-                                                        "flex items-center gap-3 p-2 border rounded-[4px] text-left transition-all",
-                                                        isSelected ? "border-[#e77600] bg-[#fff9e6]" : "border-[#ddd] hover:border-[#888]"
-                                                    )}>
-                                                    <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] overflow-hidden flex-shrink-0">
-                                                        <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[12px] font-bold text-[#111] truncate">{p.name || p.product_name}</p>
-                                                        <p className="text-[10px] text-[#565959]">
-                                                            Rs. {p.selling_price || p.price || p.sale_price}
-                                                            {(p.batch || p.batch_number) && <span className="ml-2 text-[9px] bg-slate-100 px-1 rounded text-[#888]">Batch: {p.batch || p.batch_number}</span>}
-                                                        </p>
-                                                    </div>
-                                                    {isSelected && <div className="ml-auto text-[#e77600]"><CheckCircle size={14} /></div>}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    )}
                                 </div>
+                                )}
                             </div>
                         )}
 
@@ -922,52 +1173,89 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 </div>
 
                                 <div className="space-y-4 pt-4 border-t border-[#eee]">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex-1">
-                                            <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
-                                            <p className="text-[11px] text-[#565959]">Link specific products to this promotion.</p>
-                                        </div>
-                                        <div className="w-48 relative">
-                                            <input
-                                                type="text"
-                                                placeholder="Search products..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className={inputCls + " pr-8"}
-                                            />
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[#888]">
-                                                <Settings size={12} className="animate-spin-slow" />
+                                    <div className="flex-1 mb-2">
+                                        <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
+                                        <p className="text-[11px] text-[#565959]">Search and select products to link to this promotion.</p>
+                                    </div>
+                                    
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Search products by name to add..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onFocus={() => setIsDropdownOpen(true)}
+                                            onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                                            className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
+                                        />
+                                        
+                                        {/* Dropdown Results */}
+                                        {isDropdownOpen && (
+                                            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
+                                                {products.filter(p => 
+                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
+                                                    !(form.content.product_ids || []).includes(p.id)
+                                                ).map(p => (
+                                                    <button key={p.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = form.content.product_ids || [];
+                                                            updateContent('product_ids', [...current, p.id]);
+                                                            setSearchQuery(''); // Close dropdown
+                                                        }}
+                                                        className="w-full flex items-center gap-3 p-3 border-b border-[#f0f0f0] hover:bg-[#f2f8f9] text-left transition-colors last:border-0"
+                                                    >
+                                                        <div className="w-10 h-10 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0 shadow-sm">
+                                                            <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
+                                                            <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                        </div>
+                                                        <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
+                                                    </button>
+                                                ))}
+                                                {products.filter(p => 
+                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
+                                                    !(form.content.product_ids || []).includes(p.id)
+                                                ).length === 0 && (
+                                                    <div className="p-6 text-center text-[13px] font-medium text-[#888]">No additional products found.</div>
+                                                )}
                                             </div>
+                                        )}
+                                    </div>
+
+                                    {/* Grid of Selected Products */}
+                                    {(form.content.product_ids || []).length > 0 && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                            {(form.content.product_ids || []).map((id: any) => {
+                                                const p = products.find((prod: any) => prod.id === id);
+                                                if (!p) return null;
+                                                return (
+                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#e77600]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0">
+                                                            <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1 pr-8">
+                                                            <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
+                                                            <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const current = form.content.product_ids || [];
+                                                                updateContent('product_ids', current.filter((pid: any) => pid !== p.id));
+                                                            }}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-[6px] transition-all shadow-sm"
+                                                            title="Remove product"
+                                                        >
+                                                            <X size={14} className="stroke-[3px]" />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
-                                        {products.filter(p => (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase())).map(p => {
-                                            const isSelected = (form.content.product_ids || []).includes(p.id);
-                                            return (
-                                                <button key={p.id}
-                                                    onClick={() => {
-                                                        const current = form.content.product_ids || [];
-                                                        const next = isSelected ? current.filter((id: any) => id !== p.id) : [...current, p.id];
-                                                        updateContent('product_ids', next);
-                                                    }}
-                                                    className={cn(
-                                                        "flex items-center gap-3 p-2 border rounded-[4px] text-left transition-all",
-                                                        isSelected ? "border-[#e77600] bg-[#fff9e6]" : "border-[#ddd] hover:border-[#888]"
-                                                    )}>
-                                                    <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] overflow-hidden flex-shrink-0">
-                                                        <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[12px] font-bold text-[#111] truncate">{p.name || p.product_name}</p>
-                                                        <p className="text-[10px] text-[#565959]">
-                                                            Rs. {p.selling_price || p.price || p.sale_price}
-                                                        </p>
-                                                    </div>
-                                                    {isSelected && <div className="ml-auto text-[#e77600]"><CheckCircle size={14} /></div>}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -1079,62 +1367,187 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
-                                        <label className="text-[13px] font-bold text-[#111]">List Items ({(form.content.items || form.content.reviews || form.content.plans || []).length})</label>
+                                        <label className="text-[13px] font-bold text-[#111]">
+                                            {section.section_type === 'stats' ? 'Statistics' : 
+                                             section.section_type === 'features' ? 'Feature Cards' :
+                                             section.section_type === 'steps' ? 'Process Steps' :
+                                             section.section_type === 'testimonials' ? 'Customer Reviews' : 'List Items'} 
+                                            ({(form.content.items || form.content.reviews || []).length})
+                                        </label>
                                         <button onClick={() => {
-                                            const key = form.content.items ? 'items' : (form.content.reviews ? 'reviews' : 'plans');
-                                            const newItem = section.section_type === 'faq' ? { q: '', a: '' } : { title: '', text: '' };
+                                            const key = form.content.reviews ? 'reviews' : 'items';
+                                            const newItem = section.section_type === 'faq' ? { q: '', a: '' } : 
+                                                           section.section_type === 'stats' ? { label: '', value: '' } :
+                                                           section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
+                                                           { title: '', text: '' };
                                             updateContent(key, [...(form.content[key] || []), newItem]);
                                         }} className="text-[12px] font-bold text-[#007185] hover:underline">+ Add Entry</button>
                                     </div>
                                     <div className="grid gap-3">
-                                        {(form.content.items || form.content.reviews || form.content.plans || []).map((item: any, i: number) => (
-                                            <div key={i} className="p-4 bg-[#fcfcfc] border border-[#ddd] rounded-[4px] space-y-3">
+                                        {(form.content.items || form.content.reviews || []).map((item: any, i: number) => (
+                                            <div key={i} className="p-4 bg-[#fcfcfc] border border-[#ddd] rounded-[4px] space-y-3 shadow-sm">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-bold text-[#565959]">ENTRY {i + 1}</span>
+                                                    <span className="text-[10px] font-black text-[#565959] uppercase tracking-widest">Entry {i + 1}</span>
                                                     <button onClick={() => {
-                                                        const key = form.content.items ? 'items' : (form.content.reviews ? 'reviews' : 'plans');
+                                                        const key = form.content.reviews ? 'reviews' : 'items';
                                                         updateContent(key, form.content[key].filter((_: any, idx: number) => idx !== i));
-                                                    }} className="text-red-600 hover:bg-red-50 p-1 rounded-[3px]"><Trash2 size={14} /></button>
+                                                    }} className="text-red-600 hover:bg-red-50 p-1 rounded-[3px] transition-colors"><Trash2 size={14} /></button>
                                                 </div>
-                                                <div className="grid md:grid-cols-2 gap-4">
-                                                    <input placeholder="Customer Name" value={item.name || ''} onChange={e => {
-                                                        const list = [...form.content.reviews];
-                                                        list[i].name = e.target.value;
-                                                        updateContent('reviews', list);
-                                                    }} className={inputCls} />
-                                                    
-                                                    <input placeholder="Role / Tagline (e.g. Verified Customer)" value={item.role || ''} onChange={e => {
-                                                        const list = [...form.content.reviews];
-                                                        list[i].role = e.target.value;
-                                                        updateContent('reviews', list);
-                                                    }} className={inputCls} />
-
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[11px] font-bold text-[#111] uppercase tracking-tight">Rating</label>
-                                                        <select value={item.rating || 5} onChange={e => {
+                                                
+                                                {section.section_type === 'testimonials' ? (
+                                                    <div className="grid md:grid-cols-2 gap-4">
+                                                        <input placeholder="Customer Name" value={item.name || ''} onChange={e => {
                                                             const list = [...form.content.reviews];
-                                                            list[i].rating = parseInt(e.target.value);
+                                                            list[i].name = e.target.value;
                                                             updateContent('reviews', list);
-                                                        }} className={inputCls}>
-                                                            {[5,4,3,2,1].map(num => <option key={num} value={num}>{num} Stars</option>)}
-                                                        </select>
+                                                        }} className={inputCls} />
+                                                        
+                                                        <input placeholder="Role / Tagline" value={item.role || ''} onChange={e => {
+                                                            const list = [...form.content.reviews];
+                                                            list[i].role = e.target.value;
+                                                            updateContent('reviews', list);
+                                                        }} className={inputCls} />
+
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[11px] font-bold text-[#111] uppercase tracking-tight">Rating</label>
+                                                            <select value={item.rating || 5} onChange={e => {
+                                                                const list = [...form.content.reviews];
+                                                                list[i].rating = parseInt(e.target.value);
+                                                                updateContent('reviews', list);
+                                                            }} className={inputCls}>
+                                                                {[5,4,3,2,1].map(num => <option key={num} value={num}>{num} Stars</option>)}
+                                                            </select>
+                                                        </div>
+
+                                                        <MediaField label="Customer Photo" value={item.image} onChange={(url: string) => {
+                                                            const list = [...form.content.reviews];
+                                                            list[i].image = url;
+                                                            updateContent('reviews', list);
+                                                        }} />
+
+                                                        <textarea placeholder="Testimonial Text" rows={3} value={item.text || ''} onChange={e => {
+                                                            const list = [...form.content.reviews];
+                                                            list[i].text = e.target.value;
+                                                            updateContent('reviews', list);
+                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
                                                     </div>
-
-                                                    <MediaField label="Customer Photo" value={item.image} onChange={(url: string) => {
-                                                        const list = [...form.content.reviews];
-                                                        list[i].image = url;
-                                                        updateContent('reviews', list);
-                                                    }} />
-
-                                                    <textarea placeholder="Testimonial Text" rows={3} value={item.text || ''} onChange={e => {
-                                                        const list = [...form.content.reviews];
-                                                        list[i].text = e.target.value;
-                                                        updateContent('reviews', list);
-                                                    }} className="md:col-span-2 w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
-                                                </div>
+                                                ) : section.section_type === 'stats' ? (
+                                                    <div className="grid md:grid-cols-2 gap-4">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[11px] font-bold text-[#565959]">VALUE (e.g. 10k+)</label>
+                                                            <input value={item.value} onChange={e => {
+                                                                const list = [...form.content.items];
+                                                                list[i].value = e.target.value;
+                                                                updateContent('items', list);
+                                                            }} className={inputCls} />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[11px] font-bold text-[#565959]">LABEL (e.g. Partners)</label>
+                                                            <input value={item.label} onChange={e => {
+                                                                const list = [...form.content.items];
+                                                                list[i].label = e.target.value;
+                                                                updateContent('items', list);
+                                                            }} className={inputCls} />
+                                                        </div>
+                                                    </div>
+                                                ) : section.section_type === 'faq' ? (
+                                                    <div className="space-y-3">
+                                                        <input placeholder="Question" value={item.q} onChange={e => {
+                                                            const list = [...form.content.items];
+                                                            list[i].q = e.target.value;
+                                                            updateContent('items', list);
+                                                        }} className={inputCls} />
+                                                        <textarea placeholder="Answer" rows={2} value={item.a} onChange={e => {
+                                                            const list = [...form.content.items];
+                                                            list[i].a = e.target.value;
+                                                            updateContent('items', list);
+                                                        }} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        <input placeholder="Title / Step Name" value={item.title} onChange={e => {
+                                                            const list = [...form.content.items];
+                                                            list[i].title = e.target.value;
+                                                            updateContent('items', list);
+                                                        }} className={inputCls} />
+                                                        <textarea placeholder="Description" rows={2} value={item.text} onChange={e => {
+                                                            const list = [...form.content.items];
+                                                            list[i].text = e.target.value;
+                                                            updateContent('items', list);
+                                                        }} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {section.section_type === 'marquee' && (
+                            <div className="space-y-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-[#111]">Scrolling Text</label>
+                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-[#111]">Scroll Speed</label>
+                                    <select value={form.content.speed || "medium"} onChange={e => updateContent('speed', e.target.value)} className={inputCls}>
+                                        <option value="slow">Slow</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="fast">Fast</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {section.section_type === 'contact' && (
+                            <div className="space-y-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-[#111]">Section Title</label>
+                                    <input value={form.content.title} onChange={e => updateContent('title', e.target.value)} className={inputCls} />
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Email Address</label>
+                                        <input value={form.content.email} onChange={e => updateContent('email', e.target.value)} className={inputCls} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Phone Number</label>
+                                        <input value={form.content.phone} onChange={e => updateContent('phone', e.target.value)} className={inputCls} />
+                                    </div>
+                                    <div className="md:col-span-2 space-y-1.5">
+                                        <label className="text-[13px] font-bold text-[#111]">Physical Address</label>
+                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {section.section_type === 'map' && (
+                            <div className="space-y-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-[#111]">Section Title</label>
+                                    <input value={form.content.title} onChange={e => updateContent('title', e.target.value)} className={inputCls} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[13px] font-bold text-[#111]">Google Maps Iframe URL / Embed Code</label>
+                                    <textarea 
+                                        rows={4} 
+                                        placeholder="Paste the 'src' URL or the entire <iframe> embed code from Google Maps..." 
+                                        value={form.content.iframe_url} 
+                                        onChange={e => {
+                                            let val = e.target.value;
+                                            // Auto-extract src from iframe tag if present
+                                            if (val.includes('<iframe')) {
+                                                const match = val.match(/src="([^"]+)"/);
+                                                if (match && match[1]) val = match[1];
+                                            }
+                                            updateContent('iframe_url', val);
+                                        }} 
+                                        className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[11px] font-mono outline-none focus:border-[#e77600] bg-white resize-none" 
+                                    />
+                                    <p className="text-[10px] text-slate-400 italic">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy HTML and paste it here.</p>
                                 </div>
                             </div>
                         )}

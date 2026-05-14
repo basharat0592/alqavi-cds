@@ -48,7 +48,7 @@ export interface MediaAsset {
 
 const cmsService = {
   getFullState: async () => {
-    const { data } = await api.get('v1/cms/config/get_full_site_state/');
+    const { data } = await api.get(`v1/cms/config/get_full_site_state/?_t=${Date.now()}`);
     return data;
   },
   updateSettings: async (payload: Partial<SiteSettings>) => {
@@ -108,6 +108,10 @@ const cmsService = {
   },
   submitReview: async (payload: { name: string; rating: number; text: string }) => {
     const { data } = await api.post('v1/cms/config/submit_review/', payload);
+    return data;
+  },
+  subscribeNewsletter: async (email: string) => {
+    const { data } = await api.post('v1/cms/config/subscribe_newsletter/', { email });
     return data;
   },
 };

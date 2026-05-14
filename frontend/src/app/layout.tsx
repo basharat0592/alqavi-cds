@@ -14,6 +14,7 @@ export const metadata = {
 import { Toaster } from 'react-hot-toast';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import CartDrawer from '@/components/layout/CartDrawer';
+import SiteIdentityManager from '@/components/layout/SiteIdentityManager';
 
 export default function RootLayout({
     children,
@@ -23,6 +24,7 @@ export default function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning={true}>
             <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning={true}>
+                <SiteIdentityManager />
                 <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
                 <WhatsAppButton />
                 <CartProvider>

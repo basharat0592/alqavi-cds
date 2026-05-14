@@ -106,25 +106,52 @@ export function truncate(str: string, maxLength: number): string {
 export function getImageUrl(url: string | null | undefined): string | undefined {
     if (!url || typeof url !== 'string') return undefined;
 
-    // If it's already a full URL or base64, return as is
-    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    // 1. If it's a data URL, return as is
+    if (url.startsWith('data:')) return url;
 
-    // Fallback to local API if no env provided
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
-    const domain = apiBase.replace('/api', '').replace(/\/$/, '');
-
-    // Ensure the path starts with a single slash
-    let path = url.startsWith('/') ? url : `/${url}`;
-
-    // Django specific: if path doesn't start with /media/, prepend it
-    if (!path.startsWith('/media/') && !path.startsWith('media/')) {
-        path = `/media${path}`;
+    // 2. Resolve the API/Media Domain
+    let apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    
+    // Normalize localhost vs 127.0.0.1
+    if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') {
+            apiBase = apiBase.replace(/localhost|127\.0\.0\.1/, host);
+        }
+    }
+    
+    let domain = '';
+    try {
+        domain = new URL(apiBase).origin;
+    } catch {
+        domain = apiBase.split('/api')[0].replace(/\/$/, '');
     }
 
-    // Join domain and path
-    const fullUrl = `${domain}${path}`;
+    // 3. Handle Absolute URLs
+    if (url.startsWith('http')) {
+        let finalUrl = url;
+        // Normalize our own local domain if it mismatches the current host
+        if (url.includes('localhost:8000') || url.includes('127.0.0.1:8000')) {
+            const currentHost = (typeof window !== 'undefined') ? window.location.hostname : 'localhost';
+            finalUrl = url.replace(/localhost|127\.0\.0\.1/, currentHost);
+            
+            // Add cache buster for our own local media
+            return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+        }
+        return finalUrl;
+    }
 
-    return fullUrl;
+    // 4. Handle Relative Paths
+    // Clean leading slashes
+    let cleanPath = url.replace(/^\/+/, '');
+
+    // Ensure it goes through /media/
+    if (!cleanPath.startsWith('media/')) {
+        cleanPath = `media/${cleanPath}`;
+    }
+
+    // Join and return
+    return `${domain}/${cleanPath}?v=${Date.now()}`;
 }
 
 /**
