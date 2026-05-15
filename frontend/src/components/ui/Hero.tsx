@@ -71,7 +71,7 @@ export default function Hero({ slides }: { slides?: any[] }) {
         description: s.description || "",
         cta: s.cta_text || "Shop Now",
         href: s.cta_link || "/customer/shop",
-        img: getImageUrl(s.image) || "/images/hero-artist.jpg",
+        img: getImageUrl(s.image || s.img || s.src || s.url) || "/images/hero-artist.jpg",
         video: s.media_type === 'video' ? getImageUrl(s.video) : null,
         color: "from-amber-500 to-orange-600" // Default for now
     })) : DEFAULT_SLIDES;
@@ -129,11 +129,11 @@ export default function Hero({ slides }: { slides?: any[] }) {
                             <img
                                 src={activeSlides[currentSlide].img}
                                 alt={activeSlides[currentSlide].title}
-                                className="w-full h-full object-cover opacity-50 lg:opacity-70 grayscale-[20%] contrast-[110%]"
+                                className="w-full h-full object-cover opacity-80 lg:opacity-90 grayscale-[10%] contrast-[105%]"
                             />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#0F172A] via-[#0F172A]/80 to-transparent lg:from-[#0F172A] lg:via-[#0F172A]/40 lg:to-transparent" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-transparent to-transparent opacity-60" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#0F172A]/80 via-[#0F172A]/30 to-transparent lg:from-[#0F172A]/60 lg:via-[#0F172A]/20 lg:to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/40 via-transparent to-transparent opacity-40" />
                     </motion.div>
                 </motion.div>
             </AnimatePresence>

@@ -7,7 +7,7 @@ import {
     Activity, ShieldCheck, Save, DollarSign, Percent, ArrowRight,
     Search, Info, CheckCircle, Plus, X, ChevronDown, MapPin
 } from 'lucide-react';
-import { productService, inventoryService, categoryService, sectionService } from '@/lib/api';
+import { productService, inventoryService, categoryService } from '@/lib/api';
 import { companyService } from '@/services/company.service';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -54,7 +54,7 @@ const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Se
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const selectedOption = options.find((o: any) => 
+    const selectedOption = options.find((o: any) =>
         String(o.id || '') === String(value || '')
     );
     const filtered = searchable
@@ -298,7 +298,6 @@ export default function ProductForm({ id }: ProductFormProps) {
     const [saving, setSaving] = useState(false);
 
     const [allStocks, setAllStocks] = useState<any[]>([]);
-    const [allSections, setAllSections] = useState<any[]>([]);
     const [allSuppliers, setAllSuppliers] = useState<any[]>([]);
     const [allCategories, setAllCategories] = useState<any[]>([]);
     const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
@@ -335,43 +334,31 @@ export default function ProductForm({ id }: ProductFormProps) {
 
     const [isDraggingMain, setIsDraggingMain] = useState(false);
     const [isDraggingGallery, setIsDraggingGallery] = useState(false);
-    const [sectionsDropdownOpen, setSectionsDropdownOpen] = useState(false);
-    const sectionsDropdownRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (sectionsDropdownRef.current && !sectionsDropdownRef.current.contains(event.target as Node)) {
-                setSectionsDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+
 
     useEffect(() => {
         const fetchResources = async () => {
             try {
-                const [stockData, supData, catData, secData, catProdData] = await Promise.all([
+                const [stockData, supData, catData, catProdData] = await Promise.all([
                     inventoryService.getInventory(),
                     companyService.getSuppliers(),
                     categoryService.getAll(),
-                    sectionService.getAll(),
                     productService.getAllSupplier({ no_pagination: 'true' })
                 ]);
                 setAllStocks(stockData || []);
                 setFilteredStocks(stockData || []);
                 setAllSuppliers(supData || []);
                 setAllCategories(catData || []);
-                setAllSections(Array.isArray(secData) ? secData : (secData as any).results || []);
                 setCatalogProducts(Array.isArray(catProdData) ? catProdData : catProdData?.results || []);
 
                 if (isEdit) {
                     const prod = await productService.getById(id as string);
-                    
+
                     // Robust category ID extraction
                     const catId = (
-                        (typeof prod.category === 'object' ? prod.category?.id : prod.category) || 
-                        prod.category_id || 
+                        (typeof prod.category === 'object' ? prod.category?.id : prod.category) ||
+                        prod.category_id ||
                         ''
                     );
 
@@ -390,7 +377,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                         size: prod.size || '',
                     });
                     setSellingPrice(prod.selling_price || '');
-                    
+
                     // Exhaustive image source check
                     const bannerSrc = prod.image || prod.image_url || prod.banner_image || prod.main_image;
                     if (bannerSrc) {
@@ -424,9 +411,9 @@ export default function ProductForm({ id }: ProductFormProps) {
                         }
                     }
                 }
-            } catch (err) { 
+            } catch (err) {
                 console.error("Resource fetch error:", err);
-                toast.error("Resource sync failure"); 
+                toast.error("Resource sync failure");
             } finally { setLoading(false); }
         };
         fetchResources();
@@ -652,58 +639,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                         onChange={(val: string) => setFormData(p => ({ ...p, category: val }))}
                                         searchable
                                     />
-                                    <Field label="Display in Sections">
-                                        <div className="relative" ref={sectionsDropdownRef}>
-                                            <div
-                                                className={`${inputCls} flex flex-wrap gap-1 items-center h-auto min-h-[31px] py-1 px-2 cursor-pointer`}
-                                                onClick={() => setSectionsDropdownOpen(!sectionsDropdownOpen)}
-                                            >
-                                                {formData.sections.length > 0 ? (
-                                                    formData.sections.map(id => {
-                                                        const sec = allSections.find(s => s.id.toString() === id);
-                                                        return (
-                                                            <span key={id} className="bg-[#f3f3f3] border border-[#ddd] px-1.5 py-0.5 rounded-[2px] text-[11px] font-bold flex items-center gap-1">
-                                                                {sec?.name}
-                                                                <X size={10} className="hover:text-red-600" onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setFormData(p => ({ ...p, sections: p.sections.filter(sid => sid !== id) }));
-                                                                }} />
-                                                            </span>
-                                                        );
-                                                    })
-                                                ) : <span className="text-gray-400 text-[12px]">Select Sections...</span>}
-                                                <ChevronDown size={14} className={`ml-auto text-gray-400 transition-transform ${sectionsDropdownOpen ? 'rotate-180' : ''}`} />
-                                            </div>
 
-                                            {sectionsDropdownOpen && (
-                                                <div className="absolute z-[110] w-full mt-1 bg-white border border-[#ddd] rounded-[4px] shadow-xl max-h-[200px] overflow-y-auto p-2 animate-in fade-in zoom-in-95 duration-200">
-                                                    {allSections.map(sec => {
-                                                        const isSelected = formData.sections.includes(sec.id.toString());
-                                                        return (
-                                                            <div
-                                                                key={sec.id}
-                                                                className={`p-2 hover:bg-[#f3f7f7] cursor-pointer rounded-[2px] text-[13px] flex items-center justify-between transition-colors ${isSelected ? 'bg-orange-50 font-bold text-[#e77600]' : 'text-[#111]'}`}
-                                                                onClick={() => {
-                                                                    const newSecs = isSelected
-                                                                        ? formData.sections.filter(id => id !== sec.id.toString())
-                                                                        : [...formData.sections, sec.id.toString()];
-                                                                    setFormData(p => ({ ...p, sections: newSecs }));
-                                                                }}
-                                                            >
-                                                                {sec.name}
-                                                                {isSelected && <CheckCircle size={14} />}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    {allSections.length === 0 && (
-                                                        <div className="p-4 text-center text-gray-400 text-[12px] italic">
-                                                            No sections found.
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Field>
                                 </div>
 
                                 {selectedStock && (
@@ -792,7 +728,13 @@ export default function ProductForm({ id }: ProductFormProps) {
                                             { id: 'HOT', name: 'Hot Deal' },
                                             { id: 'SALE', name: 'On Sale' },
                                             { id: 'FEATURED', name: 'Featured' },
-                                            { id: 'TOP_RATED', name: 'Top Rated' }
+                                            { id: 'TOP_RATED', name: 'Top Rated' },
+                                            { id: 'BEST_SELLER', name: 'Best Seller' },
+                                            { id: 'LIMITED', name: 'Limited Edition' },
+                                            { id: 'TRENDING', name: 'Trending' },
+                                            { id: 'PREMIUM', name: 'Premium Quality' },
+                                            { id: 'ORGANIC', name: 'Organic' },
+                                            { id: 'CLEARANCE', name: 'Clearance' }
                                         ]}
                                         onChange={(val: string) => setFormData(p => ({ ...p, badge: val }))}
                                     />

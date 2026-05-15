@@ -142,7 +142,12 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
     }
 
     // 4. Handle Relative Paths
-    // Clean leading slashes
+    // IF it starts with /images/ or /assets/ and we are on frontend, it's a local public asset
+    if (url.startsWith('images/') || url.startsWith('assets/') || url.startsWith('/images/') || url.startsWith('/assets/') || url.startsWith('/next.svg')) {
+        return url.startsWith('/') ? url : `/${url}`;
+    }
+
+    // Clean leading slashes for backend media
     let cleanPath = url.replace(/^\/+/, '');
 
     // Ensure it goes through /media/

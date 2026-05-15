@@ -430,28 +430,20 @@ export default function Home() {
                                                                 >
                                                                     All Items
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => setActiveCategory('Skin Care')}
-                                                                    className={cn(
-                                                                        "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
-                                                                        activeCategory === 'Skin Care'
-                                                                            ? "bg-[#111] border-[#111] text-white shadow-lg"
-                                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                                                                    )}
-                                                                >
-                                                                    Skin Care
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setActiveCategory('Trending')}
-                                                                    className={cn(
-                                                                        "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
-                                                                        activeCategory === 'Trending'
-                                                                            ? "bg-[#111] border-[#111] text-white shadow-lg"
-                                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                                                                    )}
-                                                                >
-                                                                    Trending
-                                                                </button>
+                                                                {categories.map((cat) => (
+                                                                    <button
+                                                                        key={cat.id}
+                                                                        onClick={() => setActiveCategory(cat.name)}
+                                                                        className={cn(
+                                                                            "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                                                                            activeCategory === cat.name
+                                                                                ? "bg-[#111] border-[#111] text-white shadow-lg"
+                                                                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                                        )}
+                                                                    >
+                                                                        {cat.name}
+                                                                    </button>
+                                                                ))}
                                                             </div>
                                                         </div>
 
