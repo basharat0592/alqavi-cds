@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+log.txt
+ts_errors.txt
+tsc_output.txt
+test_api.js
