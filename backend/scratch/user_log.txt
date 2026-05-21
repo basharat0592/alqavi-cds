@@ -44,3 +44,4 @@ User: customer | Class: User | ID: 3 | Type: <class 'modules.users.models.User'>
 User: customer | Class: User | ID: 3 | Type: <class 'modules.users.models.User'>
 User: customer | Class: User | ID: 3 | Type: <class 'modules.users.models.User'>
 User: customer | Class: User | ID: 3 | Type: <class 'modules.users.models.User'>
+User: m@gmail.com | Class: User | ID: 9 | Type: <class 'modules.users.models.User'>

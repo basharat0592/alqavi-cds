@@ -45,6 +45,8 @@ type SaleItem = {
     quantity: number; 
     unit_price: number;
     stock: number;
+    weight?: string;
+    size?: string;
 };
 
 /* ─── Searchable Product Selector (Interactive Input) ─── */
@@ -255,7 +257,7 @@ export default function SaleEntryPage() {
 const [warehouseId, setWarehouseId] = useState<string>('');
     const [guestName, setGuestName] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
-    const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0 }]);
+    const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
     
     const [stockError, setStockError] = useState<string | null>(null);
     const [warehouseStock, setWarehouseStock] = useState<any[]>([]);
@@ -281,23 +283,52 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
             const whArray = Array.isArray(w) ? w : (w as any)?.results || [];
             setWarehouses(whArray);
-            if (whArray.length > 0 && !warehouseId) setWarehouseId(whArray[0].id.toString());
         } catch { 
             if (!silent) toast.error('Failed to sync catalog'); 
         } finally { 
             setLoading(false); 
         }
-    }, []);
+    }, [warehouseId]); // Added warehouseId to dependencies to avoid stale closures if needed later
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    // Default warehouse selection - only runs when warehouses are loaded and none is selected
+    useEffect(() => {
+        if (warehouses.length > 0 && !warehouseId) {
+            setWarehouseId(String(warehouses[0].id));
+        }
+    }, [warehouses]); // Remove warehouseId from dependencies to only auto-select once when list arrives
 
     useEffect(() => {
         if (warehouseId) {
             inventoryService.getInventory({ warehouse: warehouseId }).then(data => {
-                setWarehouseStock(data);
-            }).catch(() => setWarehouseStock([]));
+                const stockData = Array.isArray(data) ? data : (data as any)?.results || [];
+                setWarehouseStock(stockData);
+
+                // IMPORTANT: Synchronize stock for all items already in the bill
+                setItems(prev => prev.map(item => {
+                    if (!item.product) return item;
+                    
+                    // Match by name, weight, and size to ensure accurate stock for specific variants
+                    const ws = stockData.find((s: any) => 
+                        (s.product_name?.toLowerCase().trim() === item.product_name?.toLowerCase().trim()) &&
+                        (s.weight === item.weight || (!s.weight && !item.weight)) &&
+                        (s.size === item.size || (!s.size && !item.size))
+                    );
+
+                    return {
+                        ...item,
+                        stock: ws ? ws.total_quantity : 0
+                    };
+                }));
+            }).catch(() => {
+                setWarehouseStock([]);
+                // Reset stock to 0 if inventory fetch fails
+                setItems(prev => prev.map(item => ({ ...item, stock: 0 })));
+            });
         } else {
             setWarehouseStock([]);
+            setItems(prev => prev.map(item => ({ ...item, stock: 0 })));
         }
     }, [warehouseId]);
 
@@ -311,11 +342,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         return () => clearInterval(timer);
     }, [loading, saving, loadData]);
 
-    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0 }]);
+    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
     
     const removeItem = (i: number) => {
         if (items.length > 1) setItems(prev => prev.filter((_, idx) => idx !== i));
-        else setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0 }]);
+        else setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
     };
 
     const updateItem = (i: number, pInfo: any) => {
@@ -327,7 +358,9 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 product_name: pInfo.product_name || pInfo.name,
                 unit_price: parseFloat(pInfo.selling_price || pInfo.price || 0),
                 stock: pInfo.total_quantity || pInfo.stock_quantity || (typeof pInfo.stock === 'number' ? pInfo.stock : 0),
-                quantity: 1
+                quantity: 1,
+                weight: pInfo.weight,
+                size: pInfo.size
             };
         }));
     };
@@ -410,7 +443,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </div>
                     <div className="flex gap-4">
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}><Printer size={18} /> View Invoice</Btn>
-                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0 }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); }}><Plus size={18} /> New Bill</Btn>
+                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); }}><Plus size={18} /> New Bill</Btn>
                     </div>
                 </div>
             </div>
@@ -481,7 +514,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <select className={selectCls} value={warehouseId} onChange={e => setWarehouseId(e.target.value)}>
                                             <option value="">Choose Warehouse...</option>
                                             {warehouses.map(w => (
-                                                <option key={w.id} value={w.id}>{w.name} ({w.location})</option>
+                                                <option key={w.id} value={String(w.id)}>{w.name} ({w.location})</option>
                                             ))}
                                         </select>
                                     </Field>
@@ -519,7 +552,9 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                         );
                                                         return {
                                                             ...p,
-                                                            total_quantity: ws ? ws.total_quantity : 0
+                                                            total_quantity: ws ? ws.total_quantity : 0,
+                                                            weight: p.weight,
+                                                            size: p.size
                                                         };
                                                     })}
                                                     inputCls={selectCls}
