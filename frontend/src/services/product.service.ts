@@ -20,6 +20,9 @@ export const productService = {
         const { data } = await api.get(`v1/products/items/${id}/`);
         return data;
     },
+    getProducts: async (params?: any): Promise<any> => {
+        return productService.getAll(params);
+    },
     create: async (payload: any): Promise<any> => {
         const { data } = await api.post('v1/products/items/', payload, {
             headers: {

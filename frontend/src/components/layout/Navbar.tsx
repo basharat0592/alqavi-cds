@@ -24,6 +24,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [announcementVisible, setAnnouncementVisible] = useState(true);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -45,12 +46,28 @@ export default function Navbar({ settings }: { settings?: any }) {
         }).catch(() => { });
 
         // Fetch settings if not provided
-        if (!settings) {
+        if (settings) {
+            setSiteSettings(settings);
+        } else {
             import('@/services/cms.service').then(m => m.default.getFullState()).then(state => {
                 setSiteSettings(state.settings);
             });
         }
     }, [settings]);
+
+    useEffect(() => {
+        if (siteSettings?.show_announcement) {
+            setAnnouncementVisible(true);
+            if (siteSettings.announcement_duration > 0) {
+                const timer = setTimeout(() => {
+                    setAnnouncementVisible(false);
+                }, siteSettings.announcement_duration * 1000);
+                return () => clearTimeout(timer);
+            }
+        } else {
+            setAnnouncementVisible(false);
+        }
+    }, [siteSettings]);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -98,17 +115,56 @@ export default function Navbar({ settings }: { settings?: any }) {
     return (
         <header className="z-[9999] relative w-full font-sans">
             {/* ── ANNOUNCEMENT BAR ── */}
-            {siteSettings?.show_announcement && (
+            {siteSettings?.show_announcement && announcementVisible && (
                 <div
-                    className="w-full py-1.5 px-4 text-center transition-all duration-500"
-                    style={{ backgroundColor: siteSettings.primary_color || '#c45500' }}
+                    className="w-full transition-all duration-500 ease-in-out overflow-hidden"
+                    style={{
+                        backgroundColor: siteSettings.announcement_bg_color || siteSettings.primary_color || '#c45500',
+                        color: siteSettings.announcement_text_color || '#ffffff',
+                        maxHeight: announcementVisible ? '40px' : '0px',
+                        opacity: announcementVisible ? 1 : 0
+                    }}
                 >
-                    <Link
-                        href={siteSettings.announcement_link || "#"}
-                        className="text-[12px] font-black uppercase tracking-[0.2em] text-white hover:underline decoration-white/30 underline-offset-4"
-                    >
-                        {siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000!'}
-                    </Link>
+                    {siteSettings.announcement_scroll ? (
+                        <div className="relative w-full overflow-hidden flex items-center h-8">
+                            <style>{`
+                                @keyframes marquee {
+                                    0% { transform: translate3d(0, 0, 0); }
+                                    100% { transform: translate3d(-50%, 0, 0); }
+                                }
+                                .marquee-content {
+                                    display: inline-flex;
+                                    white-space: nowrap;
+                                    animation: marquee ${siteSettings.announcement_scroll_speed === 'slow' ? 30 : siteSettings.announcement_scroll_speed === 'fast' ? 10 : 18}s linear infinite;
+                                }
+                                .marquee-content:hover {
+                                    animation-play-state: paused;
+                                }
+                            `}</style>
+                            <div className="marquee-content font-black uppercase text-[12px] tracking-[0.2em] w-full justify-around">
+                                <Link href={siteSettings.announcement_link || "#"} className="hover:underline flex items-center gap-12 text-center" style={{ color: siteSettings.announcement_text_color || '#ffffff' }}>
+                                    <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! 🚚'}</span>
+                                    <span>•</span>
+                                    <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! 🚚'}</span>
+                                    <span>•</span>
+                                    <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! 🚚'}</span>
+                                    <span>•</span>
+                                    <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! 🚚'}</span>
+                                    <span>•</span>
+                                </Link>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="w-full py-1.5 px-4 text-center">
+                            <Link
+                                href={siteSettings.announcement_link || "#"}
+                                className="text-[12px] font-black uppercase tracking-[0.2em] hover:underline decoration-white/30 underline-offset-4"
+                                style={{ color: siteSettings.announcement_text_color || '#ffffff' }}
+                            >
+                                {siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! 🚚'}
+                            </Link>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -345,7 +401,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                         {user ? (
                                             <button onClick={handleLogout} className="text-left text-red-600 font-bold">Sign Out</button>
                                         ) : (
-                                            <Link href="/login" onClick={() => setMobileOpen(false)} style={{ color: BRAND_GREEN }} className="font-bold">Sign In</Link>
+                                            <Link href="/login" onClick={() => setMobileOpen(false)} style={{ color: BRAND_ORANGE }} className="font-bold">Sign In</Link>
                                         )}
                                     </div>
                                 </div>

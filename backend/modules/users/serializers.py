@@ -254,3 +254,4 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # 4. If all fail, raise standard error
         raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})
+        raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})

@@ -34,7 +34,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
                 val = data_copy[field]
                 if val == "" or (isinstance(val, str) and val.lower() in ["none", "null", "undefined"]):
                     data_copy[field] = None
-                elif isinstance(val, str) and not val.startswith(('http://', 'https://')):
+                elif isinstance(val, str) and not val.startswith(('http://', 'https://', '/')):
                     data_copy[field] = None
                 
         return super().to_internal_value(data_copy)

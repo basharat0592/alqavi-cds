@@ -47,7 +47,6 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         try {
             const response = await api.get('/v1/products/wishlist/');
-            console.log("Wishlist API Response:", response.data);
             const rawData = response.data.results || response.data || [];
 
             if (!Array.isArray(rawData)) {
@@ -66,7 +65,6 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
                 weight: item.product_details?.weight,
                 addedAt: item.created_at || new Date().toISOString()
             }));
-            console.log("Mapped Wishlist Items:", backendItems);
             setWishlist(backendItems);
         } catch (err) {
             console.error("Failed to fetch wishlist from DB", err);

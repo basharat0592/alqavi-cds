@@ -78,7 +78,6 @@ backend/*.sqlite3
 
 # static & media
 backend/staticfiles/
-backend/media/
 
 # python cache
 backend/.pytest_cache/

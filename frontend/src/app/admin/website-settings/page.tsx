@@ -26,11 +26,11 @@ const TABS = [
 ];
 
 const defaultSettings: SiteSettings = {
-    site_name: 'Al-Qavi Hub', primary_color: '#c45500', secondary_color: '#111c31',
-    show_announcement: true, announcement_text: 'Free Delivery on orders over Rs. 5000!', announcement_link: '',
-    whatsapp_number: '+923000000000', phone_number: '', contact_email: 'info@alqavihub.com',
+    site_name: '', primary_color: '#c45500', secondary_color: '#111c31',
+    show_announcement: false, announcement_text: '', announcement_link: '',
+    whatsapp_number: '', phone_number: '', contact_email: '',
     address: '', google_maps_url: '', instagram_url: '', facebook_url: '', tiktok_url: '', youtube_url: '',
-    meta_title: 'Al-Qavi Hub | Luxury Cosmetics', meta_description: '', meta_keywords: '',
+    meta_title: '', meta_description: '', meta_keywords: '',
     google_analytics_id: '', pixel_id: '',
 };
 
@@ -172,7 +172,7 @@ export default function WebsiteSettingsPage() {
 
                 {/* ── CONTENT AREA ── */}
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {activeTab === 'sections' && <SectionsTab sections={sections} setSections={setSections} products={products} categories={categories} media={media} />}
+                    {activeTab === 'sections' && settings && <SectionsTab sections={sections} setSections={setSections} products={products} categories={categories} media={media} settings={settings} onSave={handleSaveSettings} />}
                     {activeTab === 'branding' && settings && <BrandingTab settings={settings} onSave={handleSaveSettings} saving={saving} setSettings={setSettings} />}
                     {activeTab === 'media' && <MediaTab media={media} setMedia={setMedia} />}
                     {activeTab === 'contact' && settings && <ContactTab settings={settings} onSave={handleSaveSettings} saving={saving} />}

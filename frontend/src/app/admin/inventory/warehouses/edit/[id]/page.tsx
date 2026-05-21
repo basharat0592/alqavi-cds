@@ -28,7 +28,7 @@ const AmazonButton = ({ children, onClick, loading, variant = "primary", classNa
     );
 };
 
-const AmazonInput = ({ label, className = "", required = false, ...props }: { label?: string, required?: boolean } & React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => (
+const AmazonInput = ({ label, className = "", required = false, ...props }: { label?: string, required?: boolean } & React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement> & React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
     <div className="w-full">
         {label && <label className="block text-[13px] font-bold text-[#0f1111] mb-1.5">{label} {required && <span className="text-red-600">*</span>}</label>}
         {props.type === 'select' ? (

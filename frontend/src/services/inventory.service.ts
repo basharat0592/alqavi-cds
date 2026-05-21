@@ -62,6 +62,26 @@ export const inventoryService = {
         // Alias for createStock for existing components
         return inventoryService.createStock(payload);
     },
+    getAdjustments: async (params?: any): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/adjustments/', { params });
+        return data.results || data || [];
+    },
+    createAdjustment: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/inventory/adjustments/', payload);
+        return data;
+    },
+    getBatches: async (params?: any): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/batches/', { params });
+        return data.results || data || [];
+    },
+    createBatch: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/inventory/batches/', payload);
+        return data;
+    },
+    createMovement: async (payload: any): Promise<any> => {
+        const { data } = await api.post('v1/inventory/movements/', payload);
+        return data;
+    },
 
     // ── Movements Aliases ───────────────────────────────────────────────────
     getMovements: async (params?: any): Promise<any[]> => {

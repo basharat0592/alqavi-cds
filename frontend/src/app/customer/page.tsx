@@ -2,13 +2,13 @@
 
 import PageLoader from '@/components/ui/PageLoader';
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-    ArrowRight, ChevronRight, ChevronLeft, Star, ShoppingCart,
-    Search, MapPin, Phone, MessageCircle, UtensilsCrossed,
-    Flame, Soup, Pizza, Coffee, Menu, X, Plus, Minus, Package,
-    Truck, ShieldCheck, Clock, CreditCard, Check, Quote, AlertTriangle,
+    ArrowRight, Star,
+    MapPin, Phone, Coffee,
+    X, Plus, Package,
+    Truck, ShieldCheck, Clock, CreditCard, Check, AlertTriangle,
     Sparkles, Image as ImageIcon, Zap, Users, Globe, Heart, Shield
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -232,11 +232,7 @@ export default function Home() {
                                             </div>
 
                                             <div className="space-y-3">
-                                                {(faqContent.items && faqContent.items.length > 0 ? faqContent.items : [
-                                                    { q: "Are your products 100% authentic?", a: "Every product in our inventory is sourced directly from original manufacturers or authorized global distributors, ensuring 100% verified authenticity." },
-                                                    { q: "What is the typical lead time for wholesale orders?", a: "Standard distribution orders are processed within 24 hours. Delivery typically takes 2-4 business days depending on your regional hub location." },
-                                                    { q: "Do you offer international shipping?", a: "Currently, we specialize in high-efficiency distribution across Pakistan, with specialized logistics for Gilgit-Baltistan and northern regions." }
-                                                ]).map((faq: any, idx: number) => (
+                                                {(faqContent.items || []).map((faq: any, idx: number) => (
                                                     <div key={idx} className="bg-white rounded-[8px] border border-[#D5D9D9] shadow-sm overflow-hidden group hover:border-[#119AB8] transition-all duration-300">
                                                         <button
                                                             onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
@@ -270,14 +266,20 @@ export default function Home() {
 
                                         {/* Right: Newsletter Section */}
                                         <div className="w-full lg:w-[450px] animate-in fade-in duration-700 lg:sticky lg:top-32 text-center lg:text-left pt-6 lg:pt-0">
-                                            <div className="mb-8">
-                                                <h2 className="text-2xl md:text-3xl font-bold text-[#2D4059] tracking-tight mb-4">
-                                                    Join Our Newsletter
-                                                </h2>
-                                                <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-sm mx-auto lg:mx-0">
-                                                    Subscribe to our newsletter and receive the latest news about our products and services!
-                                                </p>
-                                            </div>
+                                            {(newsContent.title || newsContent.subtitle) && (
+                                                <div className="mb-8">
+                                                    {newsContent.title && (
+                                                        <h2 className="text-2xl md:text-3xl font-bold text-[#2D4059] tracking-tight mb-4">
+                                                            {newsContent.title}
+                                                        </h2>
+                                                    )}
+                                                    {newsContent.subtitle && (
+                                                        <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-sm mx-auto lg:mx-0">
+                                                            {newsContent.subtitle}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             <div className="relative group max-w-md mx-auto lg:mx-0">
                                                 <div className="flex items-center bg-white rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1 md:p-1.5 border border-slate-50">
@@ -297,7 +299,6 @@ export default function Home() {
                                                     </button>
                                                 </div>
                                             </div>
-                                            <p className="mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest opacity-60">Trusted by 10,000+ Partners</p>
                                         </div>
                                     </div>
                                 </section>
@@ -687,11 +688,6 @@ export default function Home() {
                                             <div className="relative aspect-[4/3] rounded-[12px] md:rounded-[16px] overflow-hidden shadow-2xl order-1 md:order-2 group">
                                                 <img src={getImageUrl(content.image)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="About" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-[#2D4059]/40 via-transparent to-transparent opacity-60" />
-                                                {/* Floating badge for premium feel */}
-                                                <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl">
-                                                    <p className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Quality Excellence</p>
-                                                    <p className="text-white/80 text-[12px] font-medium mt-1">Sourcing only the world's most authentic cosmetic brands.</p>
-                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -712,16 +708,12 @@ export default function Home() {
                                             </button>
                                         </div>
                                         <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
-                                            {content.subtitle || "Hear from the professionals and clients who rely on Al-Qavi Hub for authentic, premium cosmetics distribution."}
+                                            {content.subtitle || ""}
                                         </p>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-                                        {(content.reviews && content.reviews.length > 0 ? content.reviews : [
-                                            { name: "Ayesha Khan", role: "Verified Customer", text: "The quality of the products is amazing. I've been using their skincare line for 3 months and the results are visible!" },
-                                            { name: "Sarah Ahmed", role: "Professional Makeup Artist", text: "As a professional, I need reliable distributors. Al-Qavi always delivers authentic products on time." },
-                                            { name: "Zainab Malik", role: "Frequent Buyer", text: "Best customer service in Pakistan! Their WhatsApp support helped me choose the right foundation shade perfectly." }
-                                        ]).map((item: any, idx: number) => (
+                                        {(content.reviews || []).map((item: any, idx: number) => (
                                             <div key={idx} className="bg-white p-8 rounded-[12px] border border-[#D5D9D9] shadow-sm relative group hover:border-[#119AB8] transition-all duration-300 flex flex-col h-full">
                                                 <div className="flex gap-0.5 mb-4">
                                                     {[...Array(5)].map((_, i) => (
@@ -772,11 +764,7 @@ export default function Home() {
                                         </div>
 
                                         <div className="max-w-4xl space-y-3">
-                                            {(content.items && content.items.length > 0 ? content.items : [
-                                                { q: "Are your products 100% authentic?", a: "Every single product in our catalog is sourced directly from original manufacturers or their authorized global distributors, ensuring a 100% verified authentic supply chain." },
-                                                { q: "How long does delivery take?", a: "Major metropolitan areas typically receive deliveries within 24-48 hours. Remote regional hubs may take up to 4 business days via our dedicated logistics network." },
-                                                { q: "Do you offer cash on delivery?", a: "Yes, we provide flexible Cash on Delivery (COD) services across all operational regions in Pakistan for both wholesale and retail orders." }
-                                            ]).map((faq: any, idx: number) => (
+                                            {(content.items || []).map((faq: any, idx: number) => (
                                                 <div key={idx} className="bg-white rounded-[8px] border border-[#D5D9D9] shadow-sm overflow-hidden group hover:border-[#119AB8] transition-all duration-300">
                                                     <button
                                                         onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
@@ -815,12 +803,16 @@ export default function Home() {
                                 <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 mt-6 md:mt-10">
                                     <div className="animate-in fade-in duration-700">
                                         <div className="max-w-4xl mx-auto text-center py-10">
-                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] mb-4">
-                                                Join Our Newsletter
-                                            </h2>
-                                            <p className="text-[14px] md:text-[16px] text-[#565959] leading-relaxed mb-12 max-w-2xl mx-auto font-medium">
-                                                Subscribe to our newsletter and receive the latest news about our products and services!
-                                            </p>
+                                            {content.title && (
+                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] mb-4">
+                                                    {content.title}
+                                                </h2>
+                                            )}
+                                            {content.subtitle && (
+                                                <p className="text-[14px] md:text-[16px] text-[#565959] leading-relaxed mb-12 max-w-2xl mx-auto font-medium">
+                                                    {content.subtitle}
+                                                </p>
+                                            )}
 
                                             <div className="relative max-w-3xl mx-auto">
                                                 <div className="flex flex-col md:flex-row items-center bg-white rounded-[20px] md:rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1.5 md:p-2 border border-slate-50">
@@ -905,18 +897,7 @@ export default function Home() {
                                                 </div>
                                             )}
 
-                                            {/* Decorative Overlay Badge */}
-                                            <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl pointer-events-none z-10 transition-opacity duration-500 group-hover:opacity-0 hidden md:block">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                                                        <Sparkles size={14} className="text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Cinematic Experience</p>
-                                                        <p className="text-white/80 text-[11px] font-medium mt-0.5">Discover the professional ecosystem of Al-Qavi Hub.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
+
 
                                             {/* Play Overlay Decorator */}
                                             {!content.url && (
@@ -977,12 +958,10 @@ export default function Home() {
                                                     <motion.img
                                                         whileHover={{ scale: 1.05 }}
                                                         transition={{ duration: 1.5 }}
-                                                        src={getImageUrl(content.image || promoProduct?.image || promoProduct?.catalog_image || promoProduct?.image_url) || 'https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=1200&auto=format&fit=crop'}
+                                                        src={getImageUrl(content.image || promoProduct?.image || promoProduct?.catalog_image || promoProduct?.image_url) || ''}
                                                         className="absolute inset-0 w-full h-full object-cover"
                                                         alt={content.title || promoProduct?.product_name || "Promotion"}
-                                                        onError={(e: any) => {
-                                                            e.target.src = 'https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=1200&auto=format&fit=crop';
-                                                        }}
+                                                        onError={(e: any) => { e.target.style.display = 'none'; }}
                                                     />
 
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-8 opacity-0 group-hover/promo:opacity-100 transition-all duration-500 transform translate-y-4 group-hover/promo:translate-y-0">
@@ -1283,22 +1262,7 @@ export default function Home() {
                                                         <div key={i} className="flex items-center justify-center w-32 md:w-48 h-16 group cursor-pointer">
                                                             <img src={getImageUrl(logo)} className="max-h-full max-w-full object-contain opacity-40 grayscale group-hover:opacity-100 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" alt="Brand Logo" />
                                                         </div>
-                                                    )) : (
-                                                        <>
-                                                            <div className="flex items-center justify-center group cursor-pointer">
-                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-[#A38B5D]">L'OREAL</span>
-                                                            </div>
-                                                            <div className="flex items-center justify-center group cursor-pointer">
-                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-slate-800">MAYBELLINE</span>
-                                                            </div>
-                                                            <div className="flex items-center justify-center group cursor-pointer">
-                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-[#C20000] group-hover:scale-105">REVLON</span>
-                                                            </div>
-                                                            <div className="flex items-center justify-center group cursor-pointer">
-                                                                <span className="text-2xl md:text-4xl font-black tracking-tighter text-slate-400 opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:text-black">MAC</span>
-                                                            </div>
-                                                        </>
-                                                    )}
+                                                    )) : null}
                                                 </div>
                                             ))}
                                         </div>
@@ -1313,7 +1277,7 @@ export default function Home() {
                                         {/* Decorative Background Elements */}
                                         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#119AB8]/20 rounded-full blur-[100px] -translate-y-1/2 pointer-events-none" />
                                         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#119AB8]/10 rounded-full blur-[100px] translate-y-1/2 pointer-events-none" />
-                                        
+
                                         <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-y-12 gap-x-6 md:gap-8 px-6">
                                             {(content.items || []).map((item: any, idx: number) => (
                                                 <div key={idx} className="text-center space-y-4 relative group">
@@ -1321,7 +1285,7 @@ export default function Home() {
                                                     {idx !== 0 && (
                                                         <div className="hidden md:block absolute top-1/2 -left-4 md:-left-4 w-px h-16 bg-slate-800 -translate-y-1/2 group-hover:bg-[#119AB8]/50 transition-colors duration-500" />
                                                     )}
-                                                    <motion.h3 
+                                                    <motion.h3
                                                         initial={{ opacity: 0, y: 20 }}
                                                         whileInView={{ opacity: 1, y: 0 }}
                                                         viewport={{ once: true }}
@@ -1343,18 +1307,18 @@ export default function Home() {
 
                         case 'features':
                             const featureIconMap: Record<string, React.ReactNode> = {
-                                truck:    <Truck size={22} className="text-[#119AB8]" />,
-                                shield:   <ShieldCheck size={22} className="text-[#119AB8]" />,
-                                clock:    <Clock size={22} className="text-[#119AB8]" />,
-                                credit:   <CreditCard size={22} className="text-[#119AB8]" />,
-                                star:     <Star size={22} className="text-[#119AB8]" />,
-                                check:    <Check size={22} className="text-[#119AB8]" />,
-                                users:    <Users size={22} className="text-[#119AB8]" />,
-                                globe:    <Globe size={22} className="text-[#119AB8]" />,
-                                heart:    <Heart size={22} className="text-[#119AB8]" />,
+                                truck: <Truck size={22} className="text-[#119AB8]" />,
+                                shield: <ShieldCheck size={22} className="text-[#119AB8]" />,
+                                clock: <Clock size={22} className="text-[#119AB8]" />,
+                                credit: <CreditCard size={22} className="text-[#119AB8]" />,
+                                star: <Star size={22} className="text-[#119AB8]" />,
+                                check: <Check size={22} className="text-[#119AB8]" />,
+                                users: <Users size={22} className="text-[#119AB8]" />,
+                                globe: <Globe size={22} className="text-[#119AB8]" />,
+                                heart: <Heart size={22} className="text-[#119AB8]" />,
                                 sparkles: <Sparkles size={22} className="text-[#119AB8]" />,
-                                zap:      <Zap size={22} className="text-[#119AB8]" />,
-                                default:  <ShieldCheck size={22} className="text-[#119AB8]" />,
+                                zap: <Zap size={22} className="text-[#119AB8]" />,
+                                default: <ShieldCheck size={22} className="text-[#119AB8]" />,
                             };
                             const featItems = content.items || [];
                             return (
@@ -1366,7 +1330,7 @@ export default function Home() {
                                             <div className="lg:sticky lg:top-24 space-y-10">
                                                 <div className="space-y-6">
                                                     <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#119AB8]/10 text-[#119AB8] rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#119AB8]/20">
-                                                        <Sparkles size={10} /> The Al-Qavi Edge
+                                                        <Sparkles size={10} /> {content.badge || 'The Premium Edge'}
                                                     </span>
                                                     <h2 className="text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-[1.05]">
                                                         {content.title || 'Why Professionals Choose Us'}
@@ -1386,9 +1350,9 @@ export default function Home() {
                                                 <div className="grid grid-cols-2 gap-4">
                                                     {[
                                                         { value: '10K+', label: 'Happy Clients' },
-                                                        { value: '99%',  label: 'Satisfaction Rate' },
+                                                        { value: '99%', label: 'Satisfaction Rate' },
                                                         { value: '500+', label: 'Product SKUs' },
-                                                        { value: '24h',  label: 'Order Processing' },
+                                                        { value: '24h', label: 'Order Processing' },
                                                     ].map((stat, i) => (
                                                         <div key={i} className="bg-slate-50 border border-slate-100 rounded-2xl p-5 hover:border-[#119AB8]/30 hover:bg-white transition-all group">
                                                             <p className="text-2xl font-black text-[#111] group-hover:text-[#119AB8] transition-colors">{stat.value}</p>
@@ -1411,7 +1375,7 @@ export default function Home() {
                                             <div className="grid sm:grid-cols-2 gap-5 md:gap-6">
                                                 {featItems.map((item: any, idx: number) => {
                                                     const iconKey = (item.icon || 'default').toLowerCase();
-                                                    const iconEl  = featureIconMap[iconKey] || featureIconMap['default'];
+                                                    const iconEl = featureIconMap[iconKey] || featureIconMap['default'];
                                                     return (
                                                         <motion.div
                                                             key={idx}
@@ -1515,7 +1479,7 @@ export default function Home() {
                             return (
                                 <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10">
                                     <div className="max-w-7xl mx-auto relative h-[400px] md:h-[550px] overflow-hidden flex items-center justify-center rounded-[24px] md:rounded-[40px] shadow-2xl">
-                                        <motion.div 
+                                        <motion.div
                                             className="absolute inset-0 z-0"
                                             style={{ y: "-15%" }}
                                         >
@@ -1620,7 +1584,7 @@ export default function Home() {
                                                             {/* Hours */}
                                                             <div className="flex items-start gap-4">
                                                                 <div className="w-10 h-10 rounded-xl bg-[#119AB8]/10 border border-[#119AB8]/20 flex items-center justify-center shrink-0 mt-0.5">
-                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#119AB8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#119AB8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                                                                 </div>
                                                                 <div>
                                                                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Business Hours</p>

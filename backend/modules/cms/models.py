@@ -15,6 +15,11 @@ class SiteSettings(models.Model):
     show_announcement = models.BooleanField(default=True)
     announcement_text = models.CharField(max_length=255, default="Free Delivery on all orders over Rs. 5000!")
     announcement_link = models.CharField(max_length=255, blank=True, null=True)
+    announcement_bg_color = models.CharField(max_length=20, default="#131921")
+    announcement_text_color = models.CharField(max_length=20, default="#ffffff")
+    announcement_scroll = models.BooleanField(default=False)
+    announcement_scroll_speed = models.CharField(max_length=20, default="medium")
+    announcement_duration = models.IntegerField(default=5)
 
     # Contact & Business Info
     whatsapp_number = models.CharField(max_length=20, default="+923000000000")
