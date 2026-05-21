@@ -62,7 +62,6 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
     };
 
     const filtered = media.filter(m => {
-        if (!allowVideo && m.file_type === 'video') return false;
         if (filter !== 'all' && m.file_type !== filter) return false;
         if (search && !m.alt_text.toLowerCase().includes(search.toLowerCase()) && !m.file.includes(search)) return false;
         return true;
@@ -96,13 +95,11 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                     <input placeholder="Search library..." value={search} onChange={e => setSearch(e.target.value)}
                                         className={inputCls + " pl-9 w-[200px]"} />
                                 </div>
-                                {allowVideo && (
-                                    <select value={filter} onChange={e => setFilter(e.target.value as any)} className={inputCls}>
-                                        <option value="all">All Files</option>
-                                        <option value="image">Images</option>
-                                        <option value="video">Videos</option>
-                                    </select>
-                                )}
+                                <select value={filter} onChange={e => setFilter(e.target.value as any)} className={inputCls}>
+                                    <option value="all">All Files</option>
+                                    <option value="image">Images</option>
+                                    <option value="video">Videos</option>
+                                </select>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input 
@@ -153,7 +150,10 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                                 <img src={getImageUrl(asset.file) || asset.file} alt={asset.alt_text} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full relative flex items-center justify-center bg-slate-900">
-                                                    <Video size={24} className="text-white/50" />
+                                                    <video src={getImageUrl(asset.file) || asset.file} className="w-full h-full object-cover opacity-80" muted playsInline />
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/35 hover:bg-black/10 transition-colors">
+                                                        <Video size={20} className="text-white drop-shadow" />
+                                                    </div>
                                                 </div>
                                             )}
                                             {selectedId === asset.id && (
@@ -174,11 +174,11 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                             <h4 className="text-[13px] font-bold text-[#111] uppercase tracking-wider">Asset Details</h4>
                             {selectedAsset ? (
                                 <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                                    <div className="aspect-square bg-white border border-[#ddd] rounded-[3px] overflow-hidden flex items-center justify-center">
+                                    <div className="aspect-square bg-white border border-[#ddd] rounded-[3px] overflow-hidden flex items-center justify-center relative">
                                         {selectedAsset.file_type === 'image' ? (
                                             <img src={getImageUrl(selectedAsset.file) || selectedAsset.file} className="max-w-full max-h-full object-contain" />
                                         ) : (
-                                            <Video size={48} className="text-[#ddd]" />
+                                            <video src={getImageUrl(selectedAsset.file) || selectedAsset.file} className="w-full h-full object-cover" controls muted loop playsInline />
                                         )}
                                     </div>
                                     <div className="space-y-3">

@@ -153,8 +153,6 @@ export default function SectionsPage() {
                 product_ids: form.product_ids
             };
 
-            console.log("Saving section with payload:", payload);
-
             if (editMode) {
                 await sectionService.update(editMode.id, payload);
                 toast.success('Section updated successfully');

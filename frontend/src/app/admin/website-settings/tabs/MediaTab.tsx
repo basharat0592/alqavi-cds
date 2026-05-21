@@ -32,6 +32,7 @@ export default function MediaTab({ media, setMedia }: Props) {
     const [search, setSearch] = useState('');
     const [uploading, setUploading] = useState(false);
     const [preview, setPreview] = useState<MediaAsset | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
 
     const filtered = media.filter(m => {
@@ -55,7 +56,6 @@ export default function MediaTab({ media, setMedia }: Props) {
     };
 
     const deleteMedia = async (id: number) => {
-        if (!confirm('Permanently delete this media asset?')) return;
         try {
             await cmsService.deleteMedia(id);
             setMedia(media.filter(m => m.id !== id));
@@ -152,7 +152,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                                         <Copy size={12} /> Link
                                     </button>
                                     <div className="w-[1px] h-4 bg-[#ddd]" />
-                                    <button onClick={e => { e.stopPropagation(); deleteMedia(asset.id!); }}
+                                    <button onClick={e => { e.stopPropagation(); setDeleteId(asset.id!); }}
                                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-[3px] flex items-center gap-1.5 text-[11px] font-bold">
                                         <Trash2 size={12} /> Delete
                                     </button>
@@ -201,7 +201,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                                     </div>
                                 </div>
                                 <div className="pt-8 border-t border-[#eee]">
-                                    <AmazonBtn variant="secondary" onClick={() => deleteMedia(preview.id!)} className="w-full text-red-600 border-red-200 hover:bg-red-50">
+                                    <AmazonBtn variant="secondary" onClick={() => setDeleteId(preview.id!)} className="w-full text-red-600 border-red-200 hover:bg-red-50">
                                         <Trash2 size={14} /> Remove from Library
                                     </AmazonBtn>
                                 </div>
@@ -209,6 +209,31 @@ export default function MediaTab({ media, setMedia }: Props) {
                         </div>
                         <div className="bg-[#f7f8fa] border-t border-[#ddd] px-6 py-4 flex justify-end">
                             <AmazonBtn onClick={() => setPreview(null)}>Close Viewer</AmazonBtn>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteId !== null && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setDeleteId(null)}>
+                    <div className="bg-white rounded-[4px] border border-[#ddd] shadow-2xl w-full max-w-[420px] overflow-hidden animate-in zoom-in-95 duration-200 text-center p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                        <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-600 border border-red-100">
+                            <Trash2 size={24} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <h3 className="text-[17px] font-bold text-[#111]">Delete Media Asset?</h3>
+                            <p className="text-[13px] text-[#565959] leading-relaxed">
+                                Are you sure you want to permanently remove this asset from your library? This action cannot be undone.
+                            </p>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                            <button onClick={() => setDeleteId(null)} className="flex-1 h-[35px] border border-[#adb1b8] rounded-[3px] text-[13px] font-medium bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm transition-all">
+                                Cancel
+                            </button>
+                            <button onClick={() => { deleteMedia(deleteId); setDeleteId(null); }} className="flex-1 h-[35px] border border-[#a83434] rounded-[3px] text-[13px] font-medium bg-gradient-to-b from-[#f59e9e] to-[#e63946] hover:from-[#fca5a5] hover:to-[#d62828] text-white shadow-sm transition-all">
+                                Yes, Delete
+                            </button>
                         </div>
                     </div>
                 </div>

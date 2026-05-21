@@ -19,6 +19,11 @@ settings.secondary_color  = "#111827"
 settings.show_announcement = True
 settings.announcement_text = "Free Delivery on all orders over Rs. 5000! 🚚"
 settings.announcement_link = "/customer/shop"
+settings.announcement_bg_color = "#131921"
+settings.announcement_text_color = "#ffffff"
+settings.announcement_scroll = False
+settings.announcement_scroll_speed = "medium"
+settings.announcement_duration = 5
 settings.whatsapp_number   = "+923000000000"
 settings.phone_number      = "+92-42-0000000"
 settings.contact_email     = "info@alqavihub.com"
@@ -31,7 +36,7 @@ settings.meta_title        = "Al-Qavi Hub | Luxury Cosmetics Pakistan"
 settings.meta_description  = "Discover premium cosmetics and skincare products from top brands. Authentic products, fast delivery across Pakistan."
 settings.meta_keywords     = "cosmetics, skincare, beauty, Pakistan, Al-Qavi, makeup, serum"
 settings.save()
-print("✅ SiteSettings saved")
+print("[OK] SiteSettings saved")
 
 # ── 2. WEBSITE SECTIONS (real landing page sections) ─────────────────────────
 WebsiteSection.objects.all().delete()
@@ -185,9 +190,9 @@ SECTIONS = [
 
 for s in SECTIONS:
     WebsiteSection.objects.create(**s)
-    print(f"  ✅ Section: {s['name']}")
+    print(f"  [OK] Section: {s['name']}")
 
-print(f"\n✅ {len(SECTIONS)} sections created")
+print(f"\n[OK] {len(SECTIONS)} sections created")
 
 # ── 3. NAVIGATION MENUS ───────────────────────────────────────────────────────
 NavigationItem.objects.all().delete()
@@ -203,7 +208,7 @@ header_items = [
 ]
 for item in header_items:
     NavigationItem.objects.create(menu=header_menu, **item)
-print(f"✅ Header menu with {len(header_items)} items created")
+print(f"[OK] Header menu with {len(header_items)} items created")
 
 # Footer Collections
 footer1 = NavigationMenu.objects.create(name="Footer - Collections", location="footer_1")
@@ -231,7 +236,7 @@ footer2_items = [
 for item in footer2_items:
     NavigationItem.objects.create(menu=footer2, **item)
 
-print(f"✅ Footer menus created")
+print(f"[OK] Footer menus created")
 
-print("\n🎉 CMS seeding complete! All real landing page data is now in the database.")
+print("\n[SUCCESS] CMS seeding complete! All real landing page data is now in the database.")
 print("   Go to: http://localhost:3000/admin/website-settings")

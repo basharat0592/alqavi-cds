@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Sparkles, Star, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, checkIsVideo } from '@/lib/utils';
 
 const DEFAULT_SLIDES = [
     {
@@ -58,26 +58,36 @@ const Particles = () => (
 );
 
 const Grain = () => (
-    <div className="absolute inset-0 z-[5] pointer-events-none opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+    <div className="absolute inset-0 z-[5] pointer-events-none opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 );
 
 export default function Hero({ slides }: { slides?: any[] }) {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
 
-    const activeSlides = slides && slides.length > 0 ? slides.map(s => ({
-        title: s.title || "New Arrival",
-        subtitle: s.subtitle || "Featured Collection",
-        description: s.description || "",
-        cta: s.cta_text || "Shop Now",
-        href: s.cta_link || "/customer/shop",
-        img: getImageUrl(s.image || s.img || s.src || s.url) || "/images/hero-artist.jpg",
-        video: s.media_type === 'video' ? getImageUrl(s.video) : null,
-        color: "from-amber-500 to-orange-600" // Default for now
-    })) : DEFAULT_SLIDES;
+    const activeSlides = slides && slides.length > 0 ? slides.map((s, idx) => {
+        const isVideo = s.media_type === 'video' || checkIsVideo(s.image) || checkIsVideo(s.video);
+        const gradients = [
+            "from-amber-500 to-orange-600",
+            "from-pink-500 to-rose-600",
+            "from-violet-500 to-purple-600",
+            "from-teal-400 to-emerald-600",
+            "from-blue-500 to-cyan-600"
+        ];
+        return {
+            title: s.title || "New Arrival",
+            subtitle: s.subtitle || "Featured Collection",
+            description: s.description || "",
+            cta: s.cta_text || "Shop Now",
+            href: s.cta_link || "/customer/shop",
+            img: getImageUrl(s.thumbnail || s.img || s.src || s.url || (!isVideo ? s.image : "")) || "/images/hero-artist.jpg",
+            video: isVideo ? getImageUrl(s.image || s.video) : null,
+            color: s.color || gradients[idx % gradients.length]
+        };
+    }) : DEFAULT_SLIDES;
 
     useEffect(() => {
-        if (isHovered || activeSlides[currentSlide].video) return;
+        if (isHovered || (activeSlides[currentSlide].video && activeSlides.length === 1)) return;
         const timer = setInterval(() => {
             nextSlide();
         }, 6000);
@@ -119,9 +129,11 @@ export default function Hero({ slides }: { slides?: any[] }) {
                         {activeSlides[currentSlide].video ? (
                             <video
                                 src={activeSlides[currentSlide].video}
+                                poster={activeSlides[currentSlide].img}
                                 autoPlay
                                 muted
                                 playsInline
+                                loop={activeSlides.length === 1}
                                 onEnded={nextSlide}
                                 className="w-full h-full object-cover opacity-50 lg:opacity-70 grayscale-[20%] contrast-[110%]"
                             />

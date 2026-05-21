@@ -100,6 +100,24 @@ export function truncate(str: string, maxLength: number): string {
 }
 
 /**
+ * Check if a media URL represents a video asset by normalizing and analyzing its path.
+ */
+export function checkIsVideo(url: string | null | undefined): boolean {
+    if (!url || typeof url !== 'string') return false;
+    const cleanUrl = url.split('?')[0].split('#')[0].toLowerCase();
+    return cleanUrl.endsWith('.mp4') || 
+           cleanUrl.endsWith('.webm') || 
+           cleanUrl.endsWith('.ogg') || 
+           cleanUrl.endsWith('.mov') || 
+           cleanUrl.includes('/video');
+}
+
+// Module-level cache buster, evaluated once per page load/import
+const CACHE_BUSTER = typeof window !== 'undefined' 
+    ? ((window as any).__CACHE_BUSTER || ((window as any).__CACHE_BUSTER = Date.now())) 
+    : Date.now();
+
+/**
  * Handle media URLs, prepending the API base URL if relative.
  * Robust against varied path formats (leading slashes, full URLs, etc.)
  */
@@ -136,7 +154,7 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
             finalUrl = url.replace(/localhost|127\.0\.0\.1/, currentHost);
             
             // Add cache buster for our own local media
-            return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+            return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}v=${CACHE_BUSTER}`;
         }
         return finalUrl;
     }
@@ -156,7 +174,7 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
     }
 
     // Join and return
-    return `${domain}/${cleanPath}?v=${Date.now()}`;
+    return `${domain}/${cleanPath}?v=${CACHE_BUSTER}`;
 }
 
 /**

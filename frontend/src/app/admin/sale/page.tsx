@@ -283,12 +283,30 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
             const whArray = Array.isArray(w) ? w : (w as any)?.results || [];
             setWarehouses(whArray);
+
+            // LIVE SYNC: If a warehouse is selected, refresh its specific stock levels too
+            if (warehouseId) {
+                const stockRes = await inventoryService.getInventory({ warehouse: warehouseId }).catch(() => []);
+                const stockData = Array.isArray(stockRes) ? stockRes : (stockRes as any)?.results || [];
+                setWarehouseStock(stockData);
+
+                // Update current bill items with latest stock levels from the selected warehouse
+                setItems(prev => prev.map(item => {
+                    if (!item.product) return item;
+                    const ws = stockData.find((s: any) => 
+                        (s.product_name?.toLowerCase().trim() === item.product_name?.toLowerCase().trim()) &&
+                        (s.weight === item.weight || (!s.weight && !item.weight)) &&
+                        (s.size === item.size || (!s.size && !item.size))
+                    );
+                    return { ...item, stock: ws ? ws.total_quantity : 0 };
+                }));
+            }
         } catch { 
             if (!silent) toast.error('Failed to sync catalog'); 
         } finally { 
             setLoading(false); 
         }
-    }, [warehouseId]); // Added warehouseId to dependencies to avoid stale closures if needed later
+    }, [warehouseId]); 
 
     useEffect(() => { loadData(); }, [loadData]);
 
@@ -299,46 +317,14 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         }
     }, [warehouses]); // Remove warehouseId from dependencies to only auto-select once when list arrives
 
-    useEffect(() => {
-        if (warehouseId) {
-            inventoryService.getInventory({ warehouse: warehouseId }).then(data => {
-                const stockData = Array.isArray(data) ? data : (data as any)?.results || [];
-                setWarehouseStock(stockData);
 
-                // IMPORTANT: Synchronize stock for all items already in the bill
-                setItems(prev => prev.map(item => {
-                    if (!item.product) return item;
-                    
-                    // Match by name, weight, and size to ensure accurate stock for specific variants
-                    const ws = stockData.find((s: any) => 
-                        (s.product_name?.toLowerCase().trim() === item.product_name?.toLowerCase().trim()) &&
-                        (s.weight === item.weight || (!s.weight && !item.weight)) &&
-                        (s.size === item.size || (!s.size && !item.size))
-                    );
-
-                    return {
-                        ...item,
-                        stock: ws ? ws.total_quantity : 0
-                    };
-                }));
-            }).catch(() => {
-                setWarehouseStock([]);
-                // Reset stock to 0 if inventory fetch fails
-                setItems(prev => prev.map(item => ({ ...item, stock: 0 })));
-            });
-        } else {
-            setWarehouseStock([]);
-            setItems(prev => prev.map(item => ({ ...item, stock: 0 })));
-        }
-    }, [warehouseId]);
-
-    // Live Telemetry: Auto-update catalog every 2 seconds
+    // Live Telemetry: Auto-update catalog every 10 seconds to keep stock in sync
     useEffect(() => {
         const timer = setInterval(() => {
             if (!loading && !saving) {
                 loadData(true);
             }
-        }, 2000);
+        }, 10000); // Increased to 10s to reduce terminal activity/noise
         return () => clearInterval(timer);
     }, [loading, saving, loadData]);
 

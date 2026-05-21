@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Plus, Eye, EyeOff, Trash2, Copy, GripVertical, ChevronDown, ChevronUp,
     ChevronRight, Edit3, X, Save, Loader2, Layout, Settings,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import cmsService, { WebsiteSection } from '@/services/cms.service';
 import toast from 'react-hot-toast';
-import { cn, getImageUrl } from '@/lib/utils';
+import { cn, getImageUrl, checkIsVideo } from '@/lib/utils';
 import MediaPickerModal from '../components/MediaPickerModal';
 
 const SECTION_TYPES = [
@@ -91,9 +91,11 @@ interface Props {
     products?: any[];
     categories?: any[];
     media?: any[];
+    settings?: any;
+    onSave?: any;
 }
 
-export default function SectionsTab({ sections, setSections, products = [], categories = [], media = [] }: Props) {
+export default function SectionsTab({ sections, setSections, products = [], categories = [], media = [], settings, onSave }: Props) {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [previewId, setPreviewId] = useState<number | null>(null);
@@ -103,6 +105,46 @@ export default function SectionsTab({ sections, setSections, products = [], cate
     const [loading, setLoading] = useState<number | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+    const [announcementForm, setAnnouncementForm] = useState({
+        show_announcement: settings?.show_announcement ?? true,
+        announcement_text: settings?.announcement_text ?? '',
+        announcement_link: settings?.announcement_link ?? '',
+        announcement_bg_color: settings?.announcement_bg_color ?? '#131921',
+        announcement_text_color: settings?.announcement_text_color ?? '#ffffff',
+        announcement_scroll: settings?.announcement_scroll ?? false,
+        announcement_scroll_speed: settings?.announcement_scroll_speed ?? 'medium',
+        announcement_duration: settings?.announcement_duration ?? 5,
+    });
+
+    const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+
+    useEffect(() => {
+        if (settings) {
+            setAnnouncementForm({
+                show_announcement: settings.show_announcement,
+                announcement_text: settings.announcement_text || '',
+                announcement_link: settings.announcement_link || '',
+                announcement_bg_color: settings.announcement_bg_color || '#131921',
+                announcement_text_color: settings.announcement_text_color || '#ffffff',
+                announcement_scroll: !!settings.announcement_scroll,
+                announcement_scroll_speed: settings.announcement_scroll_speed || 'medium',
+                announcement_duration: settings.announcement_duration ?? 5,
+            });
+        }
+    }, [settings]);
+
+    const handleSaveAnnouncement = async () => {
+        if (!onSave) return;
+        setSavingAnnouncement(true);
+        try {
+            await onSave(announcementForm);
+        } catch {
+            toast.error('Failed to save Announcement Bar');
+        } finally {
+            setSavingAnnouncement(false);
+        }
+    };
 
     const handleSync = () => {
         setIsSyncing(true);
@@ -180,6 +222,139 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 text-left">
+            {/* ── HEADER ANNOUNCEMENT BAR SETTINGS ── */}
+            {settings && (
+                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
+                    <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[15px] font-bold text-[#111]">Announcement Bar</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full border border-orange-200 animate-pulse">Header Notification</span>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={!!announcementForm.show_announcement}
+                                onChange={() => setAnnouncementForm(f => ({ ...f, show_announcement: !f.show_announcement }))}
+                            />
+                            <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#c45500]' : 'bg-[#ccc]'}`}>
+                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
+                            </div>
+                        </label>
+                    </div>
+
+                    <div className="p-6 space-y-6">
+                        {/* Row 1: Text and Link */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Banner Text</label>
+                                <input
+                                    type="text"
+                                    value={announcementForm.announcement_text}
+                                    onChange={e => setAnnouncementForm(f => ({ ...f, announcement_text: e.target.value }))}
+                                    className={inputCls}
+                                    placeholder="Free Delivery on all orders over Rs. 5000! 🚚"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Action Link (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={announcementForm.announcement_link}
+                                    onChange={e => setAnnouncementForm(f => ({ ...f, announcement_link: e.target.value }))}
+                                    placeholder="/shop"
+                                    className={inputCls}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Row 2: Colors, Scroll, Speed, Duration */}
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Background Color</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="color"
+                                        value={announcementForm.announcement_bg_color}
+                                        onChange={e => setAnnouncementForm(f => ({ ...f, announcement_bg_color: e.target.value }))}
+                                        className="w-9 h-[31px] rounded-[3px] border border-[#ddd] cursor-pointer p-0.5"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={announcementForm.announcement_bg_color}
+                                        onChange={e => setAnnouncementForm(f => ({ ...f, announcement_bg_color: e.target.value }))}
+                                        className={inputCls + " font-mono uppercase"}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Text Color</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="color"
+                                        value={announcementForm.announcement_text_color}
+                                        onChange={e => setAnnouncementForm(f => ({ ...f, announcement_text_color: e.target.value }))}
+                                        className="w-9 h-[31px] rounded-[3px] border border-[#ddd] cursor-pointer p-0.5"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={announcementForm.announcement_text_color}
+                                        onChange={e => setAnnouncementForm(f => ({ ...f, announcement_text_color: e.target.value }))}
+                                        className={inputCls + " font-mono uppercase"}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Scroll Text (Ticker)</label>
+                                <div className="h-[31px] flex items-center">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={!!announcementForm.announcement_scroll}
+                                            onChange={() => setAnnouncementForm(f => ({ ...f, announcement_scroll: !f.announcement_scroll }))}
+                                        />
+                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#c45500]' : 'bg-[#ccc]'}`}>
+                                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.announcement_scroll ? 'left-[20px]' : 'left-0.5'}`} />
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Scroll Speed</label>
+                                <select
+                                    value={announcementForm.announcement_scroll_speed}
+                                    onChange={e => setAnnouncementForm(f => ({ ...f, announcement_scroll_speed: e.target.value }))}
+                                    disabled={!announcementForm.announcement_scroll}
+                                    className="w-full h-[31px] px-2 border border-[#888c8e] rounded-[3px] text-[13px] bg-white outline-none focus:border-[#e77600] disabled:bg-slate-50 disabled:text-slate-400"
+                                >
+                                    <option value="slow">Slow</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="fast">Fast</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Display Length (Sec)</label>
+                                <input
+                                    type="number"
+                                    value={announcementForm.announcement_duration}
+                                    onChange={e => setAnnouncementForm(f => ({ ...f, announcement_duration: parseInt(e.target.value) || 0 }))}
+                                    className={inputCls}
+                                    min="0"
+                                    max="60"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-4 border-t">
+                            <AmazonBtn onClick={handleSaveAnnouncement} loading={savingAnnouncement}>
+                                Save Announcement Bar
+                            </AmazonBtn>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white border border-[#ddd] rounded-[4px] px-6 py-4 flex items-center justify-between shadow-sm">
                 <div>
                     <h3 className="text-[15px] font-bold text-[#111]">Landing Page Layout Builder</h3>
@@ -373,7 +548,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
             {/* ── FOOTER ACTIONS ── */}
             <div className="mt-8 flex justify-end pb-12 pr-6">
-                <AmazonBtn 
+                <AmazonBtn
                     className="w-[280px] h-[48px] !text-[16px] !font-black !rounded-[4px] shadow-md border-[#888c8e]"
                     onClick={handleSync}
                 >
@@ -469,11 +644,16 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
     switch (section_type) {
         case 'hero':
             const slides = content.slides || [];
+            const isVideo = slides[0] && (slides[0].media_type === 'video' || checkIsVideo(slides[0].image) || checkIsVideo(slides[0].video));
             return (
                 <div className="relative aspect-[21/9] bg-[#0F172A] overflow-hidden">
                     {slides.length > 0 ? (
                         <>
-                            <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
+                            {isVideo ? (
+                                <video src={getImageUrl(slides[0].image || slides[0].video)} className="w-full h-full object-cover opacity-50" autoPlay muted loop playsInline />
+                            ) : (
+                                <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
+                            )}
                             <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
                                 <p className="text-[#f0c14b] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
                                 <h3 className="text-4xl md:text-5xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
@@ -841,8 +1021,12 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                 <div className="flex-1 relative group">
                     <input value={value || ''} onChange={e => onChange(e.target.value)} className={inputCls + " pr-10"} placeholder="Enter URL or Choose from Library..." />
                     {value && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 bg-white border border-[#ddd] rounded-[2px] overflow-hidden shadow-sm">
-                            <img src={getImageUrl(value)} className="h-full w-full object-cover" />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 bg-white border border-[#ddd] rounded-[2px] overflow-hidden shadow-sm flex items-center justify-center">
+                            {checkIsVideo(value) ? (
+                                <Film size={12} className="text-[#565959]" />
+                            ) : (
+                                <img src={getImageUrl(value)} className="h-full w-full object-cover" />
+                            )}
                         </div>
                     )}
                 </div>
@@ -893,7 +1077,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
                                         <label className="text-[13px] font-bold text-[#111]">Carousel Slides ({(form.content.slides || []).length})</label>
-                                        <button onClick={() => updateContent('slides', [...(form.content.slides || []), { title: 'New Slide', subtitle: '', description: '', media_type: 'image', image: '' }])}
+                                        <button onClick={() => updateContent('slides', [...(form.content.slides || []), { title: 'New Slide', subtitle: '', description: '', media_type: 'image', image: '', cta_text: '', cta_link: '', color: '', thumbnail: '' }])}
                                             className="text-[12px] font-bold text-[#007185] hover:underline">+ Add Slide</button>
                                     </div>
                                     <div className="space-y-4">
@@ -904,9 +1088,43 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     <button onClick={() => updateContent('slides', form.content.slides.filter((_: any, idx: number) => idx !== i))} className="text-red-600 hover:bg-red-50 p-1.5 rounded-[3px]"><Trash2 size={14} /></button>
                                                 </div>
                                                 <div className="grid md:grid-cols-2 gap-4">
-                                                    <MediaField label="Slide Image" value={s.image} onChange={(url: string) => { const list = [...form.content.slides]; list[i].image = url; updateContent('slides', list); }} />
+                                                    <MediaField
+                                                        label="Slide Image / Video"
+                                                        value={s.image}
+                                                        allowVideo={true}
+                                                        onChange={(url: string) => {
+                                                            const list = [...form.content.slides];
+                                                            list[i].image = url;
+                                                            const isVid = checkIsVideo(url);
+                                                            list[i].media_type = isVid ? 'video' : 'image';
+                                                            list[i].video = isVid ? url : '';
+                                                            updateContent('slides', list);
+                                                        }}
+                                                    />
                                                     <input placeholder="Slide Title" value={s.title} onChange={e => { const list = [...form.content.slides]; list[i].title = e.target.value; updateContent('slides', list); }} className={inputCls} />
                                                     <input placeholder="Subtitle" value={s.subtitle} onChange={e => { const list = [...form.content.slides]; list[i].subtitle = e.target.value; updateContent('slides', list); }} className={inputCls} />
+                                                    <input placeholder="Button Label (e.g. Shop Now)" value={s.cta_text || ''} onChange={e => { const list = [...form.content.slides]; list[i].cta_text = e.target.value; updateContent('slides', list); }} className={inputCls} />
+                                                    <input placeholder="Button Link (e.g. /customer/shop)" value={s.cta_link || ''} onChange={e => { const list = [...form.content.slides]; list[i].cta_link = e.target.value; updateContent('slides', list); }} className={inputCls} />
+                                                    <select value={s.color || ''} onChange={e => { const list = [...form.content.slides]; list[i].color = e.target.value; updateContent('slides', list); }} className={inputCls}>
+                                                        <option value="">Default / Index Gradient</option>
+                                                        <option value="from-amber-500 to-orange-600">Amber to Orange</option>
+                                                        <option value="from-pink-500 to-rose-600">Pink to Rose</option>
+                                                        <option value="from-violet-500 to-purple-600">Violet to Purple</option>
+                                                        <option value="from-teal-400 to-emerald-600">Teal to Emerald</option>
+                                                        <option value="from-blue-500 to-cyan-600">Blue to Cyan</option>
+                                                    </select>
+                                                    {checkIsVideo(s.image) && (
+                                                        <MediaField
+                                                            label="Fallback Poster Image"
+                                                            value={s.thumbnail}
+                                                            allowVideo={false}
+                                                            onChange={(url: string) => {
+                                                                const list = [...form.content.slides];
+                                                                list[i].thumbnail = url;
+                                                                updateContent('slides', list);
+                                                            }}
+                                                        />
+                                                    )}
                                                     <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
                                                 </div>
                                             </div>
@@ -931,14 +1149,10 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         <label className="text-[13px] font-bold text-[#111]">Layout Type</label>
                                         <select value={form.content.layout_type || "grid"} onChange={e => updateContent("layout_type", e.target.value)} className={inputCls}>
                                             <option value="grid">Standard Grid</option>
-                                            <option value="billboard">Hero Billboard</option>
                                             <option value="carousel">Product Carousel</option>
                                             <option value="list">List View</option>
                                             <option value="minimal">Minimal Grid</option>
-                                            <option value="split">Banner & Grid</option>
-                                            <option value="luxury">Luxury Gallery</option>
-                                            <option value="masonry">Dynamic Mosaic</option>
-                                            <option value="highlight">Featured Spotlight</option>
+                                            <option value="modern_animatic">Modern Animatic</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
@@ -975,90 +1189,90 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     </div>
                                 ) : (
                                     <div className="space-y-4 pt-4 border-t border-[#eee]">
-                                    <div className="flex-1 mb-2">
-                                        <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
-                                        <p className="text-[11px] text-[#565959]">Search and select products to display in this grid.</p>
-                                    </div>
-                                    
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            placeholder="Search products by name to add..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            onFocus={() => setIsDropdownOpen(true)}
-                                            onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                            className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
-                                        />
-                                        
-                                        {/* Dropdown Results */}
-                                        {isDropdownOpen && (
-                                            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
-                                                {products.filter(p => 
-                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
-                                                    !(form.content.product_ids || []).includes(p.id)
-                                                ).map(p => (
-                                                    <button key={p.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const current = form.content.product_ids || [];
-                                                            updateContent('product_ids', [...current, p.id]);
-                                                            setSearchQuery(''); // Close dropdown
-                                                        }}
-                                                        className="w-full flex items-center gap-3 p-3 border-b border-[#f0f0f0] hover:bg-[#f2f8f9] text-left transition-colors last:border-0"
-                                                    >
-                                                        <div className="w-10 h-10 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0 shadow-sm">
-                                                            <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
-                                                            <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
-                                                        </div>
-                                                        <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
-                                                    </button>
-                                                ))}
-                                                {products.filter(p => 
-                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
-                                                    !(form.content.product_ids || []).includes(p.id)
-                                                ).length === 0 && (
-                                                    <div className="p-6 text-center text-[13px] font-medium text-[#888]">No additional products found.</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
+                                        <div className="flex-1 mb-2">
+                                            <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
+                                            <p className="text-[11px] text-[#565959]">Search and select products to display in this grid.</p>
+                                        </div>
 
-                                    {/* Grid of Selected Products */}
-                                    {(form.content.product_ids || []).length > 0 && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                                            {(form.content.product_ids || []).map((id: any) => {
-                                                const p = products.find((prod: any) => prod.id === id);
-                                                if (!p) return null;
-                                                return (
-                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#e77600]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
-                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0">
-                                                            <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
-                                                        </div>
-                                                        <div className="min-w-0 flex-1 pr-8">
-                                                            <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
-                                                            <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
-                                                        </div>
-                                                        <button 
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search products by name to add..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onFocus={() => setIsDropdownOpen(true)}
+                                                onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                                                className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
+                                            />
+
+                                            {/* Dropdown Results */}
+                                            {isDropdownOpen && (
+                                                <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
+                                                    {products.filter(p =>
+                                                        (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
+                                                        !(form.content.product_ids || []).includes(p.id)
+                                                    ).map(p => (
+                                                        <button key={p.id}
                                                             type="button"
                                                             onClick={() => {
                                                                 const current = form.content.product_ids || [];
-                                                                updateContent('product_ids', current.filter((pid: any) => pid !== p.id));
+                                                                updateContent('product_ids', [...current, p.id]);
+                                                                setSearchQuery(''); // Close dropdown
                                                             }}
-                                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-[6px] transition-all shadow-sm"
-                                                            title="Remove product"
+                                                            className="w-full flex items-center gap-3 p-3 border-b border-[#f0f0f0] hover:bg-[#f2f8f9] text-left transition-colors last:border-0"
                                                         >
-                                                            <X size={14} className="stroke-[3px]" />
+                                                            <div className="w-10 h-10 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0 shadow-sm">
+                                                                <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
+                                                                <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                            </div>
+                                                            <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
                                                         </button>
-                                                    </div>
-                                                );
-                                            })}
+                                                    ))}
+                                                    {products.filter(p =>
+                                                        (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
+                                                        !(form.content.product_ids || []).includes(p.id)
+                                                    ).length === 0 && (
+                                                            <div className="p-6 text-center text-[13px] font-medium text-[#888]">No additional products found.</div>
+                                                        )}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+
+                                        {/* Grid of Selected Products */}
+                                        {(form.content.product_ids || []).length > 0 && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                                {(form.content.product_ids || []).map((id: any) => {
+                                                    const p = products.find((prod: any) => prod.id === id);
+                                                    if (!p) return null;
+                                                    return (
+                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#e77600]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                            <div className="w-12 h-12 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0">
+                                                                <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1 pr-8">
+                                                                <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
+                                                                <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const current = form.content.product_ids || [];
+                                                                    updateContent('product_ids', current.filter((pid: any) => pid !== p.id));
+                                                                }}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-[6px] transition-all shadow-sm"
+                                                                title="Remove product"
+                                                            >
+                                                                <X size={14} className="stroke-[3px]" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -1177,7 +1391,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
                                         <p className="text-[11px] text-[#565959]">Search and select products to link to this promotion.</p>
                                     </div>
-                                    
+
                                     <div className="relative">
                                         <input
                                             type="text"
@@ -1188,12 +1402,12 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                             className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
                                         />
-                                        
+
                                         {/* Dropdown Results */}
                                         {isDropdownOpen && (
                                             <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
-                                                {products.filter(p => 
-                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
+                                                {products.filter(p =>
+                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
                                                     !(form.content.product_ids || []).includes(p.id)
                                                 ).map(p => (
                                                     <button key={p.id}
@@ -1215,12 +1429,12 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
                                                     </button>
                                                 ))}
-                                                {products.filter(p => 
-                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) && 
+                                                {products.filter(p =>
+                                                    (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
                                                     !(form.content.product_ids || []).includes(p.id)
                                                 ).length === 0 && (
-                                                    <div className="p-6 text-center text-[13px] font-medium text-[#888]">No additional products found.</div>
-                                                )}
+                                                        <div className="p-6 text-center text-[13px] font-medium text-[#888]">No additional products found.</div>
+                                                    )}
                                             </div>
                                         )}
                                     </div>
@@ -1240,7 +1454,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
                                                             <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                         </div>
-                                                        <button 
+                                                        <button
                                                             type="button"
                                                             onClick={() => {
                                                                 const current = form.content.product_ids || [];
@@ -1368,18 +1582,18 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
                                         <label className="text-[13px] font-bold text-[#111]">
-                                            {section.section_type === 'stats' ? 'Statistics' : 
-                                             section.section_type === 'features' ? 'Feature Cards' :
-                                             section.section_type === 'steps' ? 'Process Steps' :
-                                             section.section_type === 'testimonials' ? 'Customer Reviews' : 'List Items'} 
+                                            {section.section_type === 'stats' ? 'Statistics' :
+                                                section.section_type === 'features' ? 'Feature Cards' :
+                                                    section.section_type === 'steps' ? 'Process Steps' :
+                                                        section.section_type === 'testimonials' ? 'Customer Reviews' : 'List Items'}
                                             ({(form.content.items || form.content.reviews || []).length})
                                         </label>
                                         <button onClick={() => {
                                             const key = form.content.reviews ? 'reviews' : 'items';
-                                            const newItem = section.section_type === 'faq' ? { q: '', a: '' } : 
-                                                           section.section_type === 'stats' ? { label: '', value: '' } :
-                                                           section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
-                                                           { title: '', text: '' };
+                                            const newItem = section.section_type === 'faq' ? { q: '', a: '' } :
+                                                section.section_type === 'stats' ? { label: '', value: '' } :
+                                                    section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
+                                                        { title: '', text: '' };
                                             updateContent(key, [...(form.content[key] || []), newItem]);
                                         }} className="text-[12px] font-bold text-[#007185] hover:underline">+ Add Entry</button>
                                     </div>
@@ -1393,7 +1607,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         updateContent(key, form.content[key].filter((_: any, idx: number) => idx !== i));
                                                     }} className="text-red-600 hover:bg-red-50 p-1 rounded-[3px] transition-colors"><Trash2 size={14} /></button>
                                                 </div>
-                                                
+
                                                 {section.section_type === 'testimonials' ? (
                                                     <div className="grid md:grid-cols-2 gap-4">
                                                         <input placeholder="Customer Name" value={item.name || ''} onChange={e => {
@@ -1401,7 +1615,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             list[i].name = e.target.value;
                                                             updateContent('reviews', list);
                                                         }} className={inputCls} />
-                                                        
+
                                                         <input placeholder="Role / Tagline" value={item.role || ''} onChange={e => {
                                                             const list = [...form.content.reviews];
                                                             list[i].role = e.target.value;
@@ -1415,7 +1629,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                                 list[i].rating = parseInt(e.target.value);
                                                                 updateContent('reviews', list);
                                                             }} className={inputCls}>
-                                                                {[5,4,3,2,1].map(num => <option key={num} value={num}>{num} Stars</option>)}
+                                                                {[5, 4, 3, 2, 1].map(num => <option key={num} value={num}>{num} Stars</option>)}
                                                             </select>
                                                         </div>
 
@@ -1532,10 +1746,10 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Google Maps Iframe URL / Embed Code</label>
-                                    <textarea 
-                                        rows={4} 
-                                        placeholder="Paste the 'src' URL or the entire <iframe> embed code from Google Maps..." 
-                                        value={form.content.iframe_url} 
+                                    <textarea
+                                        rows={4}
+                                        placeholder="Paste the 'src' URL or the entire <iframe> embed code from Google Maps..."
+                                        value={form.content.iframe_url}
                                         onChange={e => {
                                             let val = e.target.value;
                                             // Auto-extract src from iframe tag if present
@@ -1544,8 +1758,8 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 if (match && match[1]) val = match[1];
                                             }
                                             updateContent('iframe_url', val);
-                                        }} 
-                                        className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[11px] font-mono outline-none focus:border-[#e77600] bg-white resize-none" 
+                                        }}
+                                        className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[11px] font-mono outline-none focus:border-[#e77600] bg-white resize-none"
                                     />
                                     <p className="text-[10px] text-slate-400 italic">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy HTML and paste it here.</p>
                                 </div>
@@ -1598,7 +1812,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                         <AmazonBtn onClick={save} loading={saving} className="min-w-[140px]">Update Section</AmazonBtn>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

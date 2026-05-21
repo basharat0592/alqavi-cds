@@ -137,9 +137,9 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div>
                 {/* Visual Identity */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
+                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left w-full">
                     <div className="bg-[#f7f8fa] border-b border-[#ddd] px-5 py-3">
                         <h3 className="font-bold text-[#111] text-[15px]">Visual Identity</h3>
                     </div>
@@ -173,34 +173,6 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                                         className={inputCls + " font-mono uppercase"} />
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Announcement Bar */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                    <div className="bg-[#f7f8fa] border-b border-[#ddd] px-5 py-3 flex items-center justify-between">
-                        <h3 className="font-bold text-[#111] text-[15px]">Announcement Bar</h3>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" className="hidden" checked={!!form.show_announcement}
-                                onChange={() => setForm(f => ({ ...f, show_announcement: !f.show_announcement }))} />
-                            <div className={`w-10 h-5 rounded-full transition-colors relative ${form.show_announcement ? 'bg-[#c45500]' : 'bg-[#ccc]'}`}>
-                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${form.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
-                            </div>
-                        </label>
-                    </div>
-                    <div className="p-6 space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-[#111]">Banner Text</label>
-                            <input type="text" value={form.announcement_text}
-                                onChange={e => setForm(f => ({ ...f, announcement_text: e.target.value }))}
-                                className={inputCls} placeholder="e.g. Free Delivery on all orders!" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-[#111]">Action Link (Optional)</label>
-                            <input type="text" value={form.announcement_link || ''}
-                                onChange={e => setForm(f => ({ ...f, announcement_link: e.target.value }))}
-                                placeholder="/shop" className={inputCls} />
                         </div>
                     </div>
                 </div>
