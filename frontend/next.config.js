@@ -23,6 +23,14 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
+                hostname: 'alqavitraders.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'www.alqavitraders.com',
+            },
+            {
+                protocol: 'https',
                 hostname: 'images.unsplash.com',
             },
         ],

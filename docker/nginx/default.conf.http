@@ -6,44 +6,24 @@ upstream backend {
     server backend:8000;
 }
 
-# Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name alqavitraders.com www.alqavitraders.com _;
+    server_name alqavitraders.com www.alqavitraders.com;
 
-    # Let's Encrypt challenge
+    client_max_body_size 20M;
+
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
 
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# HTTPS server
-server {
-    listen 443 ssl;
-    server_name alqavitraders.com www.alqavitraders.com _;
-
-    ssl_certificate /etc/letsencrypt/live/alqavitraders.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/alqavitraders.com/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
-    client_max_body_size 20M;
-
-    # Django static files
     location /static/ {
         alias /app/static/;
     }
 
-    # Django media files
     location /media/ {
         alias /app/media/;
     }
 
-    # Backend API and admin
     location /api/ {
         proxy_pass http://backend;
         proxy_set_header Host $host;
@@ -52,7 +32,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /django-admin/ {
+    location /admin/ {
         proxy_pass http://backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -60,7 +40,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Frontend (Next.js)
     location / {
         proxy_pass http://frontend;
         proxy_set_header Host $host;

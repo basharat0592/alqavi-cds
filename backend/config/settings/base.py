@@ -15,6 +15,12 @@ ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://alqavitraders.com',
+    'https://www.alqavitraders.com',
+    'http://74.208.242.204',
+]
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
