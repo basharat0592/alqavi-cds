@@ -1,57 +1,78 @@
 # deploy.ps1 - Deploy alqavi-cds to remote server
-# Usage: .\deploy.ps1 [-SkipBuild] [-BackendOnly] [-FrontendOnly]
+# Usage: .\deploy.ps1 [-SkipBuild] [-BackendOnly] [-FrontendOnly] [-IncludeMedia]
 
 param(
     [switch]$SkipBuild,
     [switch]$BackendOnly,
-    [switch]$FrontendOnly
+    [switch]$FrontendOnly,
+    [switch]$IncludeMedia
 )
 
 $SERVER = "74.208.242.204"
 $USER = "root"
 $REMOTE_DIR = "/opt/alqavi-cds"
-
-# Ensure we have the password (prompt if not stored)
 $PASSWORD = "od1stQGtxan1P"
+$INCLUDE_MEDIA = if ($IncludeMedia) { "True" } else { "False" }
 
 Write-Host "=== AlQavi CDS Deployment ===" -ForegroundColor Cyan
+if (-not $IncludeMedia) {
+    Write-Host "  (Skipping media folder. Use -IncludeMedia to upload media files)" -ForegroundColor Gray
+}
 
-# Step 1: Upload changed files using SCP via Python/paramiko
+# Step 1: Upload changed files
 Write-Host "`n[1/4] Uploading files to server..." -ForegroundColor Yellow
 
 python -c @"
-import paramiko, os, stat
+import paramiko, os, sys
 
 HOST = '$SERVER'
 USER = '$USER'
 PASSWORD = '$PASSWORD'
 REMOTE_DIR = '$REMOTE_DIR'
 LOCAL_DIR = os.path.dirname(os.path.abspath(r'$PSScriptRoot\deploy.ps1'))
+INCLUDE_MEDIA = '$INCLUDE_MEDIA' == 'True'
 
-SKIP = {
+SKIP_DIRS = {
     '.git', 'node_modules', '.next', '.venv', '__pycache__',
-    'db.sqlite3', 'scratch', '.env', 'brain',
-    'tsc_output.txt', 'ts_errors.txt', 'test_api.js', 'log.txt',
-    'deploy_remote.py', 'deploy.ps1', '.env.production',
-    'check_gilgit.py', 'fix_branding.py', 'prompt.txt',
+    'scratch', 'brain',
 }
+SKIP_FILES = {
+    'db.sqlite3', '.env', 'tsc_output.txt', 'ts_errors.txt',
+    'test_api.js', 'log.txt', 'deploy_remote.py', 'deploy.ps1',
+    '.env.production', 'check_gilgit.py', 'fix_branding.py',
+    'prompt.txt', 'remote_cmd.py',
+}
+SKIP_EXT = {'.mp4', '.avi', '.mov', '.mkv'}
 
-def upload_dir(sftp, local_path, remote_path):
+if not INCLUDE_MEDIA:
+    SKIP_DIRS.add('media')
+
+def upload_dir(sftp, ssh, local_path, remote_path):
     try:
         sftp.stat(remote_path)
     except FileNotFoundError:
-        sftp.mkdir(remote_path)
-    for item in os.listdir(local_path):
-        if item in SKIP:
+        ssh.exec_command(f'mkdir -p {remote_path}')
+        import time; time.sleep(0.2)
+        try:
+            sftp.stat(remote_path)
+        except:
+            sftp.mkdir(remote_path)
+    for item in sorted(os.listdir(local_path)):
+        if item in SKIP_DIRS or item in SKIP_FILES:
             continue
         local_item = os.path.join(local_path, item)
         remote_item = f'{remote_path}/{item}'
         if os.path.isdir(local_item):
-            upload_dir(sftp, local_item, remote_item)
+            upload_dir(sftp, ssh, local_item, remote_item)
         else:
-            if os.path.getsize(local_item) > 50*1024*1024:
+            ext = os.path.splitext(item)[1].lower()
+            if ext in SKIP_EXT:
                 continue
-            print(f'  -> {remote_item}')
+            size = os.path.getsize(local_item)
+            if size > 50*1024*1024:
+                continue
+            sys.stdout.buffer.write(f'  -> {remote_item}\n'.encode('utf-8','replace'))
+            sys.stdout.buffer.flush()
             sftp.put(local_item, remote_item)
 
 ssh = paramiko.SSHClient()
@@ -59,12 +80,11 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(HOST, username=USER, password=PASSWORD, timeout=30)
 sftp = ssh.open_sftp()
 
-# Upload .env
 env_content = open(os.path.join(LOCAL_DIR, '.env.production')).read()
 with sftp.open(f'{REMOTE_DIR}/.env', 'w') as f:
     f.write(env_content)
 
-upload_dir(sftp, LOCAL_DIR, REMOTE_DIR)
+upload_dir(sftp, ssh, LOCAL_DIR, REMOTE_DIR)
 sftp.close()
 ssh.close()
 print('Upload complete.')
@@ -91,34 +111,32 @@ if (-not $SkipBuild) {
 $buildCmd += " && docker compose --env-file .env up -d"
 
 python -c @"
-import paramiko, time
+import paramiko, sys, time
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect('$SERVER', username='$USER', password='$PASSWORD', timeout=30)
 
-cmds = [
-    '$buildCmd',
-]
-for cmd in cmds:
-    print(f'> {cmd}')
-    stdin, stdout, stderr = ssh.exec_command(cmd, timeout=600)
-    print(stdout.read().decode())
-    err = stderr.read().decode()
-    if err:
-        print(err)
+cmd = '$buildCmd'
+print(f'> {cmd}')
+stdin, stdout, stderr = ssh.exec_command(cmd, timeout=600)
+out = stdout.read().decode('utf-8', errors='replace')
+err = stderr.read().decode('utf-8', errors='replace')
+sys.stdout.buffer.write(out.encode('utf-8', errors='replace'))
+sys.stdout.buffer.write(err.encode('utf-8', errors='replace'))
+sys.stdout.buffer.flush()
 
-# Wait for services
 time.sleep(10)
 
-# Run migrations
-print('Running migrations...')
+print('\nRunning migrations...')
 stdin, stdout, stderr = ssh.exec_command('cd $REMOTE_DIR && docker compose exec -T backend python manage.py migrate --noinput', timeout=120)
-print(stdout.read().decode())
-print(stderr.read().decode())
+sys.stdout.buffer.write(stdout.read())
+sys.stdout.buffer.write(stderr.read())
+sys.stdout.buffer.flush()
 
-# Show status
+print('\nContainer status:')
 stdin, stdout, stderr = ssh.exec_command('cd $REMOTE_DIR && docker compose ps')
-print(stdout.read().decode())
+sys.stdout.buffer.write(stdout.read())
+sys.stdout.buffer.flush()
 
 ssh.close()
 "@
@@ -133,9 +151,9 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect('$SERVER', username='$USER', password='$PASSWORD', timeout=30)
 
 checks = [
-    ('Frontend', \"curl -s -o /dev/null -w '%{http_code}' http://localhost/\"),
-    ('Backend API', \"curl -s -o /dev/null -w '%{http_code}' http://localhost/api/v1/products/\"),
-    ('Admin', \"curl -s -o /dev/null -w '%{http_code}' http://localhost/admin/\"),
+    ('Frontend', ""curl -sk -o /dev/null -w '%{http_code}' https://localhost/""),
+    ('Backend API', ""curl -sk -o /dev/null -w '%{http_code}' https://localhost/api/v1/products/""),
+    ('Admin Dashboard', ""curl -sk -o /dev/null -w '%{http_code}' https://localhost/admin/dashboard""),
 ]
 for name, cmd in checks:
     stdin, stdout, stderr = ssh.exec_command(cmd, timeout=15)
@@ -146,9 +164,10 @@ ssh.close()
 "@
 
 Write-Host "`n[4/4] Deployment complete!" -ForegroundColor Green
-Write-Host "App is live at: http://$SERVER/" -ForegroundColor Cyan
+Write-Host "App is live at: https://alqavitraders.com/" -ForegroundColor Cyan
 Write-Host "`nUsage tips:" -ForegroundColor Gray
-Write-Host "  .\deploy.ps1                # Full rebuild and deploy" -ForegroundColor Gray
-Write-Host "  .\deploy.ps1 -BackendOnly   # Rebuild only backend" -ForegroundColor Gray
-Write-Host "  .\deploy.ps1 -FrontendOnly  # Rebuild only frontend" -ForegroundColor Gray
-Write-Host "  .\deploy.ps1 -SkipBuild     # Upload files + restart (no rebuild)" -ForegroundColor Gray
+Write-Host "  .\deploy.ps1                  # Full rebuild and deploy (no media)" -ForegroundColor Gray
+Write-Host "  .\deploy.ps1 -BackendOnly     # Rebuild only backend" -ForegroundColor Gray
+Write-Host "  .\deploy.ps1 -FrontendOnly    # Rebuild only frontend" -ForegroundColor Gray
+Write-Host "  .\deploy.ps1 -SkipBuild       # Upload files + restart (no rebuild)" -ForegroundColor Gray
+Write-Host "  .\deploy.ps1 -IncludeMedia    # Full deploy + upload media files" -ForegroundColor Gray
