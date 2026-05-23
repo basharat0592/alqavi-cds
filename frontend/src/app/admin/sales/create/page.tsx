@@ -115,7 +115,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, selectCls }: any) =
                             >
                                 <div className="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10 shrink-0">
                                     {c.avatar ? (
-                                        <img src={getAvatarUrl(c.avatar)} alt="" className="w-full h-full object-cover" />
+                                        <img src={getAvatarUrl(c.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-[12px] font-black text-slate-400">{c.first_name?.[0]}{c.last_name?.[0]}</span>
                                     )}

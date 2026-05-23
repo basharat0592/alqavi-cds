@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from 'react-hot-toast';
 
 export default function Home() {
+    const router = useRouter();
     const [sections, setSections] = useState<any[]>([]);
     const [settings, setSettings] = useState<any>(null);
     const [categories, setCategories] = useState<any[]>([]);
@@ -200,10 +201,10 @@ export default function Home() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-500">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-500 w-full overflow-x-hidden">
             <Navbar settings={settings} />
 
-            <main className="pb-20">
+            <main className="pb-20 w-full overflow-x-hidden">
                 {activeSections.map((section) => {
                     const content = section.content || {};
 
@@ -218,12 +219,12 @@ export default function Home() {
                             const newsContent = newsSec.content || {};
 
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="flex flex-col lg:flex-row gap-10 md:gap-16 items-start">
                                         {/* Left: FAQ Section */}
                                         <div className="flex-1 w-full animate-in fade-in duration-700">
                                             <div className="mb-8 md:mb-12">
-                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none mb-4">
+                                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none mb-4">
                                                     {faqContent.title || "Common Questions"}
                                                 </h2>
                                                 <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
@@ -281,19 +282,19 @@ export default function Home() {
                                                 </div>
                                             )}
 
-                                            <div className="relative group max-w-md mx-auto lg:mx-0">
-                                                <div className="flex items-center bg-white rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1 md:p-1.5 border border-slate-50">
+                                            <div className="relative group max-w-md mx-auto lg:mx-0 w-full">
+                                                <div className="flex flex-col sm:flex-row items-center bg-white rounded-[20px] sm:rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1.5 sm:p-1 md:p-1.5 border border-slate-50 gap-2 sm:gap-0">
                                                     <input
                                                         type="email"
                                                         value={newsletterEmail}
                                                         onChange={(e) => setNewsletterEmail(e.target.value)}
                                                         placeholder="Enter your email address"
-                                                        className="flex-1 bg-transparent px-6 py-1.5 outline-none text-[14px] text-[#2D4059] placeholder:text-slate-300 font-medium"
+                                                        className="w-full sm:flex-1 bg-transparent px-4 sm:px-6 py-2 sm:py-1.5 outline-none text-[14px] text-[#2D4059] placeholder:text-slate-300 font-medium text-center sm:text-left"
                                                     />
                                                     <button
                                                         onClick={handleNewsletterSubmit}
                                                         disabled={isNewsletterSubmitting}
-                                                        className="px-8 py-2 bg-[#56B8E6] hover:bg-[#45A7D5] text-white rounded-full font-bold text-[13px] transition-all active:scale-95 shadow-md shadow-[#56B8E6]/10 disabled:opacity-50 whitespace-nowrap"
+                                                        className="w-full sm:w-auto px-8 py-2 bg-[#56B8E6] hover:bg-[#45A7D5] text-white rounded-[15px] sm:rounded-full font-bold text-[13px] transition-all active:scale-95 shadow-md shadow-[#56B8E6]/10 disabled:opacity-50 whitespace-nowrap"
                                                     >
                                                         {isNewsletterSubmitting ? "..." : "Subscribe"}
                                                     </button>
@@ -310,13 +311,13 @@ export default function Home() {
                                 return searchIds.some((sid: string | number) => String(sid) === String(p.id));
                             });
                             return (
-                                <section key={section.id} className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden bg-white mt-10 md:mt-20">
+                                <section key={section.id} className="relative w-full md:h-[90vh] overflow-hidden bg-white mt-10 md:mt-20 py-10 md:py-0 flex flex-col justify-center">
                                     <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
                                         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#13B0D1]/20 blur-[120px] rounded-full animate-pulse" />
                                         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#F59E0B]/10 blur-[120px] rounded-full animate-pulse" />
                                     </div>
 
-                                    <div className="relative z-10 h-full flex flex-col items-center justify-center pointer-events-none px-4 md:px-12 xl:px-20 text-center max-w-7xl mx-auto">
+                                    <div className="relative z-10 w-full flex flex-col items-center justify-center pointer-events-none px-4 md:px-12 xl:px-20 text-center max-w-7xl mx-auto">
                                         <div className="space-y-6">
                                             <span className="px-4 py-2 bg-[#13B0D1]/10 text-[#13B0D1] rounded-full text-[10px] font-black uppercase tracking-[0.3em] border border-[#13B0D1]/20">
                                                 Interactive Discovery
@@ -330,7 +331,8 @@ export default function Home() {
                                         </div>
                                     </div>
 
-                                    <div className="absolute inset-0 z-20 overflow-hidden">
+                                    {/* Desktop Floating Canvas */}
+                                    <div className="absolute inset-0 z-20 overflow-hidden hidden md:block">
                                         {canvasProducts.map((p, idx) => {
                                             const randomX = Math.random() * 80 + 10;
                                             const randomY = Math.random() * 80 + 10;
@@ -397,13 +399,47 @@ export default function Home() {
                                             );
                                         })}
                                     </div>
+
+                                    {/* Mobile Fallback Grid/List */}
+                                    <div className="block md:hidden w-full px-4 pb-4 mt-8 overflow-x-auto no-scrollbar z-20">
+                                        <div className="flex gap-4">
+                                            {canvasProducts.map((p) => (
+                                                <div key={p.id} className="w-[160px] flex-shrink-0 bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col items-center text-center relative group">
+                                                    <Link href={`/customer/product/${p.id}`} className="block w-24 h-24 mb-3">
+                                                        <img
+                                                            src={getImageUrl(p.image || p.catalog_image || p.image_url)}
+                                                            className="w-full h-full object-contain"
+                                                            alt={p.name}
+                                                        />
+                                                    </Link>
+                                                    <h4 className="text-[12px] font-bold text-[#2D4059] line-clamp-1 uppercase tracking-tight w-full">
+                                                        {(p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                    </h4>
+                                                    <p className="text-[#13B0D1] font-black text-xs mt-1">
+                                                        Rs. {parseFloat(p.selling_price || p.price || 0).toLocaleString()}
+                                                    </p>
+
+                                                    {/* Add to Cart button */}
+                                                    <button
+                                                        onClick={() => {
+                                                            handleAdd(p);
+                                                            toast.success('Added to bag!');
+                                                        }}
+                                                        className="mt-3 w-full py-1.5 bg-[#111] hover:bg-[#333] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                                                    >
+                                                        Add To Cart
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </section>
                             );
 
 
                         case 'products':
                             return (
-                                <div key={section.id} className="w-full px-4 md:px-12 xl:px-20 pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB]">
+                                <div key={section.id} className="w-full px-4 md:px-12 xl:px-20 pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB] overflow-x-hidden -mt-6 md:mt-0 relative z-10">
                                     <div className="animate-in fade-in duration-700">
                                         {(() => {
                                             const isFullCollection = !content.title || content.title === 'Full Collection';
@@ -414,12 +450,12 @@ export default function Home() {
                                                         {/* Top Row: Title & Filters */}
                                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                             <div className="space-y-1 md:space-y-2 text-center md:text-left">
-                                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
+                                                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
                                                                     {content.title || (activeCategory === 'All' ? "Full Collection" : activeCategory)}
                                                                 </h2>
                                                             </div>
 
-                                                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                                                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full md:w-auto md:justify-end max-w-full min-w-0">
                                                                 <button
                                                                     onClick={() => setActiveCategory('All')}
                                                                     className={cn(
@@ -465,7 +501,7 @@ export default function Home() {
                                             return (
                                                 <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
                                                     <div className="space-y-1 md:space-y-2 text-center md:text-left">
-                                                        <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
+                                                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
                                                             {content.title}
                                                         </h2>
                                                         {content.subtitle && <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed font-medium">{content.subtitle}</p>}
@@ -501,72 +537,80 @@ export default function Home() {
                                                 <p className="text-sm text-slate-500 mt-2">Could not connect to the product database.</p>
                                             </div>
                                         ) : (content.product_ids && content.product_ids.length > 0) || filtered.length > 0 ? (
-                                            <div className={cn(
-                                                content.layout_type === 'split'
-                                                    ? "lg:w-2/3 xl:w-3/4 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4"
-                                                    : (content.layout_type === 'carousel'
-                                                        ? "flex overflow-x-auto pb-4 gap-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0"
-                                                        : content.layout_type === 'list'
-                                                            ? "flex flex-col gap-4"
-                                                            : content.layout_type === 'billboard'
-                                                                ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
-                                                                : content.layout_type === 'luxury'
-                                                                    ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
-                                                                    : content.layout_type === 'masonry'
-                                                                        ? "columns-2 md:columns-4 lg:columns-5 gap-4 space-y-4"
-                                                                        : content.layout_type === 'highlight'
-                                                                            ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
-                                                                            : "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6")
-                                            )}>
-                                                {(() => {
-                                                    const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
-                                                        ? allProducts
-                                                        : allProducts.filter(p => {
-                                                            const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
-                                                            return searchIds.some((sid: string | number) => String(sid) === String(p.id));
-                                                        });
+                                            <div className="w-full overflow-hidden">
+                                                <div className={cn(
+                                                    // Mobile: list = full-width vertical stack; others = horizontal scroll carousel
+                                                    content.layout_type === 'list' ? "flex flex-col gap-4" : "flex overflow-x-auto pb-4 gap-3 no-scrollbar -mx-4 px-4",
+                                                    // Desktop md+: restore layout-specific display
+                                                    content.layout_type === 'split'
+                                                        ? "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 lg:w-2/3 xl:w-3/4"
+                                                        : (content.layout_type === 'carousel'
+                                                            ? "md:mx-0 md:px-0"
+                                                            : content.layout_type === 'list'
+                                                                ? "md:flex md:flex-col md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4"
+                                                                : content.layout_type === 'billboard'
+                                                                    ? "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6"
+                                                                    : content.layout_type === 'luxury'
+                                                                        ? "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-8"
+                                                                        : content.layout_type === 'masonry'
+                                                                            ? "md:block md:columns-4 lg:columns-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 md:space-y-4"
+                                                                            : content.layout_type === 'highlight'
+                                                                                ? "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6"
+                                                                                : "md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6")
+                                                )}>
+                                                    {(() => {
+                                                        const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
+                                                            ? allProducts
+                                                            : allProducts.filter(p => {
+                                                                const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
+                                                                return searchIds.some((sid: string | number) => String(sid) === String(p.id));
+                                                            });
 
-                                                    const categoryFiltered = activeCategory === 'All'
-                                                        ? baseList
-                                                        : baseList.filter(p => {
-                                                            const target = activeCategory.toLowerCase().trim();
-                                                            const name1 = (p.category_name || '').toLowerCase().trim();
-                                                            const name2 = (p.category?.name || '').toLowerCase().trim();
-                                                            return name1 === target || name2 === target;
-                                                        });
+                                                        const categoryFiltered = activeCategory === 'All'
+                                                            ? baseList
+                                                            : baseList.filter(p => {
+                                                                const target = activeCategory.toLowerCase().trim();
+                                                                const name1 = (p.category_name || '').toLowerCase().trim();
+                                                                const name2 = (p.category?.name || '').toLowerCase().trim();
+                                                                return name1 === target || name2 === target;
+                                                            });
 
-                                                    return categoryFiltered.slice(0, content.layout_type === 'billboard' ? 5 : maxItems);
-                                                })().map((p: any, i: number) => {
-                                                    const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
-                                                    const isBillboardFirst = content.layout_type === 'billboard' && i === 0;
+                                                        return categoryFiltered.slice(0, content.layout_type === 'billboard' ? 5 : maxItems);
+                                                    })().map((p: any, i: number) => {
+                                                        const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
+                                                        const isBillboardFirst = content.layout_type === 'billboard' && i === 0;
 
-                                                    return (
-                                                        <div key={p.id} className={cn(
-                                                            content.layout_type === 'carousel' && "w-[200px] md:w-[240px] flex-shrink-0",
-                                                            content.layout_type === 'list' && "w-full",
-                                                            isBillboardFirst && "col-span-2 md:col-span-2 lg:col-span-2 xl:col-span-2 md:row-span-2 h-full",
-                                                            content.layout_type === 'highlight' && i === 0 && "col-span-2 md:col-span-2 h-full",
-                                                            content.layout_type === 'masonry' && "break-inside-avoid mb-4"
-                                                        )}>
-                                                            <ProductCard
-                                                                id={String(p.id)}
-                                                                title={displayTitle}
-                                                                description={p.description}
-                                                                image={getImageUrl(p.images?.[0]?.image || p.image || p.catalog_image || p.image_url) || undefined}
-                                                                price={parseFloat(p.selling_price || p.price || 0)}
-                                                                category={p.category_name || 'Cosmetics'}
-                                                                stock={p.total_quantity || p.quantity_in_stock}
-                                                                batch={p.batch || p.batch_number}
-                                                                badge={p.badge || p.status}
-                                                                weight={p.weight || p.volume_weight}
-                                                                size={p.size || p.type}
-                                                                onAddToCart={(qty) => handleAdd(p, qty)}
-                                                                layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst || (content.layout_type === 'highlight' && i === 0) ? 'vertical' : 'vertical')}
-                                                                variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : 'default')}
-                                                            />
-                                                        </div>
-                                                    );
-                                                })}
+                                                        return (
+                                                            <div key={p.id} className={cn(
+                                                                // Mobile: list items are full width; others are fixed carousel cards
+                                                                content.layout_type === 'list' ? "w-full" : "w-[160px] flex-shrink-0",
+                                                                // Desktop: layout-specific width overrides
+                                                                content.layout_type === 'carousel' ? "md:w-[240px]" : "md:w-auto",
+                                                                content.layout_type === 'list' && "md:w-full",
+                                                                isBillboardFirst && "md:col-span-2 lg:col-span-2 xl:col-span-2 md:row-span-2 md:h-full",
+                                                                content.layout_type === 'highlight' && i === 0 && "md:col-span-2 md:h-full",
+                                                                content.layout_type === 'masonry' && "md:break-inside-avoid md:mb-4"
+                                                            )}>
+                                                                <ProductCard
+                                                                    id={String(p.id)}
+                                                                    title={displayTitle}
+                                                                    description={p.description}
+                                                                    image={getImageUrl(p.images?.[0]?.image || p.image || p.catalog_image || p.image_url) || undefined}
+                                                                    price={parseFloat(p.selling_price || p.price || 0)}
+                                                                    category={p.category_name || 'Cosmetics'}
+                                                                    stock={p.total_quantity || p.quantity_in_stock}
+                                                                    batch={p.batch || p.batch_number}
+                                                                    badge={p.badge || p.status}
+                                                                    weight={p.weight || p.volume_weight}
+                                                                    size={p.size || p.type}
+                                                                    onAddToCart={(qty) => handleAdd(p, qty)}
+                                                                    layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst || (content.layout_type === 'highlight' && i === 0) ? 'vertical' : 'vertical')}
+                                                                    variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : 'default')}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="py-20 md:py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
@@ -586,14 +630,14 @@ export default function Home() {
                         case 'spotlight':
                             const spotlightProduct = allProducts.find(p => String(p.id) === String(content.product_id));
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10 animate-in fade-in duration-700">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10 animate-in fade-in duration-700 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto bg-white rounded-[12px] md:rounded-[16px] border border-slate-100 overflow-hidden shadow-xl flex flex-col md:flex-row items-center">
                                         <div className="w-full md:w-1/2 aspect-square relative group overflow-hidden">
                                             <img src={getImageUrl(content.image || spotlightProduct?.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Spotlight" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent hidden md:block" />
 
                                             {/* Permanent Product Identity Overlay on Image */}
-                                            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-20">
+                                            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-20 hidden md:block">
                                                 <h3 className="text-white text-xl md:text-3xl font-black uppercase tracking-tighter leading-tight drop-shadow-2xl">
                                                     {content.title || spotlightProduct?.name}
                                                 </h3>
@@ -667,7 +711,7 @@ export default function Home() {
 
                         case 'about':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 md:gap-20 items-center">
                                         <div className="space-y-6 md:space-y-8 text-center md:text-left order-2 md:order-1">
                                             <div className="space-y-3">
@@ -696,7 +740,7 @@ export default function Home() {
 
                         case 'testimonials':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="mb-10 md:mb-16">
                                         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                                             <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight">{content.title || "Elite Feedback"}</h2>
@@ -752,7 +796,7 @@ export default function Home() {
 
                         case 'faq':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="animate-in fade-in duration-700">
                                         <div className="mb-8 md:mb-12">
                                             <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none mb-4">
@@ -800,11 +844,11 @@ export default function Home() {
 
                         case 'newsletter':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-12 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="animate-in fade-in duration-700">
                                         <div className="max-w-4xl mx-auto text-center py-10">
                                             {content.title && (
-                                                <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] mb-4">
+                                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] mb-4">
                                                     {content.title}
                                                 </h2>
                                             )}
@@ -815,18 +859,18 @@ export default function Home() {
                                             )}
 
                                             <div className="relative max-w-3xl mx-auto">
-                                                <div className="flex flex-col md:flex-row items-center bg-white rounded-[20px] md:rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1.5 md:p-2 border border-slate-50">
+                                                <div className="flex flex-col sm:flex-row items-center bg-white rounded-[20px] sm:rounded-full shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] p-1.5 sm:p-1 md:p-2 border border-slate-50 gap-2 sm:gap-0">
                                                     <input
                                                         type="email"
                                                         value={newsletterEmail}
                                                         onChange={(e) => setNewsletterEmail(e.target.value)}
                                                         placeholder="Enter your email address"
-                                                        className="flex-1 w-full bg-transparent px-8 py-2 outline-none text-[16px] text-[#2D4059] placeholder:text-slate-300 font-medium"
+                                                        className="w-full sm:flex-1 bg-transparent px-4 sm:px-6 py-2 sm:py-1.5 outline-none text-[14px] text-[#2D4059] placeholder:text-slate-300 font-medium text-center sm:text-left"
                                                     />
                                                     <button
                                                         onClick={handleNewsletterSubmit}
                                                         disabled={isNewsletterSubmitting}
-                                                        className="w-full md:w-auto px-12 py-2.5 bg-[#56B8E6] hover:bg-[#45A7D5] text-white rounded-[15px] md:rounded-full font-bold text-[16px] transition-all active:scale-95 shadow-md shadow-[#56B8E6]/20 disabled:opacity-50 whitespace-nowrap"
+                                                        className="w-full sm:w-auto px-8 py-2 bg-[#56B8E6] hover:bg-[#45A7D5] text-white rounded-[15px] sm:rounded-full font-bold text-[13px] transition-all active:scale-95 shadow-md shadow-[#56B8E6]/20 disabled:opacity-50 whitespace-nowrap"
                                                     >
                                                         {isNewsletterSubmitting ? "..." : "Subscribe"}
                                                     </button>
@@ -840,7 +884,7 @@ export default function Home() {
 
                         case 'gallery':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="mb-10 md:mb-16 text-center md:text-left">
                                         <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none">{content.title || "Visual Showcase"}</h2>
                                         <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
@@ -866,7 +910,7 @@ export default function Home() {
 
                         case 'video':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-10 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-6 md:py-10 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto">
                                         <div className="mb-10 md:mb-16 text-center md:text-left space-y-4">
                                             <div className="space-y-3">
@@ -918,7 +962,7 @@ export default function Home() {
                             const promoProduct = promoProducts[0];
 
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 pb-8 md:pb-16 pt-2 md:pt-4 -mt-6 md:-mt-10 relative z-10 overflow-hidden">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 pb-8 md:pb-16 pt-2 md:pt-4 -mt-16 md:-mt-10 relative z-10 overflow-hidden">
                                     <motion.div
                                         initial={{ opacity: 0 }}
 
@@ -926,7 +970,7 @@ export default function Home() {
                                         viewport={{ once: true }}
                                         className="grid md:grid-cols-2 overflow-hidden group min-h-[220px] md:min-h-[340px]"
                                     >
-                                        <div className="relative overflow-hidden bg-white flex items-center justify-center p-4">
+                                        <div className="relative overflow-hidden bg-white flex items-center justify-center p-4 min-h-[200px] md:min-h-auto">
                                             <div className="absolute inset-0 opacity-[0.02] flex items-center justify-center pointer-events-none">
                                                 <Sparkles size={300} className="text-[#119AB8]" />
                                             </div>
@@ -964,7 +1008,7 @@ export default function Home() {
                                                         onError={(e: any) => { e.target.style.display = 'none'; }}
                                                     />
 
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-8 opacity-0 group-hover/promo:opacity-100 transition-all duration-500 transform translate-y-4 group-hover/promo:translate-y-0">
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent hidden md:flex flex-col justify-end p-8 opacity-0 group-hover/promo:opacity-100 transition-all duration-500 transform translate-y-4 group-hover/promo:translate-y-0">
                                                         <h3 className="text-white text-2xl md:text-3xl font-black tracking-tighter drop-shadow-2xl mb-1">
                                                             {promoProduct?.product_name || content.title}
                                                         </h3>
@@ -973,12 +1017,43 @@ export default function Home() {
                                                         </p>
                                                     </div>
 
+                                                    {/* Mobile view permanent overlay at the bottom of the image */}
                                                     {promoProduct && promoProducts.length === 1 && (
-                                                        <div className="absolute top-8 -right-2 z-20">
-                                                            <div className="px-5 py-2 bg-[#13B0D1] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20">
-                                                                <span className="text-[14px] font-black uppercase tracking-widest">
-                                                                    Rs. {parseFloat(promoProduct.selling_price || promoProduct.price || 0).toLocaleString()}
+                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent p-5 pt-12 flex flex-col gap-1 z-10 md:hidden text-left">
+                                                            <h3 className="text-white text-lg font-black tracking-tight drop-shadow-md">
+                                                                {promoProduct.product_name}
+                                                            </h3>
+                                                            <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                                                {promoProduct.weight && (
+                                                                    <span className="px-2 py-0.5 bg-white/10 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-wider border border-white/10">
+                                                                        {promoProduct.weight}
+                                                                    </span>
+                                                                )}
+                                                                {(promoProduct.size || promoProduct.type) && (
+                                                                    <span className="px-2 py-0.5 bg-white/10 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-wider border border-white/10">
+                                                                        {promoProduct.size || promoProduct.type}
+                                                                    </span>
+                                                                )}
+                                                                <span className="px-2 py-0.5 bg-[#119AB8]/20 backdrop-blur-md rounded text-[9px] font-black text-[#4ad7f5] uppercase tracking-wider border border-[#119AB8]/30">
+                                                                    {promoProduct.category_name || "Cosmetics"}
                                                                 </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* Price badge — inside group/promo, same as working bottom overlay */}
+                                                    {promoProduct && promoProducts.length === 1 && (
+                                                        <div className="absolute top-3 right-0 z-50">
+                                                            <div className="px-4 py-2 bg-[#13B0D1] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20 font-black tracking-widest text-sm">
+                                                                Rs. {parseFloat(promoProduct.selling_price || promoProduct.price || 0).toLocaleString()}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Discount badge */}
+                                                    {content.discount_percent && (
+                                                        <div className="absolute top-14 right-0 z-50">
+                                                            <div className="px-4 py-1.5 bg-[#e77600] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20 font-black text-[10px] uppercase tracking-widest">
+                                                                {content.discount_percent}% OFF
                                                             </div>
                                                         </div>
                                                     )}
@@ -988,8 +1063,8 @@ export default function Home() {
                                             <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
                                         </div>
 
-                                        <div className="p-6 md:p-12 lg:p-16 flex flex-col justify-center space-y-6 relative bg-white md:bg-transparent">
-                                            <div className="absolute top-4 right-16 md:right-24 z-40 flex flex-col items-center min-h-[200px]">
+                                        <div className="pt-0 -mt-9 px-6 pb-6 md:mt-0 md:p-12 lg:p-16 flex flex-col justify-center space-y-4 md:space-y-6 relative bg-white md:bg-transparent">
+                                            <div className="absolute top-10 md:top-4 right-10 md:right-24 z-40 flex flex-col items-center min-h-[150px] md:min-h-[200px] scale-[0.78] md:scale-100 origin-top-right">
                                                 <motion.div
                                                     initial={{ y: -100, rotate: -40 }}
                                                     whileInView={{ y: 0 }}
@@ -999,8 +1074,7 @@ export default function Home() {
                                                     }}
                                                     transition={{
                                                         rotate: { duration: 2.5, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" },
-                                                        y: { duration: 1.25, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" },
-                                                        initial: { duration: 0.8, ease: "easeOut" }
+                                                        y: { duration: 1.25, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }
                                                     }}
                                                     style={{ originX: "50%", originY: "0px" }}
                                                     className="mt-[6px] flex flex-col items-center pointer-events-none group z-40"
@@ -1029,7 +1103,7 @@ export default function Home() {
                                                 </div>
                                             </div>
                                             <div className="space-y-4">
-                                                <div className="flex items-center gap-3">
+                                                <div className="hidden md:flex items-center gap-3">
                                                     <div className="h-[2px] w-8 bg-[#119AB8]" />
                                                     <span className="text-[9px] font-bold text-[#119AB8] uppercase tracking-[0.4em]">
                                                         {promoProducts.length > 1 ? `Selective Portfolio (${promoProducts.length})` : "Featured Essential"}
@@ -1135,7 +1209,7 @@ export default function Home() {
                                                 </AnimatePresence>
 
                                                 {promoProducts.length === 1 && promoProduct && (
-                                                    <div className="flex flex-wrap gap-3 pt-1">
+                                                    <div className="hidden md:flex flex-wrap gap-3 pt-1">
                                                         {promoProduct.weight && (
                                                             <div className="bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
                                                                 <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Weight</p>
@@ -1155,7 +1229,7 @@ export default function Home() {
                                                     </div>
                                                 )}
 
-                                                <div className="flex items-center gap-4">
+                                                <div className="hidden md:flex items-center gap-4">
                                                     {content.discount_percent && (
                                                         <div className="px-3 py-1 bg-[#e77600] text-white font-black text-[9px] uppercase tracking-widest rounded-full shadow-lg">
                                                             {content.discount_percent}% OFF
@@ -1164,7 +1238,7 @@ export default function Home() {
                                                 </div>
                                             </div>
 
-                                            <div className="pt-2 flex flex-col sm:flex-row items-center gap-4">
+                                            <div className="pt-0 md:pt-2 flex flex-col sm:flex-row items-center gap-4">
                                                 <button
                                                     onClick={() => {
                                                         if (promoProduct) {
@@ -1208,10 +1282,10 @@ export default function Home() {
 
                         case 'categories':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto">
                                         <div className="mb-10 md:mb-16 text-center md:text-left">
-                                            <h2 className="text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none">{content.title || "Shop by Department"}</h2>
+                                            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-none">{content.title || "Shop by Department"}</h2>
                                             <div className="h-1 w-12 bg-[#119AB8] rounded-full mx-auto md:mx-0 mt-4 mb-6" />
                                             <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed max-w-2xl font-medium">
                                                 {content.subtitle || "Discover our specialized categories curated for professional distribution and individual beauty needs."}
@@ -1254,7 +1328,7 @@ export default function Home() {
                                             .marquee-inner { display: flex; width: max-content; animation: marquee-scroll 35s linear infinite; }
                                             .marquee-inner:hover { animation-play-state: paused; }
                                         `}} />
-                                    <div className="relative flex">
+                                    <div className="relative flex w-full overflow-hidden">
                                         <div className="marquee-inner whitespace-nowrap">
                                             {[1, 2, 3].map((loop) => (
                                                 <div key={loop} className="flex items-center justify-center gap-16 md:gap-32 px-8 md:px-16">
@@ -1272,7 +1346,7 @@ export default function Home() {
 
                         case 'stats':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-10 md:mt-16">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-10 md:mt-16 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto bg-[#0d1117] rounded-[24px] md:rounded-[32px] overflow-hidden relative shadow-[0_40px_120px_-20px_rgba(0,0,0,0.2)] py-12 md:py-20 border border-slate-800">
                                         {/* Decorative Background Elements */}
                                         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#119AB8]/20 rounded-full blur-[100px] -translate-y-1/2 pointer-events-none" />
@@ -1322,7 +1396,7 @@ export default function Home() {
                             };
                             const featItems = content.items || [];
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-10 md:py-16 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-10 md:py-16 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto">
                                         <div className="grid lg:grid-cols-[400px_1fr] gap-12 md:gap-20 items-start">
 
@@ -1332,7 +1406,7 @@ export default function Home() {
                                                     <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#119AB8]/10 text-[#119AB8] rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#119AB8]/20">
                                                         <Sparkles size={10} /> {content.badge || 'The Premium Edge'}
                                                     </span>
-                                                    <h2 className="text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-[1.05]">
+                                                    <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-[1.05]">
                                                         {content.title || 'Why Professionals Choose Us'}
                                                     </h2>
                                                     <p className="text-[#565959] text-[15px] leading-relaxed font-medium max-w-sm">
@@ -1426,10 +1500,10 @@ export default function Home() {
 
                         case 'steps':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-8 md:py-16 bg-[#FBFBFB] border-y border-slate-100 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto">
                                         <div className="text-center mb-12 md:mb-20">
-                                            <h2 className="text-3xl md:text-5xl font-bold text-[#2D4059] tracking-tight">{content.title || "How It Works"}</h2>
+                                            <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-[#2D4059] tracking-tight">{content.title || "How It Works"}</h2>
                                             <div className="h-1 w-12 bg-[#119AB8] rounded-full mx-auto mt-4" />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -1452,14 +1526,14 @@ export default function Home() {
 
                         case 'banner_split':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className={cn("max-w-7xl mx-auto flex flex-col md:flex-row min-h-[400px] md:min-h-[600px] rounded-[24px] md:rounded-[40px] overflow-hidden shadow-2xl", content.reversed && "md:flex-row-reverse")}>
                                         <div className="flex-1 bg-[#111] p-10 md:p-16 flex flex-col justify-center space-y-6 md:space-y-8">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-[2px] w-8 bg-[#119AB8]" />
                                                 <span className="text-[9px] font-black text-[#119AB8] uppercase tracking-[0.5em]">Exclusive Series</span>
                                             </div>
-                                            <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">{content.title}</h2>
+                                            <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">{content.title}</h2>
                                             <p className="text-slate-400 text-[15px] md:text-[17px] leading-relaxed max-w-xl font-medium">{content.body}</p>
                                             <div className="pt-4">
                                                 <Link href="/customer/shop" className="px-10 py-4 bg-[#119AB8] text-white rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-[#111] transition-all inline-block shadow-2xl text-[12px]">
@@ -1477,7 +1551,7 @@ export default function Home() {
 
                         case 'parallax':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 py-4 md:py-8 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto relative h-[400px] md:h-[550px] overflow-hidden flex items-center justify-center rounded-[24px] md:rounded-[40px] shadow-2xl">
                                         <motion.div
                                             className="absolute inset-0 z-0"
@@ -1487,7 +1561,7 @@ export default function Home() {
                                         </motion.div>
                                         <div className="absolute inset-0 bg-black/50 z-10" />
                                         <div className="relative z-20 text-center space-y-6 px-4">
-                                            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter drop-shadow-2xl">{content.title}</h2>
+                                            <h2 className="text-2xl sm:text-4xl md:text-6xl font-black text-white tracking-tighter drop-shadow-2xl">{content.title}</h2>
                                             <p className="text-white/80 text-[16px] md:text-[18px] max-w-xl mx-auto font-medium leading-relaxed drop-shadow-lg">{content.subtitle}</p>
                                         </div>
                                     </div>
@@ -1505,7 +1579,7 @@ export default function Home() {
                                             .ticker-wrapper-${section.id} { display: flex; width: max-content; animation: ticker-scroll-${section.id} ${duration} linear infinite; }
                                             .ticker-wrapper-${section.id}:hover { animation-play-state: paused; }
                                         `}} />
-                                    <div className="py-3 md:py-4">
+                                    <div className="py-3 md:py-4 w-full overflow-hidden">
                                         <div className={`ticker-wrapper-${section.id}`}>
                                             {/* We render the content twice to allow seamless scrolling of 50% */}
                                             {[1, 2].map((wrapperIdx) => (
@@ -1527,7 +1601,7 @@ export default function Home() {
 
                         case 'map':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-10 md:mt-20">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-10 md:mt-20 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto">
 
                                         {/* ── Section Header ── */}
@@ -1536,7 +1610,7 @@ export default function Home() {
                                                 <MapPin size={10} /> Find Us In Person
                                             </span>
                                             {content.title && (
-                                                <h2 className="text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-tight">
+                                                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-[#111] tracking-tighter leading-tight">
                                                     {content.title}
                                                 </h2>
                                             )}
@@ -1653,7 +1727,7 @@ export default function Home() {
 
                         case 'html':
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10">
+                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 mt-6 md:mt-10 overflow-x-hidden">
                                     <div className="max-w-7xl mx-auto" dangerouslySetInnerHTML={{ __html: content.code }} />
                                 </section>
                             );

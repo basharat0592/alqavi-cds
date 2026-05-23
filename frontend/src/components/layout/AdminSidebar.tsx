@@ -8,7 +8,7 @@ import {
     Boxes, ChevronLeft, ChevronRight, Settings, UserCheck, ShoppingBag,
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    ChevronDown, Truck, Book, FileText, AlertTriangle
+    ChevronDown, Truck, Book, FileText, AlertTriangle, X
 } from 'lucide-react';
 import cmsService, { SiteSettings } from '@/services/cms.service';
 import { getImageUrl } from '@/lib/utils';
@@ -24,7 +24,9 @@ interface NavGroup {
     items: NavItem[];
 }
 
-export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
+export default function AdminSidebar({ onToggle }: { isCollapsed?: boolean; onToggle?: () => void }) {
+    // Sidebar is fixed to expanded mode — collapsed option removed per request
+    const isCollapsed = false;
     const pathname = usePathname();
     const [settings, setSettings] = useState<SiteSettings | null>(null);
 
@@ -111,7 +113,6 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
                 const defaults: Record<string, boolean> = {};
                 menuGroups.forEach(g => g.items.forEach(i => defaults[i.href] = true));
                 defaults['/admin/settings'] = true;
-                // Ensure all new reports are visible by default
                 defaults['/admin/reports/sales'] = true;
                 defaults['/admin/reports/purchases'] = true;
                 defaults['/admin/reports/inventory'] = true;
@@ -139,106 +140,169 @@ export default function AdminSidebar({ isCollapsed, onToggle }: { isCollapsed: b
     })).filter(group => group.items.length > 0);
 
     return (
-        <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 shadow-2xl overflow-hidden font-sans antialiased
-            ${isCollapsed ? 'w-16 bg-[#232F3E]' : 'w-[250px] bg-[#232F3E]'}`}>
+        <>
+            <style>{`
+                .sidebar-scroll::-webkit-scrollbar { width: 3px; }
+                .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+                .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+                .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+                .nav-item-glow { box-shadow: inset 3px 0 0 #f59e0b, inset 0 0 20px rgba(245,158,11,0.06); }
+            `}</style>
 
-            {/* ── BRANDING AREA ── */}
-            <div className={`h-16 flex items-center px-4 border-b border-white/10 bg-[#1a252f] ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-                {!isCollapsed && (
-                    <Link href="/admin/dashboard" className="flex items-center gap-3 group">
-                        <div className="w-8 h-8 rounded-sm overflow-hidden flex-shrink-0 bg-white/5 p-1 border border-white/10">
-                            {settings?.logo ? (
-                                <img src={getImageUrl(settings.logo)} alt="Logo" className="w-full h-full object-contain" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#F3A847] font-bold text-xs border border-[#F3A847]/30">
-                                    AQ
+            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden w-[235px]`}
+                style={{ background: '#2E3A48' }}>
+
+                {/* ── BRANDING ── */}
+                <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <Link href="/admin/dashboard" className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border"
+                            style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)' }}>
+                            <span className="font-black text-[13px]" style={{ color: '#f59e0b' }}>AQ</span>
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5" style={{ color: '#f59e0b' }}>Central Console</span>
+                            <span className="text-[13px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
+                        </div>
+                    </Link>
+                    {/* Close button — mobile only */}
+                    <button
+                        onClick={onToggle}
+                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/10 text-white/60 hover:text-white"
+                        aria-label="Close sidebar"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {/* ── NAVIGATION ── */}
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll pt-4 pb-3">
+
+
+                    {filteredGroups.map((group, gIdx) => (
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-5' : ''}>
+                            {!isCollapsed && (
+                                <div className="px-4 mb-1 flex items-center justify-between">
+                                    <span className="text-[9.5px] font-bold uppercase tracking-[0.18em]"
+                                        style={{ color: 'rgba(245,158,11,0.55)' }}>
+                                        {group.label}
+                                    </span>
+                                    {/* collapse/expand control removed */}
                                 </div>
                             )}
+                            {isCollapsed && gIdx !== 0 && (
+                                <div className="mx-3 mb-1" style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+                            )}
+
+                            <div className="space-y-[1px] px-2">
+                                {group.items.map((item) => {
+                                    const active = isActive(item.href);
+                                    return (
+                                        <Link key={item.href} href={item.href}
+                                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'}`}
+                                            style={active ? {
+                                                background: 'rgba(245,158,11,0.1)',
+                                                boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.15)',
+                                            } : {}}
+                                            onMouseEnter={e => {
+                                                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.04)';
+                                            }}
+                                            onMouseLeave={e => {
+                                                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                                            }}>
+
+                                            {/* Active left indicator */}
+                                            {active && !isCollapsed && (
+                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                                                    style={{ background: '#f59e0b' }} />
+                                            )}
+
+                                            <item.icon
+                                                className="shrink-0 transition-colors duration-150"
+                                                size={15}
+                                                style={{ color: active ? '#f59e0b' : 'rgba(255,255,255,0.38)' }}
+                                            />
+
+                                            {!isCollapsed && (
+                                                <span className="text-[13px] font-medium tracking-tight whitespace-nowrap truncate transition-colors duration-150"
+                                                    style={{ color: '#ffffff' }}>
+                                                    {item.name}
+                                                </span>
+                                            )}
+
+                                            {/* Tooltip when collapsed */}
+                                            {isCollapsed && (
+                                                <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
+                                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]"
+                                                    style={{
+                                                        background: '#1e293b',
+                                                        color: '#f1f5f9',
+                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                                                        border: '1px solid rgba(255,255,255,0.08)'
+                                                    }}>
+                                                    {item.name}
+                                                </div>
+                                            )}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-[9px] text-[#F3A847] font-bold uppercase tracking-[0.2em] leading-none mb-0.5">Central Console</span>
-                            <h1 className="text-white font-bold text-[14px] tracking-tight uppercase leading-none">
-                                {settings?.site_name || 'AL-QAVI HUB'}
-                            </h1>
-                        </div>
-                    </Link>
-                )}
-                {isCollapsed && (
-                    <div className="w-8 h-8 border border-white/10 rounded-sm flex items-center justify-center bg-white/5 p-1">
-                        {settings?.logo ? (
-                            <img src={getImageUrl(settings.logo)} alt="L" className="w-full h-full object-contain" />
-                        ) : (
-                            <span className="font-bold text-[#F3A847] text-[12px]">AQ</span>
-                        )}
+                    ))}
+                </nav>
+
+                {/* ── FOOTER / SETTINGS ── */}
+                {visibility['/admin/settings'] !== false && (
+                    <div className="flex-shrink-0 px-2 pb-3 pt-2"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Link href="/admin/settings"
+                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'}`}
+                            style={isActive('/admin/settings') ? {
+                                background: 'rgba(245,158,11,0.1)',
+                                boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.15)',
+                            } : {}}
+                            onMouseEnter={e => {
+                                if (!isActive('/admin/settings'))
+                                    (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.04)';
+                            }}
+                            onMouseLeave={e => {
+                                if (!isActive('/admin/settings'))
+                                    (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                            }}>
+
+                            {isActive('/admin/settings') && !isCollapsed && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                                    style={{ background: '#f59e0b' }} />
+                            )}
+
+                            <Settings
+                                size={15}
+                                className="shrink-0 transition-colors duration-150"
+                                style={{ color: isActive('/admin/settings') ? '#f59e0b' : 'rgba(255,255,255,0.38)' }}
+                            />
+
+                            {!isCollapsed && (
+                                <span className="text-[13px] font-medium tracking-tight"
+                                    style={{ color: '#ffffff' }}>
+                                    System Settings
+                                </span>
+                            )}
+
+                            {isCollapsed && (
+                                <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
+                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]"
+                                    style={{
+                                        background: '#1e293b',
+                                        color: '#f1f5f9',
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                                        border: '1px solid rgba(255,255,255,0.08)'
+                                    }}>
+                                    System Settings
+                                </div>
+                            )}
+                        </Link>
                     </div>
-                )}
-                {!isCollapsed && (
-                    <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 rounded-[2px] transition-all">
-                        <ChevronLeft size={18} />
-                    </button>
                 )}
             </div>
-
-            {/* ── NAVIGATION ── */}
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar py-4">
-                {isCollapsed && (
-                    <div className="px-4 mb-6">
-                        <button onClick={onToggle} className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-[2px] transition-all mx-auto">
-                            <ChevronRight size={18} />
-                        </button>
-                    </div>
-                )}
-                {filteredGroups.map((group, gIdx) => (
-                    <div key={group.label} className={gIdx !== 0 ? "mt-6" : ""}>
-                        {!isCollapsed && (
-                            <h3 className="px-4 text-[10px] font-black text-[#F3A847] mb-2 uppercase tracking-[0.15em] border-b border-white/5 pb-1 mx-2">
-                                {group.label}
-                            </h3>
-                        )}
-                        <div className="space-y-[1px]">
-                            {group.items.map((item) => {
-                                const active = isActive(item.href);
-                                return (
-                                    <Link key={item.href} href={item.href}
-                                        className={`group relative flex items-center gap-3 px-4 py-2 transition-all
-                                            ${active
-                                                ? 'bg-[#1a252f] text-white font-bold border-l-[3px] border-[#F3A847]'
-                                                : 'text-zinc-100 hover:bg-white/5 hover:text-white font-medium'}`}>
-
-                                        <item.icon className={`h-[16px] w-[16px] shrink-0 transition-colors ${active ? 'text-[#F3A847]' : 'text-zinc-400 group-hover:text-zinc-200'}`} />
-
-                                        {!isCollapsed && (
-                                            <span className="text-[14px] tracking-tight whitespace-nowrap overflow-hidden">
-                                                {item.name}
-                                            </span>
-                                        )}
-
-                                        {isCollapsed && (
-                                            <div className="absolute left-full ml-2 px-3 py-1.5 bg-[#1a252f] border border-white/10 text-white text-[11px] font-bold rounded-[2px] opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-[100] whitespace-nowrap shadow-xl uppercase tracking-wider">
-                                                {item.name}
-                                            </div>
-                                        )}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </nav>
-
-            {/* ── FOOTER ── */}
-            {visibility['/admin/settings'] !== false && (
-                <div className="mt-auto border-t border-white/10 bg-[#1a252f] p-2">
-                    <Link href="/admin/settings"
-                        className={`flex items-center gap-3.5 px-4 py-2.5 rounded-[2px] transition-all
-                            ${isActive('/admin/settings')
-                                ? 'bg-white/5 text-white font-bold border border-[#F3A847]/30'
-                                : 'text-zinc-100 hover:text-white hover:bg-white/5 font-medium'}`}>
-                        <Settings size={16} className={isActive('/admin/settings') ? 'text-[#F3A847]' : 'text-zinc-400 group-hover:text-zinc-200'} />
-                        {!isCollapsed && <span className="text-[14px] font-medium tracking-tight">System Settings</span>}
-                    </Link>
-                </div>
-            )}
-        </div>
+        </>
     );
 }

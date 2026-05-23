@@ -93,7 +93,10 @@ export default function EditProductCategoryPage() {
         if (!validate()) return;
         setSaving(true);
         try {
-            await categoryService.update(categoryId, form);
+            await categoryService.update(categoryId, {
+                ...form,
+                status: form.status.toUpperCase() as 'ACTIVE' | 'INACTIVE',
+            });
             showToast('Logic configuration updated successfully!', 'success');
             setTimeout(() => router.push('/admin/products/categories'), 1500);
         } catch (err: any) {

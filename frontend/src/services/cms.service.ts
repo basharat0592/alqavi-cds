@@ -45,6 +45,22 @@ export interface MediaAsset {
   created_at?: string;
 }
 
+export interface NavigationItem {
+  id?: number;
+  title: string;
+  url: string;
+  order: number;
+  parent?: number | null;
+  children?: NavigationItem[];
+}
+
+export interface NavigationMenu {
+  id?: number;
+  name: string;
+  location: string;
+  items: NavigationItem[];
+}
+
 
 const cmsService = {
   getFullState: async () => {
@@ -113,6 +129,26 @@ const cmsService = {
   subscribeNewsletter: async (email: string) => {
     const { data } = await api.post('v1/cms/config/subscribe_newsletter/', { email });
     return data;
+  },
+  // Navigation
+  getMenus: async () => {
+    const { data } = await api.get('v1/cms/menus/');
+    return Array.isArray(data) ? data : data.results || [];
+  },
+  createMenu: async (payload: Omit<NavigationMenu, 'id' | 'items'>) => {
+    const { data } = await api.post('v1/cms/menus/', payload);
+    return data;
+  },
+  createNavItem: async (payload: Omit<NavigationItem, 'id' | 'children'>) => {
+    const { data } = await api.post('v1/cms/nav-items/', payload);
+    return data;
+  },
+  updateNavItem: async (id: number, payload: Partial<NavigationItem>) => {
+    const { data } = await api.patch(`v1/cms/nav-items/${id}/`, payload);
+    return data;
+  },
+  deleteNavItem: async (id: number) => {
+    await api.delete(`v1/cms/nav-items/${id}/`);
   },
 };
 
