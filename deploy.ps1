@@ -33,16 +33,30 @@ LOCAL_DIR = os.path.dirname(os.path.abspath(r'$PSScriptRoot\deploy.ps1'))
 INCLUDE_MEDIA = '$INCLUDE_MEDIA' == 'True'
 
 SKIP_DIRS = {
-    '.git', 'node_modules', '.next', '.venv', '__pycache__',
+    '.git', '.vscode', '.idea', '.claude',
+    'node_modules', '.next', 'out', 'build', 'dist',
+    '.venv', 'venv', 'env', 'ENV',
+    '__pycache__', '.pytest_cache', '.mypy_cache',
     'scratch', 'brain',
+    '.cache', 'tmp', 'temp', 'htmlcov',
+    'staticfiles', '.eggs',
 }
 SKIP_FILES = {
     'db.sqlite3', '.env', 'tsc_output.txt', 'ts_errors.txt',
     'test_api.js', 'log.txt', 'deploy_remote.py', 'deploy.ps1',
     '.env.production', 'check_gilgit.py', 'fix_branding.py',
     'prompt.txt', 'remote_cmd.py',
+    '.DS_Store', 'Thumbs.db', 'desktop.ini',
+    '.gitignore', '.dockerignore',
+    'vercel.json', '.coverage',
 }
-SKIP_EXT = {'.mp4', '.avi', '.mov', '.mkv'}
+SKIP_EXT = {
+    '.mp4', '.avi', '.mov', '.mkv',
+    '.log', '.pyc', '.pyo', '.pyd',
+    '.sql', '.dump', '.bak',
+    '.swp', '.swo', '.tmp',
+    '.egg-info', '.tsbuildinfo',
+}
 
 if not INCLUDE_MEDIA:
     SKIP_DIRS.add('media')
