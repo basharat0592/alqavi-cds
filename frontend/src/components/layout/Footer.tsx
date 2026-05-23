@@ -114,7 +114,7 @@ export default function Footer({ settings }: { settings?: any }) {
             {/* COPYRIGHT BAR */}
             <div className="border-t border-white/5 py-6 bg-[#131921]">
                 <div className="max-w-[1240px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-[11px] font-medium text-slate-500 uppercase tracking-widest">
-                    <div className="flex gap-8">
+                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 md:gap-8">
                         <Link href="/terms" className="hover:text-white transition-colors">Conditions of Use</Link>
                         <Link href="/privacy" className="hover:text-white transition-colors">Privacy Notice</Link>
                         <Link href="/contact" className="hover:text-white transition-colors">Help Center</Link>

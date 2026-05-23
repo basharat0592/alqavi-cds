@@ -31,6 +31,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     const { cartCount, openCart } = useCart();
     const searchRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
+    const mobileUserRef = useRef<HTMLDivElement>(null);
 
     // Official Amazon & Brand Colors
     const AMAZON_NAVY = "#131921";
@@ -71,7 +72,11 @@ export default function Navbar({ settings }: { settings?: any }) {
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (userRef.current && !userRef.current.contains(e.target as Node)) setUserMenuOpen(false);
+            const clickOutsideDesktopUser = !userRef.current || !userRef.current.contains(e.target as Node);
+            const clickOutsideMobileUser = !mobileUserRef.current || !mobileUserRef.current.contains(e.target as Node);
+            if (clickOutsideDesktopUser && clickOutsideMobileUser) {
+                setUserMenuOpen(false);
+            }
             if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
         };
         document.addEventListener('mousedown', handler);
@@ -169,40 +174,147 @@ export default function Navbar({ settings }: { settings?: any }) {
             )}
 
             {/* ── TOP HEADER (AMAZON NAVY) ── */}
-            <div className="bg-[#131921] h-16 flex items-center px-2 gap-1 md:gap-4 lg:gap-8">
+            <div className="bg-[#131921] py-2 md:py-0 px-2 flex flex-col md:flex-row items-center gap-2 md:gap-4 lg:gap-8">
+                {/* Row 1: Logo & mobile actions */}
+                <div className="flex items-center justify-between w-full md:w-auto shrink-0">
+                    <div className="flex items-center gap-2">
+                        {/* Hamburger menu on mobile */}
+                        <button
+                            onClick={() => setMobileOpen(true)}
+                            className="flex md:hidden text-white p-1 rounded-sm hover:text-slate-200 transition-colors"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        
+                        {/* Logo */}
+                        <Link href="/" className="flex items-center shrink-0 p-1 rounded-sm cursor-pointer">
+                            <Logo size="sm" src={getImageUrl(settings?.logo)} />
+                        </Link>
+                    </div>
 
-                {/* Logo Section */}
-                <Link href="/" className="flex items-center shrink-0 p-1 rounded-sm cursor-pointer ml-2">
-                    <Logo size="sm" src={getImageUrl(settings?.logo)} />
-                </Link>
+                    {/* Deliver To (visible on large screens, hidden on smaller screens) */}
+                    <div className="hidden lg:flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight">
+                        <span className="text-[12px] text-slate-300 ml-4">Deliver to</span>
+                        <div className="flex items-center gap-1">
+                            <MapPin size={15} className="text-white" />
+                            <span className="text-sm font-bold uppercase tracking-tighter">Gilgit-Baltistan</span>
+                        </div>
+                    </div>
 
-                {/* Deliver To */}
-                <div className="hidden lg:flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight">
-                    <span className="text-[12px] text-slate-300 ml-4">Deliver to</span>
-                    <div className="flex items-center gap-1">
-                        <MapPin size={15} className="text-white" />
-                        <span className="text-sm font-bold uppercase tracking-tighter">Gilgit-Baltistan</span>
+                    {/* Mobile right icons (User & Cart) */}
+                    <div className="flex md:hidden items-center gap-2 text-white pr-1">
+                        {/* Mobile User Profile */}
+                        <div className="relative" ref={mobileUserRef}>
+                            <button
+                                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                className="p-0.5 hover:bg-white/10 rounded-sm transition-colors flex items-center justify-center gap-1"
+                            >
+                                <span className="text-[13px] text-white font-normal hover:underline whitespace-nowrap max-w-[65px] truncate inline-block align-middle">
+                                    {user ? `${user.name.split(' ')[0]} ›` : 'Sign in ›'}
+                                </span>
+                                <User size={20} className="text-white shrink-0" />
+                            </button>
+
+                            <AnimatePresence>
+                                {userMenuOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                                        className="absolute right-0 mt-3 z-[10000] w-72 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-200 rounded-xl overflow-hidden text-black"
+                                    >
+                                        {!user ? (
+                                            <div className="p-8 flex flex-col items-center bg-slate-50/50">
+                                                <Link
+                                                    href="/login"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="w-full py-2.5 bg-gradient-to-b from-[#febd69] to-[#f90] text-black border border-[#a88734] rounded-md text-center text-sm font-bold shadow-sm hover:brightness-105 transition-all active:scale-95"
+                                                >
+                                                    Sign in
+                                                </Link>
+                                                <div className="text-[11px] text-slate-600 mt-4">
+                                                    New customer? <Link href="/register" onClick={() => setUserMenuOpen(false)} className="text-blue-600 font-bold hover:text-orange-600 hover:underline">Start here.</Link>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-0">
+                                                <div className="px-6 py-5 bg-[#232f3e] text-white flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                                                        <User size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-0.5">Your Account</div>
+                                                        <div className="font-bold text-[14px] truncate">{user.name}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-3 space-y-1">
+                                                    <Link href="/customer/dashboard" onClick={() => setUserMenuOpen(false)} className="px-4 py-2.5 rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#232f3e] transition-all flex items-center gap-3 group/link">
+                                                        <User size={18} className="text-slate-400 group-hover/link:text-[#232f3e]" />
+                                                        Your Account
+                                                    </Link>
+                                                    <Link href="/customer/dashboard/orders" onClick={() => setUserMenuOpen(false)} className="px-4 py-2.5 rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#232f3e] transition-all flex items-center gap-3 group/link">
+                                                        <Package size={18} className="text-slate-400 group-hover/link:text-[#232f3e]" />
+                                                        Your Orders
+                                                    </Link>
+                                                    <div className="my-2 border-t border-slate-100"></div>
+                                                    <button onClick={handleLogout} className="w-full px-4 py-2.5 rounded-lg text-[14px] font-bold text-red-600 hover:bg-red-50 transition-all flex items-center gap-3">
+                                                        <LogOut size={18} />
+                                                        Sign Out
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Mobile Cart */}
+                        <div
+                            onClick={openCart}
+                            className="relative p-0.5 hover:bg-white/10 rounded-sm cursor-pointer flex items-center justify-center shrink-0"
+                        >
+                            <div className="relative">
+                                <ShoppingCart size={24} className="text-white" />
+                                <span
+                                    className="absolute top-[0.5px] left-[9px] text-[10px] font-black text-[#f08804]"
+                                >
+                                    {cartCount}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Search Bar */}
-                <div className="flex-1 max-w-4xl relative" ref={searchRef}>
-                    <form onSubmit={handleSearch} className="flex h-10 w-full rounded-md overflow-hidden group">
+                {/* Search Bar - Full-width on mobile, auto-width on desktop */}
+                <div className="w-full md:flex-1 md:max-w-4xl relative px-1 md:px-0 mb-1 md:mb-0" ref={searchRef}>
+                    <style>{`
+                        #mobile-search-btn {
+                            background-color: #febd69 !important;
+                        }
+                        @media (min-width: 768px) {
+                            #mobile-search-btn {
+                                background-color: ${BRAND_ORANGE} !important;
+                            }
+                        }
+                    `}</style>
+                    <form onSubmit={handleSearch} className="flex h-10 w-full rounded-lg md:rounded-md overflow-hidden bg-white">
                         <div className="hidden md:flex items-center px-3 bg-[#f3f3f3] border-r border-slate-300 text-[12px] text-slate-600 cursor-pointer hover:bg-slate-200 transition-colors">
                             All <ChevronDown size={14} className="ml-1 opacity-60" />
                         </div>
                         <input
                             type="text"
                             className="flex-1 h-full px-4 text-sm text-black outline-none focus:ring-0 transition-all"
-                            placeholder={`Search ${siteSettings?.site_name || 'Alqavi Traders'}`}
+                            placeholder={siteSettings?.site_name ? `Search ${siteSettings.site_name}` : "Search Al-Qavi Hub"}
                             value={searchQuery}
                             onChange={(e) => handleQueryChange(e.target.value)}
                         />
                         <button
-                            className="px-4 transition-all flex items-center justify-center hover:brightness-110 active:scale-95"
-                            style={{ backgroundColor: BRAND_ORANGE }}
+                            id="mobile-search-btn"
+                            type="submit"
+                            className="px-5 transition-all flex items-center justify-center hover:brightness-105 active:scale-95 rounded-r-lg md:rounded-r-md"
                         >
-                            <Search className="h-6 w-6 text-white stroke-[2.5]" />
+                            <Search className="h-6 w-6 text-[#111111] md:text-white stroke-[2.5]" />
                         </button>
                     </form>
 
@@ -210,37 +322,79 @@ export default function Navbar({ settings }: { settings?: any }) {
                     <AnimatePresence>
                         {searchOpen && (
                             <motion.div
-                                initial={{ opacity: 0, y: 5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 5 }}
-                                className="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-b-md overflow-hidden z-[10000] border border-slate-200"
+                                initial={{ opacity: 0, y: 12, scale: 0.99 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 8, scale: 0.99 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white/95 backdrop-blur-md shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] rounded-2xl overflow-hidden z-[10000] border border-slate-200/80 p-2 space-y-1 max-h-[480px] overflow-y-auto"
                             >
+                                <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
+                                    Search Results
+                                </div>
                                 {searchResults.map((p) => (
                                     <Link
                                         key={p.id}
                                         href={`/customer/product/${p.id}`}
                                         onClick={() => setSearchOpen(false)}
-                                        className="flex items-center gap-4 p-3 hover:bg-slate-100 transition-colors border-b border-slate-50 last:border-0"
+                                        className="group flex items-center gap-4 p-2.5 rounded-xl hover:bg-slate-50/80 hover:shadow-sm border border-transparent hover:border-slate-100 transition-all duration-300"
                                     >
-                                        <div className="w-10 h-10 shrink-0">
-                                            <img src={getImageUrl(p.image_url || p.image) || ''} className="w-full h-full object-contain" alt="" />
+                                        <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5 shrink-0 overflow-hidden group-hover:scale-[1.03] transition-transform duration-300">
+                                            <img 
+                                                src={getImageUrl(p.image_url || p.image || p.catalog_image || p.additional_images?.[0]?.image) || ''} 
+                                                className="w-full h-full object-contain mix-blend-multiply" 
+                                                alt="" 
+                                            />
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="text-sm font-bold text-slate-900 line-clamp-1">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-[#119AB8] transition-colors text-left">
                                                 {(p.name || p.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                {(p.weight || p.size || p.type) && (
+                                                    <span className="text-slate-400 font-medium text-[12px] ml-1.5">
+                                                        ({[p.weight, p.size || p.type].filter(Boolean).join(' - ')})
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div className="text-[11px] text-slate-500 uppercase font-black tracking-widest">{p.category_name || siteSettings?.site_name || 'Alqavi Traders'}</div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-150 text-slate-500 border border-slate-200 text-left">
+                                                    {p.category_name || 'Beauty'}
+                                                </span>
+                                                {(p.total_quantity || p.quantity_in_stock || p.available_quantity || 0) > 0 ? (
+                                                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                                        In Stock
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                                                        Out of Stock
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="text-sm font-black text-[#b12704]">Rs. {p.selling_price || p.price}</div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <div className="text-right">
+                                                <div className="text-sm font-black text-[#b12704] tracking-tight">
+                                                    Rs. {parseFloat(p.selling_price || p.price || 0).toLocaleString()}
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={15} className="text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300" />
+                                        </div>
                                     </Link>
                                 ))}
+                                <div className="border-t border-slate-100 mt-2 pt-2 px-3 pb-1 flex justify-between items-center text-[10px] text-slate-400 font-medium">
+                                    <span>Showing top {searchResults.length} matches</span>
+                                    <button 
+                                        onClick={handleSearch}
+                                        className="font-bold text-[#f58220] hover:underline flex items-center gap-0.5 transition-all"
+                                    >
+                                        View all products <ChevronRight size={10} />
+                                    </button>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
 
-                {/* Right Actions */}
-                <div className="flex items-center gap-1 text-white pr-2">
+                {/* Right Actions - Desktop only */}
+                <div className="hidden md:flex items-center gap-1 text-white pr-2 shrink-0">
                     {/* Account Dropdown */}
                     <div className="relative group/user" ref={userRef} onMouseEnter={() => setUserMenuOpen(true)}>
                         <div className="flex flex-col p-1 px-2 rounded-sm cursor-pointer leading-tight min-w-[120px]">
@@ -262,7 +416,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                 {/* Arrow Pointer */}
                                 <div className="absolute top-0 right-10 w-4 h-4 bg-white rotate-45 border-l border-t border-slate-200 mt-[-8px] pointer-events-none"></div>
 
-                                <div className="w-72 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-200 rounded-xl overflow-hidden">
+                                <div className="w-72 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-200 rounded-xl overflow-hidden text-black">
                                     {!user ? (
                                         <div className="p-8 flex flex-col items-center bg-slate-50/50">
                                             <Link
@@ -308,8 +462,6 @@ export default function Navbar({ settings }: { settings?: any }) {
                         )}
                     </div>
 
-
-
                     {/* Cart Utility */}
                     <div
                         onClick={openCart}
@@ -333,7 +485,7 @@ export default function Navbar({ settings }: { settings?: any }) {
 
             {/* ── SUB HEADER (AMAZON LIGHT NAVY) ── */}
             {!pathname.startsWith('/customer/dashboard') && (
-                <div className="bg-[#232f3e] h-10 flex items-center px-4 overflow-x-auto no-scrollbar gap-4 text-white text-sm font-medium">
+                <div className="bg-[#232f3e] h-10 flex items-center px-4 overflow-x-auto no-scrollbar gap-4 text-white text-sm font-medium w-full max-w-full">
                     <button
                         onClick={() => setMobileOpen(true)}
                         className="flex items-center gap-1 shrink-0 p-1 rounded-sm hover:text-slate-200 transition-colors"

@@ -90,4 +90,7 @@ export const inventoryService = {
     getMovementsSummary: async (): Promise<any> => {
         return inventoryService.getInventorySummary();
     },
+    getAlerts: async (): Promise<any[]> => {
+        return [];
+    },
 };

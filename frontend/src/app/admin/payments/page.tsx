@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { paymentService, paymentCategoryService } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import toast from 'react-hot-toast';
 import {
     DollarSign, Search, RefreshCw, Plus, ArrowUpRight, ArrowDownLeft,
     Filter, Calendar, X, Loader2, CreditCard, Banknote, Wallet,

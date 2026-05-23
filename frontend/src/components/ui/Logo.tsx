@@ -11,7 +11,7 @@ interface LogoProps {
 
 export default function Logo({ className = '', size = 'md', dark = false, src }: LogoProps) {
     const dimensions = {
-        sm: 'h-12 w-auto',
+        sm: 'h-8 md:h-12 w-auto max-w-[110px] md:max-w-none',
         md: 'h-18 w-auto',
         lg: 'h-28 w-auto',
         xl: 'h-40 w-auto',

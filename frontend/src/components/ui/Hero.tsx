@@ -99,7 +99,7 @@ export default function Hero({ slides }: { slides?: any[] }) {
 
     return (
         <section
-            className="relative h-[70vh] lg:h-[75vh] overflow-hidden bg-[#0F172A]"
+            className="relative h-[40vh] sm:h-[55vh] md:h-[70vh] lg:h-[75vh] overflow-hidden bg-[#0F172A]"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -124,7 +124,7 @@ export default function Hero({ slides }: { slides?: any[] }) {
                         initial={{ scale: 1.2, rotate: 1 }}
                         animate={{ scale: 1, rotate: 0 }}
                         transition={{ duration: 10, ease: "linear" }}
-                        className="relative w-full h-full"
+                        className="absolute inset-0 w-full h-full overflow-hidden"
                     >
                         {activeSlides[currentSlide].video ? (
                             <video
@@ -135,13 +135,13 @@ export default function Hero({ slides }: { slides?: any[] }) {
                                 playsInline
                                 loop={activeSlides.length === 1}
                                 onEnded={nextSlide}
-                                className="w-full h-full object-cover opacity-50 lg:opacity-70 grayscale-[20%] contrast-[110%]"
+                                className="absolute inset-0 w-full h-full object-cover opacity-50 lg:opacity-70 grayscale-[20%] contrast-[110%]"
                             />
                         ) : (
                             <img
                                 src={activeSlides[currentSlide].img}
                                 alt={activeSlides[currentSlide].title}
-                                className="w-full h-full object-cover opacity-80 lg:opacity-90 grayscale-[10%] contrast-[105%]"
+                                className="absolute inset-0 w-full h-full object-cover opacity-80 lg:opacity-90 grayscale-[10%] contrast-[105%]"
                             />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-[#0F172A]/80 via-[#0F172A]/30 to-transparent lg:from-[#0F172A]/60 lg:via-[#0F172A]/20 lg:to-transparent" />
@@ -164,17 +164,17 @@ export default function Hero({ slides }: { slides?: any[] }) {
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 backdrop-blur-2xl rounded-full border border-white/10 mb-6"
+                                className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 backdrop-blur-2xl rounded-full border border-white/10 mb-2 sm:mb-6"
                             >
-                                <Sparkles className="h-4 w-4 text-[#F59E0B]" />
-                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/90">
+                                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-[#F59E0B]" />
+                                <span className="text-[9px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/90">
                                     {activeSlides[currentSlide].subtitle}
                                 </span>
                             </motion.div>
 
-                            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-none tracking-tighter mb-4 drop-shadow-2xl flex flex-wrap items-center gap-x-3">
+                            <h1 className="text-[22px] sm:text-4xl md:text-6xl lg:text-7xl font-black leading-none tracking-tighter mb-2 sm:mb-4 drop-shadow-2xl">
                                 {activeSlides[currentSlide].title.split(' ').map((word: string, i: number) => (
-                                    <span key={i} className="inline-block overflow-hidden h-fit">
+                                    <span key={i} className="inline-block overflow-hidden h-fit mr-2 last:mr-0">
                                         <motion.span
                                             initial={{ y: "100%" }}
                                             animate={{ y: 0 }}
@@ -191,7 +191,7 @@ export default function Hero({ slides }: { slides?: any[] }) {
                                 initial={{ opacity: 0, filter: "blur(10px)" }}
                                 animate={{ opacity: 1, filter: "blur(0px)" }}
                                 transition={{ delay: 0.6 }}
-                                className="text-sm md:text-lg text-slate-300/90 max-w-xl mb-8 leading-relaxed font-medium"
+                                className="hidden sm:block text-sm md:text-lg text-slate-300/90 max-w-xl mb-8 leading-relaxed font-medium"
                             >
                                 {activeSlides[currentSlide].description}
                             </motion.p>
@@ -205,21 +205,21 @@ export default function Hero({ slides }: { slides?: any[] }) {
                                 <motion.div
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.98 }}
-                                    className="relative group mt-4"
+                                    className="relative group mt-1 sm:mt-4"
                                 >
                                     <Link
                                         href={activeSlides[currentSlide].href}
-                                        className="relative px-4 py-3 flex items-center group"
+                                        className="relative px-3 py-2 sm:px-4 sm:py-3 flex items-center group"
                                     >
-                                        <span className="relative z-20 flex items-center gap-6 text-sm md:text-base text-white">
-                                            <span className="font-black uppercase tracking-[0.5em] bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50 group-hover:from-[#F59E0B] group-hover:to-[#FFB81C] transition-all duration-500">
+                                        <span className="relative z-20 flex items-center gap-2 sm:gap-6 text-[11px] sm:text-sm md:text-base text-white">
+                                            <span className="font-black uppercase tracking-[0.15em] sm:tracking-[0.3em] md:tracking-[0.5em] bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50 group-hover:from-[#F59E0B] group-hover:to-[#FFB81C] transition-all duration-500">
                                                 {activeSlides[currentSlide].cta}
                                             </span>
                                             <motion.div
-                                                animate={{ x: [0, 10, 0] }}
+                                                animate={{ x: [0, 6, 0] }}
                                                 transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
                                             >
-                                                <ArrowRight className="h-6 w-6 stroke-[3px] text-[#F59E0B]" />
+                                                <ArrowRight className="h-3 w-3 sm:h-6 sm:w-6 stroke-[3px] text-[#F59E0B]" />
                                             </motion.div>
                                         </span>
 
@@ -241,7 +241,7 @@ export default function Hero({ slides }: { slides?: any[] }) {
                 </div>
             </div>
 
-            <div className="absolute inset-y-0 inset-x-0 z-20 pointer-events-none flex items-center justify-between px-4 md:px-8 lg:px-12">
+            <div className="absolute inset-y-0 inset-x-0 z-20 pointer-events-none hidden md:flex items-center justify-between px-4 md:px-8 lg:px-12">
                 <button
                     onClick={prevSlide}
                     className="p-3 md:p-4 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 pointer-events-auto group"
@@ -256,19 +256,6 @@ export default function Hero({ slides }: { slides?: any[] }) {
                 </button>
             </div>
 
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-white/5 backdrop-blur-xl border border-white/10 px-6 py-3.5 rounded-full">
-                {activeSlides.map((_, i) => (
-                    <button
-                        key={i}
-                        onClick={() => setCurrentSlide(i)}
-                        className="group relative h-1.5 w-10 md:w-12 bg-white/10 rounded-full overflow-hidden transition-all hover:w-16"
-                    >
-                        <div
-                            className={`absolute inset-0 bg-[#F59E0B] transition-all duration-700 ease-out ${currentSlide === i ? 'w-full' : 'w-0'}`}
-                        />
-                    </button>
-                ))}
-            </div>
 
             <div className="absolute bottom-0 right-16 z-20 hidden lg:flex flex-col items-center h-32">
                 <motion.div

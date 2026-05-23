@@ -219,94 +219,116 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <AuthGuard allowedRoles={['admin', 'staff']}>
-            <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-col font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
-                <MobileTopBar
-                    onMenuToggle={() => setMobileOpen(!mobileOpen)} adminName={adminName} adminAvatar={adminAvatar}
-                    unreadCount={unreadCount} onToggleNotifications={() => setNotifOpen(!notifOpen)} onToggleProfile={() => setProfileOpen(!profileOpen)}
-                />
+            <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
+                
+                {/* ═══ MOBILE SIDEBAR OVERLAY ═══ */}
+                {mobileOpen && (
+                    <div className="fixed inset-0 z-[200] md:hidden print:hidden flex">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                            onClick={() => setMobileOpen(false)}
+                        />
+                        {/* Sidebar Panel */}
+                        <div className="relative z-10 h-full overflow-y-auto shadow-2xl animate-in slide-in-from-left duration-200">
+                            <AdminSidebar isCollapsed={false} onToggle={() => setMobileOpen(false)} />
+                        </div>
+                    </div>
+                )}
 
-                <div className="flex flex-1 min-h-0 print:block print:overflow-visible overflow-hidden">
-                    <div className="hidden md:flex flex-col flex-shrink-0 z-[60] print:hidden">
-                        <div className="h-full overflow-hidden shadow-2xl transition-all duration-300">
-                            <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+                {/* ═══ SIDEBAR (full height, desktop only) ═══ */}
+                <div className="hidden md:flex flex-col flex-shrink-0 z-[60] print:hidden">
+                    <div className="h-full overflow-hidden shadow-2xl transition-all duration-300">
+                        <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+                    </div>
+                </div>
+
+                {/* ═══ RIGHT CONTAINER (Navbar + Main Content) ═══ */}
+                <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
+                    <MobileTopBar
+                        onMenuToggle={() => setMobileOpen(!mobileOpen)} adminName={adminName} adminAvatar={adminAvatar}
+                        unreadCount={unreadCount} onToggleNotifications={() => setNotifOpen(!notifOpen)} onToggleProfile={() => setProfileOpen(!profileOpen)}
+                    />
+
+                    {/* ═══ MOBILE NOTIFICATIONS PANEL ═══ */}
+                    {notifOpen && (
+                        <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setNotifOpen(false)}>
+                            <div className="absolute top-[52px] right-2 w-[calc(100vw-16px)] max-w-sm" onClick={e => e.stopPropagation()}>
+                                <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ═══ MOBILE PROFILE PANEL ═══ */}
+                    {profileOpen && (
+                        <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setProfileOpen(false)}>
+                            <div className="absolute top-[52px] right-2 w-64" onClick={e => e.stopPropagation()}>
+                                <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ═══ NAVBAR (takes remaining width) ═══ */}
+                    <div className="hidden md:flex h-[60px] w-full flex-shrink-0 bg-white border-b border-gray-200 px-6 items-center justify-between gap-6 z-[50] shadow-sm print:hidden">
+                        
+                        {/* Search Bar */}
+                        <div className="relative flex-1 max-w-2xl">
+                            <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+                                className="flex items-center bg-white rounded-[2px] border border-[#888c8e] overflow-hidden focus-within:ring-[2px] focus-within:ring-[#e77600] focus-within:border-[#e77600] transition-all">
+                                <button type="button" className="px-3 h-9 bg-[#f3f3f3] border-r border-[#bbb] text-[12px] text-[#565959] hover:bg-[#e7e7e7] font-medium flex items-center gap-1">
+                                    All <ChevronDown size={14} />
+                                </button>
+                                <input type="text" placeholder="Search orders, products, or suppliers..."
+                                    className="flex-1 h-9 px-3 bg-transparent text-[14px] text-[#111] outline-none placeholder:text-[#aaa] font-medium"
+                                    value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                <button type="submit" className="w-12 h-9 bg-[#febd69] hover:bg-[#f3a847] flex items-center justify-center text-[#111] transition-colors">
+                                    {isSearching ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5 stroke-[2.5]" />}
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3">
+                            <Link href="/" className="hidden lg:flex items-center gap-2 text-[11px] font-bold text-[#0f1111] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border border-[#adb1b8] px-4 py-[7px] rounded-[2px] shadow-sm hover:from-[#eef1f3] hover:to-[#dce0e4] transition-all uppercase tracking-wide">
+                                <ExternalLink className="h-3.5 w-3.5" /> View Store
+                            </Link>
+                            <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
+                            <div className="relative" ref={notifRef}>
+                                <button onClick={() => setNotifOpen(!notifOpen)}
+                                    className={`p-2 rounded-[2px] transition-all border ${notifOpen ? 'bg-[#f7dfa5] border-[#c45500] text-[#c45500]' : 'bg-white hover:bg-[#F3F3F3] text-[#565959] border-[#DDDDDD]'}`}>
+                                    <Bell className="h-5 w-5" />
+                                    {unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#c45500] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
+                                </button>
+                                {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
+                            </div>
+                            <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
+                            <div className="relative" ref={profileRef}>
+                                <button onClick={() => setProfileOpen(!profileOpen)}
+                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-[2px] transition-all border ${profileOpen ? 'bg-amber-50 border-amber-300' : 'border-transparent hover:bg-zinc-100'}`}>
+                                    <div className="relative">
+                                        <div className="w-8 h-8 bg-zinc-200 rounded-[2px] flex items-center justify-center overflow-hidden border border-zinc-300">
+                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-zinc-600">{adminName[0]}</span>}
+                                        </div>
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
+                                    </div>
+                                    <div className="hidden xl:block text-left">
+                                        <p className="text-[#111] font-bold text-[13px] leading-tight flex items-center gap-1.5">{adminName} <ChevronDown size={12} className="text-[#565959]" /></p>
+                                        <p className="text-[10px] text-[#c45500] font-bold uppercase tracking-widest mt-0.5">{adminRole}</p>
+                                    </div>
+                                </button>
+                                {profileOpen && <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
-                        {/* ═══ MODERN GLASS COMMAND NAVBAR ═══ */}
-                        <div className="hidden md:flex bg-white/70 dark:bg-[#1a2235]/70 backdrop-blur-xl border-b border-white/40 dark:border-white/5 px-8 py-2 items-center justify-between gap-6 flex-shrink-0 z-[50] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] sticky top-0 transition-all duration-300 print:hidden">
-
-                            {/* Amazon Style Search Bar */}
-                            <div className="relative flex-1 max-w-2xl group">
-                                <form
-                                    onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                    className="flex items-center bg-white dark:bg-white/5 rounded-[2px] border border-[#888c8e] overflow-hidden focus-within:ring-[2px] focus-within:ring-[#e77600] focus-within:border-[#e77600] transition-all"
-                                >
-                                    <button type="button" className="px-3 h-9 bg-[#f3f3f3] dark:bg-zinc-800 border-r border-[#bbb] text-[12px] text-[#565959] hover:bg-[#e7e7e7] dark:hover:bg-zinc-700 font-medium flex items-center gap-1">
-                                        All <ChevronDown size={14} />
-                                    </button>
-                                    <input
-                                        type="text"
-                                        placeholder="Search orders, products, or suppliers..."
-                                        className="flex-1 h-9 px-3 bg-transparent text-[14px] text-[#111] dark:text-white outline-none placeholder:text-[#aaa] font-medium"
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                    />
-                                    <button type="submit" className="w-12 h-9 bg-[#febd69] hover:bg-[#f3a847] flex items-center justify-center text-[#111] transition-colors">
-                                        {isSearching ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5 stroke-[2.5]" />}
-                                    </button>
-                                </form>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-3">
-                                <Link href="/" className="hidden lg:flex items-center gap-2 text-[11px] font-bold text-[#0f1111] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border border-[#adb1b8] px-4 py-[7px] rounded-[2px] shadow-sm hover:from-[#eef1f3] hover:to-[#dce0e4] transition-all uppercase tracking-wide">
-                                    <ExternalLink className="h-3.5 w-3.5" /> View Store
-                                </Link>
-
-                                <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
-
-                                {/* Notifications */}
-                                <div className="relative" ref={notifRef}>
-                                    <button onClick={() => setNotifOpen(!notifOpen)}
-                                        className={`p-2 rounded-[2px] transition-all border ${notifOpen ? 'bg-[#f7dfa5] border-[#c45500] text-[#c45500]' : 'bg-white dark:bg-white/5 hover:bg-[#F3F3F3] dark:hover:bg-white/10 text-[#565959] dark:text-zinc-400 border-[#DDDDDD] dark:border-white/5'}`}>
-                                        <Bell className="h-5 w-5" />
-                                        {unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#c45500] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
-                                    </button>
-                                    {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
-                                </div>
-
-                                <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
-
-                                {/* Profile */}
-                                <div className="relative" ref={profileRef}>
-                                    <button onClick={() => setProfileOpen(!profileOpen)}
-                                        className={`flex items-center gap-3 px-3 py-1.5 rounded-[2px] transition-all border ${profileOpen ? 'bg-amber-50 border-amber-300' : 'border-transparent hover:bg-zinc-100'}`}>
-                                        <div className="relative">
-                                            <div className="w-8 h-8 bg-zinc-200 rounded-[2px] flex items-center justify-center overflow-hidden border border-zinc-300">
-                                                {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-zinc-600">{adminName[0]}</span>}
-                                            </div>
-                                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
-                                        </div>
-                                        <div className="hidden xl:block text-left">
-                                            <p className="text-[#111] dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
-                                                {adminName} <ChevronDown size={12} className="text-[#565959]" />
-                                            </p>
-                                            <p className="text-[10px] text-[#c45500] font-bold uppercase tracking-widest mt-0.5">{adminRole}</p>
-                                        </div>
-                                    </button>
-                                    {profileOpen && <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />}
-                                </div>
-                            </div>
-                        </div>
-
-                        <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white">
-                            {isNavigating && <PageLoader />}
-                            {children}
-                        </main>
-                    </div>
+                    {/* ═══ MAIN CONTENT ═══ */}
+                    <main className="flex-1 overflow-y-auto p-0 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white">
+                        {isNavigating && <PageLoader />}
+                        {children}
+                    </main>
                 </div>
             </div>
         </AuthGuard>
+
     );
 }

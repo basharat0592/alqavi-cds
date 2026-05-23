@@ -185,10 +185,10 @@ export default function ProductCard({
                 )}>
                     {/* Product Info */}
                     <div className="mb-3">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-2">
                             <Link href={`/customer/product/${id}`} className="flex-1">
                                 <h3 className={cn(
-                                    "font-black text-[#1E1B4B] leading-tight line-clamp-1 uppercase tracking-tight group-hover:text-[#0891B2] transition-colors",
+                                    "font-black text-[#1E1B4B] leading-tight line-clamp-2 sm:line-clamp-1 uppercase tracking-tight group-hover:text-[#0891B2] transition-colors",
                                     isHorizontal ? "text-base md:text-lg" : "text-[11px]"
                                 )}>
                                     {title}
@@ -209,8 +209,8 @@ export default function ProductCard({
                             )}
                         </div>
                         {!isMinimal && (weight || size || batch) && (
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[#FD8E23] font-bold text-[9px] uppercase tracking-widest">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                <span className="text-[#FD8E23] font-bold text-[9px] uppercase tracking-widest break-words whitespace-normal">
                                     {weight} {weight && (size || batch) ? '•' : ''} {size} {(size && batch) ? '•' : ''} {batch && `Batch: ${batch}`}
                                 </span>
                             </div>

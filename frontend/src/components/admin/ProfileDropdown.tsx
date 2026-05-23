@@ -22,22 +22,27 @@ export default function ProfileDropdown({
             
             {/* Header / Identity */}
             <div className="p-4 bg-[#fcfdff] border-b border-[#ddd]">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-zinc-100 rounded-[2px] border border-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
-                        {user.avatar ? (
-                            <img src={getImageUrl(user.avatar) || ''} alt="P" className="w-full h-full object-cover" />
-                        ) : (
-                            <span className="text-sm font-bold text-[#565959]">{initials}</span>
-                        )}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 bg-zinc-100 rounded-[2px] border border-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
+                            {user.avatar ? (
+                                <img src={getImageUrl(user.avatar) || ''} alt="P" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-sm font-bold text-[#565959]">{initials}</span>
+                            )}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[14px] font-bold truncate leading-tight">{user.name}</p>
+                            <p className="text-[11px] text-[#565959] truncate mt-0.5">{user.email}</p>
+                        </div>
                     </div>
-                    <div className="min-w-0">
-                        <p className="text-[14px] font-bold truncate leading-tight">{user.name}</p>
-                        <p className="text-[11px] text-[#565959] truncate mt-0.5">{user.email}</p>
-                    </div>
+                    <button onClick={onClose} className="p-1.5 hover:bg-[#f3f7f7] rounded-[2px] text-[#565959] hover:text-[#c45500] transition-colors shrink-0">
+                        <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    </button>
                 </div>
                 
                 {/* Status Badge */}
-                <div className="mt-3 flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-[2px] border border-amber-200 w-fit">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-[2px] border border-amber-200 w-fit">
                     <Shield size={10} className="fill-current" />
                     <span className="text-[10px] font-bold uppercase tracking-widest">{user.role} Status</span>
                 </div>

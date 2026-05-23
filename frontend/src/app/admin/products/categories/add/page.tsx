@@ -65,7 +65,10 @@ export default function AddProductCategoryPage() {
         if (!validate()) return;
         setSaving(true);
         try {
-            await categoryService.create(form);
+            await categoryService.create({
+                ...form,
+                status: form.status.toUpperCase() as 'ACTIVE' | 'INACTIVE',
+            });
             showToast('Classification logic established successfully!', 'success');
             setTimeout(() => router.push('/admin/products/categories'), 1500);
         } catch (err: any) {
