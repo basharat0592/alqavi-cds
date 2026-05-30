@@ -192,14 +192,14 @@ export default function PurchaseReturnsPage() {
                                             </td>
                                             <td className="px-4 py-4 text-right">
                                                 <div className="flex justify-end gap-3 text-[13px]">
-                                                    <button 
-                                                        onClick={() => setViewRow(row)} 
+                                                    <button
+                                                        onClick={() => setViewRow(row)}
                                                         className="text-[#007185] hover:text-[#c45500] hover:underline font-medium transition-all"
                                                     >
                                                         View
                                                     </button>
-                                                    <button 
-                                                        onClick={() => setDeleteRow(row)} 
+                                                    <button
+                                                        onClick={() => setDeleteRow(row)}
                                                         className="text-red-600 hover:text-red-700 hover:underline font-medium transition-all"
                                                     >
                                                         Delete

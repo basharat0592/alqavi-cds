@@ -24,9 +24,7 @@ interface NavGroup {
     items: NavItem[];
 }
 
-export default function AdminSidebar({ onToggle }: { isCollapsed?: boolean; onToggle?: () => void }) {
-    // Sidebar is fixed to expanded mode — collapsed option removed per request
-    const isCollapsed = false;
+export default function AdminSidebar({ isCollapsed = true, onToggle }: { isCollapsed?: boolean; onToggle?: () => void }) {
     const pathname = usePathname();
     const [settings, setSettings] = useState<SiteSettings | null>(null);
 
@@ -38,7 +36,7 @@ export default function AdminSidebar({ onToggle }: { isCollapsed?: boolean; onTo
         {
             label: 'Main Dashboard',
             items: [
-                { name: 'Overview', href: '/admin/dashboard', icon: LayoutDashboard },
+                { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
                 { name: 'Recent Activity', href: '/admin/sales/recent', icon: Activity },
                 { name: 'Order List', href: '/admin/orders', icon: ShoppingBag },
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
@@ -149,29 +147,44 @@ export default function AdminSidebar({ onToggle }: { isCollapsed?: boolean; onTo
                 .nav-item-glow { box-shadow: inset 3px 0 0 #f59e0b, inset 0 0 20px rgba(245,158,11,0.06); }
             `}</style>
 
-            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden w-[235px]`}
+            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden ${isCollapsed ? 'w-[68px]' : 'w-[235px]'}`}
                 style={{ background: '#2E3A48' }}>
 
                 {/* ── BRANDING ── */}
                 <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Link href="/admin/dashboard" className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border"
-                            style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)' }}>
-                            <span className="font-black text-[13px]" style={{ color: '#f59e0b' }}>AQ</span>
+                    {!isCollapsed ? (
+                        <>
+                            <Link href="/admin/dashboard" className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border"
+                                    style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)' }}>
+                                    <span className="font-black text-[13px]" style={{ color: '#f59e0b' }}>AQ</span>
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5" style={{ color: '#f59e0b' }}>Central Console</span>
+                                    <span className="text-[13px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
+                                </div>
+                            </Link>
+                            <button
+                                onClick={onToggle}
+                                className="p-1.5 rounded-lg transition hover:bg-white/10 text-white/60 hover:text-white"
+                                aria-label="Collapse sidebar"
+                            >
+                                <ChevronLeft size={18} className="hidden md:block" />
+                                <X size={18} className="md:hidden" />
+                            </button>
+                        </>
+                    ) : (
+                        <div className="w-full flex flex-col items-center">
+                            <button
+                                onClick={onToggle}
+                                className="w-9 h-9 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border transition-all hover:scale-105 active:scale-95"
+                                style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)' }}
+                                title="Expand Sidebar"
+                            >
+                                <span className="font-black text-[13px]" style={{ color: '#f59e0b' }}>AQ</span>
+                            </button>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5" style={{ color: '#f59e0b' }}>Central Console</span>
-                            <span className="text-[13px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
-                        </div>
-                    </Link>
-                    {/* Close button — mobile only */}
-                    <button
-                        onClick={onToggle}
-                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/10 text-white/60 hover:text-white"
-                        aria-label="Close sidebar"
-                    >
-                        <X size={18} />
-                    </button>
+                    )}
                 </div>
 
                 {/* ── NAVIGATION ── */}

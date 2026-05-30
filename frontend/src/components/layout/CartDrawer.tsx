@@ -104,7 +104,7 @@ export default function CartDrawer() {
                                 <div className="h-[65vh] flex flex-col items-center justify-center text-center p-6 space-y-6">
                                     <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center relative shadow-inner">
                                         <ShoppingBag size={36} className="text-slate-350" />
-                                        <motion.div 
+                                        <motion.div
                                             animate={{ scale: [1, 1.15, 1] }}
                                             transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
                                             className="absolute -top-1 -right-1 w-4 h-4 bg-[#f58220] rounded-full"
@@ -174,10 +174,10 @@ export default function CartDrawer() {
                                                                 Remove
                                                             </button>
                                                             <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                                                            <button 
+                                                            <button
                                                                 onClick={() => {
                                                                     addToWishlist({
-                                                                        id: item.id,
+                                                                        id: String(item.id),
                                                                         name: item.name,
                                                                         price: item.price,
                                                                         image: item.image,
@@ -213,7 +213,7 @@ export default function CartDrawer() {
                                     <span className="text-[12px] font-black text-slate-500 uppercase tracking-wider">Subtotal</span>
                                     <span className="text-[18px] font-black text-slate-900">Rs. {cartTotal.toLocaleString()}</span>
                                 </div>
-                                
+
                                 <Link
                                     href="/customer/checkout"
                                     onClick={closeCart}
@@ -222,7 +222,7 @@ export default function CartDrawer() {
                                     Proceed to Checkout
                                     <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                                 </Link>
-                                
+
                                 <div className="flex items-center justify-center gap-1.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest pt-0.5">
                                     <ShieldCheck size={12} className="text-emerald-500" />
                                     <span>Secure checkout processed by Al-Qavi</span>

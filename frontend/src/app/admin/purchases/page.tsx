@@ -40,12 +40,12 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: any; dot: string }> = {
-    PENDING:    { label: 'Pending',    cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', icon: Clock },
+    PENDING: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', icon: Clock },
     PROCESSING: { label: 'Processing', cls: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500', icon: RefreshCw },
-    SHIPPED:    { label: 'Shipped',    cls: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500', icon: Truck },
-    DELIVERED:  { label: 'Delivered',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: CheckCircle },
-    RECEIVED:   { label: 'Received',   cls: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500', icon: Package },
-    CANCELLED:  { label: 'Cancelled',  cls: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500', icon: XIcon },
+    SHIPPED: { label: 'Shipped', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500', icon: Truck },
+    DELIVERED: { label: 'Delivered', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: CheckCircle },
+    RECEIVED: { label: 'Received', cls: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500', icon: Package },
+    CANCELLED: { label: 'Cancelled', cls: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500', icon: XIcon },
 };
 
 const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusChange: (newStatus: string) => void }) => {
@@ -138,11 +138,11 @@ export default function PurchasesPage() {
     const [viewRow, setViewRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
-    
-    const [payModal, setPayModal] = useState<{open: boolean, purchase: any | null}>({ open: false, purchase: null });
+
+    const [payModal, setPayModal] = useState<{ open: boolean, purchase: any | null }>({ open: false, purchase: null });
     const [paying, setPaying] = useState(false);
 
-    const [whModal, setWhModal] = useState<{open: boolean, purchase: any | null}>({ open: false, purchase: null });
+    const [whModal, setWhModal] = useState<{ open: boolean, purchase: any | null }>({ open: false, purchase: null });
     const [assigningWh, setAssigningWh] = useState(false);
 
     const load = useCallback(async (silent = false) => {
@@ -241,9 +241,9 @@ export default function PurchasesPage() {
         if (!whModal.purchase) return;
         setAssigningWh(true);
         try {
-            await purchaseService.update(whModal.purchase.id, { 
+            await purchaseService.update(whModal.purchase.id, {
                 status: 'RECEIVED',
-                warehouse: warehouseId 
+                warehouse: warehouseId
             });
             toast.success('Stock received in warehouse successfully');
             setWhModal({ open: false, purchase: null });
@@ -384,9 +384,9 @@ export default function PurchasesPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-1.5 min-h-[32px] justify-center">
-                                                <StatusDropdown 
-                                                    status={p.status || 'PENDING'} 
-                                                    onStatusChange={(newStatus) => handleStatusChange(p.id, newStatus)} 
+                                                <StatusDropdown
+                                                    status={p.status || 'PENDING'}
+                                                    onStatusChange={(newStatus) => handleStatusChange(p.id, newStatus)}
                                                 />
                                                 {p.status === 'RECEIVED' && (
                                                     <div className={`text-[9px] font-black uppercase flex items-center gap-1 mt-1 ${p.is_inventory_synced ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -417,9 +417,9 @@ export default function PurchasesPage() {
                                                         {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
                                                     </div>
                                                 )}
-                                                
+
                                                 {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
-                                                    <button 
+                                                    <button
                                                         onClick={(e) => { e.stopPropagation(); setPayModal({ open: true, purchase: p }); }}
                                                         className="mt-1 text-[10px] font-bold bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] px-2.5 py-1 rounded-[3px] shadow-sm transition-all w-fit uppercase"
                                                     >
@@ -562,7 +562,7 @@ export default function PurchasesPage() {
 
             {/* Payment Modal */}
             {payModal.open && payModal.purchase && (
-                <PaymentModal 
+                <PaymentModal
                     isOpen={payModal.open}
                     purchase={payModal.purchase}
                     onClose={() => setPayModal({ open: false, purchase: null })}
@@ -572,10 +572,10 @@ export default function PurchasesPage() {
             )}
 
             {/* Warehouse Selection Modal */}
-            <WarehouseSelectionModal 
-                isOpen={whModal.open} 
-                onClose={() => setWhModal({ open: false, purchase: null })} 
-                onConfirm={handleWarehouseConfirm} 
+            <WarehouseSelectionModal
+                isOpen={whModal.open}
+                onClose={() => setWhModal({ open: false, purchase: null })}
+                onConfirm={handleWarehouseConfirm}
                 loading={assigningWh}
                 title={whModal.purchase?.status === 'RECEIVED' ? "Update Warehouse" : "Receive Stock in Warehouse"}
                 description={`Select the warehouse where stock for ${whModal.purchase?.purchase_number} will be deposited.`}
@@ -639,7 +639,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                         <X size={24} />
                     </button>
                 </div>
-                
+
                 <div className="px-8 py-8 overflow-y-auto flex-1 scrollbar-hide bg-[#fcfdff]">
                     {/* Status Toggle - Amazon Styled */}
                     <div className="bg-[#f3f3f3] p-1 rounded-[4px] flex gap-1 mb-8 border border-[#ddd]">
@@ -659,7 +659,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
 
                     {paymentStatus ? (
                         <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                            
+
                             <div className="space-y-2">
                                 <label className="text-[13px] font-bold text-[#111]">Evidence / Receipt</label>
                                 <div className="relative">
@@ -709,9 +709,9 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                     <label className="text-[13px] font-bold text-[#111]">
                                         {paymentMethod === 'CHEQUE' ? 'Cheque Number' : 'Ref / Transaction ID'}
                                     </label>
-                                    <input 
-                                        type="text" 
-                                        className={inputCls} 
+                                    <input
+                                        type="text"
+                                        className={inputCls}
                                         placeholder={paymentMethod === 'CHEQUE' ? 'e.g. 001234' : 'e.g. CASH-102938'}
                                         value={transactionId}
                                         onChange={e => setTransactionId(e.target.value)}
@@ -741,8 +741,8 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
 
                                 <div className="col-span-2 space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Internal Notes</label>
-                                    <textarea 
-                                        className={inputCls + " h-20 py-2 resize-none"} 
+                                    <textarea
+                                        className={inputCls + " h-20 py-2 resize-none"}
                                         placeholder="Add details about this payment..."
                                         value={paymentNotes}
                                         onChange={e => setPaymentNotes(e.target.value)}
@@ -763,9 +763,9 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                         Cancel
                     </button>
                     {paymentStatus && (
-                        <Btn 
-                            onClick={handleSubmit} 
-                            loading={loading} 
+                        <Btn
+                            onClick={handleSubmit}
+                            loading={loading}
                             className="min-w-[150px] !h-[29px]"
                         >
                             Confirm Payment
