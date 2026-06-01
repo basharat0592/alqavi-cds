@@ -54,13 +54,17 @@ export const useAdminDashboard = (filters: { date?: string; payment_method?: str
         error: null,
     });
 
+    const filterString = JSON.stringify(filters);
+
     const fetchDashboardData = useCallback(async () => {
         try {
             setData(prev => ({ ...prev, loading: true, error: null }));
 
+            const stableFilters = JSON.parse(filterString);
+
             // Fetch comprehensive stats and other data in parallel
             const [statsData, usersRes, productsRes, activityRes] = await Promise.all([
-                orderService.getStats(filters),
+                orderService.getStats(stableFilters),
                 userService.getAll?.() ?? Promise.resolve([]),
                 productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
                 userService.getAllActivityLogs?.(10) ?? Promise.resolve([]),
@@ -106,7 +110,7 @@ export const useAdminDashboard = (filters: { date?: string; payment_method?: str
                 error: err instanceof Error ? err.message : 'Failed to fetch dashboard data',
             }));
         }
-    }, [filters]);
+    }, [filterString]);
 
     useEffect(() => {
         fetchDashboardData();

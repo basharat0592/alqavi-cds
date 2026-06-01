@@ -26,20 +26,32 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
     onToggleNotifications: () => void; onToggleProfile: () => void;
 }) {
     return (
-        <div className="bg-[#F8F9FA] dark:bg-[#2d3a4b] text-[#111] dark:text-white px-4 py-2.5 flex items-center justify-between gap-4 border-b border-[#DDDDDD] dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm">
-            <button onClick={onMenuToggle} className="p-1.5 hover:bg-[#F3F3F3] dark:hover:bg-white/5 rounded-lg transition text-[#565959] dark:text-zinc-400">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-800 dark:text-white px-4 py-3 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm transition-colors duration-300">
+            <button 
+                onClick={onMenuToggle} 
+                className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+            >
                 <Menu className="h-5 w-5" />
             </button>
-            <Link href="/admin/dashboard" className="flex flex-col leading-none items-center">
-                <span className="font-black text-sm text-[#111] tracking-tight uppercase">AL-QAVI <span className="text-[#F59E0B]">TRADES</span></span>
+            <Link href="/admin/dashboard" className="flex flex-col leading-none items-center group">
+                <span className="font-extrabold text-sm tracking-widest text-slate-800 dark:text-white group-hover:opacity-85 transition-opacity">
+                    AL-QAVI <span className="bg-gradient-to-r from-amber-500 to-[#F59E0B] bg-clip-text text-transparent">TRADES</span>
+                </span>
             </Link>
-            <div className="flex items-center gap-2">
-                <button onClick={onToggleNotifications} className="p-1.5 hover:bg-[#F3F3F3] dark:hover:bg-white/5 rounded-lg transition relative text-[#565959] dark:text-zinc-400">
+            <div className="flex items-center gap-3">
+                <button 
+                    onClick={onToggleNotifications} 
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition relative text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                >
                     <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900" />
+                    )}
                 </button>
-                <button onClick={onToggleProfile}
-                    className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center text-white font-black text-xs hover:scale-105 transition-all shadow-md overflow-hidden">
+                <button 
+                    onClick={onToggleProfile}
+                    className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-white font-extrabold text-xs hover:scale-105 active:scale-95 transition-all overflow-hidden border border-slate-200 dark:border-white/10"
+                >
                     {adminAvatar ? (
                         <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -61,7 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [isNavigating, setIsNavigating] = useState(false);
 
     // Sidebar & Profile States
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -103,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const s = await settingsService.getSettings();
                 setTheme('light');
                 setAnimationsEnabled(s.animations ?? true);
-                setSidebarCollapsed(s.sidebar_collapsed ?? false);
+                setSidebarCollapsed(s.sidebar_collapsed ?? true);
             } catch { }
         };
 
@@ -269,51 +281,70 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )}
 
                     {/* ═══ NAVBAR (takes remaining width) ═══ */}
-                    <div className="hidden md:flex h-[60px] w-full flex-shrink-0 bg-white border-b border-gray-200 px-6 items-center justify-between gap-6 z-[50] shadow-sm print:hidden">
+                    <div className="hidden md:flex h-[64px] w-full flex-shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-sm sticky top-0 transition-colors duration-300 print:hidden">
                         
+                        {/* Sidebar Toggle Button for Desktop */}
+                        <button
+                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                            className="p-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl border border-transparent transition-all text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white"
+                            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+
                         {/* Search Bar */}
                         <div className="relative flex-1 max-w-2xl">
                             <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                className="flex items-center bg-white rounded-[2px] border border-[#888c8e] overflow-hidden focus-within:ring-[2px] focus-within:ring-[#e77600] focus-within:border-[#e77600] transition-all">
-                                <button type="button" className="px-3 h-9 bg-[#f3f3f3] border-r border-[#bbb] text-[12px] text-[#565959] hover:bg-[#e7e7e7] font-medium flex items-center gap-1">
-                                    All <ChevronDown size={14} />
+                                className="flex items-center bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 dark:focus-within:border-sky-400 transition-all duration-300">
+                                <button type="button" className="px-3 h-10 bg-slate-100 dark:bg-white/5 border-r border-slate-200 dark:border-white/10 text-xs text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-white/10 font-semibold flex items-center gap-1.5 transition-colors">
+                                    All <ChevronDown size={14} className="opacity-60" />
                                 </button>
-                                <input type="text" placeholder="Search orders, products, or suppliers..."
-                                    className="flex-1 h-9 px-3 bg-transparent text-[14px] text-[#111] outline-none placeholder:text-[#aaa] font-medium"
-                                    value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                                <button type="submit" className="w-12 h-9 bg-[#febd69] hover:bg-[#f3a847] flex items-center justify-center text-[#111] transition-colors">
-                                    {isSearching ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5 stroke-[2.5]" />}
-                                </button>
+                                <div className="relative flex-1 flex items-center">
+                                    <input type="text" placeholder="Search orders, products, or suppliers..."
+                                        className="w-full h-10 pl-3 pr-10 bg-transparent text-sm text-slate-800 dark:text-white outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-500 font-medium"
+                                        value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                    <button type="submit" className="absolute right-3 text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-white transition-colors">
+                                        {isSearching ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4 stroke-[2.5]" />}
+                                    </button>
+                                </div>
                             </form>
                         </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-3">
-                            <Link href="/" className="hidden lg:flex items-center gap-2 text-[11px] font-bold text-[#0f1111] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border border-[#adb1b8] px-4 py-[7px] rounded-[2px] shadow-sm hover:from-[#eef1f3] hover:to-[#dce0e4] transition-all uppercase tracking-wide">
-                                <ExternalLink className="h-3.5 w-3.5" /> View Store
+                            <Link href="/" className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
+                                <ExternalLink className="h-3.5 w-3.5 opacity-80" /> View Store
                             </Link>
-                            <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
+                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
-                                    className={`p-2 rounded-[2px] transition-all border ${notifOpen ? 'bg-[#f7dfa5] border-[#c45500] text-[#c45500]' : 'bg-white hover:bg-[#F3F3F3] text-[#565959] border-[#DDDDDD]'}`}>
+                                    className={`p-2.5 rounded-xl transition-all border ${notifOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20 text-slate-800 dark:text-white' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}>
                                     <Bell className="h-5 w-5" />
-                                    {unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#c45500] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">{unreadCount}</span>}
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
+                                            {unreadCount}
+                                        </span>
+                                    )}
                                 </button>
                                 {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
                             </div>
-                            <div className="h-8 w-[1px] bg-[#DDDDDD] mx-1" />
+                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={profileRef}>
                                 <button onClick={() => setProfileOpen(!profileOpen)}
-                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-[2px] transition-all border ${profileOpen ? 'bg-amber-50 border-amber-300' : 'border-transparent hover:bg-zinc-100'}`}>
+                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-150 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
                                     <div className="relative">
-                                        <div className="w-8 h-8 bg-zinc-200 rounded-[2px] flex items-center justify-center overflow-hidden border border-zinc-300">
-                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-zinc-600">{adminName[0]}</span>}
+                                        <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10">
+                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-slate-650 dark:text-zinc-300">{adminName[0]}</span>}
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
                                     </div>
                                     <div className="hidden xl:block text-left">
-                                        <p className="text-[#111] font-bold text-[13px] leading-tight flex items-center gap-1.5">{adminName} <ChevronDown size={12} className="text-[#565959]" /></p>
-                                        <p className="text-[10px] text-[#c45500] font-bold uppercase tracking-widest mt-0.5">{adminRole}</p>
+                                        <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
+                                            {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
+                                        </p>
+                                        <span className="inline-block text-[9px] font-extrabold text-sky-500 bg-sky-500/10 dark:text-sky-400 dark:bg-sky-500/15 px-2 py-0.5 rounded-full border border-sky-500/20 dark:border-sky-500/10 mt-1 uppercase tracking-wider">
+                                            {adminRole}
+                                        </span>
                                     </div>
                                 </button>
                                 {profileOpen && <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />}

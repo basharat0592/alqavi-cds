@@ -30,7 +30,7 @@ interface GroupSection {
     items: Omit<PageButton, 'theme'>[];
 }
 
-export default function AdminDashboard() {
+export default function OverviewPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const { stats } = useAdminDashboard();
 
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
             icon: ShoppingBag,
             theme: {
                 border: 'group-hover:border-rose-500',
-                iconBg: 'bg-rose-50 border-rose-100 text-rose-605 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
+                iconBg: 'bg-rose-50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
                 leftBar: 'bg-rose-600',
                 chevron: 'text-rose-400 group-hover:text-rose-600',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
@@ -134,24 +134,11 @@ export default function AdminDashboard() {
             theme: {
                 border: 'group-hover:border-teal-500',
                 iconBg: 'bg-teal-50 border-teal-100 text-teal-650 group-hover:bg-teal-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(20,184,166,0.2)]',
-                leftBar: 'bg-teal-650',
+                leftBar: 'bg-teal-600',
                 chevron: 'text-teal-400 group-hover:text-teal-600',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(20,184,166,0.06)]'
             },
             keywords: ['items', 'catalog', 'skus', 'edit']
-        },
-        {
-            name: 'System Settings',
-            href: '/admin/settings',
-            icon: Settings,
-            theme: {
-                border: 'group-hover:border-slate-500',
-                iconBg: 'bg-slate-100 border-slate-200 text-slate-600 group-hover:bg-slate-700 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(71,85,105,0.2)]',
-                leftBar: 'bg-slate-700',
-                chevron: 'text-slate-400 group-hover:text-slate-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(71,85,105,0.06)]'
-            },
-            keywords: ['config', 'sidebar', 'site details', 'settings', 'configure']
         },
     ];
 
@@ -281,39 +268,30 @@ export default function AdminDashboard() {
                     <span className="text-[#e47911] font-semibold">Overview</span>
                 </div>
 
-                {/* ── SMART SEARCH BAR + SETTINGS BUTTON ── */}
-                <div className="flex items-center gap-3 mb-10 w-full">
-                    <div className="relative flex-1 max-w-lg shadow-[0_6px_24px_rgba(0,0,0,0.03)] rounded-xl border border-slate-100">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        <input
-                            type="text"
-                            placeholder="Search for any action or page..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-11 pl-11 pr-12 bg-white rounded-xl text-[13.5px] text-slate-900 outline-none focus:border-[#e47911] focus:ring-4 focus:ring-[#e47911]/5 transition-all font-medium placeholder:text-slate-400 border border-slate-100"
-                        />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10.5px] font-black text-slate-400 hover:text-[#e47911] px-2 py-1"
-                            >
-                                CLEAR
-                            </button>
-                        )}
-                    </div>
-                    <Link
-                        href="/admin/settings"
-                        className="flex items-center gap-2 px-4 h-11 bg-white border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:shadow-sm transition-all group shrink-0 ml-auto"
-                    >
-                        <Settings size={14} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
-                        System Settings
-                    </Link>
+                {/* ── SMART SEARCH BAR ── */}
+                <div className="relative mb-10 max-w-lg shadow-[0_6px_24px_rgba(0,0,0,0.03)] rounded-xl border border-slate-100">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <input
+                        type="text"
+                        placeholder="Search for any action or page..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-11 pl-11 pr-12 bg-white rounded-xl text-[13.5px] text-slate-900 outline-none focus:border-[#e47911] focus:ring-4 focus:ring-[#e47911]/5 transition-all font-medium placeholder:text-slate-400 border border-slate-100"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10.5px] font-black text-slate-400 hover:text-[#e47911] px-2 py-1"
+                        >
+                            CLEAR
+                        </button>
+                    )}
                 </div>
 
                 {/* ── DIRECTORY DISPLAY ── */}
                 {filteredButtons !== null ? (
                     /* ── FILTERED BUTTONS GRID ── */
-                    <div className="space-y-4 animate-in fade-in duration-150 text-left">
+                    <div className="space-y-4 animate-in fade-in duration-150">
                         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                             <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-400">Search Results</h2>
                             <span className="bg-[#e47911]/10 text-[#e47911] px-2.5 py-0.5 rounded-full text-[10.5px] font-bold">{filteredButtons.length}</span>
@@ -360,11 +338,11 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     /* ── MAIN DIRECTORY SEGMENTED HUB ── */
-                    <div className="space-y-12 animate-in fade-in duration-300 text-left">
+                    <div className="space-y-12 animate-in fade-in duration-300">
 
                         {/* ── CORE OPERATIONS & KEY PAGES (PROMINENT ACCENT BUTTON-CARDS) ── */}
                         <div className="space-y-4">
-                            <h2 className="text-[12.5px] font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-1.5 border-b border-amber-100 pb-2.5 select-none text-left">
+                            <h2 className="text-[12.5px] font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-1.5 border-b border-amber-100 pb-2.5 select-none">
                                 <Star size={14} className="fill-amber-500 text-amber-500 animate-pulse" /> Core Operations & Key Pages
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -406,7 +384,7 @@ export default function AdminDashboard() {
                                     <span className="w-1.5 h-3.5 bg-amber-500 rounded-full" />
                                     Console Utilities & System Mappings
                                 </h2>
-                                <p className="text-[11.5px] text-slate-400 mt-0.5">Underlying administrative links, configurations, registry books, and sub-reports.</p>
+                                <p className="text-[11.5px] text-slate-450 mt-0.5">Underlying administrative links, configurations, registry books, and sub-reports.</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -431,7 +409,7 @@ export default function AdminDashboard() {
                                                             <div className="w-6 h-6 rounded bg-slate-50 text-slate-400 group-hover/link:bg-amber-50 group-hover/link:text-[#e47911] flex items-center justify-center transition-colors">
                                                                 <ItemIcon size={12} className="transition-colors shrink-0" />
                                                             </div>
-                                                            <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-800 transition-colors truncate">
+                                                            <span className="text-[12.5px] font-semibold text-slate-650 group-hover/link:text-slate-800 transition-colors truncate">
                                                                 {item.name}
                                                             </span>
                                                         </div>

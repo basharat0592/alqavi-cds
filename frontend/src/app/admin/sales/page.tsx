@@ -69,7 +69,7 @@ export default function SalesPage() {
             const data = await orderService.getAll();
             const rawOrders = Array.isArray(data) ? data : (data as any).results || [];
             // Strictly enforce that Sales Registry only contains history (Delivered/Cancelled)
-            setOrders(rawOrders.filter((o: any) => 
+            setOrders(rawOrders.filter((o: any) =>
                 ['DELIVERED', 'CANCELLED'].includes((o.status || '').toUpperCase())
             ));
         } catch { toast.error('Connection failure'); } finally { setLoading(false); }
@@ -107,7 +107,7 @@ export default function SalesPage() {
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
-                
+
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -120,7 +120,7 @@ export default function SalesPage() {
                         <h1 className="text-[22px] font-normal text-[#111]">Sales History</h1>
                     </div>
                     <div className="flex gap-2">
-                         <Btn variant="secondary" onClick={loadOrders} loading={loading}>
+                        <Btn variant="secondary" onClick={loadOrders} loading={loading}>
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                         </Btn>
                         <Btn onClick={() => router.push('/admin/sale')}>
@@ -141,7 +141,7 @@ export default function SalesPage() {
                             className={`${inputCls} pl-10`}
                         />
                     </div>
-                    
+
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                         {STATUS_FILTERS.map(f => (
                             <button
@@ -239,7 +239,7 @@ export default function SalesPage() {
                         </tbody>
                     </table>
                 </div>
-                
+
                 {/* Summary Note */}
                 <div className="mt-8 bg-[#fff4e5] border border-[#ffb347]/30 rounded-[4px] p-4 flex gap-4 items-start animate-in fade-in duration-1000">
                     <AlertTriangle className="text-[#e47911] shrink-0 mt-0.5" size={18} />
