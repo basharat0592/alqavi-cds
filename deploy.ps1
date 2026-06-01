@@ -122,7 +122,7 @@ if (-not $SkipBuild) {
         $buildCmd += " && docker compose --env-file .env build"
     }
 }
-$buildCmd += " && docker compose --env-file .env up -d"
+$buildCmd += " && docker compose --env-file .env up -d && docker compose --env-file .env restart nginx"
 
 python -c @"
 import paramiko, sys, time

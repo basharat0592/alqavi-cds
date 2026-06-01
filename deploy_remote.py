@@ -97,7 +97,7 @@ def main():
     if rc != 0:
         print(f"Build may have issues, continuing...")
 
-    rc, out, err = ssh_exec(ssh, f"cd {REMOTE_DIR} && docker compose --env-file .env up -d 2>&1", check=False)
+    rc, out, err = ssh_exec(ssh, f"cd {REMOTE_DIR} && docker compose --env-file .env up -d && docker compose --env-file .env restart nginx 2>&1", check=False)
 
     print(f"\n7. Waiting for services to start...")
     time.sleep(15)
