@@ -16,11 +16,13 @@ import MediaTab from './tabs/MediaTab';
 import SeoTab from './tabs/SeoTab';
 import ContactTab from './tabs/ContactTab';
 import LivePreviewTab from './tabs/LivePreviewTab';
+import NavbarPagesTab from './tabs/NavbarPagesTab';
 
 const TABS = [
     { id: 'sections', label: 'Page Builder', icon: Layout, desc: 'Edit Layout' },
     { id: 'branding', label: 'Site Identity', icon: Palette, desc: 'Logo & Colors' },
     { id: 'media', label: 'Media Assets', icon: ImageIcon, desc: 'Library' },
+    { id: 'navbar-pages', label: 'Navbar Pages', icon: Menu, desc: 'Navigation' },
     { id: 'contact', label: 'Business Info', icon: Phone, desc: 'Socials' },
     { id: 'seo', label: 'SEO Settings', icon: Globe, desc: 'Analytics' },
 ];
@@ -116,7 +118,7 @@ export default function WebsiteSettingsPage() {
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
+            <div className="max-w-[1100px] mx-auto px-4 md:px-6 pt-4 md:pt-5 text-left">
                 {/* ── BREADCRUMB ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <span className="hover:text-[#c45500] hover:underline cursor-pointer">Dashboard</span>
@@ -125,9 +127,9 @@ export default function WebsiteSettingsPage() {
                 </div>
 
                 {/* ── TITLE SECTION ── */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-3">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                    <div className="flex flex-col gap-0.5 w-full md:w-auto">
+                        <div className="flex items-center flex-wrap gap-2 sm:gap-3">
                             <h1 className="text-[22px] font-normal text-[#111]">Elite CMS Console</h1>
                             {saving ? (
                                 <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full uppercase animate-pulse">
@@ -142,12 +144,12 @@ export default function WebsiteSettingsPage() {
                         <p className="text-[13px] text-[#565959]">Manage landing page sections, media, and site identity.</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <AmazonBtn variant="secondary" onClick={loadAll}>
+                    <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                        <AmazonBtn variant="secondary" onClick={loadAll} className="w-full md:w-auto justify-center">
                             <RefreshCw size={14} /> Refresh
                         </AmazonBtn>
                         <a href="/" target="_blank" className="contents">
-                            <AmazonBtn>
+                            <AmazonBtn className="w-full md:w-auto justify-center">
                                 <Eye size={14} /> View Site
                             </AmazonBtn>
                         </a>
@@ -156,7 +158,7 @@ export default function WebsiteSettingsPage() {
                 <div className="border-b border-[#ddd] mb-6" />
 
                 {/* ── TABS NAVIGATION ── */}
-                <div className="flex gap-8 overflow-x-auto scrollbar-hide border-b border-[#ddd] mb-6">
+                <div className="flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide border-b border-[#ddd] mb-6 pb-0.5">
                     {TABS.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 pb-3.5 text-[14px] font-medium transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-[#c45500]' : 'text-[#565959] hover:text-[#111]'
@@ -175,6 +177,7 @@ export default function WebsiteSettingsPage() {
                     {activeTab === 'sections' && settings && <SectionsTab sections={sections} setSections={setSections} products={products} categories={categories} media={media} settings={settings} onSave={handleSaveSettings} />}
                     {activeTab === 'branding' && settings && <BrandingTab settings={settings} onSave={handleSaveSettings} saving={saving} setSettings={setSettings} />}
                     {activeTab === 'media' && <MediaTab media={media} setMedia={setMedia} />}
+                    {activeTab === 'navbar-pages' && <NavbarPagesTab />}
                     {activeTab === 'contact' && settings && <ContactTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
                     {activeTab === 'seo' && settings && <SeoTab settings={settings} onSave={handleSaveSettings} saving={saving} />}
                 </div>

@@ -37,6 +37,7 @@ class Category(BaseModel):
     ]
 
     main_category = models.ForeignKey(MainCategory, on_delete=models.CASCADE, related_name='categories', null=True)
+    navbar_page = models.ForeignKey('cms.NavbarPage', on_delete=models.SET_NULL, related_name='categories', null=True, blank=True)
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(null=True, blank=True)

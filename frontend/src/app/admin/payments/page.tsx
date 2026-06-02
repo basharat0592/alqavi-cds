@@ -36,7 +36,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -89,23 +89,23 @@ export default function PaymentsPage() {
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             {/* Header */}
             <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-6 text-left">
+                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 text-left">
                     <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
                         <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                         <ChevronRight size={10} />
                         <span className="text-[#c45500]">Payments</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                             <h1 className="text-[22px] font-normal text-[#111]">Payments</h1>
                             <p className="text-[13px] text-[#565959] mt-0.5">Track money in and out of the business</p>
                         </div>
                         {!formOpen && (
-                            <div className="flex gap-2">
-                                <Btn variant="secondary" onClick={loadData} loading={loading}>
-                                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            <div className="flex gap-2 w-full sm:w-auto justify-end">
+                                <Btn variant="secondary" onClick={loadData} loading={loading} className="flex-1 sm:flex-initial justify-center">
+                                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                                 </Btn>
-                                <Btn onClick={() => setFormOpen(true)}>
+                                <Btn onClick={() => setFormOpen(true)} className="flex-1 sm:flex-initial justify-center">
                                     <Plus size={14} /> Add Payment
                                 </Btn>
                             </div>
@@ -114,7 +114,7 @@ export default function PaymentsPage() {
                 </div>
             </div>
 
-            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 mt-6 sm:mt-8 text-left">
                 {formOpen ? (
                     <CreateView
                         onClose={() => setFormOpen(false)}
@@ -132,7 +132,7 @@ export default function PaymentsPage() {
                         </div>
 
                         {/* Search & Tabs */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-4 mb-6 shadow-sm flex flex-col md:flex-row items-center gap-4">
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4">
                             <div className="relative flex-1 w-full">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                                 <input
@@ -142,12 +142,12 @@ export default function PaymentsPage() {
                                     className={inputCls + " pl-10 h-[38px]"}
                                 />
                             </div>
-                            <div className="flex bg-[#f3f3f3] p-1 rounded-[4px] border border-[#ddd] gap-1 shrink-0">
+                            <div className="flex bg-[#f3f3f3] p-1 rounded-[4px] border border-[#ddd] gap-1 w-full sm:w-auto justify-center">
                                 {['all', 'inbound', 'outbound'].map((type) => (
                                     <button
                                         key={type}
                                         onClick={() => setTypeFilter(type)}
-                                        className={`px-4 py-1.5 text-[11px] font-bold uppercase rounded-[3px] transition-all
+                                        className={`flex-1 sm:flex-initial px-4 py-1.5 text-[11px] font-bold uppercase rounded-[3px] transition-all whitespace-nowrap
                                             ${typeFilter === type ? 'bg-white text-[#c45500] shadow-sm' : 'text-[#565959] hover:bg-[#eee]'}`}
                                     >
                                         {type === 'inbound' ? 'Income' : type === 'outbound' ? 'Expense' : 'All'}
@@ -158,57 +158,59 @@ export default function PaymentsPage() {
 
                         {/* History Table */}
                         <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
-                                        <th className="px-6 py-3">Voucher #</th>
-                                        <th className="px-6 py-3">Payment Mode</th>
-                                        <th className="px-6 py-3">Person / Company</th>
-                                        <th className="px-6 py-3">Category</th>
-                                        <th className="px-6 py-3 text-right">Amount</th>
-                                        <th className="px-6 py-3 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#eee]">
-                                    {loading ? (
-                                        <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 text-[#aaa] animate-spin mx-auto" /></td></tr>
-                                    ) : filtered.length === 0 ? (
-                                        <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#565959]">No payments found.</td></tr>
-                                    ) : (
-                                        filtered.map((payment) => (
-                                            <tr key={payment.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-bold text-[#111]">#{payment.id}</div>
-                                                    <div className="text-[11px] text-[#aaa] mt-1">{formatDate(payment.date)}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-[#565959] capitalize">
-                                                    {payment.method.replace('_', ' ')}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-bold text-[#111]">{payment.payer_payee || "Internal"}</div>
-                                                    <div className="text-[11px] text-[#aaa] mt-1 italic">By: {payment.user_name}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="inline-block px-2 py-0.5 rounded-[2px] border border-blue-100 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase">
-                                                        {payment.category_name}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <span className={`font-bold ${payment.payment_type === 'inbound' ? 'text-green-700' : 'text-red-700'}`}>
-                                                        {payment.payment_type === 'inbound' ? '+' : '-'}{formatCurrency(payment.amount)}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
-                                                        <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
+                                            <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Voucher #</th>
+                                            <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Payment Mode</th>
+                                            <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Person / Company</th>
+                                            <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Category</th>
+                                            <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Amount</th>
+                                            <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#eee]">
+                                        {loading ? (
+                                            <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 text-[#aaa] animate-spin mx-auto" /></td></tr>
+                                        ) : filtered.length === 0 ? (
+                                            <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#565959]">No payments found.</td></tr>
+                                        ) : (
+                                            filtered.map((payment) => (
+                                                <tr key={payment.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                        <div className="font-bold text-[#111]">#{payment.id}</div>
+                                                        <div className="text-[11px] text-[#aaa] mt-1">{formatDate(payment.date)}</div>
+                                                    </td>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-[#565959] capitalize whitespace-nowrap">
+                                                        {payment.method.replace('_', ' ')}
+                                                    </td>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                        <div className="font-bold text-[#111]">{payment.payer_payee || "Internal"}</div>
+                                                        <div className="text-[11px] text-[#aaa] mt-1 italic hidden sm:block">By: {payment.user_name}</div>
+                                                    </td>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                        <span className="inline-block px-2 py-0.5 rounded-[2px] border border-blue-100 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase">
+                                                            {payment.category_name}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right font-bold whitespace-nowrap">
+                                                        <span className={payment.payment_type === 'inbound' ? 'text-green-700' : 'text-red-700'}>
+                                                            {payment.payment_type === 'inbound' ? '+' : '-'}{formatCurrency(payment.amount)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
+                                                        <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                            <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]" title="View"><Eye size={14} /></button>
+                                                            <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600" title="Delete"><Trash2 size={14} /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </>
                 )}

@@ -147,7 +147,7 @@ export default function ProductsPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
+            <div className="max-w-[1100px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
 
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -156,13 +156,13 @@ export default function ProductsPage() {
                     <span className="text-[#c45500]">Products</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <h1 className="text-[22px] font-normal">Products List</h1>
-                    <div className="flex gap-2">
-                        <Btn variant="secondary" onClick={loadData} loading={syncing}>
+                    <div className="flex gap-2 w-full sm:w-auto justify-end">
+                        <Btn variant="secondary" onClick={loadData} loading={syncing} className="flex-1 sm:flex-initial justify-center">
                             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
                         </Btn>
-                        <Btn onClick={() => router.push('/admin/products/add')}>
+                        <Btn onClick={() => router.push('/admin/products/add')} className="flex-1 sm:flex-initial justify-center">
                             <Plus size={14} /> Add Product
                         </Btn>
                     </div>
@@ -170,8 +170,8 @@ export default function ProductsPage() {
                 <div className="border-b border-[#ddd] mb-6" />
 
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-wrap gap-4 items-center">
-                    <div className="relative flex-1 min-w-[250px]">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                    <div className="relative flex-1 min-w-0 sm:min-w-[250px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
                             value={search}
@@ -180,14 +180,16 @@ export default function ProductsPage() {
                             className="w-full h-[35px] pl-10 pr-4 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] transition-all"
                         />
                     </div>
-                    <select value={category} onChange={e => { setCategory(e.target.value); setCurrentPage(1); }} className="h-[35px] px-3 bg-white border border-[#888c8e] rounded-[3px] text-[13px] outline-none cursor-pointer">
-                        <option value="">All Categories</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    <select value={supplier} onChange={e => { setSupplier(e.target.value); setCurrentPage(1); }} className="h-[35px] px-3 bg-white border border-[#888c8e] rounded-[3px] text-[13px] outline-none cursor-pointer">
-                        <option value="">All Suppliers</option>
-                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+                    <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+                        <select value={category} onChange={e => { setCategory(e.target.value); setCurrentPage(1); }} className="h-[35px] px-2 sm:px-3 bg-white border border-[#888c8e] rounded-[3px] text-[13px] outline-none cursor-pointer w-full">
+                            <option value="">All Categories</option>
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <select value={supplier} onChange={e => { setSupplier(e.target.value); setCurrentPage(1); }} className="h-[35px] px-2 sm:px-3 bg-white border border-[#888c8e] rounded-[3px] text-[13px] outline-none cursor-pointer w-full">
+                            <option value="">All Suppliers</option>
+                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -196,11 +198,11 @@ export default function ProductsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-[#f7f8fa] border-b border-[#ddd] transition-colors">
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111]">Product</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111]">Price</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-center">Status</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-right">Current Units</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] text-right">Actions</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111]">Product</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111]">Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111] text-center">Status</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111] text-right">Current Units</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111] text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#eee]">
@@ -212,9 +214,9 @@ export default function ProductsPage() {
                                     groupedProducts.map(prod => {
                                         return (
                                             <tr key={prod.id} className="hover:bg-[#fcfdff] transition-colors group">
-                                                <td className="px-6 py-5">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-[3px] flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
+                                                    <div className="flex items-center gap-2 sm:gap-4">
+                                                        <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-[#eee] rounded-[3px] flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
                                                             {(() => {
                                                                 const finalImg = prod.image || prod.catalog_image;
                                                                 return finalImg ? (
@@ -225,8 +227,8 @@ export default function ProductsPage() {
                                                             })()}
                                                         </div>
                                                         <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="flex items-center gap-1.5">
+                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                                                                     <div className="text-[14px] font-bold text-[#007185] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
                                                                         {prod.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                                     </div>
@@ -238,36 +240,58 @@ export default function ProductsPage() {
                                                                 </div>
                                                                 {prod.badge && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[#e47911] text-white rounded-[2px] uppercase">{prod.badge}</span>}
                                                             </div>
-                                                            <div className="text-[11px] text-[#565959] mt-0.5 flex items-center gap-2">
+                                                            <div className="text-[11px] text-[#565959] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                                                 <span className="flex items-center gap-1"><Truck size={12} className="opacity-40" /> {prod.supplier_name}</span>
-                                                                <span className="opacity-20">|</span>
+                                                                <span className="opacity-20 hidden sm:inline">|</span>
                                                                 <span className="flex items-center gap-1"><MapPin size={11} className="opacity-40" /> {prod.warehouse_name}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="text-[15px] font-bold text-[#111]">{formatCurrency(prod.selling_price)}</div>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
+                                                    <div className="text-[14px] sm:text-[15px] font-bold text-[#111]">{formatCurrency(prod.selling_price)}</div>
                                                     <div className="flex items-center gap-1 mt-0.5">
-                                                        <TrendingUp className="h-3 w-3 text-green-600" />
-                                                        <span className="text-[10px] font-bold text-green-700">{Number(prod.profit_margin).toFixed(1)}% profit</span>
+                                                        <TrendingUp className="h-3 w-3 text-green-600 shrink-0" />
+                                                        <span className="text-[10px] font-bold text-green-700 leading-none">
+                                                            {Number(prod.profit_margin).toFixed(1)}% <span className="hidden sm:inline">profit</span>
+                                                        </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold uppercase border ${prod.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-                                                        {prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-center">
+                                                    <span className={`inline-flex items-center justify-center rounded-[2px] text-[10px] font-bold uppercase border ${
+                                                        prod.status === 'ACTIVE' 
+                                                            ? 'bg-green-50 text-green-700 border-green-200 px-2 py-0.5' 
+                                                            : 'bg-slate-50 text-slate-400 border-slate-200 px-2 py-0.5'
+                                                    } max-sm:w-2.5 max-sm:h-2.5 max-sm:rounded-full max-sm:p-0 max-sm:border-0 ${
+                                                        prod.status === 'ACTIVE' ? 'max-sm:bg-green-500' : 'max-sm:bg-slate-400'
+                                                    }`} title={prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}>
+                                                        <span className="max-sm:hidden">{prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}</span>
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-5 text-right">
-                                                    <div className={`text-[16px] font-black ${(prod.total_quantity || 0) < 10 ? 'text-red-600' : 'text-[#111]'}`}>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    <div className={`text-[14px] sm:text-[16px] font-black ${(prod.total_quantity || 0) < 10 ? 'text-red-600' : 'text-[#111]'}`}>
                                                         {(prod.total_quantity || 0).toLocaleString()}
                                                     </div>
-                                                    <div className="text-[10px] text-[#aaa] font-bold uppercase tracking-tighter">Unit Balance</div>
+                                                    <div className="hidden sm:block text-[9px] sm:text-[10px] text-[#aaa] font-bold uppercase tracking-tighter">Unit Balance</div>
                                                 </td>
-                                                <td className="px-6 py-5 text-right">
-                                                    <div className="flex justify-end gap-2 transition-opacity">
-                                                        <Btn variant="secondary" onClick={() => router.push(`/admin/products/edit/${prod.id}`)} className="h-[26px]">Edit</Btn>
-                                                        <button onClick={() => setDeleteProd(prod)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    <div className="flex justify-end gap-1.5 sm:gap-2 transition-opacity">
+                                                        <button 
+                                                            onClick={() => router.push(`/admin/products/edit/${prod.id}`)} 
+                                                            className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] hover:text-[#e77600] flex items-center gap-1 shadow-sm shrink-0"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit size={13} />
+                                                            <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setDeleteProd(prod)} 
+                                                            className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600 flex items-center gap-1 shadow-sm shrink-0"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 size={13} />
+                                                            <span className="hidden sm:inline text-[11px] font-bold">Delete</span>
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>

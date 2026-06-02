@@ -21,7 +21,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     return (
         <button
             type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium text-[#0f1111] border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium text-[#0f1111] border transition-all flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}
         >
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
@@ -180,7 +180,7 @@ export default function SettingsPage() {
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
 
             {/* ── BREADCRUMB + TITLE ── */}
-            <div className="max-w-[1100px] mx-auto px-6 pt-5 pb-3">
+            <div className="max-w-[1100px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 pb-3">
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                     <ChevronRight size={10} />
@@ -204,7 +204,7 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <div className="max-w-[1100px] mx-auto px-6">
+            <div className="max-w-[1100px] mx-auto px-3 sm:px-6">
                 <div className="border-b border-[#ddd] mb-6" />
 
                 {/* ── MAIN HUB ── */}
@@ -277,7 +277,7 @@ export default function SettingsPage() {
                             </div>
 
                             <div className="mt-8 pt-5 border-t border-[#eee] flex justify-end">
-                                <Btn loading={profileSaving} onClick={handleSaveProfile} className="w-[140px] h-[31px]">
+                                <Btn loading={profileSaving} onClick={handleSaveProfile} className="w-full sm:w-auto h-[31px] justify-center px-6">
                                     <Save size={13} /> Save changes
                                 </Btn>
                             </div>
@@ -319,7 +319,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                             <div className="mt-8 pt-5 border-t border-[#eee] flex justify-end">
-                                <Btn loading={storeSaving} onClick={handleSaveStore} className="w-[150px] h-[31px]">
+                                <Btn loading={storeSaving} onClick={handleSaveStore} className="w-full sm:w-auto h-[31px] justify-center px-6">
                                     <Save size={13} /> Save info
                                 </Btn>
                             </div>
@@ -360,7 +360,7 @@ export default function SettingsPage() {
                                         toast.success('Password changed successfully');
                                         setPasswords({ old: '', new: '', confirm: '' });
                                     } catch { } finally { setPwSaving(false); }
-                                }} className="w-[150px] h-[31px]">
+                                }} className="w-full sm:w-auto h-[31px] justify-center px-6">
                                     <Lock size={13} /> Update password
                                 </Btn>
                             </div>
@@ -396,7 +396,7 @@ export default function SettingsPage() {
                                 <Btn loading={notifSaving} onClick={async () => {
                                     setNotifSaving(true);
                                     try { await settingsService.updateSettings(notif); toast.success('Preferences saved'); } catch { } finally { setNotifSaving(false); }
-                                }} className="w-[150px] h-[31px]">
+                                }} className="w-full sm:w-auto h-[31px] justify-center px-6">
                                     <Save size={13} /> Save preferences
                                 </Btn>
                             </div>
@@ -542,13 +542,13 @@ export default function SettingsPage() {
                                 ))}
                             </div>
 
-                            <div className="mt-8 pt-5 border-t border-[#eee] flex items-center justify-between">
-                                <p className="text-[12px] text-[#565959]">Toggling off a page will hide it from the sidebar but not delete it.</p>
+                            <div className="mt-8 pt-5 border-t border-[#eee] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                                <p className="text-[12px] text-[#565959] text-center sm:text-left">Toggling off a page will hide it from the sidebar but not delete it.</p>
                                 <Btn onClick={() => {
                                     localStorage.setItem('sidebar_visibility', JSON.stringify(sidebarVisibility));
                                     window.dispatchEvent(new Event('sidebar_visibility_change'));
                                     toast.success('Navigation layout saved');
-                                }} className="w-[140px] h-[31px]">
+                                }} className="w-full sm:w-auto h-[31px] justify-center px-6">
                                     <Save size={13} /> Save layout
                                 </Btn>
                             </div>

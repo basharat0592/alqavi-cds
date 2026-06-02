@@ -73,20 +73,20 @@ export default function MediaTab({ media, setMedia }: Props) {
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 text-left">
 
             {/* Library Control Bar */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="bg-white border border-[#ddd] rounded-[4px] px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                 <div>
                     <h3 className="text-[15px] font-bold text-[#111]">Media Library</h3>
                     <p className="text-[12px] text-[#565959]">
                         {media.length} items total • {media.filter(m => m.file_type === 'image').length} images, {media.filter(m => m.file_type === 'video').length} videos
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="relative">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+                    <div className="relative w-full sm:w-auto">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" />
                         <input placeholder="Search files..." value={search} onChange={e => setSearch(e.target.value)}
-                            className={inputCls + " pl-9 w-[220px]"} />
+                            className={inputCls + " pl-9 w-full sm:w-[220px]"} />
                     </div>
-                    <AmazonBtn onClick={() => fileRef.current?.click()} loading={uploading}>
+                    <AmazonBtn onClick={() => fileRef.current?.click()} loading={uploading} className="w-full sm:w-auto justify-center">
                         <Upload size={14} /> Upload Asset
                     </AmazonBtn>
                     <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden"
@@ -176,15 +176,15 @@ export default function MediaTab({ media, setMedia }: Props) {
                             </h3>
                             <button onClick={() => setPreview(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
                         </div>
-                        <div className="flex flex-col md:flex-row h-[500px]">
-                            <div className="flex-[2] bg-[#f0f2f2] p-8 flex items-center justify-center border-r border-[#ddd]">
+                        <div className="flex flex-col md:flex-row h-auto md:h-[500px] overflow-y-auto md:overflow-hidden">
+                            <div className="flex-1 md:flex-[2] h-64 md:h-auto bg-[#f0f2f2] p-4 md:p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#ddd] shrink-0">
                                 {preview.file_type === 'image' ? (
                                     <img src={getImageUrl(preview.file) || preview.file} alt={preview.alt_text} className="max-w-full max-h-full object-contain drop-shadow-xl" />
                                 ) : (
                                     <video src={getImageUrl(preview.file) || preview.file} controls className="max-w-full max-h-full shadow-lg" autoPlay />
                                 )}
                             </div>
-                            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                            <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto">
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-bold text-[#565959] uppercase">Filename</label>
                                     <p className="text-[13px] font-mono break-all text-[#111]">{preview.file.split('/').pop()}</p>

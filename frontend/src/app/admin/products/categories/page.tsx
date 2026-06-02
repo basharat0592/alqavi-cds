@@ -135,7 +135,7 @@ export default function ProductCategoriesPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5">
+            <div className="max-w-[1100px] mx-auto px-4 md:px-6 pt-4 md:pt-5">
 
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -144,16 +144,16 @@ export default function ProductCategoriesPage() {
                     <span className="text-[#c45500] font-bold">Categories</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                     <h1 className="text-[22px] font-normal">
                         {view === 'list' ? 'Product Categories' : (editCat ? 'Edit Category' : 'Create Category')}
                     </h1>
                     {view === 'list' ? (
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={load} loading={loading}>
+                        <div className="flex gap-2 w-full sm:w-auto justify-end">
+                            <Btn variant="secondary" onClick={load} loading={loading} className="flex-1 sm:flex-initial justify-center whitespace-nowrap">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Btn>
-                            <Btn onClick={handleNew}><Plus size={14} /> Add Category</Btn>
+                            <Btn onClick={handleNew} className="flex-1 sm:flex-initial justify-center whitespace-nowrap"><Plus size={14} /> Add Category</Btn>
                         </div>
                     ) : (
                         <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
@@ -167,7 +167,7 @@ export default function ProductCategoriesPage() {
                     <div className="space-y-6">
                         {/* Search Area */}
                         <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
-                            <div className="relative max-w-sm">
+                            <div className="relative w-full sm:max-w-sm">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                                 <input
                                     value={search}
@@ -180,16 +180,17 @@ export default function ProductCategoriesPage() {
 
                         {/* Registry Table */}
                         <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
-                                        <th className="px-6 py-3">Category Name</th>
-                                        <th className="px-6 py-3">Description</th>
-                                        <th className="px-6 py-3 text-center">Status</th>
-                                        <th className="px-6 py-3 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#eee]">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] md:text-[12px] font-bold text-[#111]">
+                                            <th className="px-2 md:px-6 py-2 md:py-3 w-1/4 sm:w-auto">Category Name</th>
+                                            <th className="px-2 md:px-6 py-2 md:py-3">Description</th>
+                                            <th className="px-2 md:px-6 py-2 md:py-3 text-center w-16 md:w-28">Status</th>
+                                            <th className="px-2 md:px-6 py-2 md:py-3 text-right w-20 md:w-32">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#eee]">
                                     {loading && filtered.length === 0 ? (
                                         <tr><td colSpan={4} className="py-20 text-center text-[13px] text-[#565959]">Synchronizing registry...</td></tr>
                                     ) : filtered.length === 0 ? (
@@ -197,24 +198,24 @@ export default function ProductCategoriesPage() {
                                     ) : (
                                         filtered.map(cat => (
                                             <tr key={cat.id} className="hover:bg-[#fcfdff] transition-colors group">
-                                                <td className="px-6 py-4">
-                                                    <div className="text-[14px] font-bold text-[#007185] group-hover:underline cursor-pointer" onClick={() => handleEdit(cat)}>
+                                                <td className="px-2 md:px-6 py-2 md:py-4">
+                                                    <div className="text-[13px] md:text-[14px] font-bold text-[#007185] group-hover:underline cursor-pointer truncate max-w-[90px] sm:max-w-none" onClick={() => handleEdit(cat)} title={cat.name}>
                                                         {cat.name}
                                                     </div>
-                                                    <div className="text-[11px] text-[#565959] mt-0.5">Slug: {cat.slug}</div>
+                                                    <div className="text-[10px] md:text-[11px] text-[#565959] mt-0.5 truncate max-w-[90px] sm:max-w-none">Slug: {cat.slug}</div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-[13px] text-[#565959] line-clamp-1 italic max-w-sm">{cat.description || 'No description provided'}</div>
+                                                <td className="px-2 md:px-6 py-2 md:py-4">
+                                                    <div className="text-[12px] md:text-[13px] text-[#565959] line-clamp-1 italic max-w-[80px] sm:max-w-xs">{cat.description || 'No description'}</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold uppercase border ${cat.status?.toUpperCase() === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                                <td className="px-2 md:px-6 py-2 md:py-4 text-center">
+                                                    <span className={`px-1.5 py-0.5 rounded-[2px] text-[9px] md:text-[10px] font-bold uppercase border ${cat.status?.toUpperCase() === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                                         {cat.status || 'ACTIVE'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => handleEdit(cat)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Edit size={14} /></button>
-                                                        <button onClick={() => setDeleteCat(cat)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash size={14} /></button>
+                                                <td className="px-2 md:px-6 py-2 md:py-4 text-right">
+                                                    <div className="flex justify-end gap-1 md:gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => handleEdit(cat)} className="p-1 md:p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Edit size={13} /></button>
+                                                        <button onClick={() => setDeleteCat(cat)} className="p-1 md:p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash size={13} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -223,6 +224,7 @@ export default function ProductCategoriesPage() {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
                     </div>
                 ) : (
                     /* Entry Form */

@@ -25,7 +25,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -98,22 +98,22 @@ export default function UsersPage() {
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             {/* Header */}
             <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-6 text-left">
+                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 text-left">
                     <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
                         <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                         <ChevronRight size={10} />
                         <span className="text-[#c45500]">Users</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                             <h1 className="text-[22px] font-normal text-[#111]">Users</h1>
                             <p className="text-[13px] text-[#565959] mt-0.5">Manage employees and system access</p>
                         </div>
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={loadData} loading={loading}>
+                        <div className="flex gap-2 w-full sm:w-auto justify-end">
+                            <Btn variant="secondary" onClick={loadData} loading={loading} className="flex-1 sm:flex-initial justify-center">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                             </Btn>
-                            <Btn onClick={() => router.push('/admin/users/add')}>
+                            <Btn onClick={() => router.push('/admin/users/add')} className="flex-1 sm:flex-initial justify-center">
                                 <Plus size={14} /> Add User
                             </Btn>
                         </div>
@@ -121,9 +121,9 @@ export default function UsersPage() {
                 </div>
             </div>
 
-            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 mt-6 sm:mt-8 text-left">
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-3 mb-6 shadow-sm flex flex-col md:flex-row gap-3 items-center">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-3 mb-6 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
                     <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
@@ -133,7 +133,7 @@ export default function UsersPage() {
                             className={inputCls}
                         />
                     </div>
-                    <div className="flex items-center gap-4 bg-[#f3f3f3] p-1 rounded-[4px] border border-[#ddd] w-full md:w-auto overflow-x-auto">
+                    <div className="flex items-center justify-center sm:justify-start gap-4 bg-[#f3f3f3] p-1 rounded-[4px] border border-[#ddd] w-full sm:w-auto overflow-x-auto">
                         <div className="flex bg-white rounded-[3px] p-0.5 gap-1 shadow-sm shrink-0">
                             {['all', 'admin'].map(r => (
                                 <button
@@ -164,77 +164,79 @@ export default function UsersPage() {
 
                 {/* Table */}
                 <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
-                                <th className="px-6 py-3">User</th>
-                                <th className="px-6 py-3">Role</th>
-                                <th className="px-6 py-3">Joined</th>
-                                <th className="px-6 py-3 text-center">Status</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#eee]">
-                            {filtered.length === 0 ? (
-                                <tr><td colSpan={5} className="py-24 text-center text-[13px] text-[#565959]">No users found.</td></tr>
-                            ) : (
-                                filtered.map(user => (
-                                    <tr key={user.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 bg-[#f0f2f2] border border-[#ddd] rounded-[4px] flex items-center justify-center font-bold text-[#565959] group-hover:bg-[#f0c14b] group-hover:text-[#111] transition-all">
-                                                    {(user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">User</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Role</th>
+                                    <th className="hidden sm:table-cell px-6 py-3 whitespace-nowrap">Joined</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-center whitespace-nowrap">Status</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right whitespace-nowrap">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#eee]">
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan={5} className="py-24 text-center text-[13px] text-[#565959]">No users found.</td></tr>
+                                ) : (
+                                    filtered.map(user => (
+                                        <tr key={user.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-9 w-9 bg-[#f0f2f2] border border-[#ddd] rounded-[4px] flex items-center justify-center font-bold text-[#565959] group-hover:bg-[#f0c14b] group-hover:text-[#111] transition-all">
+                                                        {(user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-[#111]">{user.first_name} {user.last_name}</p>
+                                                        <p className="text-[11px] text-[#aaa]">{user.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-[#111]">{user.first_name} {user.last_name}</p>
-                                                    <p className="text-[11px] text-[#aaa]">{user.email}</p>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={`inline-block px-2 py-0.5 rounded-[2px] border text-[10px] font-bold uppercase tracking-tight w-fit
+                                                        ${user.role_name?.toLowerCase().includes('admin')
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                                            : 'bg-white text-[#565959] border-[#ddd]'}`}>
+                                                        {user.role_name || 'Individual'}
+                                                    </span>
+                                                    {user.business_name && <p className="text-[10px] text-[#aaa] font-bold uppercase">{user.business_name}</p>}
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
-                                                <span className={`inline-block px-2 py-0.5 rounded-[2px] border text-[10px] font-bold uppercase tracking-tight w-fit
-                                                    ${user.role_name?.toLowerCase().includes('admin')
-                                                        ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                                        : 'bg-white text-[#565959] border-[#ddd]'}`}>
-                                                    {user.role_name || 'Individual'}
-                                                </span>
-                                                {user.business_name && <p className="text-[10px] text-[#aaa] font-bold uppercase">{user.business_name}</p>}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-[#565959]">
-                                            {formatDate(user.date_joined || new Date().toISOString())}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <select
-                                                value={user.is_active ? 'active' : 'inactive'}
-                                                onChange={() => toggleUserStatus(user)}
-                                                className={`px-3 py-1 rounded-[3px] text-[10px] font-bold uppercase transition-all outline-none cursor-pointer border
-                                                    ${user.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                                            >
-                                                <option value="active">Active</option>
-                                                <option value="inactive">Inactive</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 transition-opacity">
-                                                <button onClick={() => setSelectedUserForView(user)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
-                                                <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-amber-50 text-amber-600"><Edit size={14} /></button>
-                                                <button onClick={() => setDeleteUser(user)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 text-[#565959] whitespace-nowrap">
+                                                {formatDate(user.date_joined || new Date().toISOString())}
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-center whitespace-nowrap">
+                                                <select
+                                                    value={user.is_active ? 'active' : 'inactive'}
+                                                    onChange={() => toggleUserStatus(user)}
+                                                    className={`px-3 py-1 rounded-[3px] text-[10px] font-bold uppercase transition-all outline-none cursor-pointer border
+                                                        ${user.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                >
+                                                    <option value="active">Active</option>
+                                                    <option value="inactive">Inactive</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setSelectedUserForView(user)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
+                                                    <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-amber-50 text-amber-600"><Edit size={14} /></button>
+                                                    <button onClick={() => setDeleteUser(user)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             {/* Delete Modal */}
             {deleteUser && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] max-w-sm w-full shadow-2xl p-8 text-center animate-in zoom-in-95">
+                    <div className="bg-white rounded-[4px] border border-[#ddd] max-w-sm w-full shadow-2xl p-6 sm:p-8 text-center animate-in zoom-in-95">
                         <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 border border-red-100"><AlertTriangle size={32} /></div>
                         <h3 className="text-[18px] font-bold text-[#111]">Delete User?</h3>
                         <p className="text-[13px] text-[#565959] mt-3 leading-relaxed">Delete <span className="font-bold text-[#111]">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This will revoke all system access.</p>
@@ -256,7 +258,7 @@ export default function UsersPage() {
                             <span className="text-[12px] font-bold text-[#111] uppercase">Full User Profile</span>
                             <button onClick={() => setSelectedUserForView(null)} className="text-[#aaa] hover:text-[#111]"><X size={20} /></button>
                         </div>
-                        <div className="p-8 space-y-6">
+                        <div className="p-4 sm:p-8 space-y-6">
                             <div className="flex items-center gap-4 pb-6 border-b border-[#eee]">
                                 <div className="w-12 h-12 bg-[#f0f2f2] border border-[#ddd] flex items-center justify-center rounded-[4px]">
                                     <User size={24} className="text-[#ccc]" />
@@ -288,7 +290,7 @@ export default function UsersPage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-6 text-[12px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-6 text-[12px]">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Email Address</p>
                                     <p className="font-bold text-[#111] truncate">{selectedUserForView.email || '—'}</p>
@@ -319,7 +321,7 @@ export default function UsersPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="px-6 py-4 bg-[#f6f6f6] border-t border-[#ddd] flex gap-3">
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#f6f6f6] border-t border-[#ddd] flex flex-col sm:flex-row gap-2.5">
                             <Btn onClick={() => router.push(`/admin/users/edit/${selectedUserForView.id}`)} className="flex-1 h-[35px]">Edit User</Btn>
                             <Btn variant="secondary" onClick={() => setSelectedUserForView(null)} className="px-8 h-[35px]">Close</Btn>
                         </div>

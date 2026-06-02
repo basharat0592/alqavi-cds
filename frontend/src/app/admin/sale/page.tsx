@@ -108,7 +108,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
             </div>
 
             {open && (
-                <div className="absolute top-[calc(100%+4px)] left-0 w-[400px] sm:w-[550px] bg-white border border-slate-300 rounded-[6px] shadow-2xl z-[1000] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="absolute top-[calc(100%+4px)] left-0 w-[calc(100vw-32px)] sm:w-[400px] md:w-[550px] bg-white border border-slate-300 rounded-[6px] shadow-2xl z-[1000] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
                     <div className="max-h-[350px] overflow-y-auto scrollbar-thin">
                         {filtered.length === 0 ? (
                             <div className="p-10 text-center bg-slate-50">
@@ -438,7 +438,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-left text-[#0f1111]">
-            <div className="max-w-[1200px] mx-auto px-6 pt-5">
+            <div className="max-w-[1200px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5">
 
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -470,11 +470,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                             {/* Order Info Panel */}
                             <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm animate-in fade-in slide-in-from-top-2">
-                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
-                                    <h2 className="text-[14px] font-black uppercase tracking-wider text-slate-600">Order Details</h2>
-                                    <p className="text-[11px] text-[#565959] mt-1 font-medium italic">Choose customer and how they will pay.</p>
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                                    <h2 className="text-[13px] sm:text-[14px] font-black uppercase tracking-wider text-slate-600">Order Details</h2>
+                                    <p className="text-[11px] text-[#565959] mt-0.5 font-medium italic">Choose customer and how they will pay.</p>
                                 </div>
-                                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label="Order Number" required>
                                         <input className={inputCls} value={orderNumber} onChange={e => setOrderNumber(e.target.value)} />
                                     </Field>
@@ -509,16 +509,16 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                             {/* Line Items Detail */}
                             <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm relative z-[10] animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-[14px] font-black uppercase tracking-wider text-slate-600">Sale Items</h2>
-                                        <p className="text-[11px] text-[#565959] mt-1 font-medium italic">Add products and how many to sell.</p>
+                                        <h2 className="text-[13px] sm:text-[14px] font-black uppercase tracking-wider text-slate-600">Sale Items</h2>
+                                        <p className="text-[11px] text-[#565959] mt-0.5 font-medium italic">Add products and how many to sell.</p>
                                     </div>
                                     <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
                                 </div>
-                                <div className="p-6 space-y-4">
-                                    {/* Table Header */}
-                                    <div className="grid grid-cols-12 gap-3 text-[10px] font-black text-[#565959] uppercase tracking-[0.1em] px-1 pb-1">
+                                <div className="p-3 sm:p-6 space-y-3">
+                                    {/* Desktop Table Header - hidden on mobile */}
+                                    <div className="hidden sm:grid grid-cols-12 gap-3 text-[10px] font-black text-[#565959] uppercase tracking-[0.1em] px-1 pb-1">
                                         <div className="col-span-6">Choose Product</div>
                                         <div className="col-span-2 text-center">Qty</div>
                                         <div className="col-span-3 text-right">Subtotal</div>
@@ -526,45 +526,80 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
                                     
                                     {items.map((item, i) => (
-                                        <div key={i} className="grid grid-cols-12 gap-3 items-center bg-[#fcfdff] border border-[#eee] rounded-[3px] p-3 transition-all hover:border-[#aaa]/50 group animate-in slide-in-from-left-2 duration-300">
-                                            <div className="col-span-6">
-                                                <ProductSelector 
-                                                    selectedId={item.product}
-                                                    products={products.map(p => {
-                                                        const ws = warehouseStock.find(s => 
-                                                            (s.product_name?.toLowerCase() === p.product_name?.toLowerCase()) &&
-                                                            (s.weight === p.weight || (!s.weight && !p.weight)) &&
-                                                            (s.size === p.size || (!s.size && !p.size))
-                                                        );
-                                                        return {
-                                                            ...p,
-                                                            total_quantity: ws ? ws.total_quantity : 0,
-                                                            weight: p.weight,
-                                                            size: p.size
-                                                        };
-                                                    })}
-                                                    inputCls={selectCls}
-                                                    onSelect={(p: any) => updateItem(i, p)}
-                                                />
-                                            </div>
-                                            <div className="col-span-2 relative">
-                                                <input 
-                                                    className={inputCls + " text-center font-black text-[#c45500]"} 
-                                                    type="number" 
-                                                    min="1" 
-                                                    value={item.quantity || ''} 
-                                                    onChange={e => updateQty(i, parseInt(e.target.value))} 
-                                                />
-                                                {(parseInt(item.stock as any) > 0) && <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black text-slate-400 whitespace-nowrap uppercase tracking-tighter">Max: {item.stock}</span>}
-                                            </div>
-                                            <div className="col-span-3 text-right">
-                                                <div className="text-[16px] font-black text-[#B12704] font-mono whitespace-nowrap">{formatCurrency(item.unit_price * item.quantity)}</div>
-                                                {item.product && <div className="text-[10px] text-[#888] font-bold uppercase">@{formatCurrency(item.unit_price)}</div>}
-                                            </div>
-                                            <div className="col-span-1 flex justify-center">
-                                                <button onClick={() => removeItem(i)} className="text-[#bbb] hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50">
-                                                    <Trash2 size={16} />
+                                        <div key={i} className="bg-[#fcfdff] border border-[#eee] rounded-[3px] p-3 transition-all hover:border-[#aaa]/50 animate-in slide-in-from-left-2 duration-300">
+                                            {/* Mobile Card Layout */}
+                                            <div className="flex items-start gap-2 sm:hidden">
+                                                <div className="flex-1 min-w-0">
+                                                    <ProductSelector
+                                                        selectedId={item.product}
+                                                        products={products.map(p => {
+                                                            const ws = warehouseStock.find((s: any) =>
+                                                                (s.product_name?.toLowerCase() === p.product_name?.toLowerCase()) &&
+                                                                (s.weight === p.weight || (!s.weight && !p.weight)) &&
+                                                                (s.size === p.size || (!s.size && !p.size))
+                                                            );
+                                                            return { ...p, total_quantity: ws ? ws.total_quantity : 0, weight: p.weight, size: p.size };
+                                                        })}
+                                                        inputCls={selectCls}
+                                                        onSelect={(p: any) => updateItem(i, p)}
+                                                    />
+                                                </div>
+                                                <button onClick={() => removeItem(i)} className="text-[#bbb] hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50 shrink-0 mt-1">
+                                                    <Trash2 size={14} />
                                                 </button>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2 sm:hidden">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Qty:</span>
+                                                    <input
+                                                        className={"w-16 h-[28px] px-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] text-center font-black text-[#c45500] bg-white"}
+                                                        type="number" min="1"
+                                                        value={item.quantity || ''}
+                                                        onChange={e => updateQty(i, parseInt(e.target.value))}
+                                                    />
+                                                    {(parseInt(item.stock as any) > 0) && <span className="text-[9px] font-bold text-slate-400">/{item.stock}</span>}
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-[15px] font-black text-[#B12704] font-mono">{formatCurrency(item.unit_price * item.quantity)}</div>
+                                                    {item.product && <div className="text-[9px] text-[#888] font-bold uppercase">@{formatCurrency(item.unit_price)}</div>}
+                                                </div>
+                                            </div>
+
+                                            {/* Desktop Row Layout */}
+                                            <div className="hidden sm:grid grid-cols-12 gap-3 items-center">
+                                                <div className="col-span-6">
+                                                    <ProductSelector
+                                                        selectedId={item.product}
+                                                        products={products.map(p => {
+                                                            const ws = warehouseStock.find((s: any) =>
+                                                                (s.product_name?.toLowerCase() === p.product_name?.toLowerCase()) &&
+                                                                (s.weight === p.weight || (!s.weight && !p.weight)) &&
+                                                                (s.size === p.size || (!s.size && !p.size))
+                                                            );
+                                                            return { ...p, total_quantity: ws ? ws.total_quantity : 0, weight: p.weight, size: p.size };
+                                                        })}
+                                                        inputCls={selectCls}
+                                                        onSelect={(p: any) => updateItem(i, p)}
+                                                    />
+                                                </div>
+                                                <div className="col-span-2 relative">
+                                                    <input
+                                                        className={inputCls + " text-center font-black text-[#c45500]"}
+                                                        type="number" min="1"
+                                                        value={item.quantity || ''}
+                                                        onChange={e => updateQty(i, parseInt(e.target.value))}
+                                                    />
+                                                    {(parseInt(item.stock as any) > 0) && <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black text-slate-400 whitespace-nowrap uppercase tracking-tighter">Max: {item.stock}</span>}
+                                                </div>
+                                                <div className="col-span-3 text-right">
+                                                    <div className="text-[16px] font-black text-[#B12704] font-mono whitespace-nowrap">{formatCurrency(item.unit_price * item.quantity)}</div>
+                                                    {item.product && <div className="text-[10px] text-[#888] font-bold uppercase">@{formatCurrency(item.unit_price)}</div>}
+                                                </div>
+                                                <div className="col-span-1 flex justify-center">
+                                                    <button onClick={() => removeItem(i)} className="text-[#bbb] hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -581,7 +616,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                         {/* RIGHT: Bill Summary */}
                         <div className="w-full lg:w-[350px] shrink-0 animate-in slide-in-from-right-4 duration-500">
-                            <div className="bg-white border border-[#ddd] rounded-[8px] shadow-sm overflow-hidden sticky top-4">
+                            <div className="bg-white border border-[#ddd] rounded-[8px] shadow-sm overflow-hidden lg:sticky lg:top-4">
                                 <div className="px-6 py-4 border-b border-[#eee] bg-slate-50/50">
                                     <h3 className="text-[14px] font-bold uppercase tracking-widest text-[#111]">Bill Summary</h3>
                                 </div>

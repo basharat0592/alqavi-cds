@@ -355,7 +355,7 @@ export default function InventoryListPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
+            <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
 
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -364,22 +364,22 @@ export default function InventoryListPage() {
                     <span className="text-[#c45500] font-bold">Stock Room</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-[22px] font-normal">
+                <div className="flex items-center justify-between mb-4 gap-2">
+                    <h1 className="text-[20px] sm:text-[22px] font-normal shrink-0">
                         {view === 'list' ? 'Stock Room' : (isEditing ? 'Edit Item' : 'New Stock')}
                     </h1>
                     {view === 'list' ? (
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={loadData} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <div className="flex gap-2 shrink-0">
+                            <Btn variant="secondary" onClick={loadData} loading={loading} className="whitespace-nowrap">
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Refresh</span>
                             </Btn>
                             <Btn onClick={() => {
                                 setForm({ product_name: '', category: '', supplier: '', warehouse: selectedWarehouse || '', purchase_type: 'single', cartons: '', items_per_carton: '', total_quantity: '', price_per_carton: '', price_per_item: '', date: new Date().toISOString().slice(0, 10), supplier_product_id: '' });
                                 setIsEditing(false); setView('form');
-                            }}><Plus size={14} /> Add Stock</Btn>
+                            }} className="whitespace-nowrap"><Plus size={14} /> Add Stock</Btn>
                         </div>
                     ) : (
-                        <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold">
+                        <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold whitespace-nowrap">
                             <ChevronLeft size={14} /> Back to Stock Room
                         </button>
                     )}
@@ -389,8 +389,8 @@ export default function InventoryListPage() {
                 {view === 'list' ? (
                     <div className="space-y-6">
                         {/* Filters */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                            <div className="relative flex-1 min-w-[300px]">
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                                 <input
                                     value={search}
@@ -399,8 +399,8 @@ export default function InventoryListPage() {
                                     className={`${inputCls} pl-10 h-[35px]`}
                                 />
                             </div>
-                            <div className="h-8 w-px bg-[#eee] mx-2 hidden sm:block" />
-                            <div className="relative min-w-[200px]">
+                            <div className="h-8 w-px bg-[#eee] mx-2 hidden md:block" />
+                            <div className="relative flex-1 md:flex-initial md:min-w-[200px]">
                                 <select
                                     value={selectedWarehouse}
                                     onChange={e => setSelectedWarehouse(e.target.value)}
@@ -410,7 +410,7 @@ export default function InventoryListPage() {
                                     {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
                                 </select>
                             </div>
-                            <div className="relative min-w-[200px]">
+                            <div className="relative flex-1 md:flex-initial md:min-w-[200px]">
                                 <select
                                     value={selectedSupplier}
                                     onChange={e => setSelectedSupplier(e.target.value)}
@@ -422,8 +422,133 @@ export default function InventoryListPage() {
                             </div>
                         </div>
 
-                        {/* Inventory Table */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
+                        {/* ── Mobile Card List ── */}
+                        <div className="md:hidden space-y-3 mb-6">
+                            {loading && stocks.length === 0 ? (
+                                <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                                    <Loader2 size={32} className="animate-spin text-[#c45500] mx-auto mb-3" />
+                                    <p className="text-[13px] text-[#565959] font-medium italic">Syncing Stock Room...</p>
+                                </div>
+                            ) : paginatedData.length === 0 ? (
+                                <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                                    <div className="mb-3 opacity-10"><Box size={40} className="mx-auto" /></div>
+                                    <p className="text-[13px] text-[#565959] font-medium">No stock records match search.</p>
+                                </div>
+                            ) : (
+                                paginatedData.map(s => (
+                                    <div key={s.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 space-y-3 text-left">
+                                        {/* Row 1: Image + Item Title & Info */}
+                                        <div className="flex gap-3">
+                                            <div className="w-14 h-14 bg-white rounded border border-[#ddd] overflow-hidden flex items-center justify-center shrink-0">
+                                                {s.product_image ? (
+                                                    <img
+                                                        src={getImageUrl(s.product_image)}
+                                                        className="w-full h-full object-contain p-1"
+                                                        alt=""
+                                                    />
+                                                ) : (
+                                                    <Package size={24} className="text-gray-200" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-baseline gap-1.5 flex-wrap" onClick={() => setViewingStock(s)}>
+                                                    <h3 className="text-[14px] font-bold text-[#111] hover:text-[#007185] hover:underline cursor-pointer">
+                                                        {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
+                                                    </h3>
+                                                    {(s.weight || s.size) && (
+                                                        <span className="text-[9px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                            — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-[10px] text-[#565959] uppercase font-bold mt-0.5 tracking-tighter">{s.category_name || 'Category not set'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Row 2: Stock Level & Price */}
+                                        <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-[#eee] text-[12px]">
+                                            <div>
+                                                <div className="text-[10px] text-slate-400 font-bold uppercase">Stock Level</div>
+                                                <div className="text-[15px] font-bold text-[#111] mt-0.5">
+                                                    {s.total_quantity.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal ml-0.5">Units</span>
+                                                </div>
+                                                <div className="text-[9px] text-[#007600] font-black uppercase tracking-wider mt-0.5">
+                                                    {s.purchase_type === 'carton' ? `${s.cartons} Boxes` : 'Loose Units'}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-[10px] text-slate-400 font-bold uppercase">Unit Price</div>
+                                                <div className="font-bold text-[#B12704] text-[15px] mt-0.5">{formatCurrency(s.price_per_item)}</div>
+                                                <div className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Single Cost</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Row 3: Supplier, Warehouse & Last Updated */}
+                                        <div className="space-y-1.5 text-[11px] text-[#565959]">
+                                            <div className="flex items-center gap-1.5">
+                                                <Truck size={13} className="text-[#adb1b8] shrink-0" />
+                                                <span className="font-semibold text-[#111]">{getSupplierName(s.supplier, s.supplier_name)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <MapPin size={13} className="text-[#adb1b8] shrink-0" />
+                                                {s.warehouse_name ? (
+                                                    <span className="font-semibold text-[#111]">{s.warehouse_name}</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
+                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-[#007185] bg-[#f2fcfd] text-[#007185] hover:bg-[#e1f5f8] rounded text-[9px] font-bold transition-all"
+                                                    >
+                                                        <Plus size={8} strokeWidth={3} /> Assign Location
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 pt-0.5 border-t border-[#f7f7f7]">
+                                                <span className="font-medium">Updated:</span>
+                                                <span className="text-[#111] font-bold">
+                                                    {new Date(s.updated_at || s.created_at || s.date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </span>
+                                                <span className="text-slate-400">•</span>
+                                                <span className="text-[#111] font-bold">
+                                                    {new Date(s.updated_at || s.created_at || s.date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Row 4: Action Controls */}
+                                        <div className="flex gap-2 pt-2 border-t border-[#eee]">
+                                            <button
+                                                onClick={() => setViewingStock(s)}
+                                                className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#007185] text-[12px] font-bold shadow-sm"
+                                            >
+                                                <Eye size={13} /> View
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setForm({ product_name: s.product_name, category: s.category || '', supplier: s.supplier, warehouse: s.warehouse, purchase_type: s.purchase_type, cartons: s.cartons || '', items_per_carton: s.items_per_carton || '', total_quantity: s.total_quantity, price_per_carton: s.price_per_carton || '', price_per_item: s.price_per_item, date: s.date, supplier_product_id: '' });
+                                                    setIsEditing(true); setEditingId(s.id); setView('form');
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] text-[12px] font-bold shadow-sm"
+                                            >
+                                                <Edit2 size={13} /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteModal({
+                                                    open: true,
+                                                    ids: s.items.map((i: any) => i.id),
+                                                    name: s.product_name
+                                                })}
+                                                className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-red-200 rounded bg-red-50/50 hover:bg-red-50 text-red-600 text-[12px] font-bold shadow-sm"
+                                            >
+                                                <Trash2 size={13} /> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* ── Desktop Table ── */}
+                        <div className="hidden md:block bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
@@ -544,17 +669,17 @@ export default function InventoryListPage() {
                         </div>
 
                         {/* ── Pagination Controls ── */}
-                        <div className="px-6 py-4 bg-[#fcfdff] border-t border-[#eee] flex items-center justify-between">
-                            <div className="text-[13px] text-[#565959]">
+                        <div className="px-4 py-4 sm:px-6 bg-[#fcfdff] border-t border-[#eee] flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="text-[12px] sm:text-[13px] text-[#565959] text-center sm:text-left">
                                 Showing <span className="font-bold text-[#111]">{filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to <span className="font-bold text-[#111]">{Math.min(currentPage * pageSize, filtered.length)}</span> of <span className="font-bold text-[#111]">{filtered.length}</span> items
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1 || filtered.length === 0}
                                     className="h-[31px] px-3 border border-[#ddd] rounded-[3px] text-[13px] font-bold hover:bg-[#f7f8fa] disabled:opacity-40 flex items-center gap-1 transition-all"
                                 >
-                                    <ChevronLeft size={16} /> Previous
+                                    <ChevronLeft size={16} /> <span className="hidden xs:inline">Previous</span>
                                 </button>
                                 <div className="flex items-center gap-1">
                                     {totalPages > 0 && Array.from({ length: totalPages }).map((_, i) => (
@@ -572,7 +697,7 @@ export default function InventoryListPage() {
                                     disabled={currentPage === totalPages || filtered.length === 0}
                                     className="h-[31px] px-3 border border-[#ddd] rounded-[3px] text-[13px] font-bold hover:bg-[#f7f8fa] disabled:opacity-40 flex items-center gap-1 transition-all"
                                 >
-                                    Next <ChevronRight size={16} />
+                                    <span className="hidden xs:inline">Next</span> <ChevronRight size={16} />
                                 </button>
                             </div>
                         </div>

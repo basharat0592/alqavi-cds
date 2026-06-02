@@ -25,7 +25,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -321,7 +321,7 @@ export default function WarehousesPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
+            <div className="max-w-[1100px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
 
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -330,18 +330,18 @@ export default function WarehousesPage() {
                     <span className="text-[#c45500]">Warehouses</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <h1 className="text-[22px] font-normal">
                         {view === 'list' ? 'Warehouses List' :
                             view === 'products' ? `Products in ${selectedWh?.name}` :
                                 (editWh ? 'Edit Warehouse' : 'Add Warehouse')}
                     </h1>
                     {view === 'list' ? (
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={load} loading={loading}>
+                        <div className="flex gap-2 w-full sm:w-auto justify-end">
+                            <Btn variant="secondary" onClick={load} loading={loading} className="flex-1 sm:flex-initial justify-center">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Btn>
-                            <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }}><Plus size={14} /> Add Warehouse</Btn>
+                            <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }} className="flex-1 sm:flex-initial justify-center"><Plus size={14} /> Add Warehouse</Btn>
                         </div>
                     ) : (
                         <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold">
@@ -417,28 +417,28 @@ export default function WarehousesPage() {
                     /* Products In Warehouse View */
                     <div className="space-y-6">
                         {/* Filters Bar */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                            <div className="relative flex-1 min-w-[200px]">
+                        <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                                 <input
                                     value={prodSearch}
                                     onChange={e => setProdSearch(e.target.value)}
                                     placeholder="Search products..."
                                     className={`${inputCls} pl-10 h-[35px]`}
+                                
                                 />
                             </div>
-                            <div className="h-8 w-px bg-[#eee] mx-2 hidden sm:block" />
-                            <div className="relative min-w-[200px]">
+                            <div className="relative w-full sm:w-[200px]">
                                 <select
                                     value={prodSupplier}
                                     onChange={e => setProdSupplier(e.target.value)}
-                                    className={`${inputCls} h-[35px] font-bold cursor-pointer pr-8`}
+                                    className={`${inputCls} h-[35px] font-bold cursor-pointer pr-8 bg-white`}
                                 >
                                     <option value="">Select Supplier to Filter</option>
                                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.company || s.name}</option>)}
                                 </select>
                             </div>
-                            <Btn variant="secondary" onClick={handleExportCSV} className="ml-auto">
+                            <Btn variant="secondary" onClick={handleExportCSV} className="w-full sm:w-auto justify-center shrink-0">
                                 <Box size={14} /> Export CSV
                             </Btn>
                         </div>
@@ -465,19 +465,19 @@ export default function WarehousesPage() {
                                     <table className="w-full text-left text-[13px] border-collapse">
                                         <thead>
                                             <tr className="border-b border-[#ddd] bg-[#f7f8fa] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
-                                                <th className="px-6 py-3">Product Name</th>
-                                                <th className="px-6 py-3">Supplier</th>
-                                                <th className="px-6 py-3 text-right">Quantity</th>
-                                                <th className="px-6 py-3 text-right">Unit Price</th>
-                                                <th className="px-6 py-3 text-right">Received</th>
-                                                <th className="px-6 py-3 text-right">Actions</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3">Product Name</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3">Supplier</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Quantity</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Unit Price</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Received</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#eee]">
                                             {groupedWhInventory.map((item: any) => (
                                                 <tr key={item.id} className="hover:bg-[#fcfdff] transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-baseline gap-1.5">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4">
+                                                        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                                                             <div className="font-bold text-[#007185]">{item.product_name}</div>
                                                             {(item.weight || item.size) && (
                                                                 <div className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
@@ -486,30 +486,30 @@ export default function WarehousesPage() {
                                                             )}
                                                         </div>
                                                         <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                                                            {item.category_name || 'No Category'} • SKU: {item.sku || '---'}
+                                                            {item.category_name || 'No Category'} <span className="hidden sm:inline">• SKU: {item.sku || '---'}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4">
                                                         <div className="text-[13px] text-[#111] font-medium">{item.supplier_name || 'Generic'}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="font-bold text-[15px] text-[#111]">{(item.total_quantity || item.current_stock || 0).toLocaleString()}</div>
-                                                        <div className="text-[10px] text-[#007600] font-bold uppercase tracking-tighter">{item.purchase_type === 'carton' ? `${item.cartons} Boxes` : 'Loose'}</div>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right">
+                                                        <div className="font-bold text-[14px] sm:text-[15px] text-[#111]">{(item.total_quantity || item.current_stock || 0).toLocaleString()}</div>
+                                                        <div className="hidden sm:block text-[10px] text-[#007600] font-bold uppercase tracking-tighter">{item.purchase_type === 'carton' ? `${item.cartons} Boxes` : 'Loose'}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right font-bold text-[#B12704]">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right font-bold text-[#B12704] whitespace-nowrap">
                                                         Rs. {(item.price_per_item || item.unit_price || item.price || 0).toLocaleString()}
                                                     </td>
-                                                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
                                                         <div className="text-[12px] text-[#565959] font-bold">{new Date(item.date).toLocaleDateString()}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right">
                                                         <div className="flex items-center justify-end gap-1">
                                                             <button
                                                                 onClick={() => handleViewMovements(item)}
-                                                                className="p-1.5 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all"
+                                                                className="p-1 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all shrink-0"
                                                                 title="View Movement History"
                                                             >
-                                                                <Eye size={16} />
+                                                                <Eye size={14} />
                                                             </button>
                                                             <button
                                                                 onClick={() => {
@@ -517,17 +517,17 @@ export default function WarehousesPage() {
                                                                     setTransferQty(item.total_quantity);
                                                                     setTransferDate(new Date().toISOString().slice(0, 10));
                                                                 }}
-                                                                className="p-1.5 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all"
+                                                                className="p-1 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all shrink-0"
                                                                 title="Move to another Warehouse"
                                                             >
-                                                                <ArrowRightLeft size={16} />
+                                                                <ArrowRightLeft size={14} />
                                                             </button>
                                                             <button
                                                                 onClick={() => setRemoveStock(item)}
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-all"
+                                                                className="p-1 text-red-600 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-all shrink-0"
                                                                 title="Remove from Warehouse"
                                                             >
-                                                                <Trash2 size={16} />
+                                                                <Trash2 size={14} />
                                                             </button>
                                                         </div>
                                                     </td>

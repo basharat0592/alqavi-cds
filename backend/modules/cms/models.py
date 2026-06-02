@@ -109,3 +109,28 @@ class NavigationItem(models.Model):
 
     class Meta:
         ordering = ['order']
+
+class NavbarPage(models.Model):
+    """Navbar Pages - Category groupings that appear in the top navbar."""
+    name = models.CharField(max_length=255, unique=True, help_text="Name of this navbar section")
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    description = models.TextField(blank=True, null=True, help_text="Internal description")
+    icon_url = models.CharField(max_length=500, blank=True, null=True, help_text="URL or icon class")
+    order = models.PositiveIntegerField(default=0, help_text="Display order in navbar")
+    is_visible = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = "Navbar Page"
+        verbose_name_plural = "Navbar Pages"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name

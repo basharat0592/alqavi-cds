@@ -445,7 +445,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                 {/* Right Actions - Desktop only */}
                 <div className="hidden md:flex items-center gap-1 text-white pr-2 shrink-0">
                     {/* Account Dropdown */}
-                    <div className="relative" ref={userRef}>
+                    <div className="relative group/user" ref={userRef} onMouseEnter={() => setUserMenuOpen(true)} onMouseLeave={() => setUserMenuOpen(false)}>
                         <div 
                             onClick={() => setUserMenuOpen(!userMenuOpen)}
                             className="flex flex-col p-1 px-2 rounded-sm cursor-pointer leading-tight min-w-[120px] select-none hover:bg-white/10 transition-colors"
@@ -626,8 +626,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                         <Menu size={20} />
                         <span className="font-bold">All</span>
                     </button>
-                    <Link href="/customer/shop/deals" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/customer/shop/deals' ? '#EFB366' : 'white' }}>Today's Deals</Link>
-                    <Link href="/customer/shop/cosmetics" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/customer/shop/cosmetics' ? '#EFB366' : 'white' }}>Cosmetics</Link>
+                    <Link href="/about" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/about' ? '#EFB366' : 'white' }}>About Us</Link>
                     <Link href="/customer/tracking" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/customer/tracking' ? '#EFB366' : 'white' }}>Track Order</Link>
                     <Link href="/contact" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/contact' ? '#EFB366' : 'white' }}>Customer Service</Link>
                     <Link href="/gift-cards" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/gift-cards' ? '#EFB366' : 'white' }}>Gift Cards</Link>

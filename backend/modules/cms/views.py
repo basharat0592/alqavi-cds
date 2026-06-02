@@ -2,10 +2,10 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import SiteSettings, WebsiteSection, MediaAsset, NavigationMenu, NavigationItem
+from .models import SiteSettings, WebsiteSection, MediaAsset, NavigationMenu, NavigationItem, NavbarPage
 from .serializers import (
     SiteSettingsSerializer, WebsiteSectionSerializer, MediaAssetSerializer,
-    NavigationMenuSerializer, NavigationItemSerializer
+    NavigationMenuSerializer, NavigationItemSerializer, NavbarPageSerializer
 )
 
 class CmsConfigViewSet(viewsets.ViewSet):
@@ -153,3 +153,30 @@ class NavigationItemViewSet(viewsets.ModelViewSet):
     serializer_class = NavigationItemSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
+
+class NavbarPageViewSet(viewsets.ModelViewSet):
+    queryset = NavbarPage.objects.all().order_by('order')
+    serializer_class = NavbarPageSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    @action(detail=False, methods=['post'])
+    def reorder(self, request):
+        orders = request.data.get('orders', [])
+        for item in orders:
+            NavbarPage.objects.filter(id=item['id']).update(order=item['order'])
+        return Response({"status": "reordered"})
+
+    @action(detail=False, methods=['get'])
+    def get_categories_count(self, request):
+        """Get count of categories for each navbar page"""
+        navbar_pages = NavbarPage.objects.all()
+        data = []
+        for page in navbar_pages:
+            try:
+                from modules.products.models import Category
+                count = Category.objects.filter(navbar_page=page).count()
+                data.append({'id': page.id, 'name': page.name, 'categories_count': count})
+            except:
+                data.append({'id': page.id, 'name': page.name, 'categories_count': 0})
+        return Response(data)
