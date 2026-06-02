@@ -462,7 +462,7 @@ export default function SettingsPage() {
                                     {
                                         group: 'Main',
                                         items: [
-                                            { n: 'Overview', h: '/admin/dashboard' },
+                                            { n: 'Dashboard', h: '/admin/dashboard' },
                                             { n: 'Customers', h: '/admin/company/customers' },
                                             { n: 'Recent Activity', h: '/admin/sales/recent' },
                                             { n: 'Order List', h: '/admin/orders' },

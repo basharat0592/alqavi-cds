@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import {
     Search, ShoppingCart, Menu, X, MapPin, ChevronDown, User,
-    LogOut, Package, LayoutDashboard, ChevronRight
+    LogOut, Package, LayoutDashboard, ChevronRight,
+    Heart, Percent, Truck, Gift, HelpCircle, LogIn, UserPlus, Store
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCart } from "@/context/CartContext";
@@ -221,45 +222,93 @@ export default function Navbar({ settings }: { settings?: any }) {
                                         initial={{ opacity: 0, y: 10, scale: 0.98 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                                        className="absolute right-0 mt-3 z-[10000] w-72 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-200 rounded-xl overflow-hidden text-black"
+                                        className="absolute right-0 mt-3 z-[10000] w-72 bg-white shadow-[0_25px_60px_rgba(0,0,0,0.15)] border border-slate-200/80 rounded-2xl overflow-hidden text-black"
                                     >
                                         {!user ? (
-                                            <div className="p-8 flex flex-col items-center bg-slate-50/50">
-                                                <Link
-                                                    href="/login"
-                                                    onClick={() => setUserMenuOpen(false)}
-                                                    className="w-full py-2.5 bg-gradient-to-b from-[#febd69] to-[#f90] text-black border border-[#a88734] rounded-md text-center text-sm font-bold shadow-sm hover:brightness-105 transition-all active:scale-95"
+                                            <div className="p-2.5 space-y-0.5">
+                                                <Link 
+                                                    href="/login" 
+                                                    onClick={() => setUserMenuOpen(false)} 
+                                                    className="px-3.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#f58220] transition-all flex items-center gap-2.5 group"
                                                 >
-                                                    Sign in
+                                                    <LogIn size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                    <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Log In</span>
+                                                    <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </Link>
-                                                <div className="text-[11px] text-slate-600 mt-4">
-                                                    New customer? <Link href="/register" onClick={() => setUserMenuOpen(false)} className="text-blue-600 font-bold hover:text-orange-600 hover:underline">Start here.</Link>
-                                                </div>
+                                                
+                                                <Link 
+                                                    href="/register" 
+                                                    onClick={() => setUserMenuOpen(false)} 
+                                                    className="px-3.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#f58220] transition-all flex items-center gap-2.5 group"
+                                                >
+                                                    <UserPlus size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                    <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Create Account</span>
+                                                    <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </Link>
+
+                                                <Link 
+                                                    href="/register/supplier" 
+                                                    onClick={() => setUserMenuOpen(false)} 
+                                                    className="px-3.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#f58220] transition-all flex items-center gap-2.5 group"
+                                                >
+                                                    <Store size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                    <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Become a Seller</span>
+                                                    <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </Link>
                                             </div>
                                         ) : (
                                             <div className="p-0">
-                                                <div className="px-6 py-5 bg-[#232f3e] text-white flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                                                        <User size={20} />
+                                                <div className="px-5 py-4 bg-[#232f3e] text-white flex items-center gap-3 relative overflow-hidden">
+                                                    {/* Decorative radial gradient in header */}
+                                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_right_top,rgba(254,189,105,0.15),transparent_45%)] pointer-events-none"></div>
+                                                    
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-[#f58220] flex items-center justify-center text-white font-bold text-base shadow-inner shrink-0 uppercase">
+                                                        {user.name.charAt(0)}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-0.5">Your Account</div>
-                                                        <div className="font-bold text-[14px] truncate">{user.name}</div>
+                                                        <div className="text-[9px] text-slate-300 font-extrabold uppercase tracking-[0.2em] mb-0.5">Welcome</div>
+                                                        <div className="font-extrabold text-[14px] truncate leading-tight">{user.name}</div>
                                                     </div>
                                                 </div>
-                                                <div className="p-3 space-y-1">
-                                                    <Link href="/customer/dashboard" onClick={() => setUserMenuOpen(false)} className="px-4 py-2.5 rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#232f3e] transition-all flex items-center gap-3 group/link">
-                                                        <User size={18} className="text-slate-400 group-hover/link:text-[#232f3e]" />
-                                                        Your Account
+                                                <div className="p-2.5 space-y-0.5">
+                                                    <Link 
+                                                        href="/customer/dashboard" 
+                                                        onClick={() => setUserMenuOpen(false)} 
+                                                        className="px-3.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#f58220] transition-all flex items-center gap-2.5 group"
+                                                    >
+                                                        <User size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Your Account</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                     </Link>
-                                                    <Link href="/customer/dashboard/orders" onClick={() => setUserMenuOpen(false)} className="px-4 py-2.5 rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#232f3e] transition-all flex items-center gap-3 group/link">
-                                                        <Package size={18} className="text-slate-400 group-hover/link:text-[#232f3e]" />
-                                                        Your Orders
+                                                    
+                                                    <Link 
+                                                        href="/customer/dashboard/orders" 
+                                                        onClick={() => setUserMenuOpen(false)} 
+                                                        className="px-3.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#f58220] transition-all flex items-center gap-2.5 group"
+                                                    >
+                                                        <Package size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Your Orders</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                     </Link>
-                                                    <div className="my-2 border-t border-slate-100"></div>
-                                                    <button onClick={handleLogout} className="w-full px-4 py-2.5 rounded-lg text-[14px] font-bold text-red-600 hover:bg-red-50 transition-all flex items-center gap-3">
-                                                        <LogOut size={18} />
-                                                        Sign Out
+
+                                                    <Link 
+                                                        href="/customer/wishlist" 
+                                                        onClick={() => setUserMenuOpen(false)} 
+                                                        className="px-3.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#f58220] transition-all flex items-center gap-2.5 group"
+                                                    >
+                                                        <Heart size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">My Wishlist</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <div className="my-1.5 border-t border-slate-100"></div>
+                                                    
+                                                    <button 
+                                                        onClick={handleLogout} 
+                                                        className="w-full px-3.5 py-2 rounded-lg text-[13px] font-bold text-rose-600 hover:bg-rose-50 transition-all flex items-center gap-2.5 text-left"
+                                                    >
+                                                        <LogOut size={16} className="text-rose-500" />
+                                                        <span>Sign Out</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -396,8 +445,11 @@ export default function Navbar({ settings }: { settings?: any }) {
                 {/* Right Actions - Desktop only */}
                 <div className="hidden md:flex items-center gap-1 text-white pr-2 shrink-0">
                     {/* Account Dropdown */}
-                    <div className="relative group/user" ref={userRef} onMouseEnter={() => setUserMenuOpen(true)}>
-                        <div className="flex flex-col p-1 px-2 rounded-sm cursor-pointer leading-tight min-w-[120px]">
+                    <div className="relative" ref={userRef}>
+                        <div 
+                            onClick={() => setUserMenuOpen(!userMenuOpen)}
+                            className="flex flex-col p-1 px-2 rounded-sm cursor-pointer leading-tight min-w-[120px] select-none hover:bg-white/10 transition-colors"
+                        >
                             <span className="text-[12px] text-slate-300">Hello, {user ? user.name.split(' ')[0] : 'sign in'}</span>
                             <div className="flex items-center gap-1">
                                 <span className="text-sm font-bold">Account & Lists</span>
@@ -411,52 +463,133 @@ export default function Navbar({ settings }: { settings?: any }) {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                                 className="absolute top-full right-0 mt-3 z-[10000]"
-                                onMouseLeave={() => setUserMenuOpen(false)}
                             >
                                 {/* Arrow Pointer */}
                                 <div className="absolute top-0 right-10 w-4 h-4 bg-white rotate-45 border-l border-t border-slate-200 mt-[-8px] pointer-events-none"></div>
 
-                                <div className="w-72 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-200 rounded-xl overflow-hidden text-black">
-                                    {!user ? (
-                                        <div className="p-8 flex flex-col items-center bg-slate-50/50">
-                                            <Link
-                                                href="/login"
-                                                className="w-full py-2.5 bg-gradient-to-b from-[#febd69] to-[#f90] text-black border border-[#a88734] rounded-md text-center text-sm font-bold shadow-sm hover:brightness-105 transition-all active:scale-95"
-                                            >
-                                                Sign in
-                                            </Link>
-                                            <div className="text-[11px] text-slate-600 mt-4">
-                                                New customer? <Link href="/register" className="text-blue-600 font-bold hover:text-orange-600 hover:underline">Start here.</Link>
+                                <div className="w-80 bg-white shadow-[0_25px_60px_rgba(0,0,0,0.15)] border border-slate-200/80 rounded-2xl overflow-hidden text-black backdrop-blur-md">
+                                    {/* Header Section */}
+                                    {user && (
+                                        <div className="px-6 py-5 bg-[#232f3e] text-white flex items-center gap-4 relative overflow-hidden">
+                                            {/* Decorative radial gradient in header */}
+                                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_right_top,rgba(254,189,105,0.15),transparent_45%)] pointer-events-none"></div>
+                                            
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 to-[#f58220] flex items-center justify-center text-white font-bold text-lg shadow-inner shrink-0 uppercase">
+                                                {user.name.charAt(0)}
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="p-0">
-                                            <div className="px-6 py-5 bg-[#232f3e] text-white flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                                                    <User size={20} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-0.5">Your Account</div>
-                                                    <div className="font-bold text-[14px] truncate">{user.name}</div>
-                                                </div>
-                                            </div>
-                                            <div className="p-3 space-y-1">
-                                                <Link href="/customer/dashboard" className="px-4 py-2.5 rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#232f3e] transition-all flex items-center gap-3 group/link">
-                                                    <User size={18} className="text-slate-400 group-hover/link:text-[#232f3e]" />
-                                                    Your Account
-                                                </Link>
-                                                <Link href="/customer/dashboard/orders" className="px-4 py-2.5 rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#232f3e] transition-all flex items-center gap-3 group/link">
-                                                    <Package size={18} className="text-slate-400 group-hover/link:text-[#232f3e]" />
-                                                    Your Orders
-                                                </Link>
-                                                <div className="my-2 border-t border-slate-100"></div>
-                                                <button onClick={handleLogout} className="w-full px-4 py-2.5 rounded-lg text-[14px] font-bold text-red-600 hover:bg-red-50 transition-all flex items-center gap-3">
-                                                    <LogOut size={18} />
-                                                    Sign Out
-                                                </button>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-[10px] text-slate-300 font-extrabold uppercase tracking-[0.2em] mb-0.5">Welcome Back</div>
+                                                <div className="font-extrabold text-[16px] truncate leading-tight">{user.name}</div>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 mt-1 border border-emerald-500/30">
+                                                    Active Session
+                                                </span>
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Single Column list */}
+                                    <div className="p-4 bg-white space-y-3">
+                                        <h3 className="px-3 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                                            Your Account
+                                        </h3>
+                                        <div className="space-y-1">
+                                            {user ? (
+                                                <>
+                                                    <Link 
+                                                        href="/customer/dashboard" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <User size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Account Hub</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <Link 
+                                                        href="/customer/dashboard/orders" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <Package size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Your Orders</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <Link 
+                                                        href="/register/supplier" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <Store size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Become a Seller</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <Link 
+                                                        href="/contact" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <HelpCircle size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Contact Support</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <div className="my-1.5 border-t border-slate-100"></div>
+
+                                                    <button 
+                                                        onClick={handleLogout} 
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-bold text-rose-600 hover:bg-rose-50 transition-all duration-200 flex items-center gap-2.5 text-left"
+                                                    >
+                                                        <LogOut size={16} className="text-rose-500" />
+                                                        <span>Sign Out</span>
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Link 
+                                                        href="/login" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <LogIn size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Log In</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <Link 
+                                                        href="/register" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <UserPlus size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Create Account</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <Link 
+                                                        href="/register/supplier" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <Store size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Become a Seller</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+
+                                                    <Link 
+                                                        href="/contact" 
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                        className="w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#f58220] transition-all duration-200 flex items-center gap-2.5 group"
+                                                    >
+                                                        <HelpCircle size={16} className="text-slate-400 group-hover:text-[#f58220] transition-colors" />
+                                                        <span className="flex-1 group-hover:translate-x-0.5 transition-transform duration-200">Contact Support</span>
+                                                        <ChevronRight size={12} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </Link>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { 
-    Banknote, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, 
+    Banknote, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Package,
     Calendar, Download, Filter, Search, Printer, ChevronRight,
     PieChart as PieIcon, CreditCard, Banknote as BankIcon,
     History, ArrowRight, CheckCircle, Clock, Info, RefreshCw
@@ -11,6 +11,7 @@ import {
 import PageLoader from '@/components/ui/PageLoader';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useAdminDashboard } from '@/hooks';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PURE AMAZON RETAIL DESIGN SYSTEM - FINANCIAL REPORTS
@@ -29,14 +30,74 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     );
 };
 
+const formatK = (num: number) => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toLocaleString();
+};
+
+const MetricCard = ({ label, value, subtext, icon: Icon, color = "#e47911", alert = false, prefix = "Rs. " }: any) => {
+    const glowColor = color === "#e47911" || color === "#13b0d1" ? "rgba(19, 176, 209, 0.12)" :
+        color === "#067d62" || color === "#10b981" ? "rgba(16, 185, 129, 0.12)" :
+            color === "#007185" || color === "#6366f1" ? "rgba(99, 102, 241, 0.12)" :
+                color === "#f0c14b" || color === "#f59e0b" ? "rgba(245, 158, 11, 0.12)" : `${color}20`;
+
+    const displayColor = color === "#e47911" ? "#13b0d1" :
+        color === "#067d62" ? "#10b981" :
+            color === "#007185" ? "#6366f1" :
+                color === "#f0c14b" ? "#f59e0b" : color;
+
+    return (
+        <div className="bg-white p-5 rounded-[4px] border border-[#ddd] shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden text-left">
+            <div className="flex justify-between items-start mb-3">
+                <div className="space-y-1">
+                    <p className="text-[11px] font-bold text-[#565959] uppercase tracking-[0.1em]">{label}</p>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-2xl font-black text-[#0f1111] tracking-tight flex items-baseline">
+                            {prefix && <span className="text-[16px] mr-0.5 opacity-60 font-semibold">{prefix}</span>}
+                            {value}
+                        </h3>
+                        {alert && (
+                            <span className="flex h-2.5 w-2.5 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="w-10 h-10 rounded border border-[#e3e6e6] flex items-center justify-center" style={{ backgroundColor: glowColor, color: displayColor }}>
+                    <Icon size={20} strokeWidth={2} />
+                </div>
+            </div>
+            {subtext && (
+                <div className="flex items-center pt-3 border-t border-[#ddd]">
+                    <p className="text-[12px] text-[#565959] font-medium">{subtext}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function AccountingReportPage() {
-    const [loading, setLoading] = useState(true);
+    const [filterDate, setFilterDate] = useState<string>('');
+    const [paymentMethod, setPaymentMethod] = useState<string>('ALL');
+
+    const dashboardFilters = useMemo(() => ({
+        date: filterDate || undefined,
+        payment_method: paymentMethod !== 'ALL' ? paymentMethod : undefined
+    }), [filterDate, paymentMethod]);
+
+    const { stats, loading: statsLoading, refetch } = useAdminDashboard(dashboardFilters);
+    const [initialLoading, setInitialLoading] = useState(true);
 
     useEffect(() => {
-        setTimeout(() => setLoading(false), 800);
-    }, []);
+        if (!statsLoading) {
+            setInitialLoading(false);
+        }
+    }, [statsLoading]);
 
-    if (loading) return <PageLoader />;
+    if (initialLoading) return <PageLoader />;
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
@@ -51,37 +112,72 @@ export default function AccountingReportPage() {
                     <span className="text-[#c45500] font-bold">Financial Statements</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4 no-print">
+                {/* Header Controls */}
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-4 no-print">
                     <div>
                         <h1 className="text-[22px] font-normal text-[#111]">General Ledger & Financial Health</h1>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="rounded-[3px] border border-[#888c8e] bg-white h-[29px] px-2 flex items-center gap-2">
+                            <Calendar size={14} className="text-[#666]" />
+                            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-[13px] font-medium text-[#0f1111] outline-none border-none" />
+                        </div>
+                        <div className="rounded-[3px] border border-[#888c8e] bg-white h-[29px] px-2 flex items-center gap-2">
+                            <Filter size={14} className="text-[#666]" />
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="bg-transparent text-[13px] font-medium text-[#0f1111] outline-none border-none cursor-pointer">
+                                <option value="ALL">All Payments</option>
+                                <option value="COD">C.O.D</option>
+                                <option value="ONLINE">Bank Transfer</option>
+                                <option value="SHOP">Shop POS</option>
+                            </select>
+                        </div>
+                        <button onClick={refetch} className="h-[29px] px-4 rounded-[3px] border border-[#adb1b8] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[13px] font-medium text-[#0f1111] flex items-center gap-2 hover:from-[#eef1f3] hover:to-[#dce0e4] active:scale-[0.98] shadow-sm">
+                            <RefreshCw size={14} className={statsLoading ? 'animate-spin' : ''} /> Refresh
+                        </button>
                         <Btn variant="secondary" onClick={() => toast.success('Balance Sheet Downloaded')}>
                             <Download size={14} /> Download PDF
                         </Btn>
                         <Btn variant="secondary" onClick={() => window.print()}>
                             <Printer size={14} /> Print
                         </Btn>
+                        <span className="text-[13px] text-[#666]">Filter: <b className="text-[#0f1111]">{paymentMethod === 'ALL' ? 'All Payments' : paymentMethod}</b></span>
                     </div>
                 </div>
                 <div className="border-b border-[#ddd] mb-6 no-print" />
 
-                {/* Tactical Sensors */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    {[
-                        { label: 'Total Receivables', value: 'Rs. 1,240,500', trend: '+5.2%', up: true },
-                        { label: 'Total Payables', value: 'Rs. 450,200', trend: '-2.1%', up: false },
-                        { label: 'Cash On Hand', value: 'Rs. 890,000', trend: '+12%', up: true },
-                        { label: 'Net Profit', value: 'Rs. 790,300', trend: '+8.4%', up: true },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">{stat.label}</p>
-                                <span className={`text-[10px] font-black ${stat.up ? 'text-[#007600]' : 'text-[#B12704]'}`}>{stat.trend}</span>
-                            </div>
-                            <p className="text-[20px] font-normal text-[#111]">{stat.value}</p>
-                        </div>
-                    ))}
+                {/* Stats Metric Cards (Filtered) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <MetricCard
+                        label="Total Money"
+                        value={formatK(stats.totalRevenue || 0)}
+                        subtext="All history sales"
+                        icon={DollarSign}
+                        color="#13b0d1"
+                    />
+                    <MetricCard
+                        label="Net Profit"
+                        value={formatK(stats.totalProfit || 0)}
+                        subtext="Total earnings"
+                        icon={TrendingUp}
+                        color="#10b981"
+                    />
+                    <MetricCard
+                        label="Active Orders"
+                        value={stats.totalActive || stats.pendingOrders || 0}
+                        subtext="Total open orders"
+                        icon={Package}
+                        color="#6366f1"
+                        prefix=""
+                    />
+                    <MetricCard
+                        label="Pending Submission"
+                        value={stats.pendingOrders || 0}
+                        subtext="Need your approval"
+                        icon={Clock}
+                        color="#f59e0b"
+                        alert={(stats.pendingOrders || 0) > 0}
+                        prefix=""
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

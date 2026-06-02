@@ -134,20 +134,20 @@ function ReturnDetailModal({ returnData, onClose, onUpdate }: { returnData: any;
                     <Btn variant="secondary" onClick={onClose} disabled={loading} className="!h-9 !px-8">Dismiss</Btn>
                     {returnData.status.toUpperCase() === 'PENDING' && (
                         <div className="flex gap-3">
-                             <button 
+                            <button
                                 onClick={() => handleAction('REJECTED')}
                                 disabled={loading}
                                 className="h-9 px-6 text-[13px] font-bold text-white bg-[#B12704] hover:bg-[#8f2003] border border-[#8f2003] rounded-[3px] shadow-sm transition-all active:scale-[0.98] flex items-center gap-2"
-                             >
+                            >
                                 <XCircle size={14} /> Reject Request
-                             </button>
-                             <button 
+                            </button>
+                            <button
                                 onClick={() => handleAction('ACCEPTED')}
                                 disabled={loading}
                                 className="h-9 px-8 text-[13px] font-bold text-[#111] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] rounded-[3px] shadow-sm transition-all active:scale-[0.98] flex items-center gap-2"
-                             >
+                            >
                                 <CheckCircle2 size={14} /> Accept & Restock
-                             </button>
+                            </button>
                         </div>
                     )}
                 </div>
@@ -220,7 +220,7 @@ export default function SaleReturnsPage() {
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
-                
+
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -251,7 +251,7 @@ export default function SaleReturnsPage() {
                             className={`${inputCls} pl-10`}
                         />
                     </div>
-                    
+
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                         {STATUS_FILTERS.map(f => (
                             <button
