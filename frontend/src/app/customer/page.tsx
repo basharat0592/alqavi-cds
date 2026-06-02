@@ -201,6 +201,17 @@ export default function Home() {
         }
     }
 
+    // Special offer (promotion) to overlay on top of the hero on large screens
+    const heroPromoSection = activeSections.find((s) => s.section_type === 'promotion');
+    const heroPromoContent = heroPromoSection?.content || {};
+    const heroPromoIds = Array.isArray(heroPromoContent.product_ids)
+        ? heroPromoContent.product_ids
+        : (heroPromoContent.product_id ? [heroPromoContent.product_id] : []);
+    const heroPromoProduct = allProducts.find((p) => heroPromoIds.some((sid: any) => String(sid) === String(p.id)));
+    const heroPromoPrice = heroPromoProduct ? parseFloat(heroPromoProduct.selling_price || heroPromoProduct.price || 0) : 0;
+    const heroPromoDiscount = parseFloat(heroPromoContent.discount_percent || 0);
+    const heroPromoFinal = heroPromoDiscount > 0 ? Math.round(heroPromoPrice * (1 - heroPromoDiscount / 100)) : heroPromoPrice;
+
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-500 w-full overflow-x-hidden">
             <Navbar settings={settings} />
@@ -211,7 +222,67 @@ export default function Home() {
 
                     switch (section.section_type) {
                         case 'hero':
-                            return <Hero key={section.id} slides={content.slides} />;
+                            return (
+                                <div key={section.id} className="relative">
+                                    <Hero slides={content.slides} />
+
+                                    {/* Special Offer — overlaid on the hero (desktop only) */}
+                                    {heroPromoProduct && (
+                                        <div className="hidden lg:flex absolute inset-y-0 right-0 w-1/2 items-center justify-end pr-10 xl:pr-16 z-20 pointer-events-none">
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 28, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
+                                                className="group/promo pointer-events-auto relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl ring-1 ring-black/5 hover:-translate-y-1 transition-transform duration-500"
+                                            >
+                                                {/* Discount seal */}
+                                                {heroPromoDiscount > 0 && (
+                                                    <div className="absolute -top-4 -right-4 z-10 w-16 h-16 rounded-full bg-gradient-to-br from-[#E6C04D] to-[#C7991F] text-white flex flex-col items-center justify-center shadow-xl border-[3px] border-white rotate-12">
+                                                        <span className="text-base font-black leading-none">{heroPromoDiscount}%</span>
+                                                        <span className="text-[8px] font-black uppercase tracking-[0.25em] mt-0.5">Off</span>
+                                                    </div>
+                                                )}
+
+                                                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-[#119AB8]">
+                                                    <Sparkles size={12} /> Special Offer
+                                                </span>
+
+                                                <div className="flex items-center gap-4 mt-3.5">
+                                                    <div className="w-20 h-20 shrink-0 rounded-2xl bg-[#F0F7FF] border border-slate-100 overflow-hidden flex items-center justify-center">
+                                                        <img
+                                                            src={getImageUrl(heroPromoContent.image || heroPromoProduct.image || heroPromoProduct.catalog_image || heroPromoProduct.image_url)}
+                                                            className="w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-500"
+                                                            alt={heroPromoProduct.product_name || 'Special Offer'}
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-[#0f1111] font-bold text-sm leading-snug line-clamp-2 tracking-tight">
+                                                            {heroPromoContent.title || heroPromoProduct.product_name}
+                                                        </h3>
+                                                        <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+                                                            <span className="text-[#0f1111] text-2xl font-black tracking-tight leading-none">Rs. {heroPromoFinal.toLocaleString()}</span>
+                                                            {heroPromoDiscount > 0 && (
+                                                                <span className="text-slate-400 line-through text-[13px] font-bold">Rs. {heroPromoPrice.toLocaleString()}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => {
+                                                        handleAdd(heroPromoProduct);
+                                                        router.push('/customer/checkout');
+                                                    }}
+                                                    className="group/btn mt-5 w-full py-3.5 bg-[#119AB8] hover:bg-[#13B0D1] text-white rounded-xl font-black uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95 shadow-lg shadow-[#119AB8]/25 flex items-center justify-center gap-2"
+                                                >
+                                                    {heroPromoContent.cta_text || 'Grab Deal'}
+                                                    <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                                </button>
+                                            </motion.div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
 
                         case 'faq_newsletter_combined':
                             const faqSec = section.reversed ? section.newsletter_section : section;
@@ -952,7 +1023,11 @@ export default function Home() {
                             const promoProduct = promoProducts[0];
 
                             return (
-                                <section key={section.id} className="w-full px-4 md:px-12 xl:px-20 pb-8 md:pb-16 pt-2 md:pt-4 -mt-16 md:-mt-10 relative z-10 overflow-hidden">
+                                <section key={section.id} className={cn(
+                                    "w-full px-4 md:px-12 xl:px-20 pb-8 md:pb-16 pt-2 md:pt-4 -mt-16 md:-mt-10 relative z-10 overflow-hidden",
+                                    // Hidden on desktop because it is shown as an overlay on the hero instead
+                                    heroPromoProduct && heroPromoSection && section.id === heroPromoSection.id && "lg:hidden"
+                                )}>
                                     <motion.div
                                         initial={{ opacity: 0 }}
 
@@ -1811,15 +1886,17 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
                 <>
                     <button
                         onClick={() => scroll('left')}
-                        className="absolute left-0 top-[40%] -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white shadow-md border border-slate-200/50 flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white z-30"
+                        aria-label="Scroll left"
+                        className="hidden md:flex absolute left-1 top-[38%] -translate-y-1/2 w-10 h-10 rounded-full bg-white text-[#0f1111] shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
                     >
-                        <ChevronLeft size={16} />
+                        <ChevronLeft size={18} className="stroke-[2.5] -ml-px" />
                     </button>
                     <button
                         onClick={() => scroll('right')}
-                        className="absolute right-0 top-[40%] -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white shadow-md border border-slate-200/50 flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white z-30"
+                        aria-label="Scroll right"
+                        className="hidden md:flex absolute right-1 top-[38%] -translate-y-1/2 w-10 h-10 rounded-full bg-white text-[#0f1111] shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
                     >
-                        <ChevronRight size={16} />
+                        <ChevronRight size={18} className="stroke-[2.5] ml-px" />
                     </button>
                 </>
             )}
