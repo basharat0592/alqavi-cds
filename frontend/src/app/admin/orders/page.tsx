@@ -495,7 +495,6 @@ export default function AdminOrdersPage() {
                             )}
                         </tbody>
                     </table>
-                </div>
 
                     {/* Industrial Pagination */}
                     <div className="bg-[#f6f8fa] border-t border-[#e1e4e8] px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">

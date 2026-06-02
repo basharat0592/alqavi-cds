@@ -681,6 +681,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                     <h3 className="font-bold text-lg mb-2">Help & Settings</h3>
                                     <div className="grid gap-4 text-slate-700 font-medium">
                                         <Link href="/customer/dashboard" onClick={() => setMobileOpen(false)}>Your Account</Link>
+                                        <Link href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
                                         <Link href="/contact" onClick={() => setMobileOpen(false)}>Customer Service</Link>
                                         {user ? (
                                             <button onClick={handleLogout} className="text-left text-red-600 font-bold">Sign Out</button>

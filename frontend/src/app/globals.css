@@ -61,6 +61,8 @@
     font-family: 'Outfit', sans-serif;
   }
 
+  /* Unified type system across the whole customer site: a single clean
+     sans-serif (Outfit) for every heading — matching the contact page. */
   h1,
   h2,
   h3,

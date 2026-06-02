@@ -441,7 +441,7 @@ export default function Home() {
                         case 'products': {
                             const isFullCollection = !content.title || content.title === 'Full Collection';
                             return (
-                                <div key={section.id} className="w-full px-4 md:px-12 xl:px-20 pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB] overflow-x-hidden -mt-6 md:mt-0 relative z-10">
+                                <div key={section.id} className="w-full px-4 md:px-[1%] pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB] overflow-x-hidden -mt-6 md:mt-0 relative z-10">
                                     <div className="animate-in fade-in duration-700">
                                         {(() => {
                                             if (isFullCollection) {

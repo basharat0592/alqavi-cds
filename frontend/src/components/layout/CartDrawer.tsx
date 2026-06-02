@@ -82,7 +82,7 @@ export default function CartDrawer() {
                                         </span>
                                     ) : (
                                         <span className="text-slate-600">
-                                            Add <strong className="text-[#f58220]">Rs. {remainingForFree.toLocaleString()}</strong> more for <strong className="text-[#119AB8]">FREE SHIPPING</strong>
+                                            Add <strong className="text-[#119AB8]">Rs. {remainingForFree.toLocaleString()}</strong> more for <strong className="text-[#119AB8]">FREE SHIPPING</strong>
                                         </span>
                                     )}
                                     <span className="text-[10px] text-slate-400 font-medium">Goal: Rs. {shippingThreshold.toLocaleString()}</span>
@@ -92,7 +92,7 @@ export default function CartDrawer() {
                                         initial={{ width: 0 }}
                                         animate={{ width: `${Math.min(100, (cartTotal / shippingThreshold) * 100)}%` }}
                                         transition={{ duration: 0.5, ease: "easeOut" }}
-                                        className={`h-full rounded-full bg-gradient-to-r ${isFreeShipping ? 'from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'from-amber-400 to-[#f58220]'}`}
+                                        className={`h-full rounded-full bg-gradient-to-r ${isFreeShipping ? 'from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'from-[#13B0D1] to-[#119AB8]'}`}
                                     />
                                 </div>
                             </div>
@@ -107,7 +107,7 @@ export default function CartDrawer() {
                                         <motion.div
                                             animate={{ scale: [1, 1.15, 1] }}
                                             transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                                            className="absolute -top-1 -right-1 w-4 h-4 bg-[#f58220] rounded-full"
+                                            className="absolute -top-1 -right-1 w-4 h-4 bg-[#119AB8] rounded-full"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -118,7 +118,7 @@ export default function CartDrawer() {
                                     </div>
                                     <button
                                         onClick={closeCart}
-                                        className="px-8 py-3 bg-gradient-to-r from-amber-500 to-[#f58220] hover:brightness-105 active:scale-95 text-white font-bold rounded-xl shadow-md shadow-orange-500/10 transition-all text-xs uppercase tracking-wider"
+                                        className="px-8 py-3 bg-[#119AB8] hover:bg-[#13B0D1] active:scale-95 text-white font-bold rounded-xl shadow-md shadow-[#119AB8]/15 transition-all text-xs uppercase tracking-wider"
                                     >
                                         Start Shopping
                                     </button>
@@ -148,7 +148,7 @@ export default function CartDrawer() {
                                                 {/* Weight / Type Display */}
                                                 {(item.weight || item.size || item.batch) && (
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <span className="text-[9px] font-extrabold text-[#FD8E23] uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                                                        <span className="text-[9px] font-extrabold text-[#119AB8] uppercase tracking-widest bg-[#119AB8]/5 px-2 py-0.5 rounded border border-[#119AB8]/15">
                                                             {[item.weight, item.size, item.batch && `Batch: ${item.batch}`].filter(Boolean).join(' • ')}
                                                         </span>
                                                     </div>
@@ -217,7 +217,7 @@ export default function CartDrawer() {
                                 <Link
                                     href="/customer/checkout"
                                     onClick={closeCart}
-                                    className="group w-full py-2.5 bg-gradient-to-r from-amber-500 to-[#f58220] hover:brightness-105 active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-orange-500/5 hover:shadow-orange-500/15 transition-all text-xs uppercase tracking-wider"
+                                    className="group w-full py-2.5 bg-[#119AB8] hover:bg-[#13B0D1] active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#119AB8]/10 hover:shadow-[#119AB8]/20 transition-all text-xs uppercase tracking-wider"
                                 >
                                     Proceed to Checkout
                                     <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />

@@ -31,9 +31,4 @@ class Migration(migrations.Migration):
                 'ordering': ['order'],
             },
         ),
-        migrations.AddField(
-            model_name='category',
-            name='navbar_page',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='categories', to='cms.navbarpage'),
-        ),
     ]

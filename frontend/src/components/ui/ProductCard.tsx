@@ -210,7 +210,7 @@ export default function ProductCard({
                         </div>
                         {!isMinimal && (weight || size || batch) && (
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                <span className="text-[#FD8E23] font-bold text-[9px] uppercase tracking-widest break-words whitespace-normal">
+                                <span className="text-[#119AB8] font-bold text-[9px] uppercase tracking-widest break-words whitespace-normal">
                                     {weight} {weight && (size || batch) ? '•' : ''} {size} {(size && batch) ? '•' : ''} {batch && `Batch: ${batch}`}
                                 </span>
                             </div>
@@ -227,7 +227,7 @@ export default function ProductCard({
                                 </p>
                                 <Link
                                     href={`/customer/product/${id}`}
-                                    className="absolute bottom-0 right-0 bg-white pl-1 text-[#FD8E23] font-black text-[10px] hover:underline"
+                                    className="absolute bottom-0 right-0 bg-white pl-1 text-[#119AB8] font-black text-[10px] hover:underline"
                                 >
                                     Read More
                                 </Link>
@@ -246,7 +246,7 @@ export default function ProductCard({
                                 <button
                                     onClick={handleAddToCart}
                                     disabled={stock === 0}
-                                    className={`w-full h-8 rounded-[4px] text-[10px] font-bold uppercase tracking-widest flex items-center justify-center transition-all duration-300
+                                    className={`w-full h-8 rounded-[8px] text-[10px] font-bold uppercase tracking-widest flex items-center justify-center transition-all duration-300
                                         ${stock === 0
                                             ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                             : 'bg-[#119AB8] text-white hover:bg-[#13B0D1] shadow-sm active:scale-95'
@@ -255,7 +255,7 @@ export default function ProductCard({
                                     Add To Cart
                                 </button>
                             ) : (
-                                <div className="w-full h-8 bg-[#119AB8] rounded-[4px] flex items-center justify-between px-2 text-white shadow-sm">
+                                <div className="w-full h-8 bg-[#119AB8] rounded-[8px] flex items-center justify-between px-2 text-white shadow-sm">
                                     <button
                                         onClick={(e) => handleUpdateQuantity(e, -1)}
                                         className="w-5 h-5 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors"
