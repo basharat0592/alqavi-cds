@@ -24,7 +24,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -133,30 +133,30 @@ export default function RecentOrdersPage() {
 
             {/* Header */}
             <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-6 text-left">
+                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 text-left">
                     <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
                         <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                         <ChevronRight size={10} />
                         <span className="text-[#c45500]">Recent Orders</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                             <h1 className="text-[22px] font-normal text-[#111]">Recent Orders</h1>
                             <p className="text-[13px] text-[#565959] mt-0.5">Overview of latest transactions</p>
                         </div>
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={loadData} loading={loading}>
+                        <div className="flex gap-2 w-full sm:w-auto justify-end">
+                            <Btn variant="secondary" onClick={loadData} loading={loading} className="flex-1 sm:flex-initial justify-center">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Btn>
-                            <Link href="/admin/sales">
-                                <Btn><Plus size={14} /> New Order</Btn>
+                            <Link href="/admin/sales" className="flex-1 sm:flex-initial flex">
+                                <Btn className="w-full justify-center"><Plus size={14} /> New Order</Btn>
                             </Link>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 mt-6 sm:mt-8 text-left">
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -167,8 +167,8 @@ export default function RecentOrdersPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-col xl:flex-row gap-4">
-                    <div className="relative flex-1">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-4">
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
                             placeholder="Search by Phone, Tracking ID or Order #..."
@@ -177,12 +177,12 @@ export default function RecentOrdersPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <div className="flex gap-3">
-                        <div className="relative">
+                    <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+                        <div className="relative w-full">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
-                            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={inputCls + " pl-10 h-[35px] w-[180px]"} />
+                            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={inputCls + " pl-10 h-[35px] w-full md:w-[180px]"} />
                         </div>
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls + " w-[160px] h-[35px] cursor-pointer"}>
+                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls + " w-full md:w-[160px] h-[35px] cursor-pointer"}>
                             {STATUS_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                     </div>
@@ -190,53 +190,55 @@ export default function RecentOrdersPage() {
 
                 {/* Orders List */}
                 <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
-                                <th className="px-6 py-3">Order Info</th>
-                                <th className="px-6 py-3">Customer</th>
-                                <th className="px-6 py-3">Total</th>
-                                <th className="px-6 py-3 text-center">Status</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#eee]">
-                            {loading && filtered.length === 0 ? (
-                                <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">Loading...</td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No orders found.</td></tr>
-                            ) : (
-                                filtered.map((o) => (
-                                    <tr key={o.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]" onClick={() => setSelectedOrder(o)}>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#007185] group-hover:underline cursor-pointer">#{o.order_number}</div>
-                                            <div className="text-[11px] text-[#aaa] mt-0.5">{formatDate(o.created_at)}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#111]">{o.customer_name || 'Walk-in'}</div>
-                                            <div className="flex items-center gap-2 text-[11px] text-[#565959] mt-0.5">
-                                                <Phone size={10} className="text-[#aaa]" /> {o.phone_number || 'N/A'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#111]">{formatCurrency(o.total_amount)}</div>
-                                            <div className="text-[11px] text-green-600 font-bold uppercase">{o.items?.length || 0} Items</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <StatusBadge status={o.status || 'PENDING'} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                <button onClick={() => setSelectedOrder(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
-                                                <button onClick={() => handlePrint(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-blue-600"><Printer size={14} /></button>
-                                                <button onClick={() => setDeleteTarget(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Order Info</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Customer</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Total</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-center whitespace-nowrap">Status</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right whitespace-nowrap">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#eee]">
+                                {loading && filtered.length === 0 ? (
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">Loading...</td></tr>
+                                ) : filtered.length === 0 ? (
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No orders found.</td></tr>
+                                ) : (
+                                    filtered.map((o) => (
+                                        <tr key={o.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]" onClick={() => setSelectedOrder(o)}>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="font-bold text-[#007185] group-hover:underline cursor-pointer">#{o.order_number}</div>
+                                                <div className="text-[11px] text-[#aaa] mt-0.5">{formatDate(o.created_at)}</div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4">
+                                                <div className="font-bold text-[#111]">{o.customer_name || 'Walk-in'}</div>
+                                                <div className="hidden sm:flex items-center gap-2 text-[11px] text-[#565959] mt-0.5">
+                                                    <Phone size={10} className="text-[#aaa]" /> {o.phone_number || 'N/A'}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="font-bold text-[#111]">{formatCurrency(o.total_amount)}</div>
+                                                <div className="hidden sm:block text-[11px] text-green-600 font-bold uppercase">{o.items?.length || 0} Items</div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-center whitespace-nowrap">
+                                                <StatusBadge status={o.status || 'PENDING'} />
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                    <button onClick={() => setSelectedOrder(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
+                                                    <button onClick={() => handlePrint(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-blue-600"><Printer size={14} /></button>
+                                                    <button onClick={() => setDeleteTarget(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -244,12 +246,12 @@ export default function RecentOrdersPage() {
             {selectedOrder && (
                 <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
                     <div className="bg-white rounded-[4px] border border-[#ddd] max-w-2xl w-full shadow-2xl overflow-hidden text-left">
-                        <div className="px-6 py-4 border-b border-[#ddd] flex items-center justify-between bg-[#f7f8fa]">
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#ddd] flex items-center justify-between bg-[#f7f8fa]">
                             <h3 className="text-[15px] font-bold text-[#111]">Order #{selectedOrder.order_number}</h3>
                             <button onClick={() => setSelectedOrder(null)} className="text-[#aaa] hover:text-[#565959]"><X size={20} /></button>
                         </div>
-                        <div className="p-6 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-8 mb-8">
+                        <div className="p-4 sm:p-6 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-8">
                                 <div>
                                     <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3">Customer Details</p>
                                     <div className="space-y-1">
@@ -280,30 +282,30 @@ export default function RecentOrdersPage() {
                             </div>
 
                             <p className="text-[11px] font-bold text-[#aaa] uppercase mb-3">Items</p>
-                            <div className="border border-[#eee] rounded-[4px] overflow-hidden">
+                            <div className="border border-[#eee] rounded-[4px] overflow-x-auto">
                                 <table className="w-full text-left text-[13px]">
                                     <thead className="bg-[#f9fafb]">
                                         <tr>
-                                            <th className="px-4 py-2 border-b">Product</th>
-                                            <th className="px-4 py-2 border-b text-center">Qty</th>
-                                            <th className="px-4 py-2 border-b text-right">Price</th>
-                                            <th className="px-4 py-2 border-b text-right">Subtotal</th>
+                                            <th className="px-4 py-2 border-b whitespace-nowrap">Product</th>
+                                            <th className="px-4 py-2 border-b text-center whitespace-nowrap">Qty</th>
+                                            <th className="px-4 py-2 border-b text-right whitespace-nowrap">Price</th>
+                                            <th className="px-4 py-2 border-b text-right whitespace-nowrap">Subtotal</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#eee]">
                                         {selectedOrder.items?.map((item: any) => (
                                             <tr key={item.id}>
-                                                <td className="px-4 py-3">{item.product_name}</td>
-                                                <td className="px-4 py-3 text-center font-bold">{item.quantity}</td>
-                                                <td className="px-4 py-3 text-right">{parseFloat(item.price).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right font-bold">{(item.quantity * parseFloat(item.price)).toLocaleString()}</td>
+                                                <td className="px-4 py-3 whitespace-nowrap">{item.product_name}</td>
+                                                <td className="px-4 py-3 text-center font-bold whitespace-nowrap">{item.quantity}</td>
+                                                <td className="px-4 py-3 text-right whitespace-nowrap">{parseFloat(item.price).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-bold whitespace-nowrap">{(item.quantity * parseFloat(item.price)).toLocaleString()}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot className="bg-[#0f1111] text-white">
                                         <tr>
-                                            <td colSpan={3} className="px-4 py-3 text-right text-[11px] uppercase tracking-widest opacity-70">Total Amount</td>
-                                            <td className="px-4 py-3 text-right text-[16px] font-bold text-[#ffd814]">Rs. {parseFloat(selectedOrder.total_amount).toLocaleString()}</td>
+                                            <td colSpan={3} className="px-4 py-3 text-right text-[11px] uppercase tracking-widest opacity-70 whitespace-nowrap">Total Amount</td>
+                                            <td className="px-4 py-3 text-right text-[16px] font-bold text-[#ffd814] whitespace-nowrap">Rs. {parseFloat(selectedOrder.total_amount).toLocaleString()}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -316,9 +318,9 @@ export default function RecentOrdersPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="px-6 py-4 bg-[#f7f8fa] border-t border-[#ddd] flex gap-3">
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#f7f8fa] border-t border-[#ddd] flex flex-col sm:flex-row gap-2.5">
                             <button onClick={() => setSelectedOrder(null)} className="flex-1 h-[35px] text-[13px] font-bold text-[#565959] bg-white border border-[#ddd] rounded-[3px] hover:bg-[#fcfdff]">Close</button>
-                            <button onClick={() => handlePrint()} className="flex-1 h-[35px] text-[13px] font-bold text-[#111] bg-[#f0c14b] border border-[#a88734] rounded-[3px] hover:bg-[#f5d78e] flex items-center justify-center gap-2 shadow-sm">
+                            <button onClick={() => handlePrint()} className="flex-1 h-[35px] text-[13px] font-bold text-[#111] bg-[#f0c14b] border border-[#a88734] rounded-[3px] hover:bg-[#f5d78e] flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
                                 <Printer size={16} /> Print Logistics Slip
                             </button>
                         </div>

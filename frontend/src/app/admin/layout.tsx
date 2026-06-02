@@ -205,6 +205,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         settingsService.updateSettings({ theme: newTheme });
     };
 
+    const toggleSidebar = async () => {
+        const nextState = !sidebarCollapsed;
+        setSidebarCollapsed(nextState);
+        try {
+            await settingsService.updateSettings({ sidebar_collapsed: nextState });
+        } catch { }
+    };
+
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
         setIsSearching(true);
@@ -283,31 +291,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {/* ═══ NAVBAR (takes remaining width) ═══ */}
                     <div className="hidden md:flex h-[64px] w-full flex-shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-sm sticky top-0 transition-colors duration-300 print:hidden">
                         
-                        {/* Sidebar Toggle Button for Desktop */}
-                        <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="p-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl border border-transparent transition-all text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white"
-                            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                        >
-                            <Menu className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center gap-4 flex-1">
+                            <button
+                                type="button"
+                                onClick={toggleSidebar}
+                                className="p-1.5 border border-[#ddd] rounded-[3px] bg-white hover:bg-[#f7f8fa] text-[#565959] hover:text-[#e77600] transition-all shadow-sm shrink-0"
+                                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                            >
+                                <Menu className="h-5 w-5" />
+                            </button>
 
-                        {/* Search Bar */}
-                        <div className="relative flex-1 max-w-2xl">
-                            <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                className="flex items-center bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 dark:focus-within:border-sky-400 transition-all duration-300">
-                                <button type="button" className="px-3 h-10 bg-slate-100 dark:bg-white/5 border-r border-slate-200 dark:border-white/10 text-xs text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-white/10 font-semibold flex items-center gap-1.5 transition-colors">
-                                    All <ChevronDown size={14} className="opacity-60" />
-                                </button>
-                                <div className="relative flex-1 flex items-center">
-                                    <input type="text" placeholder="Search orders, products, or suppliers..."
-                                        className="w-full h-10 pl-3 pr-10 bg-transparent text-sm text-slate-800 dark:text-white outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-500 font-medium"
-                                        value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                                    <button type="submit" className="absolute right-3 text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-white transition-colors">
-                                        {isSearching ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4 stroke-[2.5]" />}
+                            {/* Search Bar */}
+                            <div className="relative flex-1 max-w-2xl">
+                                <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+                                    className="flex items-center bg-white rounded-[2px] border border-[#888c8e] overflow-hidden focus-within:ring-[2px] focus-within:ring-[#e77600] focus-within:border-[#e77600] transition-all">
+                                    <button type="button" className="px-3 h-9 bg-[#f3f3f3] border-r border-[#bbb] text-[12px] text-[#565959] hover:bg-[#e7e7e7] font-medium flex items-center gap-1">
+                                        All <ChevronDown size={14} />
                                     </button>
-                                </div>
-                            </form>
+                                    <input type="text" placeholder="Search orders, products, or suppliers..."
+                                        className="flex-1 h-9 px-3 bg-transparent text-[14px] text-[#111] outline-none placeholder:text-[#aaa] font-medium"
+                                        value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                    <button type="submit" className="w-12 h-9 bg-[#febd69] hover:bg-[#f3a847] flex items-center justify-center text-[#111] transition-colors">
+                                        {isSearching ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5 stroke-[2.5]" />}
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
                         {/* Actions */}

@@ -120,7 +120,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Page Header Aligned with Purchases */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <h1 className="text-[21px] font-bold text-[#111]">Site Identity & Branding</h1>
             </div>
 
@@ -129,7 +129,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                 <div className="bg-[#f7f8fa] border-b border-[#ddd] px-5 py-3 flex items-center justify-between">
                     <h3 className="font-bold text-[#111] text-[15px]">Brand Assets</h3>
                 </div>
-                <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                     <BrandingUpload field="logo" label="Main Logo" desc="Header" />
                     <BrandingUpload field="favicon" label="Favicon" desc="Tab icon" />
                     <BrandingUpload field="footer_logo" label="Footer Logo" desc="Bottom" />
@@ -150,7 +150,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                                 onChange={e => setForm(f => ({ ...f, site_name: e.target.value }))}
                                 className={inputCls + " font-bold"} />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[13px] font-bold text-[#111]">Primary Color</label>
                                 <div className="flex items-center gap-2">
@@ -179,12 +179,12 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
             </div>
 
             {/* Footer Aligned Action */}
-            <div className="flex items-center justify-between bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#ddd] rounded-[4px] p-4 md:p-6 shadow-sm">
                 <div className="flex items-center gap-3 text-slate-400">
                     <History size={18} />
                     <p className="text-[13px] font-medium italic">All branding changes update the live site instantly.</p>
                 </div>
-                <Btn onClick={() => onSave(form)} loading={saving} className="min-w-[180px] h-[35px]">
+                <Btn onClick={() => onSave(form)} loading={saving} className="w-full sm:w-auto min-w-[180px] h-[35px] justify-center">
                     Confirm & Save Identity
                 </Btn>
             </div>

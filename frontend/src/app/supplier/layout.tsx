@@ -252,6 +252,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
                                                     className={cn(
                                                         "group flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-200",
                                                         isActive
@@ -276,6 +277,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
                                                     className={cn(
                                                         "group flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-200",
                                                         isActive

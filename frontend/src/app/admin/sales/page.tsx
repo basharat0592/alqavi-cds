@@ -106,8 +106,7 @@ export default function SalesPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
-
+            <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -115,15 +114,16 @@ export default function SalesPage() {
                     <span className="text-[#c45500] font-bold">Sales Registry</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 gap-2">
                     <div>
-                        <h1 className="text-[22px] font-normal text-[#111]">Sales History</h1>
+                        <h1 className="text-[20px] sm:text-[22px] font-normal text-[#111]">Sales History</h1>
                     </div>
-                    <div className="flex gap-2">
-                        <Btn variant="secondary" onClick={loadOrders} loading={loading}>
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                    <div className="flex gap-2 shrink-0">
+                         <Btn variant="secondary" onClick={loadOrders} loading={loading}>
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            <span className="hidden sm:inline">Refresh</span>
                         </Btn>
-                        <Btn onClick={() => router.push('/admin/sale')}>
+                        <Btn onClick={() => router.push('/admin/sale')} className="whitespace-nowrap">
                             <Plus size={14} /> New Sale
                         </Btn>
                     </div>
@@ -131,8 +131,8 @@ export default function SalesPage() {
                 <div className="border-b border-[#ddd] mb-6" />
 
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-wrap items-center gap-5 animate-in fade-in slide-in-from-top-2 duration-500">
-                    <div className="relative flex-1 min-w-[300px]">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
                             value={searchTerm}
@@ -155,8 +155,75 @@ export default function SalesPage() {
                     </div>
                 </div>
 
-                {/* Sales Table */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
+                {/* ── Mobile Card List (hidden on md+) ── */}
+                <div className="md:hidden space-y-3 mb-6">
+                    {filtered.length === 0 ? (
+                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                            <div className="opacity-10 mb-3"><ShoppingBag size={48} className="mx-auto" /></div>
+                            <p className="text-[13px] text-[#565959] font-medium italic">No sales found.</p>
+                        </div>
+                    ) : filtered.map(o => (
+                        <div key={o.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 space-y-3">
+                            {/* Row 1: Order # + Amount */}
+                            <div className="flex items-start justify-between gap-2">
+                                <div>
+                                    <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[15px] font-bold text-[#007185] hover:underline">
+                                        #{o.order_number || o.id}
+                                    </button>
+                                    <div className="flex items-center gap-1 text-[10px] text-[#565959] font-medium mt-0.5">
+                                        <Clock size={10} />
+                                        {formatDateTime(o.created_at)}
+                                    </div>
+                                    {(o as any).warehouse_name && (
+                                        <div className="text-[10px] text-[#e77600] font-black uppercase tracking-tighter mt-0.5 flex items-center gap-1">
+                                            <Warehouse size={10} className="opacity-50" />{(o as any).warehouse_name}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <div className="text-[16px] font-black text-[#B12704]">{formatCurrency(o.total_amount)}</div>
+                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-[2px] text-[9px] font-black uppercase border ${getStatusStyle(o.status)}`}>
+                                        {o.status}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Row 2: Customer + Payment */}
+                            <div className="flex items-center justify-between border-t border-[#eee] pt-2.5">
+                                <div className="flex items-center gap-2">
+                                    <User size={13} className="text-[#adb1b8]" />
+                                    <div>
+                                        <div className="text-[12px] font-bold text-[#111]">{(o as any).customer_name || 'Counter Guest'}</div>
+                                        <div className="text-[10px] text-[#565959] italic">Walk-in Account</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="flex items-center gap-1 text-[11px] font-bold text-[#111] justify-end">
+                                        <CreditCard size={11} className="text-[#adb1b8]" />
+                                        {o.payment_method || 'Cash'}
+                                    </div>
+                                    <div className="text-[9px] text-[#007600] font-black uppercase tracking-tighter mt-0.5">Verified Paid</div>
+                                </div>
+                            </div>
+
+                            {/* Row 3: Actions */}
+                            <div className="flex items-center justify-end gap-2 border-t border-[#eee] pt-2.5">
+                                <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="flex items-center gap-1.5 px-3 h-[28px] text-[11px] font-semibold border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm">
+                                    <Eye size={12} /> View
+                                </button>
+                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="flex items-center gap-1.5 px-3 h-[28px] text-[11px] font-semibold border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm">
+                                    <Printer size={12} /> Invoice
+                                </button>
+                                <button onClick={() => setOrderToDelete(o as Order)} className="flex items-center gap-1.5 px-3 h-[28px] text-[11px] font-semibold border border-rose-200 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 shadow-sm">
+                                    {updatingRow === o.id.toString() ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Desktop Table (hidden on mobile) ── */}
+                <div className="hidden md:block bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
@@ -171,7 +238,7 @@ export default function SalesPage() {
                         </thead>
                         <tbody className="divide-y divide-[#eee]">
                             {filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-24 text-center">
+                                <tr><td colSpan={7} className="py-24 text-center">
                                     <div className="opacity-10 mb-4"><ShoppingBag size={60} className="mx-auto" /></div>
                                     <p className="text-[14px] text-[#565959] font-medium italic">No sales found matching your criteria.</p>
                                 </td></tr>

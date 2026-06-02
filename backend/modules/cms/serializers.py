@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SiteSettings, WebsiteSection, MediaAsset, NavigationMenu, NavigationItem
+from .models import SiteSettings, WebsiteSection, MediaAsset, NavigationMenu, NavigationItem, NavbarPage
 
 class MediaAssetSerializer(serializers.ModelSerializer):
     class Meta:
@@ -76,4 +76,10 @@ class NavigationMenuSerializer(serializers.ModelSerializer):
     def get_items(self, obj):
         items = obj.items.filter(parent=None)
         return NavigationItemSerializer(items, many=True).data
+
+class NavbarPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NavbarPage
+        fields = ['id', 'name', 'slug', 'description', 'icon_url', 'order', 'is_visible', 'created_at', 'updated_at']
+        read_only_fields = ['slug', 'created_at', 'updated_at']
 

@@ -352,7 +352,6 @@ export default function InvoicesPage() {
                         })}
                     </div>
                 </div>
-
             </div>
         </div>
     );

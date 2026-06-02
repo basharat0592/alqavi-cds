@@ -2,14 +2,15 @@
 
 import PageLoader from '@/components/ui/PageLoader';
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowRight, Star,
     MapPin, Phone, Coffee,
     X, Plus, Package,
     Truck, ShieldCheck, Clock, CreditCard, Check, AlertTriangle,
-    Sparkles, Image as ImageIcon, Zap, Users, Globe, Heart, Shield
+    Sparkles, Image as ImageIcon, Zap, Users, Globe, Heart, Shield,
+    GalleryHorizontal, ChevronLeft, ChevronRight
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -437,13 +438,12 @@ export default function Home() {
                             );
 
 
-                        case 'products':
+                        case 'products': {
+                            const isFullCollection = !content.title || content.title === 'Full Collection';
                             return (
-                                <div key={section.id} className="w-full px-4 md:px-12 xl:px-20 pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB] overflow-x-hidden -mt-6 md:mt-0 relative z-10">
+                                <div key={section.id} className="w-full px-4 md:px-[1%] pt-4 md:pt-8 pb-6 md:pb-12 bg-[#FBFBFB] overflow-x-hidden -mt-6 md:mt-0 relative z-10">
                                     <div className="animate-in fade-in duration-700">
                                         {(() => {
-                                            const isFullCollection = !content.title || content.title === 'Full Collection';
-
                                             if (isFullCollection) {
                                                 return (
                                                     <div className="mb-8 md:mb-12 space-y-2 md:space-y-3">
@@ -499,12 +499,20 @@ export default function Home() {
 
                                             // Default Header for other product sections
                                             return (
-                                                <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
-                                                    <div className="space-y-1 md:space-y-2 text-center md:text-left">
-                                                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
-                                                            {content.title}
-                                                        </h2>
-                                                        {content.subtitle && <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed font-medium">{content.subtitle}</p>}
+                                                <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-3 md:gap-6">
+                                                    <div className="flex flex-col text-left space-y-1 md:space-y-2 w-full md:w-auto">
+                                                        <div className="flex flex-row items-center justify-between w-full md:w-auto">
+                                                            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
+                                                                {content.title}
+                                                            </h2>
+                                                            <Link
+                                                                href="/customer/shop"
+                                                                className="md:hidden group flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#13B0D1] hover:text-[#111] transition-all whitespace-nowrap"
+                                                            >
+                                                                View All <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform" />
+                                                            </Link>
+                                                        </div>
+                                                        {content.subtitle && <p className="text-[13px] md:text-[15px] text-[#565959] leading-relaxed font-medium">{content.subtitle}</p>}
                                                         <p className="text-[11px] md:text-[13px] text-slate-400 font-bold uppercase tracking-widest">
                                                             Showing <span className="text-[#111]">{(() => {
                                                                 const baseList = (isFullCollection || !content.product_ids || content.product_ids.length === 0)
@@ -518,10 +526,10 @@ export default function Home() {
                                                         </p>
                                                     </div>
 
-                                                    <div className="flex justify-center md:justify-end">
+                                                    <div className="hidden md:flex justify-end">
                                                         <Link
                                                             href="/customer/shop"
-                                                            className="group flex items-center gap-2 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#13B0D1] hover:text-[#111] transition-all"
+                                                            className="group flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#13B0D1] hover:text-[#111] transition-all"
                                                         >
                                                             View Full Collection <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
                                                         </Link>
@@ -537,81 +545,62 @@ export default function Home() {
                                                 <p className="text-sm text-slate-500 mt-2">Could not connect to the product database.</p>
                                             </div>
                                         ) : (content.product_ids && content.product_ids.length > 0) || filtered.length > 0 ? (
-                                            <div className="w-full overflow-hidden">
-                                                <div className={cn(
-                                                    // Mobile: list = full-width vertical stack; others = horizontal scroll carousel
-                                                    content.layout_type === 'list' ? "flex flex-col gap-4" : "flex overflow-x-auto pb-4 gap-3 no-scrollbar -mx-4 px-4",
-                                                    // Desktop md+: restore layout-specific display
-                                                    content.layout_type === 'split'
-                                                        ? "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 lg:w-2/3 xl:w-3/4"
-                                                        : (content.layout_type === 'carousel'
-                                                            ? "md:mx-0 md:px-0"
-                                                            : content.layout_type === 'list'
-                                                                ? "md:flex md:flex-col md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4"
-                                                                : content.layout_type === 'billboard'
-                                                                    ? "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6"
-                                                                    : content.layout_type === 'luxury'
-                                                                        ? "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-8"
-                                                                        : content.layout_type === 'masonry'
-                                                                            ? "md:block md:columns-4 lg:columns-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 md:space-y-4"
-                                                                            : content.layout_type === 'highlight'
-                                                                                ? "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6"
-                                                                                : "md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6")
-                                                )}>
-                                                    {(() => {
-                                                        const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
-                                                            ? allProducts
-                                                            : allProducts.filter(p => {
-                                                                const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
-                                                                return searchIds.some((sid: string | number) => String(sid) === String(p.id));
-                                                            });
+                                            <CarouselContainer layoutType={content.layout_type || 'grid'} isFullCollection={isFullCollection}>
+                                                {(() => {
+                                                    const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
+                                                        ? allProducts
+                                                        : allProducts.filter(p => {
+                                                            const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
+                                                            return searchIds.some((sid: string | number) => String(sid) === String(p.id));
+                                                        });
 
-                                                        const categoryFiltered = activeCategory === 'All'
-                                                            ? baseList
-                                                            : baseList.filter(p => {
-                                                                const target = activeCategory.toLowerCase().trim();
-                                                                const name1 = (p.category_name || '').toLowerCase().trim();
-                                                                const name2 = (p.category?.name || '').toLowerCase().trim();
-                                                                return name1 === target || name2 === target;
-                                                            });
+                                                    const categoryFiltered = activeCategory === 'All'
+                                                        ? baseList
+                                                        : baseList.filter(p => {
+                                                            const target = activeCategory.toLowerCase().trim();
+                                                            const name1 = (p.category_name || '').toLowerCase().trim();
+                                                            const name2 = (p.category?.name || '').toLowerCase().trim();
+                                                            return name1 === target || name2 === target;
+                                                        });
 
-                                                        return categoryFiltered.slice(0, content.layout_type === 'billboard' ? 5 : maxItems);
-                                                    })().map((p: any, i: number) => {
-                                                        const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
-                                                        const isBillboardFirst = content.layout_type === 'billboard' && i === 0;
+                                                    return categoryFiltered.slice(0, content.layout_type === 'billboard' ? 5 : maxItems);
+                                                })().map((p: any, i: number) => {
+                                                    const displayTitle = (p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
+                                                    const isBillboardFirst = content.layout_type === 'billboard' && i === 0;
 
-                                                        return (
-                                                            <div key={p.id} className={cn(
-                                                                // Mobile: list items are full width; others are fixed carousel cards
-                                                                content.layout_type === 'list' ? "w-full" : "w-[160px] flex-shrink-0",
-                                                                // Desktop: layout-specific width overrides
-                                                                content.layout_type === 'carousel' ? "md:w-[240px]" : "md:w-auto",
-                                                                content.layout_type === 'list' && "md:w-full",
-                                                                isBillboardFirst && "md:col-span-2 lg:col-span-2 xl:col-span-2 md:row-span-2 md:h-full",
-                                                                content.layout_type === 'highlight' && i === 0 && "md:col-span-2 md:h-full",
-                                                                content.layout_type === 'masonry' && "md:break-inside-avoid md:mb-4"
-                                                            )}>
-                                                                <ProductCard
-                                                                    id={String(p.id)}
-                                                                    title={displayTitle}
-                                                                    description={p.description}
-                                                                    image={getImageUrl(p.images?.[0]?.image || p.image || p.catalog_image || p.image_url) || undefined}
-                                                                    price={parseFloat(p.selling_price || p.price || 0)}
-                                                                    category={p.category_name || 'Cosmetics'}
-                                                                    stock={p.total_quantity || p.quantity_in_stock}
-                                                                    batch={p.batch || p.batch_number}
-                                                                    badge={p.badge || p.status}
-                                                                    weight={p.weight || p.volume_weight}
-                                                                    size={p.size || p.type}
-                                                                    onAddToCart={(qty) => handleAdd(p, qty)}
-                                                                    layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst || (content.layout_type === 'highlight' && i === 0) ? 'vertical' : 'vertical')}
-                                                                    variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : 'default')}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
+                                                    return (
+                                                        <div key={p.id} className={cn(
+                                                            // Mobile: list items are full width; others are fixed carousel cards
+                                                            content.layout_type === 'list' 
+                                                                ? "w-full" 
+                                                                : (isFullCollection ? "w-[185px] sm:w-[210px] flex-shrink-0" : "w-[160px] flex-shrink-0"),
+                                                            // Desktop: layout-specific width overrides
+                                                            content.layout_type === 'carousel' ? "md:w-[240px]" : "md:w-auto",
+                                                            content.layout_type === 'list' && "md:w-full",
+                                                            isBillboardFirst && "md:col-span-2 lg:col-span-2 xl:col-span-2 md:row-span-2 md:h-full",
+                                                            content.layout_type === 'highlight' && i === 0 && "md:col-span-2 md:h-full",
+                                                            content.layout_type === 'masonry' && "md:break-inside-avoid md:mb-4"
+                                                        )}>
+                                                            <ProductCard
+                                                                id={String(p.id)}
+                                                                title={displayTitle}
+                                                                description={p.description}
+                                                                image={getImageUrl(p.images?.[0]?.image || p.image || p.catalog_image || p.image_url) || undefined}
+                                                                price={parseFloat(p.selling_price || p.price || 0)}
+                                                                category={p.category_name || 'Cosmetics'}
+                                                                stock={p.total_quantity || p.quantity_in_stock}
+                                                                batch={p.batch || p.batch_number}
+                                                                badge={p.badge || p.status}
+                                                                weight={p.weight || p.volume_weight}
+                                                                size={p.size || p.type}
+                                                                onAddToCart={(qty) => handleAdd(p, qty)}
+                                                                layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst || (content.layout_type === 'highlight' && i === 0) ? 'vertical' : 'vertical')}
+                                                                variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : 'default')}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </CarouselContainer>
                                         ) : (
                                             <div className="py-20 md:py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
                                                 <Package size={48} className="mx-auto text-slate-200 mb-4" />
@@ -626,6 +615,7 @@ export default function Home() {
                                     </div>
                                 </div>
                             );
+                        }
 
                         case 'spotlight':
                             const spotlightProduct = allProducts.find(p => String(p.id) === String(content.product_id));
@@ -1739,6 +1729,113 @@ export default function Home() {
             </main>
 
             <Footer settings={settings} />
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CAROUSEL CONTAINER SUB-COMPONENT
+   Features scroll tracking, horizontal scroll progress trackbar, and arrow buttons.
+   ───────────────────────────────────────────────────────────────────────────── */
+function CarouselContainer({ children, layoutType, isFullCollection }: { children: React.ReactNode; layoutType: string; isFullCollection?: boolean }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const [showBar, setShowBar] = useState(false);
+
+    const handleScroll = () => {
+        const el = containerRef.current;
+        if (!el) return;
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        if (maxScroll <= 0) {
+            setScrollProgress(0);
+            setShowBar(false);
+            return;
+        }
+        setShowBar(true);
+        const progress = (el.scrollLeft / maxScroll) * 100;
+        setScrollProgress(progress);
+    };
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        handleScroll();
+        el.addEventListener('scroll', handleScroll);
+        window.addEventListener('resize', handleScroll);
+        // Also run after a tiny delay for hydration/rendering of products
+        const timer = setTimeout(handleScroll, 500);
+        return () => {
+            el.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+            clearTimeout(timer);
+        };
+    }, [children]);
+
+    const scroll = (direction: 'left' | 'right') => {
+        const el = containerRef.current;
+        if (!el) return;
+        const amount = el.clientWidth * 0.75;
+        el.scrollBy({
+            left: direction === 'left' ? -amount : amount,
+            behavior: 'smooth'
+        });
+    };
+
+    if (layoutType === 'list') {
+        return <div className="w-full flex flex-col gap-4">{children}</div>;
+    }
+
+    return (
+        <div className="w-full relative group/carousel">
+            {/* Scrollable Container */}
+            <div
+                ref={containerRef}
+                className={cn(
+                    "flex overflow-x-auto pb-4 gap-3 no-scrollbar -mx-4 px-4 scroll-smooth",
+                    layoutType === 'split' && "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 lg:w-2/3 xl:w-3/4",
+                    layoutType === 'carousel' && "md:mx-0 md:px-0",
+                    layoutType === 'billboard' && "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6",
+                    layoutType === 'luxury' && "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-8",
+                    layoutType === 'masonry' && "md:block md:columns-4 lg:columns-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 md:space-y-4",
+                    layoutType === 'highlight' && "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6",
+                    layoutType === 'grid' && (isFullCollection
+                        ? "md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6"
+                        : "md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6")
+                )}
+            >
+                {children}
+            </div>
+
+            {/* Carousel Navigation Buttons - visible on hover on desktop */}
+            {showBar && (
+                <>
+                    <button
+                        onClick={() => scroll('left')}
+                        className="absolute left-0 top-[40%] -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white shadow-md border border-slate-200/50 flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white z-30"
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    <button
+                        onClick={() => scroll('right')}
+                        className="absolute right-0 top-[40%] -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white shadow-md border border-slate-200/50 flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white z-30"
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </>
+            )}
+
+            {/* Custom Carousel Progress Bar Track at the Bottom */}
+            {showBar && (
+                <div className="w-32 h-1 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto mt-2 overflow-hidden relative">
+                    <div
+                        className="absolute top-0 bottom-0 bg-[#13B0D1] rounded-full transition-all duration-150"
+                        style={{
+                            width: '30%',
+                            left: `${scrollProgress * 0.7}%`
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 }

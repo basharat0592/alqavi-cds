@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Users, Plus, Search, Mail, Phone, MapPin, 
     Trash2, Edit, X, CheckCircle, AlertTriangle, 
-    RefreshCw, ChevronRight, ChevronLeft, User, Shield, Eye, Pencil, Save
+    RefreshCw, ChevronRight, ChevronLeft, User, Shield, Eye, Pencil, Save, Loader2
 } from 'lucide-react';
 import { companyService } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -185,7 +185,7 @@ export default function CustomersPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-left text-[#0f1111]">
-            <div className="max-w-[1200px] mx-auto px-6 pt-5">
+            <div className="max-w-[1200px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5">
                 
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -194,9 +194,9 @@ export default function CustomersPage() {
                     <span className="text-[#c45500] font-bold">Customer Registry</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-[24px] font-normal text-[#111]">Manage Customers</h1>
-                    <Btn onClick={openAdd}>
+                <div className="flex items-center justify-between mb-4 gap-2">
+                    <h1 className="text-[20px] sm:text-[22px] font-normal text-[#111] shrink-0">Manage Customers</h1>
+                    <Btn onClick={openAdd} className="whitespace-nowrap shrink-0">
                         <Plus size={14} /> Add New Customer
                     </Btn>
                 </div>
@@ -204,7 +204,7 @@ export default function CustomersPage() {
 
 
                 {/* Search & Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex gap-4 items-center">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
@@ -214,13 +214,100 @@ export default function CustomersPage() {
                             className="w-full h-[38px] pl-10 pr-4 border border-[#888c8e] rounded-[3px] text-[14px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] transition-all font-medium"
                         />
                     </div>
-                    <Btn variant="secondary" onClick={loadCustomers} loading={loading} className="h-[38px] px-6">
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Directory
+                    <Btn variant="secondary" onClick={loadCustomers} loading={loading} className="h-[38px] px-6 whitespace-nowrap">
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden xs:inline">Sync Directory</span><span className="xs:hidden">Sync</span>
                     </Btn>
                 </div>
 
-                {/* Table */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
+                {/* ── Mobile Card List ── */}
+                <div className="md:hidden space-y-3 mb-6">
+                    {loading && customers.length === 0 ? (
+                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                            <Loader2 size={32} className="animate-spin text-[#c45500] mx-auto mb-3" />
+                            <p className="text-[13px] text-[#565959] font-medium italic">Loading customer directory...</p>
+                        </div>
+                    ) : filteredCustomers.length === 0 ? (
+                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                            <p className="text-[13px] text-[#565959] italic">No customer accounts found.</p>
+                        </div>
+                    ) : (
+                        paginatedItems.map(cust => (
+                            <div key={cust.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 space-y-3 text-left">
+                                {/* Row 1: Avatar + Name / Staff status + Verified status */}
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-[#f3f3f3] rounded-[4px] flex items-center justify-center text-[#999] border border-[#ddd] shadow-inner font-black text-[15px] overflow-hidden shrink-0">
+                                            {cust.avatar ? (
+                                                <img src={getAvatarUrl(cust.avatar)} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                cust.first_name?.[0].toUpperCase()
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[14px] font-bold text-[#007185] hover:underline cursor-pointer flex items-center gap-1" onClick={() => setViewingCustomer(cust)}>
+                                                {cust.first_name} {cust.last_name}
+                                                {cust.is_staff && <Shield size={11} className="text-[#c45500] shrink-0" />}
+                                            </h3>
+                                            <div className="text-[10px] text-[#565959] font-bold uppercase tracking-widest mt-0.5">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-[2px] text-[9px] font-black uppercase border shrink-0 tracking-wider ${cust.is_active !== false ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                        {cust.is_active !== false ? 'Verified' : 'Suspended'}
+                                    </span>
+                                </div>
+
+                                {/* Row 2: Email & Phone */}
+                                <div className="border-t border-[#eee] pt-2.5 space-y-1.5 text-[12px] text-[#565959]">
+                                    <div className="flex items-center gap-2">
+                                        <Mail size={12} className="text-[#aaa]" />
+                                        <span className="text-[#111] truncate">{cust.email}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Phone size={12} className="text-[#aaa]" />
+                                        <span className="text-[#111]">{cust.phone || '—'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Row 3: Location */}
+                                <div className="flex items-start gap-2 text-[11px] text-[#565959] italic bg-[#fcfcfc] border border-[#eee] rounded p-2">
+                                    <MapPin size={13} className="text-[#aaa] mt-0.5 shrink-0" />
+                                    <div>
+                                        <div className="line-clamp-1">{cust.address || 'No address registered'}</div>
+                                        {cust.city && <div className="text-[9px] text-[#aaa] font-bold uppercase mt-0.5">{cust.city} {cust.country}</div>}
+                                    </div>
+                                </div>
+
+                                {/* Row 4: Controls */}
+                                <div className="flex gap-2 pt-2 border-t border-[#eee]">
+                                    <button
+                                        onClick={() => setViewingCustomer(cust)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-slate-50 text-[#007185] text-[12px] font-bold shadow-sm"
+                                        title="View Details"
+                                    >
+                                        <Eye size={13} /> View
+                                    </button>
+                                    <button
+                                        onClick={() => openEdit(cust)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] text-[12px] font-bold shadow-sm"
+                                        title="Edit Profile"
+                                    >
+                                        <Pencil size={13} /> Edit
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteTarget(cust)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-red-200 rounded bg-red-50/50 hover:bg-red-50 text-red-600 text-[12px] font-bold shadow-sm"
+                                        title="Delete Customer"
+                                    >
+                                        <Trash2 size={13} /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -299,38 +386,34 @@ export default function CustomersPage() {
                                     ))
                                 )}
                             </tbody>
-                            {filteredCustomers.length > 0 && (
-                                <tfoot className="bg-[#f7f8fa] border-t border-[#ddd]">
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="text-[13px] text-[#565959]">
-                                                    Showing <span className="font-bold text-[#111]">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-[#111]">{Math.min(currentPage * itemsPerPage, filteredCustomers.length)}</span> of <span className="font-bold text-[#111]">{filteredCustomers.length}</span> customers
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button 
-                                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                                        disabled={currentPage === 1}
-                                                        className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
-                                                    >
-                                                        <ChevronLeft size={14} /> Previous
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                                        disabled={currentPage === totalPages}
-                                                        className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
-                                                    >
-                                                        Next <ChevronRight size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            )}
                         </table>
                     </div>
                 </div>
+
+                {/* ── Pagination Controls ── */}
+                {filteredCustomers.length > 0 && (
+                    <div className="mt-4 px-4 py-4 sm:px-6 bg-white border border-[#ddd] rounded-[4px] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in duration-500">
+                        <div className="text-[12px] sm:text-[13px] text-[#565959] text-center sm:text-left">
+                            Showing <span className="font-bold text-[#111]">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-[#111]">{Math.min(currentPage * itemsPerPage, filteredCustomers.length)}</span> of <span className="font-bold text-[#111]">{filteredCustomers.length}</span> customers
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
+                            >
+                                <ChevronLeft size={14} /> Previous
+                            </button>
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
+                            >
+                                Next <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Form Modal (Add/Edit) */}

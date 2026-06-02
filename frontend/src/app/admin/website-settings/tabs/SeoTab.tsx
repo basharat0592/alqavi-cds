@@ -39,7 +39,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Page Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <h1 className="text-[21px] font-bold text-[#111]">SEO & Search Settings</h1>
             </div>
             
@@ -51,8 +51,8 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                         Google Search Appearance
                     </h3>
                 </div>
-                <div className="p-8 flex items-center justify-center bg-[#f0f2f2]/30 border-b border-[#ddd]">
-                    <div className="bg-white rounded-lg border border-[#ddd] shadow-sm p-6 w-full max-w-xl font-sans">
+                <div className="p-4 md:p-8 flex items-center justify-center bg-[#f0f2f2]/30 border-b border-[#ddd]">
+                    <div className="bg-white rounded-lg border border-[#ddd] shadow-sm p-4 md:p-6 w-full max-w-xl font-sans">
                         <div className="flex items-center gap-2 mb-1.5">
                             <div className="w-6 h-6 rounded-full bg-[#f0f2f2] flex items-center justify-center">
                                 <Globe size={12} className="text-[#565959]" />
@@ -136,12 +136,12 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
             </div>
 
             {/* Footer Aligned Action */}
-            <div className="flex items-center justify-between bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#ddd] rounded-[4px] p-4 md:p-6 shadow-sm">
                 <div className="flex items-center gap-3 text-slate-400">
                     <RotateCcw size={18} />
                     <p className="text-[13px] font-medium italic">SEO changes may take a few days to reflect in search engines.</p>
                 </div>
-                <Btn onClick={() => onSave(form)} loading={saving} className="min-w-[180px] h-[35px]">
+                <Btn onClick={() => onSave(form)} loading={saving} className="w-full sm:w-auto min-w-[180px] h-[35px] justify-center">
                     Sync Meta Settings
                 </Btn>
             </div>

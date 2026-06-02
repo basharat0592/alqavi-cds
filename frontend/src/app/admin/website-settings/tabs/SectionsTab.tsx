@@ -269,7 +269,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         </div>
 
                         {/* Row 2: Colors, Scroll, Speed, Duration */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
                             <div className="space-y-1.5">
                                 <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Background Color</label>
                                 <div className="flex items-center gap-2">
@@ -355,12 +355,12 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                 </div>
             )}
 
-            <div className="bg-white border border-[#ddd] rounded-[4px] px-6 py-4 flex items-center justify-between shadow-sm">
+            <div className="bg-white border border-[#ddd] rounded-[4px] px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
                 <div>
                     <h3 className="text-[15px] font-bold text-[#111]">Landing Page Layout Builder</h3>
                     <p className="text-[12px] text-[#565959]">Manage the sequence and content of sections on your storefront.</p>
                 </div>
-                <AmazonBtn onClick={() => setShowAddModal(true)}>
+                <AmazonBtn onClick={() => setShowAddModal(true)} className="w-full sm:w-auto justify-center whitespace-nowrap">
                     <Plus size={16} /> Add Page Section
                 </AmazonBtn>
             </div>
@@ -383,7 +383,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         </div>
                     </div>
                 )}
-                <div className="grid grid-cols-12 px-6 py-3 border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider bg-[#f7f8fa]">
+                <div className="hidden md:grid grid-cols-12 px-6 py-3 border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider bg-[#f7f8fa]">
                     <div className="col-span-1">Order</div>
                     <div className="col-span-1">Type</div>
                     <div className="col-span-6">Section Name & Details</div>
@@ -432,7 +432,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             setDragOverIndex(null);
                                         }}
                                         className={cn(
-                                            'grid grid-cols-12 items-center px-6 py-4 hover:bg-[#fcfcfc] transition-all group relative border-l-4 border-transparent',
+                                            'hover:bg-[#fcfcfc] transition-all group relative border-l-4 border-transparent w-full',
                                             !s.is_visible && 'opacity-60 bg-slate-50/50',
                                             dragIndex === idx && 'bg-blue-50 border-blue-500 shadow-inner scale-[0.98]',
                                             dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50',
@@ -447,79 +447,161 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             )} />
                                         )}
 
-                                        <div className="col-span-1 flex items-center gap-1.5">
-                                            <div className="cursor-grab active:cursor-grabbing text-[#ddd] group-hover:text-[#aaa]">
-                                                <GripVertical size={14} />
+                                        {/* DESKTOP ROW */}
+                                        <div className="hidden md:grid grid-cols-12 items-center px-6 py-4 w-full">
+                                            <div className="col-span-1 flex items-center gap-1.5">
+                                                <div className="cursor-grab active:cursor-grabbing text-[#ddd] group-hover:text-[#aaa]">
+                                                    <GripVertical size={14} />
+                                                </div>
+                                                <div className="flex flex-col -space-y-1">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
+                                                        disabled={idx === 0}
+                                                        className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                    >
+                                                        <ChevronUp size={16} strokeWidth={3} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
+                                                        disabled={idx === sections.length - 1}
+                                                        className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                    >
+                                                        <ChevronDown size={16} strokeWidth={3} />
+                                                    </button>
+                                                </div>
+                                                <span className="text-[13px] font-black text-[#111] min-w-[14px] text-center">{idx + 1}</span>
                                             </div>
-                                            <div className="flex flex-col -space-y-1">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
-                                                    disabled={idx === 0}
-                                                    className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
-                                                >
-                                                    <ChevronUp size={16} strokeWidth={3} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
-                                                    disabled={idx === sections.length - 1}
-                                                    className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
-                                                >
-                                                    <ChevronDown size={16} strokeWidth={3} />
-                                                </button>
+
+                                            <div className="col-span-1">
+                                                <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
+                                                    {meta?.icon || '📄'}
+                                                </div>
                                             </div>
-                                            <span className="text-[13px] font-black text-[#111] min-w-[14px] text-center">{idx + 1}</span>
-                                        </div>
 
-                                        <div className="col-span-1">
-                                            <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
-                                                {meta?.icon || '📄'}
+                                            <div className="col-span-6">
+                                                <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
+                                                <p className="text-[12px] text-[#565959]">{meta?.label} • {meta?.desc}</p>
                                             </div>
-                                        </div>
 
-                                        <div className="col-span-6">
-                                            <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
-                                            <p className="text-[12px] text-[#565959]">{meta?.label} • {meta?.desc}</p>
-                                        </div>
-
-                                        <div className="col-span-2">
-                                            <div className="flex items-center gap-3">
-                                                <button
-                                                    onClick={() => toggleVisibility(s)}
-                                                    className={cn(
-                                                        "relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                                                        s.is_visible ? "bg-green-600" : "bg-gray-300"
-                                                    )}
-                                                >
-                                                    <span
+                                            <div className="col-span-2">
+                                                <div className="flex items-center gap-3">
+                                                    <button
+                                                        onClick={() => toggleVisibility(s)}
                                                         className={cn(
-                                                            "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                                                            s.is_visible ? "translate-x-4" : "translate-x-0"
+                                                            "relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                                                            s.is_visible ? "bg-green-600" : "bg-gray-300"
                                                         )}
-                                                    />
+                                                    >
+                                                        <span
+                                                            className={cn(
+                                                                "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                                                s.is_visible ? "translate-x-4" : "translate-x-0"
+                                                            )}
+                                                        />
+                                                    </button>
+                                                    <span className={cn(
+                                                        "text-[10px] font-black uppercase tracking-tight",
+                                                        s.is_visible ? "text-green-700" : "text-gray-400"
+                                                    )}>
+                                                        {s.is_visible ? 'Live' : 'Hidden'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="col-span-2 flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
+                                                    className={cn(
+                                                        "p-1.5 rounded-full transition-all",
+                                                        previewId === s.id ? "bg-[#111] text-white" : "text-[#565959] hover:bg-slate-100"
+                                                    )}
+                                                    title="Toggle Preview"
+                                                >
+                                                    {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 </button>
-                                                <span className={cn(
-                                                    "text-[10px] font-black uppercase tracking-tight",
-                                                    s.is_visible ? "text-green-700" : "text-gray-400"
-                                                )}>
-                                                    {s.is_visible ? 'Live' : 'Hidden'}
-                                                </span>
+                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#007185] hover:underline">Edit</button>
+                                                <span className="text-[#ddd]">|</span>
+                                                <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </div>
 
-                                        <div className="col-span-2 flex items-center justify-end gap-3">
-                                            <button
-                                                onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
-                                                className={cn(
-                                                    "p-1.5 rounded-full transition-all",
-                                                    previewId === s.id ? "bg-[#111] text-white" : "text-[#565959] hover:bg-slate-100"
-                                                )}
-                                                title="Toggle Preview"
-                                            >
-                                                {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
-                                            </button>
-                                            <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#007185] hover:underline">Edit</button>
-                                            <span className="text-[#ddd]">|</span>
-                                            <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                        {/* MOBILE CARD */}
+                                        <div className="flex md:hidden flex-col p-4 gap-3 w-full">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="cursor-grab active:cursor-grabbing text-[#aaa] p-1">
+                                                        <GripVertical size={16} />
+                                                    </div>
+                                                    <div className="flex flex-col -space-y-1">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
+                                                            disabled={idx === 0}
+                                                            className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                        >
+                                                            <ChevronUp size={16} strokeWidth={3} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
+                                                            disabled={idx === sections.length - 1}
+                                                            className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                        >
+                                                            <ChevronDown size={16} strokeWidth={3} />
+                                                        </button>
+                                                    </div>
+                                                    <span className="text-[13px] font-black text-[#111] ml-1 bg-slate-100 w-6 h-6 rounded-full flex items-center justify-center border border-slate-200">
+                                                        {idx + 1}
+                                                    </span>
+                                                </div>
+
+                                                <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
+                                                    {meta?.icon || '📄'}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
+                                                <p className="text-[12px] text-[#565959] mt-0.5">{meta?.label} • {meta?.desc}</p>
+                                            </div>
+
+                                            <div className="flex items-center justify-between border-t border-[#eee] pt-3 mt-1">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => toggleVisibility(s)}
+                                                        className={cn(
+                                                            "relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                                                            s.is_visible ? "bg-green-600" : "bg-gray-300"
+                                                        )}
+                                                    >
+                                                        <span
+                                                            className={cn(
+                                                                "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                                                s.is_visible ? "translate-x-4" : "translate-x-0"
+                                                            )}
+                                                        />
+                                                    </button>
+                                                    <span className={cn(
+                                                        "text-[10px] font-black uppercase tracking-tight",
+                                                        s.is_visible ? "text-green-700" : "text-gray-400"
+                                                    )}>
+                                                        {s.is_visible ? 'Live' : 'Hidden'}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <button
+                                                        onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
+                                                        className={cn(
+                                                            "p-1.5 rounded-full transition-all border",
+                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#565959] hover:bg-slate-100 border-[#ddd]"
+                                                        )}
+                                                        title="Toggle Preview"
+                                                    >
+                                                        {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-[#adb1b8] rounded-[3px] text-[12px] font-bold text-[#007185] hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
+                                                    <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#c40000]/20 rounded-[3px] text-[12px] font-bold text-[#c40000] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -559,11 +641,11 @@ export default function SectionsTab({ sections, setSections, products = [], cate
             {showAddModal && (
                 <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4">
                     <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-4 flex items-center justify-between">
+                        <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 md:px-6 py-4 flex items-center justify-between">
                             <h3 className="font-bold text-[#111] text-[17px]">Select Section Type</h3>
                             <button onClick={() => setShowAddModal(false)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
                         </div>
-                        <div className="p-6 grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                        <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {SECTION_TYPES.map(t => (
                                 <button key={t.type} onClick={() => addSection(t.type)}
                                     className="flex items-center gap-4 p-4 border border-[#ddd] rounded-[4px] hover:border-[#e77600] hover:bg-[#fff9e6] transition-all group text-left">
@@ -1040,8 +1122,8 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
     return (
         <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4">
             {picker.open && <MediaPickerModal allowVideo={picker.allowVideo} onClose={() => setPicker(p => ({ ...p, open: false }))} onSelect={picker.onSelect} />}
-            <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-4 flex items-center justify-between">
+            <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[95vh] h-full sm:h-auto">
+                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-white border border-[#ddd] rounded-[4px] flex items-center justify-center">
                             {SECTION_TYPES.find(t => t.type === section.section_type)?.icon}
@@ -1051,7 +1133,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                     <button onClick={onClose} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
                 </div>
 
-                <div className="p-8 space-y-8 overflow-y-auto flex-1 custom-scrollbar text-left">
+                <div className="p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1 custom-scrollbar text-left">
                     <div className="grid md:grid-cols-2 gap-6 pb-6 border-b border-[#eee]">
                         <div className="space-y-1.5">
                             <label className="text-[13px] font-bold text-[#111]">Internal Label</label>

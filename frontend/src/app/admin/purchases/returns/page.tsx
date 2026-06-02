@@ -21,7 +21,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -39,11 +39,22 @@ const statusStyle: Record<string, string> = {
     cancelled: 'bg-red-50 text-red-700 border-red-200',
 };
 
-const StatusPill = ({ status }: { status: string }) => (
-    <span className={`inline-block px-2 py-0.5 rounded-[3px] border text-[11px] font-bold capitalize ${statusStyle[(status || '').toLowerCase()] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-        {(status || '').replace('_', ' ')}
-    </span>
-);
+const StatusPill = ({ status }: { status: string }) => {
+    const formatted = (status || '').replace('_', ' ');
+    const s = (status || '').toLowerCase();
+    return (
+        <>
+            <span className={`inline-block sm:hidden w-2.5 h-2.5 rounded-full ${
+                ['accepted', 'completed'].includes(s) ? 'bg-emerald-600' :
+                ['pending', 'waiting_for_supplier'].includes(s) ? 'bg-amber-500' :
+                'bg-red-600'
+            }`} title={formatted} />
+            <span className={`hidden sm:inline-block px-2 py-0.5 rounded-[3px] border text-[11px] font-bold capitalize ${statusStyle[s] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                {formatted}
+            </span>
+        </>
+    );
+};
 
 export default function PurchaseReturnsPage() {
     const router = useRouter();
@@ -95,7 +106,7 @@ export default function PurchaseReturnsPage() {
 
     return (
         <div className="bg-[#F8FAFC] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1250px] mx-auto px-6 pt-5">
+            <div className="max-w-[1250px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5">
 
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -107,13 +118,13 @@ export default function PurchaseReturnsPage() {
                 </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <h1 className="text-[22px] font-normal italic">Purchase Returns</h1>
-                    <div className="flex items-center gap-2">
-                        <Btn variant="secondary" onClick={() => load()}>
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    <div className="flex gap-2 w-full sm:w-auto justify-end">
+                        <Btn variant="secondary" onClick={() => load()} className="flex-1 sm:flex-initial justify-center">
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                         </Btn>
-                        <Btn onClick={openAdd}>
+                        <Btn onClick={openAdd} className="flex-1 sm:flex-initial justify-center">
                             <Plus size={14} /> New Return
                         </Btn>
                     </div>
@@ -121,8 +132,8 @@ export default function PurchaseReturnsPage() {
                 <div className="border-b border-[#ddd] mb-6" />
 
                 {/* Filters & Search */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
-                    <div className="relative w-[300px]">
+                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="relative w-full sm:w-[300px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888c8e]" size={14} />
                         <input
                             className={inputCls + " pl-9"}
@@ -131,8 +142,8 @@ export default function PurchaseReturnsPage() {
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="h-5 w-[1px] bg-[#ddd] hidden md:block" />
-                    <span className="text-[13px] text-[#565959]">
+                    <div className="h-5 w-[1px] bg-[#ddd] hidden sm:block" />
+                    <span className="text-[13px] text-[#565959] text-center sm:text-left">
                         Showing {filtered.length} records
                     </span>
                 </div>
@@ -143,24 +154,24 @@ export default function PurchaseReturnsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-[#f7f8fa] border-b border-[#ddd]">
-                                    <th className="px-4 py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider">Return #</th>
-                                    <th className="px-4 py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider">Details</th>
-                                    <th className="px-4 py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider">Date</th>
-                                    <th className="px-4 py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider">Refund Amount</th>
-                                    <th className="px-4 py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider">Status</th>
-                                    <th className="px-4 py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider text-right">Actions</th>
+                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider whitespace-nowrap">Return #</th>
+                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider">Details</th>
+                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider whitespace-nowrap">Date</th>
+                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider whitespace-nowrap">Refund Amount</th>
+                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider whitespace-nowrap">Status</th>
+                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[12px] font-bold uppercase text-[#565959] tracking-wider text-right whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#eee]">
                                 {loading && filtered.length === 0 ? (
                                     Array(5).fill(0).map((_, i) => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={6} className="px-4 py-4 h-14 bg-gray-50/50" />
+                                            <td colSpan={6} className="px-2.5 sm:px-4 py-4 h-14 bg-gray-50/50" />
                                         </tr>
                                     ))
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-20 text-center">
+                                        <td colSpan={6} className="px-2.5 sm:px-4 py-20 text-center">
                                             <div className="flex flex-col items-center opacity-40">
                                                 <RotateCcw size={40} className="mb-2 text-slate-300" />
                                                 <p className="text-[14px]">No return records found</p>
@@ -170,39 +181,43 @@ export default function PurchaseReturnsPage() {
                                 ) : (
                                     filtered.map(row => (
                                         <tr key={row.id} className="hover:bg-[#f3f7f7] transition-all group">
-                                            <td className="px-4 py-4">
+                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
                                                 <span className="text-[13px] font-bold text-[#007185] hover:underline cursor-pointer group-hover:text-[#c45500]">
                                                     #{row.return_number}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-[13px] font-bold">{row.supplier_name || 'Generic Supplier'}</span>
-                                                    <span className="text-[11px] text-[#565959] italic">Ref: {row.purchase_number || 'Standalone'}</span>
+                                                    <span className="text-[11px] text-[#565959] italic hidden sm:inline">Ref: {row.purchase_number || 'Standalone'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
                                                 <span className="text-[13px] text-[#565959]">{row.return_date}</span>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
                                                 <span className="text-[14px] font-bold text-[#B12704]">{formatCurrency(row.total_refund_amount || 0)}</span>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
                                                 <StatusPill status={row.status} />
                                             </td>
-                                            <td className="px-4 py-4 text-right">
-                                                <div className="flex justify-end gap-3 text-[13px]">
-                                                    <button
-                                                        onClick={() => setViewRow(row)}
-                                                        className="text-[#007185] hover:text-[#c45500] hover:underline font-medium transition-all"
+                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="flex justify-end gap-1.5 text-[13px]">
+                                                    <button 
+                                                        onClick={() => setViewRow(row)} 
+                                                        className="p-1.5 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all shrink-0 sm:border-0 sm:p-0 sm:hover:bg-transparent sm:hover:underline font-medium"
+                                                        title="View"
                                                     >
-                                                        View
+                                                        <span className="hidden sm:inline">View</span>
+                                                        <Eye size={14} className="sm:hidden" />
                                                     </button>
-                                                    <button
-                                                        onClick={() => setDeleteRow(row)}
-                                                        className="text-red-600 hover:text-red-700 hover:underline font-medium transition-all"
+                                                    <button 
+                                                        onClick={() => setDeleteRow(row)} 
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-all shrink-0 sm:border-0 sm:p-0 sm:hover:bg-transparent sm:hover:underline font-medium"
+                                                        title="Delete"
                                                     >
-                                                        Delete
+                                                        <span className="hidden sm:inline">Delete</span>
+                                                        <Trash2 size={14} className="sm:hidden" />
                                                     </button>
                                                 </div>
                                             </td>

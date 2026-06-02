@@ -78,7 +78,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
             <main className="flex-1 pt-16 pb-20 max-w-[1500px] mx-auto px-4 lg:px-8">
 
-                {/* ── BREADCRUMBS ── */}
+                {/* â”€â”€ BREADCRUMBS â”€â”€ */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-4">
                     <Link href="/customer" className="hover:text-[#c45500] hover:underline">Home</Link>
                     <ChevronRight size={12} />
@@ -91,7 +91,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
                 <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-                    {/* ── COL 1: GALLERY ── */}
+                    {/* â”€â”€ COL 1: GALLERY â”€â”€ */}
                     <div className="w-full lg:w-[45%] flex flex-col-reverse lg:flex-row gap-4">
                         <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto no-scrollbar lg:max-h-[500px]">
                             {images.map((img, i) => (
@@ -99,7 +99,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                     key={i}
                                     onMouseEnter={() => setActiveImage(i)}
                                     onClick={() => setActiveImage(i)}
-                                    className={`w-[45px] lg:w-[50px] aspect-square rounded-[3px] border-2 transition-all p-1 bg-white shrink-0 ${activeImage === i ? 'border-[#e77600] shadow-[0_0_3px_2px_rgba(228,121,17,0.5)]' : 'border-[#ddd] hover:border-[#e77600]'}`}
+                                    className={`w-[45px] lg:w-[50px] aspect-square rounded-[3px] border-2 transition-all p-1 bg-white shrink-0 ${activeImage === i ? 'border-[#119AB8] shadow-[0_0_3px_2px_rgba(228,121,17,0.5)]' : 'border-[#ddd] hover:border-[#119AB8]'}`}
                                 >
                                     <img src={img} className="w-full h-full object-contain" alt="" />
                                 </button>
@@ -118,7 +118,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                         </div>
                     </div>
 
-                    {/* ── COL 2: CENTER INFO ── */}
+                    {/* â”€â”€ COL 2: CENTER INFO â”€â”€ */}
                     <div className="w-full lg:w-[35%] space-y-4">
                         <div className="border-b border-[#eee] pb-4 space-y-2">
                             <Link href="#" className="text-[14px] text-[#007185] hover:text-[#c45500] hover:underline font-medium block">
@@ -177,7 +177,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                         </div>
                     </div>
 
-                    {/* ── COL 3: BUY BOX ── */}
+                    {/* â”€â”€ COL 3: BUY BOX â”€â”€ */}
                     <div className="w-full lg:w-[20%] lg:sticky lg:top-24">
                         <div className="bg-white border border-[#ddd] rounded-[8px] p-5 shadow-sm space-y-4">
                             <div className="space-y-1">
@@ -265,7 +265,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     </div>
                 </div>
 
-                {/* ── TECHNICAL DETAILS ── */}
+                {/* â”€â”€ TECHNICAL DETAILS â”€â”€ */}
                 <div className="mt-16 pt-10 border-t border-[#eee]">
                     <h2 className="text-[20px] font-bold mb-6">Technical Details</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20">
@@ -312,7 +312,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     </div>
                 </div>
 
-                {/* ── RELATED PRODUCTS ── */}
+                {/* â”€â”€ RELATED PRODUCTS â”€â”€ */}
                 {relatedProducts.length > 0 && (
                     <div className="mt-20 pt-10 border-t border-[#eee]">
                         <h2 className="text-[20px] font-bold mb-6">Inspired by your shopping trend</h2>

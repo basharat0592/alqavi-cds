@@ -150,6 +150,30 @@ const cmsService = {
   deleteNavItem: async (id: number) => {
     await api.delete(`v1/cms/nav-items/${id}/`);
   },
+  // Navbar Pages
+  getNavbarPages: async () => {
+    const { data } = await api.get('v1/cms/navbar-pages/');
+    return Array.isArray(data) ? data : data.results || [];
+  },
+  createNavbarPage: async (payload: Omit<any, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data } = await api.post('v1/cms/navbar-pages/', payload);
+    return data;
+  },
+  updateNavbarPage: async (id: number, payload: Partial<any>) => {
+    const { data } = await api.patch(`v1/cms/navbar-pages/${id}/`, payload);
+    return data;
+  },
+  deleteNavbarPage: async (id: number) => {
+    await api.delete(`v1/cms/navbar-pages/${id}/`);
+  },
+  reorderNavbarPages: async (orders: { id?: number; order: number }[]) => {
+    const { data } = await api.post('v1/cms/navbar-pages/reorder/', { orders });
+    return data;
+  },
+  getNavbarPagesWithCategoriesCount: async () => {
+    const { data } = await api.get('v1/cms/navbar-pages/get_categories_count/');
+    return Array.isArray(data) ? data : data.results || [];
+  },
 };
 
 export default cmsService;

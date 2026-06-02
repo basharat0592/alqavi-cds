@@ -139,7 +139,7 @@ export default function SuppliersPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
+            <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
                 
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
@@ -148,27 +148,106 @@ export default function SuppliersPage() {
                     <span className="text-[#c45500] font-bold">Supplier List</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-[22px] font-normal">
+                <div className="flex items-center justify-between mb-4 gap-2">
+                    <h1 className="text-[20px] sm:text-[22px] font-normal shrink-0">
                         {view === 'list' ? 'Supplier List' : (view === 'add' ? 'New Supplier' : 'Edit Supplier')}
                     </h1>
                     {view === 'list' ? (
-                        <div className="flex gap-2">
-                             <Btn variant="secondary" onClick={loadData} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                        <div className="flex gap-2 shrink-0">
+                             <Btn variant="secondary" onClick={loadData} loading={loading} className="whitespace-nowrap">
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Refresh</span>
                             </Btn>
-                            <Btn onClick={() => setView('add')}><Plus size={14} /> Add Supplier</Btn>
+                            <Btn onClick={() => setView('add')} className="whitespace-nowrap"><Plus size={14} /> Add Supplier</Btn>
                         </div>
                     ) : (
-                        <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold">
+                        <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold whitespace-nowrap">
                             <ChevronLeft size={14} /> Back to List
                         </button>
                     )}
                 </div>
                 <div className="border-b border-[#ddd] mb-6" />
 
-                {/* List Table */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
+                {/* ── Mobile Card List ── */}
+                <div className="md:hidden space-y-3 mb-6">
+                    {filtered.length === 0 ? (
+                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                            <div className="opacity-10 mb-3"><User size={40} className="mx-auto" /></div>
+                            <p className="text-[13px] text-[#565959] font-medium">No suppliers found.</p>
+                        </div>
+                    ) : (
+                        paginatedItems.map(s => (
+                            <div key={s.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 space-y-3 text-left">
+                                {/* Row 1: Avatar + Name & Company + Status */}
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0 shadow-sm">
+                                            {s.avatar ? (
+                                                <img src={getImageUrl(s.avatar)} className="w-full h-full object-cover" alt="" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold bg-slate-50 uppercase text-[11px]">{s.name ? s.name[0] : '?'}</div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[14px] font-bold text-[#007185] hover:underline cursor-pointer" onClick={() => openEdit(s)}>{s.name}</h3>
+                                            <div className="text-[10px] text-[#565959] uppercase font-bold mt-0.5 tracking-tighter flex items-center gap-1">
+                                                <Building2 size={11} className="text-[#adb1b8]" /> {s.company || 'Private Seller'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-[2px] text-[9px] font-bold uppercase border shrink-0 ${s.is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                        {s.is_active ? 'Active' : 'Hidden'}
+                                    </span>
+                                </div>
+
+                                {/* Row 2: Contact Info */}
+                                <div className="border-t border-[#eee] pt-2.5 space-y-1.5 text-[12px] text-[#565959]">
+                                    <div className="flex items-center gap-2">
+                                        <Phone size={13} className="text-[#adb1b8] shrink-0" />
+                                        <span className="text-[#111]">{s.phone || 'No Phone'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Mail size={13} className="text-[#adb1b8] shrink-0" />
+                                        <span className="text-[#111] truncate">{s.email}</span>
+                                    </div>
+                                </div>
+
+                                {/* Row 3: Address */}
+                                <div className="flex items-start gap-2 text-[11px] text-[#565959] italic bg-[#fcfcfc] border border-[#eee] rounded p-2">
+                                    <MapPin size={13} className="text-[#adb1b8] mt-0.5 shrink-0" />
+                                    <span className="line-clamp-2">{s.address || 'Address not listed'}</span>
+                                </div>
+
+                                {/* Row 4: Controls */}
+                                <div className="flex gap-2 pt-2 border-t border-[#eee]">
+                                    <button
+                                        onClick={() => setSelectedForView(s)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-slate-50 text-[#007185] text-[12px] font-bold shadow-sm"
+                                        title="Quick View"
+                                    >
+                                        <Eye size={13} /> View
+                                    </button>
+                                    <button
+                                        onClick={() => openEdit(s)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] text-[12px] font-bold shadow-sm"
+                                        title="Edit Profile"
+                                    >
+                                        <Pencil size={13} /> Edit
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteItem(s)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-red-200 rounded bg-red-50/50 hover:bg-red-50 text-red-600 text-[12px] font-bold shadow-sm"
+                                        title="Delete Supplier"
+                                    >
+                                        <Trash2 size={13} /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* ── Desktop Table ── */}
+                <div className="hidden md:block bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
@@ -232,37 +311,33 @@ export default function SuppliersPage() {
                                 ))
                             )}
                         </tbody>
-                        {filtered.length > 0 && (
-                            <tfoot className="bg-[#f7f8fa] border-t border-[#ddd]">
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-[13px] text-[#565959]">
-                                                Showing <span className="font-bold text-[#111]">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-[#111]">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-bold text-[#111]">{filtered.length}</span> suppliers
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button 
-                                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                                    disabled={currentPage === 1}
-                                                    className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
-                                                >
-                                                    <ChevronLeft size={14} /> Previous
-                                                </button>
-                                                <button 
-                                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                                    disabled={currentPage === totalPages}
-                                                    className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
-                                                >
-                                                    Next <ChevronRight size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        )}
                     </table>
                 </div>
+
+                {/* ── Pagination Controls ── */}
+                {filtered.length > 0 && (
+                    <div className="mt-4 px-4 py-4 sm:px-6 bg-white border border-[#ddd] rounded-[4px] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in duration-500">
+                        <div className="text-[12px] sm:text-[13px] text-[#565959] text-center sm:text-left">
+                            Showing <span className="font-bold text-[#111]">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-[#111]">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-bold text-[#111]">{filtered.length}</span> suppliers
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
+                            >
+                                <ChevronLeft size={14} /> Previous
+                            </button>
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="h-[29px] px-4 border border-[#adb1b8] rounded-[3px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] text-[12px] font-bold text-[#0f1111] hover:from-[#eef1f3] hover:to-[#dce0e4] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
+                            >
+                                Next <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* SUPPLIER MODAL (ADD/EDIT) */}

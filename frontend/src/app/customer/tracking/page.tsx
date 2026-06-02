@@ -11,9 +11,9 @@ import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
-/* ─────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    PURE AMAZON RETAIL DESIGN SYSTEM - PUBLIC TRACKING VERSION 2.0
-   ───────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
         primary: 'bg-[#119AB8] hover:bg-[#13B0D1] border-[#119AB8] text-white shadow-[0_2px_5px_0_rgba(17,154,184,0.3)]',
@@ -125,7 +125,7 @@ export default function TrackingPage() {
                 {/* Search Bar */}
                 <div className="mb-12 group">
                     <form onSubmit={handleTrack} className="relative max-w-2xl mx-auto drop-shadow-sm hover:drop-shadow-md transition-all">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#888] group-focus-within:text-[#e77600]" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#888] group-focus-within:text-[#119AB8]" />
                         <input
                             type="text"
                             value={trackingId}
@@ -301,7 +301,7 @@ export default function TrackingPage() {
                     <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-[#D5D9D9] rounded-[16px] bg-[#F7F8FA] animate-in zoom-in duration-500">
                         <div className="relative mb-6">
                             <Box size={80} className="text-[#D5D9D9]" />
-                            <Search size={32} className="absolute -bottom-2 -right-2 text-[#e77600] bg-white rounded-full p-1.5 shadow-md" />
+                            <Search size={32} className="absolute -bottom-2 -right-2 text-[#119AB8] bg-white rounded-full p-1.5 shadow-md" />
                         </div>
                         <h2 className="text-[22px] font-bold text-[#111]">Track your parcel</h2>
                         <p className="text-[14px] text-[#565959] mt-2 mb-10 text-center max-w-sm">Enter the Tracking ID provided in your SMS or email to see its journey.</p>

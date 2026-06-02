@@ -23,7 +23,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {children}
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
         </button>
@@ -219,8 +219,7 @@ export default function SaleReturnsPage() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
-
+            <div className="max-w-[1440px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
                 {/* ── Breadcrumb ── */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -228,12 +227,12 @@ export default function SaleReturnsPage() {
                     <span className="text-[#c45500] font-bold">Return Management</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                         <h1 className="text-[22px] font-normal text-[#111]">Customer Return Requests</h1>
                     </div>
-                    <div className="flex gap-2">
-                        <Btn variant="secondary" onClick={() => loadReturns()} loading={loading}>
+                    <div className="flex gap-2 w-full sm:w-auto justify-end">
+                        <Btn variant="secondary" onClick={() => loadReturns()} loading={loading} className="flex-1 sm:flex-initial justify-center">
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                         </Btn>
                     </div>
@@ -241,8 +240,8 @@ export default function SaleReturnsPage() {
                 <div className="border-b border-[#ddd] mb-6" />
 
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-wrap items-center gap-5 animate-in fade-in slide-in-from-top-2 duration-500">
-                    <div className="relative flex-1 min-w-[300px]">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="relative w-full sm:flex-1 min-w-0 sm:min-w-[300px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
                         <input
                             value={searchTerm}
@@ -251,8 +250,7 @@ export default function SaleReturnsPage() {
                             className={`${inputCls} pl-10`}
                         />
                     </div>
-
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
                         {STATUS_FILTERS.map(f => (
                             <button
                                 key={f}
@@ -267,73 +265,80 @@ export default function SaleReturnsPage() {
 
                 {/* Returns Table */}
                 <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-700">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
-                                <th className="px-6 py-3">Return ID</th>
-                                <th className="px-6 py-3">Source Order</th>
-                                <th className="px-6 py-3">Customer</th>
-                                <th className="px-6 py-3 text-right">Refund Value</th>
-                                <th className="px-6 py-3 text-center">Lifecycle</th>
-                                <th className="px-6 py-3 text-right">Controls</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#eee]">
-                            {filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-24 text-center">
-                                    <div className="opacity-10 mb-4"><Package size={60} className="mx-auto" /></div>
-                                    <p className="text-[14px] text-[#565959] font-medium italic">No return requests found matching your criteria.</p>
-                                </td></tr>
-                            ) : (
-                                filtered.map(r => (
-                                    <tr key={r.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
-                                        <td className="px-6 py-4">
-                                            <div className="text-[14px] font-bold text-[#007185] group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
-                                                #{r.return_number}
-                                            </div>
-                                            <div className="text-[11px] text-[#565959] mt-1 flex items-center gap-1.5 font-medium">
-                                                <Clock size={12} className="text-[#adb1b8]" /> {formatDateTime(r.created_at)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-[#111] font-bold">{r.order_tracking_id}</div>
-                                            <div className="text-[10px] text-[#007600] font-black uppercase mt-1 tracking-tighter">Verified Order</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-[#111] font-bold flex items-center gap-2">
-                                                <User size={14} className="text-[#adb1b8]" /> {r.customer_name}
-                                            </div>
-                                            <div className="text-[11px] text-[#565959] mt-1 font-medium italic">Authenticated Account</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="text-[16px] font-black text-[#B12704]">
-                                                Rs. {(r.items?.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0) || 0).toLocaleString()}
-                                            </div>
-                                            <div className="text-[10px] text-[#565959] font-bold uppercase mt-1">
-                                                {r.items?.length || 0} Item{r.items?.length !== 1 ? 's' : ''}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <span className={`px-3 py-1 rounded-[2px] text-[10px] font-black uppercase border shadow-sm ${getStatusStyle(r.status)}`}>
-                                                    {r.status}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 transition-opacity">
-                                                <button onClick={() => setSelectedReturn(r)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm" title="Inspect Request"><Eye size={14} /></button>
-                                                <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm" title="Print Details"><Printer size={14} /></button>
-                                                <button onClick={() => setReturnToDelete(r)} className="p-1.5 border border-rose-200 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 shadow-sm" title="Delete Return">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
+                                    <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Return ID</th>
+                                    <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Source Order</th>
+                                    <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Customer</th>
+                                    <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Refund Value</th>
+                                    <th className="px-2.5 sm:px-6 py-3 text-center whitespace-nowrap">Lifecycle</th>
+                                    <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Controls</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#eee]">
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan={6} className="py-24 text-center">
+                                        <div className="opacity-10 mb-4"><Package size={60} className="mx-auto" /></div>
+                                        <p className="text-[14px] text-[#565959] font-medium italic">No return requests found matching your criteria.</p>
+                                    </td></tr>
+                                ) : (
+                                    filtered.map(r => (
+                                        <tr key={r.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
+                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                <div className="text-[14px] font-bold text-[#007185] group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
+                                                    #{r.return_number}
+                                                </div>
+                                                <div className="text-[11px] text-[#565959] mt-1 flex items-center gap-1.5 font-medium">
+                                                    <Clock size={12} className="text-[#adb1b8]" /> {formatDateTime(r.created_at)}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                <div className="text-[#111] font-bold">{r.order_tracking_id}</div>
+                                                <div className="text-[10px] text-[#007600] font-black uppercase mt-1 tracking-tighter hidden sm:block">Verified Order</div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                                <div className="text-[#111] font-bold flex items-center gap-2">
+                                                    <User size={14} className="text-[#adb1b8]" /> {r.customer_name}
+                                                </div>
+                                                <div className="text-[11px] text-[#565959] mt-1 font-medium italic hidden sm:block">Authenticated Account</div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="text-[16px] font-black text-[#B12704]">
+                                                    Rs. {(r.items?.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0) || 0).toLocaleString()}
+                                                </div>
+                                                <div className="text-[10px] text-[#565959] font-bold uppercase mt-1">
+                                                    {r.items?.length || 0} Item{r.items?.length !== 1 ? 's' : ''}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-center whitespace-nowrap">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <span className={`inline-block sm:hidden w-2.5 h-2.5 rounded-full ${
+                                                        r.status?.toLowerCase() === 'pending' ? 'bg-amber-500' :
+                                                        ['accepted', 'authorized'].includes(r.status?.toLowerCase()) ? 'bg-green-600' :
+                                                        'bg-red-600'
+                                                    }`} title={r.status} />
+                                                    <span className={`hidden sm:inline-block px-3 py-1 rounded-[2px] text-[10px] font-black uppercase border shadow-sm ${getStatusStyle(r.status)}`}>
+                                                        {r.status}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="flex justify-end gap-1.5 transition-opacity">
+                                                    <button onClick={() => setSelectedReturn(r)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm" title="Inspect Request"><Eye size={14} /></button>
+                                                    <button className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] shadow-sm" title="Print Details"><Printer size={14} /></button>
+                                                    <button onClick={() => setReturnToDelete(r)} className="p-1.5 border border-rose-200 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 shadow-sm" title="Delete Return">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Summary Note */}

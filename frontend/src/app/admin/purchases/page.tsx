@@ -262,22 +262,22 @@ export default function PurchasesPage() {
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
             {/* Header */}
             <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-6 text-left">
+                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 text-left">
                     <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
                         <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
                         <ChevronRight size={10} />
                         <span className="text-[#c45500]">Purchases</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                         <div>
-                            <h1 className="text-[22px] font-normal text-[#111]">Purchases</h1>
-                            <p className="text-[13px] text-[#565959] mt-0.5">Manage stock purchases from suppliers</p>
+                            <h1 className="text-[20px] sm:text-[22px] font-normal text-[#111]">Purchases</h1>
+                            <p className="text-[12px] sm:text-[13px] text-[#565959] mt-0.5">Manage stock purchases from suppliers</p>
                         </div>
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={() => exportToCSV(purchases, 'Purchases.csv')}>
-                                <FileSpreadsheet size={14} /> Export
+                        <div className="flex gap-2 shrink-0">
+                            <Btn variant="secondary" onClick={() => exportToCSV(purchases, 'Purchases.csv')} className="whitespace-nowrap">
+                                <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Export</span>
                             </Btn>
-                            <Btn onClick={() => router.push('/admin/purchases/add')}>
+                            <Btn onClick={() => router.push('/admin/purchases/add')} className="whitespace-nowrap">
                                 <Plus size={14} /> New Purchase
                             </Btn>
                         </div>
@@ -285,10 +285,10 @@ export default function PurchasesPage() {
                 </div>
             </div>
 
-            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 mt-6 sm:mt-8 text-left">
                 {/* Search & Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex items-end gap-4 overflow-x-auto">
-                    <div className="flex-1 min-w-[300px]">
+                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col md:flex-row items-stretch md:items-end gap-4">
+                    <div className="flex-1">
                         <label className="block text-[13px] font-bold text-[#111] mb-1.5">Search</label>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
@@ -300,27 +300,31 @@ export default function PurchasesPage() {
                             />
                         </div>
                     </div>
-                    <div className="w-[160px]">
-                        <label className="block text-[13px] font-bold text-[#111] mb-1.5">Payment</label>
-                        <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer"}>
-                            <option value="All">All Payments</option>
-                            <option value="unpaid">Unpaid</option>
-                            <option value="partial">Partial</option>
-                            <option value="paid">Paid</option>
-                        </select>
+                    <div className="flex flex-row gap-4 flex-1 md:flex-initial">
+                        <div className="flex-1 md:w-[160px]">
+                            <label className="block text-[13px] font-bold text-[#111] mb-1.5">Payment</label>
+                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer"}>
+                                <option value="All">All Payments</option>
+                                <option value="unpaid">Unpaid</option>
+                                <option value="partial">Partial</option>
+                                <option value="paid">Paid</option>
+                            </select>
+                        </div>
+                        <div className="flex-1 md:w-[180px]">
+                            <label className="block text-[13px] font-bold text-[#111] mb-1.5">Supplier</label>
+                            <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer w-full"}>
+                                <option value="All">All Suppliers</option>
+                                {suppliers.map(s => (
+                                    <option key={s.id} value={s.id}>{s.company ? `${s.company} - ` : ''}{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-end shrink-0">
+                            <Btn variant="secondary" onClick={() => load()} loading={loading} className="h-[35px] px-3.5">
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            </Btn>
+                        </div>
                     </div>
-                    <div className="w-[180px]">
-                        <label className="block text-[13px] font-bold text-[#111] mb-1.5">Supplier</label>
-                        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer"}>
-                            <option value="All">All Suppliers</option>
-                            {suppliers.map(s => (
-                                <option key={s.id} value={s.id}>{s.company ? `${s.company} - ` : ''}{s.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <Btn variant="secondary" onClick={() => load()} loading={loading} className="h-[35px]">
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                    </Btn>
                 </div>
 
                 {/* Status Tabs */}
@@ -347,8 +351,130 @@ export default function PurchasesPage() {
                     ))}
                 </div>
 
-                {/* Table */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm text-left mb-6 relative z-10">
+                {/* ── Mobile Card List ── */}
+                <div className="md:hidden space-y-3 mb-6">
+                    {loading && filtered.length === 0 ? (
+                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                            <Loader2 size={32} className="animate-spin text-[#c45500] mx-auto mb-3" />
+                            <p className="text-[13px] text-[#565959] font-medium italic">Loading purchases...</p>
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
+                            <p className="text-[13px] text-[#565959] italic">No purchases found.</p>
+                        </div>
+                    ) : (
+                        filtered.map((p: any) => (
+                            <div key={p.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 space-y-3 text-left">
+                                {/* Row 1: First Item Image + Order # & Date */}
+                                <div className="flex gap-3">
+                                    <div className="w-14 h-14 bg-white rounded border border-[#ddd] overflow-hidden flex items-center justify-center shrink-0">
+                                        {(() => {
+                                            const img = p.items?.[0]?.product_image;
+                                            return img ? (
+                                                <img src={getImageUrl(img)} className="w-full h-full object-contain p-1" alt="" />
+                                            ) : (
+                                                <Package size={24} className="text-gray-200" />
+                                            );
+                                        })()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="text-[14px] font-bold text-[#007185] hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>
+                                                #{p.purchase_number}
+                                            </h3>
+                                            <div className="text-[15px] font-bold text-[#111]">{formatCurrency(p.total_amount)}</div>
+                                        </div>
+                                        <div className="text-[10px] text-[#565959] font-bold mt-1 uppercase tracking-tight">
+                                            {formatDateTime(p.created_at || p.order_date || p.date)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Row 2: Status Controls */}
+                                <div className="grid grid-cols-2 gap-3 py-2.5 border-t border-b border-[#eee] items-center">
+                                    <div className="space-y-1">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Order Status</span>
+                                        <StatusDropdown 
+                                            status={p.status || 'PENDING'} 
+                                            onStatusChange={(newStatus) => handleStatusChange(p.id, newStatus)} 
+                                        />
+                                        {p.status === 'RECEIVED' && (
+                                            <div className={`text-[9px] font-black uppercase flex items-center gap-1 mt-1 ${p.is_inventory_synced ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                {p.is_inventory_synced ? (
+                                                    <><Package size={10} /> {p.warehouse_name || 'Stock In'}</>
+                                                ) : (
+                                                    <><RefreshCw size={10} className="animate-pulse" /> Pending Sync</>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1 text-right flex flex-col items-end">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Payment Status</span>
+                                        {p.payment_status && p.payment_status.toUpperCase() !== 'UNPAID' && !p.payment_confirmed ? (
+                                            <div className="flex flex-col gap-0.5 items-end">
+                                                <span className="text-[9px] font-black bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-[2px] uppercase tracking-tighter animate-pulse">
+                                                    Pending Verify
+                                                </span>
+                                                <span className="text-[8px] text-slate-400 font-semibold">
+                                                    {p.payment_method?.replace('_', ' ') || 'CASH'} Submitted
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-green-600' : 'text-[#c45500]'}`}>
+                                                {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
+                                            </div>
+                                        )}
+                                        
+                                        {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setPayModal({ open: true, purchase: p }); }}
+                                                className="mt-1 text-[9px] font-bold bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] px-2 py-0.5 rounded-[3px] shadow-sm transition-all uppercase whitespace-nowrap"
+                                            >
+                                                {p.payment_status?.toLowerCase() === 'partial' ? 'Pay Bal' : 'Pay Now'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Row 3: Remaining Balance if any */}
+                                {(p.remaining_amount > 0) && (
+                                    <div className="flex items-center justify-between text-[11px] bg-red-50/40 border border-red-100 rounded px-2.5 py-1.5">
+                                        <span className="font-medium text-[#565959]">Remaining Balance:</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="font-bold text-red-600">{formatCurrency(p.remaining_amount)}</span>
+                                            {p.payment_confirmed && <CheckCircle2 size={12} className="text-emerald-500" />}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Row 4: Action Controls */}
+                                <div className="flex gap-2 pt-2 border-t border-[#eee]">
+                                    <button
+                                        onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-slate-50 text-blue-600 text-[12px] font-bold shadow-sm"
+                                    >
+                                        <Truck size={13} /> Track
+                                    </button>
+                                    <button
+                                        onClick={() => handleViewDetails(p.id)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-slate-50 text-[#565959] text-[12px] font-bold shadow-sm"
+                                    >
+                                        <Eye size={13} /> View
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteRow(p)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-red-200 rounded bg-red-50/50 hover:bg-red-50 text-red-600 text-[12px] font-bold shadow-sm"
+                                    >
+                                        <Trash2 size={13} /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block bg-white border border-[#ddd] rounded-[4px] shadow-sm text-left mb-6 relative z-10">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">

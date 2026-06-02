@@ -31,7 +31,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
             {children}
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
         </button>
@@ -220,7 +220,7 @@ function ReportsEngineInner() {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1440px] mx-auto px-6 pt-5">
+            <div className="max-w-[1440px] mx-auto px-4 md:px-6 pt-4 md:pt-5">
 
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2 no-print">
                     <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
@@ -228,16 +228,16 @@ function ReportsEngineInner() {
                     <span className="text-[#c45500] font-bold uppercase tracking-tight">Report Center</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-4 no-print">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 no-print">
                     <div className="flex items-center gap-3">
                         <BarChart3 className="text-[#111] h-5 w-5" />
                         <h1 className="text-[22px] font-normal text-[#111]">Reports & Analytics</h1>
                     </div>
-                    <div className="flex gap-2">
-                        <Btn variant="secondary" onClick={() => exportToCSV(reportResult, 'Report.csv')} disabled={reportResult.length === 0}>
+                    <div className="flex gap-2 w-full sm:w-auto justify-end">
+                        <Btn variant="secondary" onClick={() => exportToCSV(reportResult, 'Report.csv')} disabled={reportResult.length === 0} className="flex-1 sm:flex-initial">
                             <FileSpreadsheet size={14} /> Export CSV
                         </Btn>
-                        <Btn variant="secondary" onClick={() => window.print()} disabled={reportResult.length === 0}>
+                        <Btn variant="secondary" onClick={() => window.print()} disabled={reportResult.length === 0} className="flex-1 sm:flex-initial">
                             <Printer size={14} /> Print Report
                         </Btn>
                     </div>
@@ -359,14 +359,14 @@ function ReportsEngineInner() {
 
                 {reportResult.length > 0 ? (
                     <div className="animate-in fade-in duration-700">
-                        <div className="flex items-center justify-between px-2 mb-4 no-print">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2 mb-4 no-print">
                              <div className="flex items-center gap-2">
                                  <CheckCircle className="text-green-600 h-4 w-4" />
                                  <p className="text-[13px] text-[#565959] font-medium">
                                      Report Summary: <span className="font-bold text-[#111]">{reportResult.length} Items Found</span>
                                  </p>
                              </div>
-                             <div className="flex items-center gap-4">
+                             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                                  <div className="text-[13px] text-[#565959] font-medium">
                                      Total Amount: <span className="text-[#B12704] font-black">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.price_per_item || r.total_amount || r.total_refund_amount || r.price || 0), 0))}</span>
                                  </div>
@@ -376,7 +376,7 @@ function ReportsEngineInner() {
                              </div>
                          </div>
  
-                         <div className="bg-white border border-[#e1e4e8] rounded-[2px] shadow-sm overflow-hidden no-print">
+                         <div className="bg-white border border-[#e1e4e8] rounded-[2px] shadow-sm overflow-x-auto no-print">
                              <table className="w-full text-left border-collapse">
                                  <thead>
                                      <tr className="bg-[#f6f8fa] border-b border-[#e1e4e8] text-[9.5px] font-bold text-[#57606a] uppercase tracking-wider">
