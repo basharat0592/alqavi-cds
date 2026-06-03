@@ -10,32 +10,17 @@ import {
 import { sectionService, productService } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
+import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PROFESSIONAL AMAZON RETAIL DESIGN SYSTEM (SYNCED)
    ───────────────────────────────────────────────────────────────────────────── */
-const AmazonButton = ({ children, onClick, loading, variant = "primary", className = "", type = "button", disabled = false }: any) => {
-    const primary = "bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] #9c7e31 #846a29 hover:from-[#f5d78e] hover:to-[#eeb933] shadow-[0_1px_0_rgba(255,255,255,0.4)_inset,0_1px_3px_rgba(0,0,0,0.1)]";
-    const secondary = "bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] #a2a6ac #8d9096 hover:from-[#eef1f3] hover:to-[#dce0e4] shadow-sm";
-
-    return (
-        <button
-            type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[31px] px-5 rounded-[3px] text-[13px] font-[500] text-[#0f1111] border transition-all active:shadow-inner flex items-center justify-center gap-2 ${variant === 'primary' ? primary : secondary} ${className}`}
-        >
-            {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-            {children}
-        </button>
-    );
-};
-
 const AmazonInput = ({ label, className = "", required = false, rows, ...props }: { label?: string, required?: boolean, rows?: number } & React.InputHTMLAttributes<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => (
     <div className="w-full">
-        {label && <label className="block text-[13px] font-bold text-[#0f1111] mb-1.5">{label} {required && <span className="text-red-600">*</span>}</label>}
+        {label && <label className="block text-[13px] font-bold text-slate-900 mb-1.5">{label} {required && <span className="text-rose-600">*</span>}</label>}
         {props.type === 'select' ? (
             <select
-                className={`w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] cursor-pointer ${className}`}
+                className={`${ui.inputBase} cursor-pointer ${className}`}
                 {...(props as any)}
             >
                 {props.children}
@@ -43,12 +28,12 @@ const AmazonInput = ({ label, className = "", required = false, rows, ...props }
         ) : props.type === 'textarea' ? (
             <textarea
                 rows={rows}
-                className={`w-full p-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.07)] placeholder:text-[#888] ${className}`}
+                className={`w-full px-3.5 py-2.5 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 ${className}`}
                 {...(props as any)}
             />
         ) : (
             <input
-                className={`w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none transition-all focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600] shadow-[inset_0_1px_2px_rgba(0,0,0,0.07)] placeholder:text-[#888] ${className}`}
+                className={`${ui.inputBase} ${className}`}
                 {...props}
             />
         )}
@@ -210,41 +195,34 @@ export default function SectionsPage() {
 
     if (view === 'form') {
         return (
-            <div className="bg-[#fcfcfc] min-h-screen pb-20 font-sans animate-in fade-in duration-500 text-left">
+            <div className="animate-in fade-in duration-500 text-left">
 
-                {/* ── PROFESSIONAL HEADER ── */}
-                <div className="bg-white border-b border-[#ddd] py-5 shadow-sm">
-                    <div className="max-w-[1240px] mx-auto px-4 md:px-8">
-                        <div className="flex items-center gap-1 text-[11px] text-[#565959] mb-3">
-                            <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                            <ChevronRight size={10} />
-                            <button onClick={() => setView('list')} className="hover:text-[#c45500] hover:underline">Sections</button>
-                            <ChevronRight size={10} />
-                            <span className="text-[#c45500] tracking-tighter font-black">{editMode ? 'EDIT SECTION' : 'NEW SECTION'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-[24px] font-normal text-[#111]">{editMode ? 'Edit Section' : 'Add New Section'}</h1>
-                                <p className="text-[12px] text-[#565959] mt-0.5">Configure your public store navigation and group products together.</p>
-                            </div>
-                            <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] font-bold flex items-center gap-1 transition-colors">
-                                <ChevronLeft size={16} /> Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <PageHeader
+                    title={editMode ? 'Edit Section' : 'Add New Section'}
+                    subtitle="Configure your public store navigation and group products together."
+                    breadcrumbs={[
+                        { label: 'Console', href: '/admin/dashboard' },
+                        { label: 'Product Sections' },
+                        { label: editMode ? 'Edit Section' : 'New Section' },
+                    ]}
+                    actions={
+                        <Button variant="ghost" size="sm" onClick={() => setView('list')}>
+                            <ChevronLeft size={16} /> Cancel
+                        </Button>
+                    }
+                />
 
-                <div className="max-w-[1240px] mx-auto mt-8 px-4 md:px-8">
+                <div>
                     <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                         <div className="lg:col-span-4 space-y-6 animate-in slide-in-from-bottom-5 duration-500">
                             {/* 1. Page Config */}
-                            <div className="bg-white border border-[#ddd] rounded-lg p-8 shadow-sm">
-                                <div className="flex items-center gap-3 mb-8 pb-4 border-b border-[#f3f3f3]">
-                                    <div className="p-2.5 bg-slate-50 rounded-lg"><Layers className="h-5 w-5 text-[#111]" /></div>
+                            <Card className="p-8">
+                                <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
+                                    <div className="p-2.5 bg-indigo-50 rounded-lg"><Layers className="h-5 w-5 text-indigo-600" /></div>
                                     <div>
-                                        <h2 className="text-[16px] font-bold text-[#111]">1. Config</h2>
-                                        <p className="text-[11px] text-[#565959]">Display and visibility.</p>
+                                        <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">1. Config</h2>
+                                        <p className="text-[11px] text-slate-500">Display and visibility.</p>
                                     </div>
                                 </div>
 
@@ -258,37 +236,37 @@ export default function SectionsPage() {
                                         </AmazonInput>
                                     </div>
                                     <div className="flex items-center gap-2 py-1">
-                                        <input type="checkbox" id="is_visible" checked={form.is_visible} onChange={e => setForm({ ...form, is_visible: e.target.checked })} className="w-4 h-4 accent-[#e47911]" />
-                                        <label htmlFor="is_visible" className="text-[12px] font-bold text-[#111]">Show on front page</label>
+                                        <input type="checkbox" id="is_visible" checked={form.is_visible} onChange={e => setForm({ ...form, is_visible: e.target.checked })} className="w-4 h-4 accent-indigo-600" />
+                                        <label htmlFor="is_visible" className="text-[12px] font-bold text-slate-900">Show on front page</label>
                                     </div>
                                     <AmazonInput label="Description" type="textarea" rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Subtitle for this section..." />
                                 </div>
-                            </div>
+                            </Card>
                         </div>
 
                         <div className="lg:col-span-8 flex flex-col gap-6 animate-in slide-in-from-bottom-6 duration-500">
                             {/* 2. SELECT PRODUCTS */}
-                            <div className="bg-white border border-[#ddd] rounded-lg p-8 shadow-sm">
-                                <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#f3f3f3]">
+                            <Card className="p-8">
+                                <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2.5 bg-slate-50 rounded-lg"><Package className="h-5 w-5 text-[#e47911]" /></div>
+                                        <div className="p-2.5 bg-indigo-50 rounded-lg"><Package className="h-5 w-5 text-indigo-600" /></div>
                                         <div>
-                                            <h2 className="text-[16px] font-bold text-[#111]">2. Pick Products</h2>
-                                            <p className="text-[11px] text-[#565959]">Items displayed in this section.</p>
+                                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">2. Pick Products</h2>
+                                            <p className="text-[11px] text-slate-500">Items displayed in this section.</p>
                                         </div>
                                     </div>
-                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100 rounded-sm">
+                                    <Badge tone="indigo">
                                         {form.product_ids.length} CHOICES
-                                    </span>
+                                    </Badge>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[12px] font-bold text-[#111]">Select Products to Include</label>
+                                        <label className="text-[12px] font-bold text-slate-900">Select Products to Include</label>
                                         <button
                                             type="button"
                                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                            className="text-[11px] font-black text-[#007185] hover:text-[#c45500] uppercase tracking-tighter"
+                                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wide"
                                         >
                                             {isDropdownOpen ? 'Close Dropdown' : 'Open Product List'}
                                         </button>
@@ -297,17 +275,17 @@ export default function SectionsPage() {
                                     <div className={`relative transition-all duration-300 ${isDropdownOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
                                         <div className="relative group">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#e47911] transition-colors" />
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                                                 <input
                                                     value={prodSearch}
                                                     onChange={e => setProdSearch(e.target.value)}
                                                     placeholder="Search by name or SKU..."
-                                                    className="w-full h-[40px] pl-10 pr-4 border border-[#adb1b8] rounded-[4px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] font-medium transition-all"
+                                                    className="w-full h-10 pl-10 pr-4 border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                                 />
                                             </div>
 
-                                            {/* ── Amazon-Style Dropdown Results ── */}
-                                            <div className="mt-2 bg-white border border-[#ddd] rounded-md shadow-xl overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                                            {/* ── Product Dropdown Results ── */}
+                                            <div className="mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in slide-in-from-top-2 duration-300">
                                                 <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                                                     {filteredProds.length === 0 ? (
                                                         <div className="px-6 py-10 text-center">
@@ -315,25 +293,25 @@ export default function SectionsPage() {
                                                             <p className="text-[11px] text-slate-400 italic">No products found matching "{prodSearch}"</p>
                                                         </div>
                                                     ) : (
-                                                        <div className="divide-y divide-[#f3f3f3]">
+                                                        <div className="divide-y divide-slate-100">
                                                             {filteredProds.map(p => {
                                                                 const isSelected = form.product_ids.includes(p.id);
                                                                 return (
                                                                     <div
                                                                         key={p.id}
                                                                         onClick={() => toggleProductSelection(p.id)}
-                                                                        className={`flex items-center gap-4 px-6 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${isSelected ? 'bg-amber-50/30' : ''}`}
+                                                                        className={`flex items-center gap-4 px-6 py-3 cursor-pointer transition-colors hover:bg-slate-50 ${isSelected ? 'bg-indigo-50/40' : ''}`}
                                                                     >
-                                                                        <div className={`w-[18px] h-[18px] rounded-[3px] border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-[#e47911] border-[#e47911]' : 'border-[#adb1b8] bg-white group-hover:border-[#c45500]'}`}>
+                                                                        <div className={`w-[18px] h-[18px] rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white group-hover:border-indigo-400'}`}>
                                                                             {isSelected && <CheckCircle className="h-3 w-3 text-white" strokeWidth={4} />}
                                                                         </div>
                                                                         <div className="min-w-0 flex-1">
-                                                                            <p className={`text-[13px] truncate ${isSelected ? 'font-bold text-[#111]' : 'font-medium text-[#565959]'}`}>
+                                                                            <p className={`text-[13px] truncate ${isSelected ? 'font-bold text-slate-900' : 'font-medium text-slate-600'}`}>
                                                                                 {p.product_name || p.name}
                                                                             </p>
                                                                             <div className="flex items-center gap-2 mt-0.5">
-                                                                                <span className="text-[9px] font-black text-slate-400 tracking-tighter uppercase whitespace-nowrap">SKU: {p.sku || 'N/A'}</span>
-                                                                                {isSelected && <span className="text-[9px] font-black text-[#c45500] uppercase tracking-tighter italic">Included</span>}
+                                                                                <span className="text-[9px] font-bold text-slate-400 tracking-wide uppercase whitespace-nowrap">SKU: {p.sku || 'N/A'}</span>
+                                                                                {isSelected && <span className="text-[9px] font-bold text-indigo-600 uppercase tracking-wide italic">Included</span>}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -349,21 +327,24 @@ export default function SectionsPage() {
                                     {!isDropdownOpen && (
                                         <div
                                             onClick={() => setIsDropdownOpen(true)}
-                                            className="w-full h-[45px] px-4 border border-[#adb1b8] rounded-[4px] bg-[#f7f8fa] flex items-center justify-between cursor-pointer hover:bg-[#eff1f3] transition-colors"
+                                            className="w-full h-[45px] px-4 border border-slate-200 rounded-lg bg-slate-50 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
                                         >
-                                            <span className="text-[13px] font-medium text-[#565959]">
+                                            <span className="text-[13px] font-medium text-slate-600">
                                                 {form.product_ids.length > 0 ? `${form.product_ids.length} products selected` : 'Click to select products...'}
                                             </span>
-                                            <ChevronRight className={`h-4 w-4 text-[#565959] transition-transform ${isDropdownOpen ? 'rotate-90' : ''}`} />
+                                            <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-90' : ''}`} />
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="mt-10 flex justify-end gap-3 pt-6 border-t border-[#eee]">
-                                    <AmazonButton variant="secondary" onClick={() => setView('list')} className="w-[120px]">Discard</AmazonButton>
-                                    <AmazonButton type="submit" loading={saving} className="w-[180px]">Save Section</AmazonButton>
+                                <div className="mt-10 flex justify-end gap-3 pt-6 border-t border-slate-100">
+                                    <Button variant="outline" onClick={() => setView('list')} className="w-[120px]">Discard</Button>
+                                    <Button type="submit" disabled={saving} className="w-[180px]">
+                                        {saving && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                                        Save Section
+                                    </Button>
                                 </div>
-                            </div>
+                            </Card>
                         </div>
                     </form>
                 </div>
@@ -372,100 +353,94 @@ export default function SectionsPage() {
     }
 
     return (
-        <div className="bg-[#fcfcfc] min-h-screen pb-20 font-sans animate-in fade-in duration-500 text-left">
+        <div className="animate-in fade-in duration-500 text-left">
 
-            {/* ── PROFESSIONAL HEADER ── */}
-            <div className="bg-white border-b border-[#ddd] py-5 shadow-sm">
-                <div className="max-w-[1240px] mx-auto px-4 md:px-8">
-                    <div className="flex items-center gap-1 text-[11px] text-[#565959] mb-3">
-                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                        <ChevronRight size={10} />
-                        <span className="text-[#c45500] font-black uppercase tracking-tight">Sections</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-[24px] font-normal text-[#111]">Front Page Sections</h1>
-                            <p className="text-[12px] text-[#565959] mt-0.5">Manage the product groups shown on your main website.</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <AmazonButton variant="secondary" onClick={loadData}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                            </AmazonButton>
-                            <AmazonButton onClick={handleNew}>
-                                <Plus size={14} /> Add new section
-                            </AmazonButton>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <PageHeader
+                title="Product Sections"
+                subtitle="Manage the product groups shown on your main website."
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Product Sections' },
+                ]}
+                actions={
+                    <>
+                        <Button variant="outline" onClick={loadData}>
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                        </Button>
+                        <Button onClick={handleNew}>
+                            <Plus size={14} /> Add new section
+                        </Button>
+                    </>
+                }
+            />
 
-            <div className="max-w-[1240px] mx-auto mt-8 px-4 md:px-8">
+            <div>
 
                 {/* ── SEARCH BOX ── */}
-                <div className="bg-white border border-[#ddd] rounded p-4 mb-6 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300">
+                <Card className="p-4 mb-6 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-300">
                     <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Find a section..."
-                            className="w-full h-[32px] pl-9 pr-4 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] font-medium"
+                            className="w-full h-10 pl-9 pr-4 border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all"
                         />
                     </div>
-                    <div className="flex items-center gap-3 px-4 py-1.5 bg-[#fcfcfc] border border-[#f3f3f3] rounded text-[11px] font-bold text-[#565959]">
-                        <Activity size={14} className="text-[#e47911]" /> {categories.length} GROUPS
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-[11px] font-bold text-slate-600">
+                        <Activity size={14} className="text-indigo-600" /> {categories.length} GROUPS
                     </div>
-                </div>
+                </Card>
 
                 {/* ── TABLE ── */}
-                <div className="bg-white border border-[#ddd] rounded shadow-sm overflow-hidden animate-in fade-in duration-500">
+                <Card className="overflow-hidden animate-in fade-in duration-500">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[#f6f6f6] border-b border-[#ddd]">
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] uppercase tracking-tighter">Order</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] uppercase tracking-tighter">Group Name</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] uppercase tracking-tighter">Products</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] uppercase tracking-tighter">Front End</th>
-                                    <th className="px-6 py-4 text-[12px] font-bold text-[#111] uppercase tracking-tighter">Status</th>
-                                    <th className="px-6 py-4 text-right text-[12px] font-bold text-[#111] uppercase tracking-tighter">Actions</th>
+                                <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Group Name</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Products</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Front End</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-4 text-right text-[11px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#eee] bg-white">
+                            <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading && filtered.length === 0 ? (
                                     <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-400 italic">Reading layout...</td></tr>
                                 ) : filtered.length === 0 ? (
                                     <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-400 font-medium">No sections defined yet.</td></tr>
                                 ) : (
                                     filtered.map((cat) => (
-                                        <tr key={cat.id} className="hover:bg-[#fcfdff] transition-all group">
-                                            <td className="px-6 py-4 text-[13px] font-bold text-slate-400">
+                                        <tr key={cat.id} className="hover:bg-slate-50 transition-all group">
+                                            <td className="px-6 py-4 text-[13px] font-bold text-slate-400 tabular-nums">
                                                 {String(cat.position || 0).padStart(2, '0')}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <p className="text-[14px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer hover:underline" onClick={() => handleEdit(cat)}>{cat.name}</p>
-                                                {cat.description && <p className="text-[10px] text-[#565959] mt-0.5 max-w-[250px] truncate">{cat.description}</p>}
+                                                <p className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer hover:underline" onClick={() => handleEdit(cat)}>{cat.name}</p>
+                                                {cat.description && <p className="text-[10px] text-slate-500 mt-0.5 max-w-[250px] truncate">{cat.description}</p>}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-[#f9f9f9] border border-[#eee] rounded">
+                                                <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-slate-50 border border-slate-200/70 rounded-lg">
                                                     <Package size={11} className="text-slate-400" />
-                                                    <span className="text-[11px] font-bold text-[#111]">{cat.products?.length || cat.product_details?.length || 0}</span>
+                                                    <span className="text-[11px] font-bold text-slate-900 tabular-nums">{cat.products?.length || cat.product_details?.length || 0}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-0.5 rounded-[1px] text-[9px] font-black uppercase border ${cat.is_visible !== false ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                                                <Badge tone={cat.is_visible !== false ? 'green' : 'neutral'}>
                                                     {cat.is_visible !== false ? 'Visible' : 'Hidden'}
-                                                </span>
+                                                </Badge>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-0.5 rounded-[1px] text-[9px] font-black uppercase border ${cat.status === 'active' ? 'bg-[#f0f2f2] text-[#111] border-[#d5d9d9]' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                                                <Badge tone={cat.status === 'active' ? 'neutral' : 'red'}>
                                                     {cat.status || 'Active'}
-                                                </span>
+                                                </Badge>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 opacity-50 group-hover:opacity-100 transition-all">
-                                                    <button onClick={() => handleEdit(cat)} className="p-1.5 border border-[#ddd] rounded text-[#565959] hover:text-[#007185] hover:bg-slate-50"><Edit size={14} /></button>
-                                                    <button onClick={() => setDeleteItem(cat)} className="p-1.5 border border-[#ddd] rounded text-[#565959] hover:text-red-700 hover:bg-red-50"><Trash size={14} /></button>
+                                                    <button onClick={() => handleEdit(cat)} className="p-1.5 border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-colors"><Edit size={14} /></button>
+                                                    <button onClick={() => setDeleteItem(cat)} className="p-1.5 border border-slate-200 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors"><Trash size={14} /></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -474,25 +449,29 @@ export default function SectionsPage() {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </Card>
             </div>
 
             {/* --- Delete Confirmation --- */}
-            {deleteItem && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-md p-10 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
-                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 border border-red-100"><AlertTriangle size={32} /></div>
-                        <h3 className="text-[20px] font-bold text-[#111]">Delete Section?</h3>
-                        <p className="text-[13px] text-[#565959] mt-3 leading-relaxed">Remove <span className="font-bold text-[#111]">"{deleteItem.name}"</span>? This will hide the group from your store front.</p>
-                        <div className="mt-8 flex gap-4">
-                            <button onClick={() => setDeleteItem(null)} className="flex-1 py-2 text-[13px] font-bold text-[#565959] hover:underline">Cancel</button>
-                            <button onClick={confirmDelete} disabled={deleting} className="flex-1 bg-red-600 text-white rounded-[2px] py-2 text-[13px] font-bold shadow-sm hover:bg-red-700 disabled:opacity-50">
-                                {deleting ? 'Deleting...' : 'Delete Section'}
-                            </button>
-                        </div>
-                    </div>
+            <Modal
+                open={!!deleteItem}
+                onClose={() => setDeleteItem(null)}
+                size="sm"
+                footer={
+                    <>
+                        <Button variant="ghost" onClick={() => setDeleteItem(null)}>Cancel</Button>
+                        <Button variant="danger" onClick={confirmDelete} disabled={deleting}>
+                            {deleting ? 'Deleting...' : 'Delete Section'}
+                        </Button>
+                    </>
+                }
+            >
+                <div className="text-center py-2">
+                    <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600 border border-rose-100"><AlertTriangle size={32} /></div>
+                    <h3 className="text-[20px] font-bold text-slate-900 tracking-tight">Delete Section?</h3>
+                    <p className="text-[13px] text-slate-600 mt-3 leading-relaxed">Remove <span className="font-bold text-slate-900">"{deleteItem?.name}"</span>? This will hide the group from your store front.</p>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

@@ -2,19 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Building2, Plus, Edit, Trash2, Save, X,
-    AlertCircle, Search, RefreshCw,
-    CheckCircle, ChevronLeft, Mail, Phone,
-    MapPin, Globe, Tag, AlertTriangle, MoreHorizontal,
-    ShieldCheck, Activity, Loader2
+    Building2, Plus, Edit, Trash2, Save,
+    Search, RefreshCw, ChevronLeft, Mail,
+    MapPin, AlertTriangle
 } from 'lucide-react';
 import { companyService, companyCategoryService, CompanyInfo, CompanyCategory } from '@/lib/api';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
+import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
-const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
+const inputCls = (err?: boolean) => `${ui.inputBase} ${err ? '!border-rose-500 focus:!border-rose-500 focus:!ring-rose-500/10' : ''}`;
+const selectCls = `${ui.inputBase} cursor-pointer`;
+const labelCls = 'block text-[13px] font-bold text-slate-700 mb-1.5';
 
 const EMPTY: Partial<CompanyInfo> = {
     name: '', email: '', phone: '', address: '', city: '', tax_number: '', website: '', category: '', is_active: true
@@ -88,31 +87,30 @@ function CompanyForm({
 
     return (
         <div className="max-w-4xl mx-auto py-8 px-6 font-sans">
-            <div className="mb-8">
-                <button 
-                    onClick={onCancel} 
-                    className="text-sm font-medium text-slate-500 hover:text-[#F59E0B] transition-colors mb-4 flex items-center gap-1"
-                >
-                    <ChevronLeft className="h-4 w-4" /> Back to Registry
-                </button>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                    {editCompany ? 'Edit Profile' : 'New Company Registry'}
-                </h1>
-                <p className="text-sm text-slate-500">Add or update company information in the system</p>
-            </div>
+            <button
+                onClick={onCancel}
+                className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors mb-4 flex items-center gap-1"
+            >
+                <ChevronLeft className="h-4 w-4" /> Back to Registry
+            </button>
+            <PageHeader
+                title={editCompany ? 'Edit Profile' : 'New Company Registry'}
+                subtitle="Add or update company information in the system"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Company', href: '/admin/company' }, { label: editCompany ? 'Edit' : 'New' }]}
+            />
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <Building2 className="h-4 w-4 text-[#F59E0B]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Professional Profile</h2>
+                <Card className="overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/60">
+                        <Building2 className="h-4 w-4 text-indigo-600" />
+                        <h2 className="text-sm font-bold text-slate-900">Professional Profile</h2>
                     </div>
                     <div className="p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1">
-                                <label className={labelCls}>Company Name <span className="text-red-500">*</span></label>
+                                <label className={labelCls}>Company Name <span className="text-rose-500">*</span></label>
                                 <input name="name" value={form.name} onChange={h} className={inputCls(!!errors.name)} placeholder="e.g. Al-Qavi Cosmetics" />
-                                {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                                {errors.name && <p className="text-xs text-rose-500">{errors.name}</p>}
                             </div>
                             <div className="space-y-1">
                                 <label className={labelCls}>Category</label>
@@ -122,14 +120,14 @@ function CompanyForm({
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className={labelCls}>Email Liaison <span className="text-red-500">*</span></label>
+                                <label className={labelCls}>Email Liaison <span className="text-rose-500">*</span></label>
                                 <input name="email" type="email" value={form.email} onChange={h} className={inputCls(!!errors.email)} placeholder="info@company.com" />
-                                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+                                {errors.email && <p className="text-xs text-rose-500">{errors.email}</p>}
                             </div>
                             <div className="space-y-1">
-                                <label className={labelCls}>Phone Contact <span className="text-red-500">*</span></label>
+                                <label className={labelCls}>Phone Contact <span className="text-rose-500">*</span></label>
                                 <input name="phone" value={form.phone} onChange={h} className={inputCls(!!errors.phone)} placeholder="+92 ..." />
-                                {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
+                                {errors.phone && <p className="text-xs text-rose-500">{errors.phone}</p>}
                             </div>
                             <div className="space-y-1">
                                 <label className={labelCls}>Tax / NTN Identification</label>
@@ -141,7 +139,7 @@ function CompanyForm({
                             </div>
                             <div className="md:col-span-2 space-y-1">
                                 <label className={labelCls}>Business Address</label>
-                                <textarea name="address" value={form.address} onChange={h} rows={3} className={inputCls() + ' resize-none'} placeholder="Physical office location..." />
+                                <textarea name="address" value={form.address} onChange={h} rows={3} className={inputCls() + ' !h-auto py-2.5 resize-none'} placeholder="Physical office location..." />
                             </div>
                             <div className="flex items-center gap-3 py-2">
                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -151,30 +149,22 @@ function CompanyForm({
                                         checked={form.is_active}
                                         onChange={(e) => setForm((p: any) => ({ ...p, is_active: e.target.checked }))}
                                     />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F59E0B]"></div>
-                                    <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">Active Entity</span>
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    <span className="ml-3 text-sm font-medium text-slate-700">Active Entity</span>
                                 </label>
                             </div>
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 <div className="flex justify-end gap-3 pt-4">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
-                    >
+                    <Button type="button" variant="ghost" onClick={onCancel}>
                         Discard
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-[#F59E0B] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
-                    >
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={saving}>
                         {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Commit Changes
-                    </button>
+                    </Button>
                 </div>
             </form>
         </div>
@@ -260,44 +250,38 @@ export default function CompanyPage() {
             {loading && <PageLoader />}
             
             {/* ── Page Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Company Hub</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage all registered companies and entities</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={load}
-                        className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-all font-bold"
-                        title="Refresh"
-                    >
-                        <RefreshCw className={`h-4 w-4 font-bold ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button
-                        onClick={() => { setEditCompany(null); setView('form'); }}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Register Entity
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+                title="Company"
+                subtitle="Manage all registered companies and entities"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Company' }]}
+                actions={
+                    <>
+                        <Button variant="outline" size="md" onClick={load} title="Refresh" className="!px-3">
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button variant="primary" size="md" onClick={() => { setEditCompany(null); setView('form'); }}>
+                            <Plus className="h-4 w-4" />
+                            Register Entity
+                        </Button>
+                    </>
+                }
+            />
 
             {/* ── Filters Bar ── */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search system registry..."
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400"
+                        className={`${ui.inputBase} pl-9`}
                     />
                 </div>
                 <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] text-slate-700 dark:text-slate-300 cursor-pointer h-[38px]"
+                    className={`${ui.inputBase} w-auto cursor-pointer`}
                 >
                     <option value="">All Categories</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -305,23 +289,23 @@ export default function CompanyPage() {
             </div>
 
             {/* ── Table ── */}
-            <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+            <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-left">
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Company Name</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Category</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-wider">Contact Info</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>
+                            <tr className="bg-slate-50/60 border-b border-slate-200 text-left">
+                                <th className="px-4 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider">Company Name</th>
+                                <th className="px-4 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider">Category</th>
+                                <th className="px-4 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider">Contact Info</th>
+                                <th className="px-4 py-3 text-[11px] font-bold text-slate-400 text-right whitespace-nowrap uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                        <tbody className="divide-y divide-slate-100">
                             {(loading && filteredEntities.length === 0) ? (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3">
-                                            <div className="h-8 w-8 border-2 border-[#F59E0B] border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="h-8 w-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                                             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sourcing Registry...</p>
                                         </div>
                                     </td>
@@ -329,32 +313,32 @@ export default function CompanyPage() {
                             ) : filteredEntities.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-20 text-center">
-                                        <Building2 className="h-10 w-10 text-slate-200 dark:text-white/10 mx-auto mb-3" />
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">No system records found.</p>
+                                        <Building2 className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                                        <p className="text-sm text-slate-500">No system records found.</p>
                                     </td>
                                 </tr>
                             ) : (
                                 filteredEntities.map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group">
+                                    <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 text-slate-400 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-[#F59E0B] group-hover:text-white transition-all">
+                                                <div className="w-8 h-8 bg-slate-100 text-slate-400 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                                     <Building2 className="h-4 w-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</p>
-                                                    <p className="text-[10px] text-[#F59E0B] font-bold uppercase tracking-wider">Verified</p>
+                                                    <p className="font-bold text-slate-900 text-sm">{item.name}</p>
+                                                    <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Verified</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="px-2 py-0.5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded border border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase">
+                                            <Badge tone="neutral">
                                                 {item.category_name || 'Uncategorized'}
-                                            </span>
+                                            </Badge>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="space-y-0.5">
-                                                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                                                <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                                                     <Mail className="h-3 w-3 text-slate-300" /> {item.email}
                                                 </div>
                                                 <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold tracking-tight">
@@ -364,15 +348,15 @@ export default function CompanyPage() {
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button 
-                                                    onClick={() => { setEditCompany(item); setView('form'); }} 
-                                                    className="p-1.5 text-slate-400 hover:text-[#F59E0B] rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
+                                                <button
+                                                    onClick={() => { setEditCompany(item); setView('form'); }}
+                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-all"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button 
-                                                    onClick={() => setDeleteCompany(item)} 
-                                                    className="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+                                                <button
+                                                    onClick={() => setDeleteCompany(item)}
+                                                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-all"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -384,38 +368,31 @@ export default function CompanyPage() {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </Card>
 
-            {deleteCompany && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-xl border border-slate-200 dark:border-white/10 max-w-sm w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Confirm Purge</h3>
-                            </div>
-                            <button onClick={() => setDeleteCompany(null)} className="p-1 text-slate-400 hover:text-slate-600">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <div className="p-8">
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                                Confirm permanent removal of <span className="text-[#F59E0B] font-bold">"{deleteCompany.name}"</span> from system registry?
-                            </p>
-                        </div>
-                        <div className="px-6 py-4 border-t border-slate-100 dark:border-white/10 flex justify-end gap-3 bg-slate-50/50 dark:bg-white/5">
-                            <button onClick={() => setDeleteCompany(null)} disabled={deleting} className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 disabled:opacity-50 transition-colors">Abort</button>
-                            <button 
-                                onClick={confirmDelete} 
-                                disabled={deleting} 
-                                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {deleting && <RefreshCw className="h-4 w-4 animate-spin" />} Confirm Purge
-                            </button>
-                        </div>
+            <Modal
+                open={!!deleteCompany}
+                onClose={() => { if (!deleting) setDeleteCompany(null); }}
+                title="Confirm Purge"
+                size="sm"
+                footer={
+                    <>
+                        <Button variant="ghost" onClick={() => setDeleteCompany(null)} disabled={deleting}>Abort</Button>
+                        <Button variant="danger" onClick={confirmDelete} disabled={deleting}>
+                            {deleting && <RefreshCw className="h-4 w-4 animate-spin" />} Confirm Purge
+                        </Button>
+                    </>
+                }
+            >
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="h-5 w-5 text-rose-600" />
                     </div>
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium pt-1.5">
+                        Confirm permanent removal of <span className="text-slate-900 font-bold">"{deleteCompany?.name}"</span> from system registry?
+                    </p>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

@@ -30,7 +30,7 @@ const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`${sizes[size]} rounded-[3px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`${sizes[size as keyof typeof sizes]} rounded-[3px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <Loader2 className="h-3 w-3 animate-spin" />}
             {children}
         </button>

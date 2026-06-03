@@ -6,7 +6,7 @@ import {
     ShoppingCart, Plus, Search, RefreshCw, Trash2, Eye, Edit2,
     X, CheckCircle, AlertTriangle, Package, Loader2, Filter,
     Users, Clock, CreditCard, FileText, Lock, Calendar, FileSpreadsheet, Printer,
-    ChevronRight, ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone,
+    ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone,
     Upload, CheckCircle2, Info, Warehouse as WarehouseIcon, ShieldCheck, Banknote,
     Check, X as XIcon, ChevronDown
 } from 'lucide-react';
@@ -16,36 +16,22 @@ import { productService } from '@/services/product.service';
 import { formatDate, formatDateTime, formatCurrency, exportToCSV, getImageUrl } from '@/lib/utils';
 import { inventoryService } from '@/services/inventory.service';
 import PageLoader from '@/components/ui/PageLoader';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
+import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - PURCHASES
+   ADMIN DESIGN SYSTEM - PURCHASES (indigo accent, slate neutrals)
    ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
-
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const inputCls = ui.inputBase;
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: any; dot: string }> = {
     PENDING: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', icon: Clock },
-    PROCESSING: { label: 'Processing', cls: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500', icon: RefreshCw },
+    PROCESSING: { label: 'Processing', cls: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500', icon: RefreshCw },
     SHIPPED: { label: 'Shipped', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500', icon: Truck },
     DELIVERED: { label: 'Delivered', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: CheckCircle },
-    RECEIVED: { label: 'Received', cls: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500', icon: Package },
-    CANCELLED: { label: 'Cancelled', cls: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500', icon: XIcon },
+    RECEIVED: { label: 'Received', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: Package },
+    CANCELLED: { label: 'Cancelled', cls: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500', icon: XIcon },
 };
 
 const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusChange: (newStatus: string) => void }) => {
@@ -59,8 +45,8 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-                    flex items-center gap-2.5 py-1.5 px-4 border rounded-full text-[10px] font-black uppercase transition-all
-                    shadow-[0_2px_4px_rgba(0,0,0,0.02),0_1px_0_rgba(255,255,255,0.8)_inset] hover:shadow-[0_4px_12px_-2px_rgba(0,0,0,0.12)] 
+                    flex items-center gap-2.5 py-1.5 px-4 border rounded-full text-[10px] font-bold uppercase transition-all
+                    shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_12px_-2px_rgba(15,23,42,0.12)]
                     active:scale-95 group relative overflow-hidden tracking-widest border-opacity-60
                     ${current.cls}
                 `}
@@ -76,9 +62,9 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
-                    <div className="absolute left-0 mt-2 w-52 bg-white/95 backdrop-blur-md border border-[#ddd] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[101] overflow-hidden py-2 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="px-5 py-3 border-b border-[#eee] mb-1">
-                            <p className="text-[10px] font-black text-[#aaa] uppercase tracking-[0.2em]">Select New Status</p>
+                    <div className="absolute left-0 mt-2 w-52 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.15)] z-[101] overflow-hidden py-2 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="px-5 py-3 border-b border-slate-100 mb-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Select New Status</p>
                         </div>
                         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
                             const ItemIcon = cfg.icon;
@@ -91,7 +77,7 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                                         setIsOpen(false);
                                     }}
                                     className={`w-full flex items-center gap-4 px-5 py-2.5 text-[12px] font-bold text-left transition-all
-                                        ${isActive ? 'bg-[#f7f8fa] text-[#c45500]' : 'text-[#565959] hover:bg-[#f3f7f7] hover:text-[#111] hover:pl-7'}
+                                        ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:pl-7'}
                                     `}
                                 >
                                     <div className={`p-2 rounded-xl border shadow-sm transition-transform ${cfg.cls} ${isActive ? 'scale-110 shadow-md' : 'group-hover:scale-105'}`}>
@@ -99,7 +85,7 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                                     </div>
                                     <span className="uppercase tracking-wider text-[11px]">{cfg.label}</span>
                                     {isActive && (
-                                        <div className="ml-auto bg-[#c45500] p-1 rounded-full shadow-sm">
+                                        <div className="ml-auto bg-indigo-600 p-1 rounded-full shadow-sm">
                                             <Check size={10} className="text-white" strokeWidth={3} />
                                         </div>
                                     )}
@@ -117,7 +103,7 @@ const StatusPill = ({ status }: { status: string }) => {
     const cfg = STATUS_CONFIG[status.toUpperCase()] || STATUS_CONFIG.PENDING;
     const Icon = cfg.icon;
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[3px] border text-[11px] font-bold capitalize ${cfg.cls}`}>
+        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px] font-bold capitalize ${cfg.cls}`}>
             <Icon size={12} />
             {(status || '').replace('_', ' ')}
         </span>
@@ -259,51 +245,42 @@ export default function PurchasesPage() {
     const filtered = purchasesList;
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            {/* Header */}
-            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 text-left">
-                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
-                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                        <ChevronRight size={10} />
-                        <span className="text-[#c45500]">Purchases</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                        <div>
-                            <h1 className="text-[20px] sm:text-[22px] font-normal text-[#111]">Purchases</h1>
-                            <p className="text-[12px] sm:text-[13px] text-[#565959] mt-0.5">Manage stock purchases from suppliers</p>
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                            <Btn variant="secondary" onClick={() => exportToCSV(purchases, 'Purchases.csv')} className="whitespace-nowrap">
-                                <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Export</span>
-                            </Btn>
-                            <Btn onClick={() => router.push('/admin/purchases/add')} className="whitespace-nowrap">
-                                <Plus size={14} /> New Purchase
-                            </Btn>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div className="pb-20 text-slate-800">
+            <PageHeader
+                title="Purchases"
+                subtitle="Manage stock purchases from suppliers"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases' }]}
+                actions={
+                    <>
+                        <Button variant="outline" size="sm" onClick={() => exportToCSV(purchases, 'Purchases.csv')} className="whitespace-nowrap">
+                            <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Export</span>
+                        </Button>
+                        <Button size="sm" onClick={() => router.push('/admin/purchases/add')} className="whitespace-nowrap">
+                            <Plus size={14} /> New Purchase
+                        </Button>
+                    </>
+                }
+            />
 
-            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 mt-6 sm:mt-8 text-left">
+            <div className="text-left">
                 {/* Search & Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col md:flex-row items-stretch md:items-end gap-4">
+                <Card className="p-4 sm:p-5 mb-6 flex flex-col md:flex-row items-stretch md:items-end gap-4">
                     <div className="flex-1">
-                        <label className="block text-[13px] font-bold text-[#111] mb-1.5">Search</label>
+                        <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Search</label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 placeholder="Search order # or supplier..."
-                                className={inputCls + " pl-10 h-[35px]"}
+                                className={inputCls + " pl-10"}
                             />
                         </div>
                     </div>
                     <div className="flex flex-row gap-4 flex-1 md:flex-initial">
                         <div className="flex-1 md:w-[160px]">
-                            <label className="block text-[13px] font-bold text-[#111] mb-1.5">Payment</label>
-                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer"}>
+                            <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Payment</label>
+                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " cursor-pointer"}>
                                 <option value="All">All Payments</option>
                                 <option value="unpaid">Unpaid</option>
                                 <option value="partial">Partial</option>
@@ -311,8 +288,8 @@ export default function PurchasesPage() {
                             </select>
                         </div>
                         <div className="flex-1 md:w-[180px]">
-                            <label className="block text-[13px] font-bold text-[#111] mb-1.5">Supplier</label>
-                            <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " h-[35px] cursor-pointer w-full"}>
+                            <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Supplier</label>
+                            <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " cursor-pointer w-full"}>
                                 <option value="All">All Suppliers</option>
                                 {suppliers.map(s => (
                                     <option key={s.id} value={s.id}>{s.company ? `${s.company} - ` : ''}{s.name}</option>
@@ -320,15 +297,15 @@ export default function PurchasesPage() {
                             </select>
                         </div>
                         <div className="flex items-end shrink-0">
-                            <Btn variant="secondary" onClick={() => load()} loading={loading} className="h-[35px] px-3.5">
+                            <Button variant="outline" onClick={() => load()} disabled={loading} className="px-3.5">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                            </Btn>
+                            </Button>
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 {/* Status Tabs */}
-                <div className="flex gap-8 border-b border-[#ddd] mb-6 px-1 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-8 border-b border-slate-200 mb-6 px-1 overflow-x-auto scrollbar-hide">
                     {[
                         { id: 'active', label: 'Active Orders', icon: Clock },
                         { id: 'received', label: 'Received (Fulfilled)', icon: CheckCircle },
@@ -339,13 +316,13 @@ export default function PurchasesPage() {
                             key={tab.id}
                             onClick={() => setStatusFilter(tab.id === 'all' ? 'All' : tab.id)}
                             className={`flex items-center gap-2 pb-3 text-[14px] font-medium transition-all relative whitespace-nowrap ${(statusFilter === 'All' && tab.id === 'all') || (statusFilter.toLowerCase() === tab.id) || (statusFilter === 'active' && tab.id === 'active')
-                                ? 'text-[#c45500]' : 'text-[#565959] hover:text-[#111]'
+                                ? 'text-indigo-600' : 'text-slate-600 hover:text-slate-900'
                                 }`}
                         >
                             <tab.icon size={16} />
                             {tab.label}
                             {((statusFilter === 'All' && tab.id === 'all') || (statusFilter.toLowerCase() === tab.id) || (statusFilter === 'active' && tab.id === 'active')) && (
-                                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#c45500]" />
+                                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-indigo-600" />
                             )}
                         </button>
                     ))}
@@ -354,20 +331,20 @@ export default function PurchasesPage() {
                 {/* ── Mobile Card List ── */}
                 <div className="md:hidden space-y-3 mb-6">
                     {loading && filtered.length === 0 ? (
-                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
-                            <Loader2 size={32} className="animate-spin text-[#c45500] mx-auto mb-3" />
-                            <p className="text-[13px] text-[#565959] font-medium italic">Loading purchases...</p>
-                        </div>
+                        <Card className="py-16 text-center">
+                            <Loader2 size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
+                            <p className="text-[13px] text-slate-600 font-medium italic">Loading purchases...</p>
+                        </Card>
                     ) : filtered.length === 0 ? (
-                        <div className="bg-white border border-[#ddd] rounded-[4px] py-16 text-center shadow-sm">
-                            <p className="text-[13px] text-[#565959] italic">No purchases found.</p>
-                        </div>
+                        <Card className="py-16 text-center">
+                            <p className="text-[13px] text-slate-600 italic">No purchases found.</p>
+                        </Card>
                     ) : (
                         filtered.map((p: any) => (
-                            <div key={p.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-4 space-y-3 text-left">
+                            <Card key={p.id} className="p-4 space-y-3 text-left">
                                 {/* Row 1: First Item Image + Order # & Date */}
                                 <div className="flex gap-3">
-                                    <div className="w-14 h-14 bg-white rounded border border-[#ddd] overflow-hidden flex items-center justify-center shrink-0">
+                                    <div className="w-14 h-14 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
                                         {(() => {
                                             const img = p.items?.[0]?.product_image;
                                             return img ? (
@@ -379,19 +356,19 @@ export default function PurchasesPage() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">
-                                            <h3 className="text-[14px] font-bold text-[#007185] hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>
+                                            <h3 className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>
                                                 #{p.purchase_number}
                                             </h3>
-                                            <div className="text-[15px] font-bold text-[#111]">{formatCurrency(p.total_amount)}</div>
+                                            <div className="text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(p.total_amount)}</div>
                                         </div>
-                                        <div className="text-[10px] text-[#565959] font-bold mt-1 uppercase tracking-tight">
+                                        <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tight">
                                             {formatDateTime(p.created_at || p.order_date || p.date)}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Row 2: Status Controls */}
-                                <div className="grid grid-cols-2 gap-3 py-2.5 border-t border-b border-[#eee] items-center">
+                                <div className="grid grid-cols-2 gap-3 py-2.5 border-t border-b border-slate-100 items-center">
                                     <div className="space-y-1">
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Order Status</span>
                                         <StatusDropdown 
@@ -399,7 +376,7 @@ export default function PurchasesPage() {
                                             onStatusChange={(newStatus) => handleStatusChange(p.id, newStatus)} 
                                         />
                                         {p.status === 'RECEIVED' && (
-                                            <div className={`text-[9px] font-black uppercase flex items-center gap-1 mt-1 ${p.is_inventory_synced ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            <div className={`text-[9px] font-bold uppercase flex items-center gap-1 mt-1 ${p.is_inventory_synced ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                 {p.is_inventory_synced ? (
                                                     <><Package size={10} /> {p.warehouse_name || 'Stock In'}</>
                                                 ) : (
@@ -412,7 +389,7 @@ export default function PurchasesPage() {
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Payment Status</span>
                                         {p.payment_status && p.payment_status.toUpperCase() !== 'UNPAID' && !p.payment_confirmed ? (
                                             <div className="flex flex-col gap-0.5 items-end">
-                                                <span className="text-[9px] font-black bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-[2px] uppercase tracking-tighter animate-pulse">
+                                                <span className="text-[9px] font-bold bg-sky-50 text-sky-700 border border-sky-100 px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
                                                     Pending Verify
                                                 </span>
                                                 <span className="text-[8px] text-slate-400 font-semibold">
@@ -420,15 +397,15 @@ export default function PurchasesPage() {
                                                 </span>
                                             </div>
                                         ) : (
-                                            <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-green-600' : 'text-[#c45500]'}`}>
+                                            <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                                 {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
                                             </div>
                                         )}
-                                        
+
                                         {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
-                                            <button 
+                                            <button
                                                 onClick={(e) => { e.stopPropagation(); setPayModal({ open: true, purchase: p }); }}
-                                                className="mt-1 text-[9px] font-bold bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] px-2 py-0.5 rounded-[3px] shadow-sm transition-all uppercase whitespace-nowrap"
+                                                className="mt-1 text-[9px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded-lg shadow-sm transition-all uppercase whitespace-nowrap"
                                             >
                                                 {p.payment_status?.toLowerCase() === 'partial' ? 'Pay Bal' : 'Pay Now'}
                                             </button>
@@ -438,46 +415,46 @@ export default function PurchasesPage() {
 
                                 {/* Row 3: Remaining Balance if any */}
                                 {(p.remaining_amount > 0) && (
-                                    <div className="flex items-center justify-between text-[11px] bg-red-50/40 border border-red-100 rounded px-2.5 py-1.5">
-                                        <span className="font-medium text-[#565959]">Remaining Balance:</span>
+                                    <div className="flex items-center justify-between text-[11px] bg-rose-50/40 border border-rose-100 rounded-lg px-2.5 py-1.5">
+                                        <span className="font-medium text-slate-600">Remaining Balance:</span>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="font-bold text-red-600">{formatCurrency(p.remaining_amount)}</span>
+                                            <span className="font-bold text-rose-600 tabular-nums">{formatCurrency(p.remaining_amount)}</span>
                                             {p.payment_confirmed && <CheckCircle2 size={12} className="text-emerald-500" />}
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Row 4: Action Controls */}
-                                <div className="flex gap-2 pt-2 border-t border-[#eee]">
+                                <div className="flex gap-2 pt-2 border-t border-slate-100">
                                     <button
                                         onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-slate-50 text-blue-600 text-[12px] font-bold shadow-sm"
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-indigo-600 text-[12px] font-bold shadow-sm"
                                     >
                                         <Truck size={13} /> Track
                                     </button>
                                     <button
                                         onClick={() => handleViewDetails(p.id)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-[#ddd] rounded bg-white hover:bg-slate-50 text-[#565959] text-[12px] font-bold shadow-sm"
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold shadow-sm"
                                     >
                                         <Eye size={13} /> View
                                     </button>
                                     <button
                                         onClick={() => setDeleteRow(p)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-red-200 rounded bg-red-50/50 hover:bg-red-50 text-red-600 text-[12px] font-bold shadow-sm"
+                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 text-[12px] font-bold shadow-sm"
                                     >
                                         <Trash2 size={13} /> Delete
                                     </button>
                                 </div>
-                            </div>
+                            </Card>
                         ))
                     )}
                 </div>
 
                 {/* Desktop Table */}
-                <div className="hidden md:block bg-white border border-[#ddd] rounded-[4px] shadow-sm text-left mb-6 relative z-10">
+                <Card className="hidden md:block text-left mb-6 relative z-10 overflow-hidden">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
+                            <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                                 <th className="px-6 py-3 w-[80px]">Item</th>
                                 <th className="px-6 py-3">Order #</th>
                                 <th className="px-6 py-3">Order Status</th>
@@ -486,14 +463,14 @@ export default function PurchasesPage() {
                                 <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#eee]">
-                            {loading && filtered.length === 0 ? <tr><td colSpan={6} className="py-20 text-center text-[13px] text-[#565959]">Loading purchases...</td></tr> : filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-20 text-center text-[13px] text-[#565959]">No purchases found.</td></tr>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading && filtered.length === 0 ? <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">Loading purchases...</td></tr> : filtered.length === 0 ? (
+                                <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
                             ) : (
                                 filtered.map((p: any) => (
-                                    <tr key={p.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
+                                    <tr key={p.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
                                         <td className="px-6 py-4">
-                                            <div className="w-12 h-12 bg-white rounded border border-[#ddd] overflow-hidden flex items-center justify-center group-hover:border-[#e77600] transition-colors">
+                                            <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
                                                 {(() => {
                                                     const img = p.items?.[0]?.product_image;
                                                     return img ? (
@@ -505,8 +482,8 @@ export default function PurchasesPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-bold text-[#007185] hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>#{p.purchase_number}</div>
-                                            <div className="text-[11px] text-[#565959] font-bold mt-1 uppercase tracking-tight">{formatDateTime(p.created_at || p.order_date || p.date)}</div>
+                                            <div className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>#{p.purchase_number}</div>
+                                            <div className="text-[11px] text-slate-500 font-bold mt-1 uppercase tracking-tight">{formatDateTime(p.created_at || p.order_date || p.date)}</div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-1.5 min-h-[32px] justify-center">
@@ -515,7 +492,7 @@ export default function PurchasesPage() {
                                                     onStatusChange={(newStatus) => handleStatusChange(p.id, newStatus)}
                                                 />
                                                 {p.status === 'RECEIVED' && (
-                                                    <div className={`text-[9px] font-black uppercase flex items-center gap-1 mt-1 ${p.is_inventory_synced ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                    <div className={`text-[9px] font-bold uppercase flex items-center gap-1 mt-1 ${p.is_inventory_synced ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                         {p.is_inventory_synced ? (
                                                             <><Package size={10} /> {p.warehouse_name || 'Stock In'}</>
                                                         ) : (
@@ -530,7 +507,7 @@ export default function PurchasesPage() {
                                                 {p.payment_status && p.payment_status.toUpperCase() !== 'UNPAID' && !p.payment_confirmed ? (
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-[3px] w-fit uppercase tracking-tighter animate-pulse">
+                                                            <span className="text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter animate-pulse">
                                                                 Waiting for Confirmation
                                                             </span>
                                                         </div>
@@ -539,7 +516,7 @@ export default function PurchasesPage() {
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-green-600' : 'text-[#c45500]'}`}>
+                                                    <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-indigo-600'}`}>
                                                         {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
                                                     </div>
                                                 )}
@@ -547,7 +524,7 @@ export default function PurchasesPage() {
                                                 {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setPayModal({ open: true, purchase: p }); }}
-                                                        className="mt-1 text-[10px] font-bold bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] px-2.5 py-1 rounded-[3px] shadow-sm transition-all w-fit uppercase"
+                                                        className="mt-1 text-[10px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg shadow-sm transition-all w-fit uppercase"
                                                     >
                                                         {p.payment_status?.toLowerCase() === 'partial' ? 'Pay Balance' : 'Pay Now'}
                                                     </button>
@@ -555,10 +532,10 @@ export default function PurchasesPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="font-bold text-[#111]">{formatCurrency(p.total_amount)}</div>
+                                            <div className="font-bold text-slate-900 tabular-nums">{formatCurrency(p.total_amount)}</div>
                                             {(p.remaining_amount > 0) && (
                                                 <div className="flex items-center justify-end gap-1.5 mt-1">
-                                                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">
+                                                    <div className="text-[10px] font-bold text-rose-600 uppercase tracking-tighter tabular-nums">
                                                         Bal: {formatCurrency(p.remaining_amount)}
                                                     </div>
                                                     {p.payment_confirmed && (
@@ -571,9 +548,9 @@ export default function PurchasesPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-3 transition-opacity">
-                                                <button onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)} className="flex items-center gap-1.5 text-[12px] font-bold text-blue-600 hover:underline"><Truck size={14} /> Track</button>
-                                                <button onClick={() => handleViewDetails(p.id)} className="flex items-center gap-1.5 text-[12px] font-bold text-[#565959] hover:underline"><Eye size={14} /> View</button>
-                                                <button onClick={() => setDeleteRow(p)} className="flex items-center gap-1.5 text-[12px] font-bold text-red-600 hover:underline"><Trash2 size={14} /> Delete</button>
+                                                <button onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)} className="flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:underline"><Truck size={14} /> Track</button>
+                                                <button onClick={() => handleViewDetails(p.id)} className="flex items-center gap-1.5 text-[12px] font-bold text-slate-600 hover:underline"><Eye size={14} /> View</button>
+                                                <button onClick={() => setDeleteRow(p)} className="flex items-center gap-1.5 text-[12px] font-bold text-rose-600 hover:underline"><Trash2 size={14} /> Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -581,88 +558,88 @@ export default function PurchasesPage() {
                             )}
                         </tbody>
                     </table>
-                </div>
+                </Card>
             </div>
 
             {/* View Details Modal */}
             {viewRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-4xl bg-[#fcfdff] rounded-[4px] shadow-2xl overflow-hidden text-left border border-[#ddd]">
-                        <div className="border-b border-[#ddd] p-6 flex justify-between items-center bg-[#f7f8fa]">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-4xl bg-slate-50 rounded-2xl shadow-2xl overflow-hidden text-left border border-slate-200">
+                        <div className="border-b border-slate-100 p-6 flex justify-between items-center bg-white">
                             <div className="flex flex-col gap-0.5">
-                                <h2 className="text-[16px] font-bold text-[#111] flex items-center gap-2">
+                                <h2 className="text-[16px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
                                     Purchase Order Details
-                                    <span className="text-[#007185]">#{viewRow.purchase_number}</span>
-                                    <span className="px-2 py-0.5 bg-amber-50 text-[#c45500] border border-amber-100 rounded-[3px] text-[9px] font-black uppercase tracking-tighter ml-2 animate-pulse">
+                                    <span className="text-indigo-600">#{viewRow.purchase_number}</span>
+                                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-[9px] font-bold uppercase tracking-tighter ml-2 animate-pulse">
                                         Last Updated: {new Date(viewRow.updated_at || viewRow.created_at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                     </span>
                                 </h2>
                                 <div className="flex items-center gap-4">
-                                    <p className="text-[11px] text-[#565959] font-bold uppercase tracking-widest flex items-center gap-1">
+                                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1">
                                         <Calendar size={12} className="text-slate-300" /> Created: {formatDateTime(viewRow.created_at || viewRow.order_date || viewRow.date)}
                                     </p>
                                     <div className="w-[1px] h-3 bg-slate-200" />
-                                    <p className="text-[11px] text-[#c45500] font-black uppercase tracking-widest flex items-center gap-1">
-                                        <RefreshCw size={12} className="text-[#c45500]/50" /> Updated: {formatDateTime(viewRow.updated_at || viewRow.created_at)}
+                                    <p className="text-[11px] text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <RefreshCw size={12} className="text-indigo-600/50" /> Updated: {formatDateTime(viewRow.updated_at || viewRow.created_at)}
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setViewRow(null)} className="text-[#aaa] hover:text-[#111]"><X size={24} /></button>
+                            <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={24} /></button>
                         </div>
                         <div className="p-8 flex flex-col lg:flex-row gap-8">
                             <div className="flex-1 space-y-6">
-                                <div className="bg-white border border-[#ddd] rounded-[4px] p-6">
-                                    <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3 pb-2 border-b">Products</p>
+                                <Card className="p-6">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">Products</p>
                                     <table className="w-full text-[13px]">
-                                        <thead><tr className="text-left text-[#565959]"><th className="pb-3 px-2">Name</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
-                                        <tbody className="divide-y divide-[#eee]">
+                                        <thead><tr className="text-left text-slate-500"><th className="pb-3 px-2">Name</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
+                                        <tbody className="divide-y divide-slate-100">
                                             {viewRow.items?.map((item: any) => {
                                                 const img = item.product_image;
                                                 return (
                                                     <tr key={item.id}>
-                                                        <td className="py-3 px-2 font-bold text-[#111]">
+                                                        <td className="py-3 px-2 font-bold text-slate-900">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] flex-shrink-0 flex items-center justify-center p-1">
-                                                                    {img ? <img src={getImageUrl(img)} alt="" className="w-full h-full object-contain" /> : <Package size={16} className="text-gray-100" />}
+                                                                <div className="w-10 h-10 bg-white border border-slate-100 rounded-lg flex-shrink-0 flex items-center justify-center p-1">
+                                                                    {img ? <img src={getImageUrl(img)} alt="" className="w-full h-full object-contain" /> : <Package size={16} className="text-slate-200" />}
                                                                 </div>
                                                                 <span>{item.product_name}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 text-center">{item.quantity}</td>
-                                                        <td className="py-3 text-right font-bold text-[#007185]">{formatCurrency(item.subtotal)}</td>
+                                                        <td className="py-3 text-center tabular-nums">{item.quantity}</td>
+                                                        <td className="py-3 text-right font-bold text-indigo-600 tabular-nums">{formatCurrency(item.subtotal)}</td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
-                                </div>
+                                </Card>
                                 <div className="grid grid-cols-3 gap-6">
-                                    <div className="bg-white border border-[#ddd] rounded-[4px] p-6">
-                                        <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3">Supplier</p>
-                                        <p className="font-bold text-[#111]">{viewRow.supplier_name || '—'}</p>
-                                        <p className="text-[12px] text-[#565959] mt-1">{viewRow.supplier_phone || '—'}</p>
-                                    </div>
+                                    <Card className="p-6">
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Supplier</p>
+                                        <p className="font-bold text-slate-900">{viewRow.supplier_name || '—'}</p>
+                                        <p className="text-[12px] text-slate-600 mt-1">{viewRow.supplier_phone || '—'}</p>
+                                    </Card>
 
-                                    <div className="bg-white border border-[#ddd] rounded-[4px] p-6">
-                                        <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3">Status</p>
+                                    <Card className="p-6">
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Status</p>
                                         <div className="flex flex-col gap-2">
                                             <div><StatusPill status={viewRow.status} /></div>
-                                            <p className="text-[12px] font-bold text-green-600 uppercase tracking-widest">{viewRow.payment_status || 'UNPAID'}</p>
+                                            <p className="text-[12px] font-bold text-emerald-600 uppercase tracking-widest">{viewRow.payment_status || 'UNPAID'}</p>
                                         </div>
-                                    </div>
+                                    </Card>
                                 </div>
                             </div>
                             <aside className="w-full lg:w-[320px] space-y-6">
-                                <div className="bg-white border border-[#ddd] rounded-[4px] p-6">
-                                    <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-4">Summary</p>
+                                <Card className="p-6">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Summary</p>
                                     <div className="space-y-3 text-[13px]">
-                                        <div className="flex justify-between text-[#565959]"><span>Subtotal</span><span>{formatCurrency((viewRow.total_amount || 0) - (viewRow.tax_amount || 0) - (viewRow.shipping_cost || 0))}</span></div>
-                                        <div className="flex justify-between text-[#565959]"><span>Shipping</span><span>{formatCurrency(viewRow.shipping_cost || 0)}</span></div>
-                                        <div className="flex justify-between text-[#565959]"><span>Tax</span><span>{formatCurrency(viewRow.tax_amount || 0)}</span></div>
-                                        <div className="flex justify-between font-bold text-[#111] pt-3 border-t mt-3 text-[18px]"><span>Total</span><span className="text-[#c45500]">{formatCurrency(viewRow.total_amount || 0)}</span></div>
+                                        <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="tabular-nums">{formatCurrency((viewRow.total_amount || 0) - (viewRow.tax_amount || 0) - (viewRow.shipping_cost || 0))}</span></div>
+                                        <div className="flex justify-between text-slate-600"><span>Shipping</span><span className="tabular-nums">{formatCurrency(viewRow.shipping_cost || 0)}</span></div>
+                                        <div className="flex justify-between text-slate-600"><span>Tax</span><span className="tabular-nums">{formatCurrency(viewRow.tax_amount || 0)}</span></div>
+                                        <div className="flex justify-between font-bold text-slate-900 pt-3 border-t border-slate-100 mt-3 text-[18px]"><span>Total</span><span className="text-indigo-600 tabular-nums">{formatCurrency(viewRow.total_amount || 0)}</span></div>
                                     </div>
-                                </div>
-                                <Btn className="w-full h-[35px]" onClick={() => window.print()}><Printer size={16} /> Print Invoice</Btn>
+                                </Card>
+                                <Button className="w-full" onClick={() => window.print()}><Printer size={16} /> Print Invoice</Button>
                             </aside>
                         </div>
                     </div>
@@ -671,19 +648,19 @@ export default function PurchasesPage() {
 
             {/* Delete Modal */}
             {deleteRow && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in-95">
-                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 border border-red-100 font-bold"><Trash2 size={32} /></div>
-                        <h3 className="text-[18px] font-bold text-[#111]">Delete Purchase?</h3>
-                        <p className="text-[13px] text-[#565959] mt-3">Delete record <span className="font-bold">#{deleteRow.purchase_number}</span>? This cannot be undone.</p>
-                        <div className="flex gap-4 mt-8">
-                            <button onClick={() => setDeleteRow(null)} className="flex-1 py-2 text-[13px] font-bold text-[#565959] hover:underline">Cancel</button>
-                            <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 bg-red-600 text-white rounded-[3px] text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm">
+                <Modal open={!!deleteRow} onClose={() => setDeleteRow(null)} size="sm">
+                    <div className="text-center">
+                        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600 border border-rose-100 font-bold"><Trash2 size={32} /></div>
+                        <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Delete Purchase?</h3>
+                        <p className="text-[13px] text-slate-600 mt-3">Delete record <span className="font-bold text-slate-900">#{deleteRow.purchase_number}</span>? This cannot be undone.</p>
+                        <div className="flex gap-3 mt-8">
+                            <Button variant="ghost" className="flex-1" onClick={() => setDeleteRow(null)}>Cancel</Button>
+                            <Button variant="danger" className="flex-1" onClick={handleDelete} disabled={deleting}>
                                 {deleting ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Payment Modal */}
@@ -753,31 +730,31 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
     };
 
     return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 animate-in fade-in">
-            <div className="w-full max-w-xl bg-white rounded-[4px] shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col border border-[#ddd]">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col border border-slate-200">
                 {/* Header */}
-                <div className="px-8 py-6 flex justify-between items-center bg-[#f7f8fa] border-b border-[#ddd] shrink-0">
+                <div className="px-8 py-6 flex justify-between items-center bg-white border-b border-slate-100 shrink-0">
                     <div>
-                        <h2 className="text-[17px] font-bold text-[#111]">Verify Payment</h2>
-                        <p className="text-[13px] text-[#565959] mt-0.5">Purchase Order <span className="font-bold text-[#c45500]">#{purchase.purchase_number}</span> • {formatCurrency(purchase.total_amount)}</p>
+                        <h2 className="text-[17px] font-bold text-slate-900 tracking-tight">Verify Payment</h2>
+                        <p className="text-[13px] text-slate-600 mt-0.5">Purchase Order <span className="font-bold text-indigo-600">#{purchase.purchase_number}</span> • {formatCurrency(purchase.total_amount)}</p>
                     </div>
-                    <button onClick={onClose} className="text-[#888] hover:text-[#111] transition-colors">
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
                         <X size={24} />
                     </button>
                 </div>
 
-                <div className="px-8 py-8 overflow-y-auto flex-1 scrollbar-hide bg-[#fcfdff]">
-                    {/* Status Toggle - Amazon Styled */}
-                    <div className="bg-[#f3f3f3] p-1 rounded-[4px] flex gap-1 mb-8 border border-[#ddd]">
+                <div className="px-8 py-8 overflow-y-auto flex-1 scrollbar-hide bg-slate-50/50">
+                    {/* Status Toggle */}
+                    <div className="bg-slate-100 p-1 rounded-xl flex gap-1 mb-8 border border-slate-200">
                         <button
                             onClick={() => setPaymentStatus('PAID')}
-                            className={`flex-1 py-2.5 rounded-[3px] text-[13px] font-bold transition-all ${paymentStatus === 'PAID' ? 'bg-white text-[#111] shadow-sm border border-[#bbb]' : 'text-[#565959] hover:text-[#111]'}`}
+                            className={`flex-1 py-2.5 rounded-lg text-[13px] font-bold transition-all ${paymentStatus === 'PAID' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900'}`}
                         >
                             Fully Paid
                         </button>
                         <button
                             onClick={() => setPaymentStatus('PARTIAL')}
-                            className={`flex-1 py-2.5 rounded-[3px] text-[13px] font-bold transition-all ${paymentStatus === 'PARTIAL' ? 'bg-white text-[#111] shadow-sm border border-[#bbb]' : 'text-[#565959] hover:text-[#111]'}`}
+                            className={`flex-1 py-2.5 rounded-lg text-[13px] font-bold transition-all ${paymentStatus === 'PARTIAL' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900'}`}
                         >
                             Partial Payment
                         </button>
@@ -787,7 +764,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                         <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
 
                             <div className="space-y-2">
-                                <label className="text-[13px] font-bold text-[#111]">Evidence / Receipt</label>
+                                <label className="text-[13px] font-bold text-slate-900">Evidence / Receipt</label>
                                 <div className="relative">
                                     <input
                                         type="file"
@@ -797,16 +774,16 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                     />
                                     <label
                                         htmlFor="payment-slip-modal"
-                                        className={`flex items-center gap-4 p-4 rounded-[4px] border-2 border-dashed transition-all cursor-pointer bg-white ${paymentSlip ? 'border-green-500 bg-green-50/30' : 'border-[#ddd] hover:border-[#e77600] hover:bg-[#f3f7f7]'}`}
+                                        className={`flex items-center gap-4 p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer bg-white ${paymentSlip ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40'}`}
                                     >
-                                        <div className={`w-10 h-10 rounded-[4px] flex items-center justify-center border ${paymentSlip ? 'bg-green-100 border-green-200 text-green-600' : 'bg-[#f7f8fa] border-[#ddd] text-gray-400'}`}>
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${paymentSlip ? 'bg-emerald-100 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
                                             {paymentSlip ? <CheckCircle size={20} /> : <Upload size={20} />}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className={`text-[13px] font-bold ${paymentSlip ? 'text-green-700' : 'text-[#111]'}`}>
+                                            <span className={`text-[13px] font-bold ${paymentSlip ? 'text-emerald-700' : 'text-slate-900'}`}>
                                                 {paymentSlip ? paymentSlip.name : 'Upload Payment Slip / Receipt'}
                                             </span>
-                                            <span className="text-[11px] text-[#565959]">
+                                            <span className="text-[11px] text-slate-500">
                                                 {paymentSlip ? 'Click to change' : 'PNG, JPG or PDF up to 5MB'}
                                             </span>
                                         </div>
@@ -816,7 +793,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
 
                             <div className="grid grid-cols-2 gap-5">
                                 <div className="space-y-1.5">
-                                    <label className="text-[13px] font-bold text-[#111]">Payment Method</label>
+                                    <label className="text-[13px] font-bold text-slate-900">Payment Method</label>
                                     <select className={inputCls} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
                                         <option value="CASH">Cash</option>
                                         <option value="BANK_TRANSFER">Bank Transfer</option>
@@ -827,12 +804,12 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[13px] font-bold text-[#111]">Payment Date</label>
+                                    <label className="text-[13px] font-bold text-slate-900">Payment Date</label>
                                     <input type="date" className={inputCls} value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
                                 </div>
 
                                 <div className="col-span-2 space-y-1.5">
-                                    <label className="text-[13px] font-bold text-[#111]">
+                                    <label className="text-[13px] font-bold text-slate-900">
                                         {paymentMethod === 'CHEQUE' ? 'Cheque Number' : 'Ref / Transaction ID'}
                                     </label>
                                     <input
@@ -845,28 +822,28 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                 </div>
 
                                 {paymentStatus === 'PARTIAL' && (
-                                    <div className="col-span-2 p-5 bg-[#f7f8fa] rounded-[4px] border border-[#ddd] flex items-center justify-between shadow-sm">
+                                    <div className="col-span-2 p-5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
                                         <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-[#565959] uppercase tracking-tighter">Amount to Pay</label>
-                                            <div className="flex items-center text-[22px] font-bold text-[#b12704]">
+                                            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">Amount to Pay</label>
+                                            <div className="flex items-center text-[22px] font-bold text-rose-600">
                                                 <span className="mr-1 text-[16px]">Rs.</span>
                                                 <input
                                                     type="number"
-                                                    className="bg-transparent outline-none w-32 border-b border-dotted border-[#b12704] focus:border-solid"
+                                                    className="bg-transparent outline-none w-32 border-b border-dotted border-rose-600 focus:border-solid tabular-nums"
                                                     value={paidAmount}
                                                     onChange={e => setPaidAmount(parseFloat(e.target.value))}
                                                 />
                                             </div>
                                         </div>
                                         <div className="text-right space-y-0.5">
-                                            <span className="text-[11px] font-bold text-[#565959] uppercase tracking-tighter">Remaining Balance</span>
-                                            <p className="text-[18px] font-bold text-[#111]">{formatCurrency((purchase.total_amount || 0) - (paidAmount || 0))}</p>
+                                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">Remaining Balance</span>
+                                            <p className="text-[18px] font-bold text-slate-900 tabular-nums">{formatCurrency((purchase.total_amount || 0) - (paidAmount || 0))}</p>
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="col-span-2 space-y-1.5">
-                                    <label className="text-[13px] font-bold text-[#111]">Internal Notes</label>
+                                    <label className="text-[13px] font-bold text-slate-900">Internal Notes</label>
                                     <textarea
                                         className={inputCls + " h-20 py-2 resize-none"}
                                         placeholder="Add details about this payment..."
@@ -877,25 +854,26 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                             </div>
                         </div>
                     ) : (
-                        <div className="h-32 flex flex-col items-center justify-center text-center space-y-2 bg-[#fcfdff] rounded-[4px] border border-dashed border-[#ddd]">
-                            <Info size={20} className="text-gray-300" />
-                            <p className="text-[13px] text-[#565959]">Please select a payment type above to continue</p>
+                        <div className="h-32 flex flex-col items-center justify-center text-center space-y-2 bg-white rounded-xl border border-dashed border-slate-200">
+                            <Info size={20} className="text-slate-300" />
+                            <p className="text-[13px] text-slate-600">Please select a payment type above to continue</p>
                         </div>
                     )}
                 </div>
 
-                <div className="px-8 py-6 flex gap-2 shrink-0 bg-[#f7f8fa] border-t border-[#ddd] justify-end">
-                    <button onClick={onClose} disabled={loading} className="h-[29px] px-6 rounded-[3px] text-[13px] font-medium border border-[#adb1b8] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]">
+                <div className="px-8 py-6 flex gap-2 shrink-0 bg-slate-50/50 border-t border-slate-100 justify-end">
+                    <Button variant="ghost" onClick={onClose} disabled={loading}>
                         Cancel
-                    </button>
+                    </Button>
                     {paymentStatus && (
-                        <Btn
+                        <Button
                             onClick={handleSubmit}
-                            loading={loading}
-                            className="min-w-[150px] !h-[29px]"
+                            disabled={loading}
+                            className="min-w-[150px]"
                         >
+                            {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
                             Confirm Payment
-                        </Btn>
+                        </Button>
                     )}
                 </div>
             </div>

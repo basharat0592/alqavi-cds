@@ -10,11 +10,12 @@ import {
     Eye, EyeOff, Lock
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
+import { PageHeader, Button } from '@/components/admin/ui';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
     <div className="flex items-center gap-2 mb-4">
-        <Icon className="h-4 w-4 text-[#1D4ED8]" />
-        <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
+        <Icon className="h-4 w-4 text-indigo-600" />
+        <span className="text-xs font-bold text-slate-900 uppercase tracking-tight">{title}</span>
     </div>
 );
 
@@ -139,12 +140,12 @@ export default function EditUserPage() {
     if (loading) return <PageLoader />;
 
     const inputCls = (field: string) =>
-        `w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border rounded text-sm font-medium text-gray-900 dark:text-white outline-none transition-all focus:bg-white dark:focus:bg-slate-900 ${errors[field]
-            ? 'border-red-300 focus:border-red-400'
-            : 'border-gray-200 dark:border-slate-700 focus:border-[#1D4ED8]'
+        `w-full px-4 py-2 bg-white border rounded-lg text-sm font-medium text-slate-900 outline-none transition-all focus:ring-4 ${errors[field]
+            ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-500/10'
+            : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-500/10'
         }`;
 
-    const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-slate-400 mb-1.5";
+    const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5";
 
     return (
         <div className="max-w-[800px] mx-auto pb-12 font-sans px-4 mt-8">
@@ -152,53 +153,57 @@ export default function EditUserPage() {
             {/* Toast */}
             {toast && (
                 <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-                    <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 px-5 py-4 rounded shadow-2xl flex items-center gap-4 min-w-[300px]">
-                        <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                    <div className="bg-white border border-slate-200/70 px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px]">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
                             {toast.type === 'success' ? <CheckCircle className="h-5 w-5 text-white" /> : <XCircle className="h-5 w-5 text-white" />}
                         </div>
-                        <p className="text-gray-900 dark:text-white text-sm font-bold">{toast.msg}</p>
+                        <p className="text-slate-900 text-sm font-bold">{toast.msg}</p>
                     </div>
                 </div>
             )}
 
             {/* Page Header */}
-            <div className="flex items-center gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
-                <Link href="/admin/users" className="p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-gray-400 hover:text-[#1D4ED8] transition-all shadow-sm">
-                    <ArrowLeft className="h-4 w-4" />
-                </Link>
-                <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Edit Identity profile</h1>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Modify platform identity settings</p>
-                </div>
-            </div>
+            <PageHeader
+                title="Edit User"
+                subtitle="Modify platform identity settings"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Users', href: '/admin/users' }, { label: 'Edit User' }]}
+                actions={
+                    <Link href="/admin/users">
+                        <Button variant="outline" size="sm">
+                            <ArrowLeft className="h-4 w-4" />
+                            Back
+                        </Button>
+                    </Link>
+                }
+            />
 
             {/* Single Card Form */}
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] overflow-hidden">
+            <form onSubmit={handleSubmit} className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
                 <div className="p-8 space-y-8">
 
                     {/* Basic Info Group */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
-                            <label className={labelCls}>First Name <span className="text-red-500">*</span></label>
+                            <label className={labelCls}>First Name <span className="text-rose-500">*</span></label>
                             <input type="text" value={form.first_name} onChange={e => handle('first_name', e.target.value)}
                                 className={inputCls('first_name')} placeholder="Name" />
-                            {errors.first_name && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.first_name}</p>}
+                            {errors.first_name && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.first_name}</p>}
                         </div>
                         <div>
-                            <label className={labelCls}>Last Name <span className="text-red-500">*</span></label>
+                            <label className={labelCls}>Last Name <span className="text-rose-500">*</span></label>
                             <input type="text" value={form.last_name} onChange={e => handle('last_name', e.target.value)}
                                 className={inputCls('last_name')} placeholder="Surname" />
-                            {errors.last_name && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.last_name}</p>}
+                            {errors.last_name && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.last_name}</p>}
                         </div>
                     </div>
 
                     {/* Contact & Role Group */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
-                            <label className={labelCls}>Email Address <span className="text-red-500">*</span></label>
+                            <label className={labelCls}>Email Address <span className="text-rose-500">*</span></label>
                             <input type="email" value={form.email} onChange={e => handle('email', e.target.value)}
                                 className={inputCls('email')} placeholder="Email address" />
-                            {errors.email && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.email}</p>}
+                            {errors.email && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.email}</p>}
                         </div>
                         <div>
                             <label className={labelCls}>Phone Number</label>
@@ -216,13 +221,13 @@ export default function EditUserPage() {
                                 <option value="">Select a role</option>
                                 {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                             </select>
-                            {errors.role && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.role}</p>}
+                            {errors.role && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.role}</p>}
                         </div>
                         <div className="flex flex-col justify-end">
-                            <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded">
-                                <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest pl-2">Account State</span>
+                            <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200/70 rounded-lg">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-2">Account State</span>
                                 <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#1D4ED8]' : 'bg-gray-300 dark:bg-slate-600'}`}>
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-indigo-600' : 'bg-slate-300'}`}>
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </button>
                             </div>
@@ -239,9 +244,9 @@ export default function EditUserPage() {
                     )}
 
                     {/* Security & Access Group */}
-                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
                         <SectionHeader title="Account Security" icon={Shield} />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-slate-200 dark:border-white/10">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200/70">
                             <div>
                                 <label className={labelCls}>Update Master Password</label>
                                 <div className="relative">
@@ -255,7 +260,7 @@ export default function EditUserPage() {
                                     <button 
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1D4ED8]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
                                     >
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
@@ -274,30 +279,32 @@ export default function EditUserPage() {
                                     <button 
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1D4ED8]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
                                     >
                                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
                                 </div>
                             </div>
                             <div className="sm:col-span-2 flex justify-end">
-                                <button
+                                <Button
                                     type="button"
+                                    variant="secondary"
+                                    size="sm"
                                     onClick={handlePasswordReset}
                                     disabled={updatingPassword || !passwordData.new_password}
-                                    className="px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50"
+                                    className="font-bold text-[10px] uppercase tracking-widest"
                                 >
                                     {updatingPassword ? <Loader2 className="h-3 w-3 animate-spin" /> : <Shield className="h-3 w-3" />}
                                     {updatingPassword ? 'Updating...' : 'Set New Password'}
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
 
                     {/* Profile Information Note */}
-                    <hr className="border-gray-100 dark:border-slate-800" />
-                    <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded border border-gray-100 dark:border-slate-800">
-                        <div className="flex items-center gap-3 text-gray-400 dark:text-slate-500">
+                    <hr className="border-slate-100" />
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200/70">
+                        <div className="flex items-center gap-3 text-slate-400">
                             <Lock className="h-4 w-4" />
                             <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed font-mono">
                                 SECURITY_PROTOCOL_ALPHA: Identity credentials and master access tokens must be handled over secure encrypted channels only.
@@ -307,15 +314,17 @@ export default function EditUserPage() {
                 </div>
 
                 {/* Footer Controls */}
-                <div className="bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-800 p-6 flex items-center justify-end gap-3">
-                    <Link href="/admin/users" className="px-6 py-2 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-[10px] uppercase tracking-widest rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
-                        Abort
+                <div className="bg-slate-50 border-t border-slate-200/70 p-6 flex items-center justify-end gap-3">
+                    <Link href="/admin/users">
+                        <Button type="button" variant="outline" size="sm" className="font-bold text-[10px] uppercase tracking-widest">
+                            Abort
+                        </Button>
                     </Link>
-                    <button type="submit" disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2 bg-[#1D4ED8] hover:bg-[#1D4ED8] text-white font-bold text-[10px] uppercase tracking-widest rounded transition-all shadow-sm disabled:opacity-50">
+                    <Button type="submit" variant="primary" size="sm" disabled={saving}
+                        className="font-bold text-[10px] uppercase tracking-widest">
                         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                         {saving ? 'UPDATING...' : 'COMMIT PROFILE'}
-                    </button>
+                    </Button>
                 </div>
             </form>
         </div>

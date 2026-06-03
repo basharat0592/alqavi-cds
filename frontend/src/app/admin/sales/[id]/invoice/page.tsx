@@ -4,26 +4,11 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Printer, ArrowLeft, Share2, Check, ChevronRight, Hash, Calendar, Phone, Mail } from 'lucide-react';
+import { Printer, ArrowLeft, Share2, Check } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import Logo from '@/components/ui/Logo';
+import { PageHeader, Button } from '@/components/admin/ui';
 import toast from 'react-hot-toast';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - INVOICE
-   ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[31px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {children}
-        </button>
-    );
-};
 
 export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -85,42 +70,42 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     const totalAmount = parseFloat(order.total_amount || '0');
 
     return (
-        <div className="min-h-screen bg-white pb-20 font-sans text-[#111] selection:bg-amber-100 text-left">
+        <div className="min-h-screen bg-white pb-20 font-sans text-[#111] selection:bg-indigo-100 text-left">
 
-            {/* Integrated Action Bar (Transparent Style) */}
+            {/* Integrated Action Bar */}
             <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
-                <div className="flex items-center justify-between py-4 border-b border-[#eee]">
-                    <div className="flex items-center gap-1 text-[11px] text-[#565959] uppercase tracking-wider font-bold">
-                        <span className="cursor-pointer hover:text-[#c45500]" onClick={() => router.push('/admin/dashboard')}>Dashboard</span>
-                        <ChevronRight size={10} />
-                        <span className="text-[#c45500]">Sale Invoice</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Btn variant="secondary" onClick={() => router.back()}>
-                            <ArrowLeft size={14} /> Back
-                        </Btn>
-                        <div className="h-6 w-[1px] bg-[#eee] mx-1"></div>
-                        <select
-                            value={(order.status || '').toLowerCase()}
-                            onChange={(e) => handleUpdateStatus(e.target.value)}
-                            disabled={updatingStatus || (order.status || '').toUpperCase() === 'DELIVERED'}
-                            className={`h-[31px] px-3 border border-[#adb1b8] rounded-[3px] text-[12px] font-bold outline-none cursor-pointer bg-[#f7f8fa] hover:bg-white transition-all
-                                ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-green-700' : 'text-[#111]'}`}
-                        >
-                            {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
-                                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                            ))}
-                        </select>
-                        <div className="h-6 w-[1px] bg-[#eee] mx-1"></div>
-                        <Btn variant="secondary" onClick={handleShare}>
-                            {shared ? <Check size={14} className="text-green-600" /> : <Share2 size={14} />}
-                            {shared ? 'Copied' : 'Share'}
-                        </Btn>
-                        <Btn onClick={handlePrint}>
-                            <Printer size={14} /> Print
-                        </Btn>
-                    </div>
-                </div>
+                <PageHeader
+                    title="Sales Invoice"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Sales Invoice' }]}
+                    className="mb-0 pb-6 border-b border-slate-100"
+                    actions={
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => router.back()}>
+                                <ArrowLeft size={14} /> Back
+                            </Button>
+                            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                            <select
+                                value={(order.status || '').toLowerCase()}
+                                onChange={(e) => handleUpdateStatus(e.target.value)}
+                                disabled={updatingStatus || (order.status || '').toUpperCase() === 'DELIVERED'}
+                                className={`h-8 px-3 border border-slate-200 rounded-lg text-[12.5px] font-semibold outline-none cursor-pointer bg-white hover:border-slate-300 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all disabled:opacity-60
+                                    ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-emerald-700' : 'text-slate-700'}`}
+                            >
+                                {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+                                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                                ))}
+                            </select>
+                            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                            <Button variant="outline" size="sm" onClick={handleShare}>
+                                {shared ? <Check size={14} className="text-emerald-600" /> : <Share2 size={14} />}
+                                {shared ? 'Copied' : 'Share'}
+                            </Button>
+                            <Button variant="primary" size="sm" onClick={handlePrint}>
+                                <Printer size={14} /> Print
+                            </Button>
+                        </>
+                    }
+                />
             </div>
 
             {/* Paper Container */}

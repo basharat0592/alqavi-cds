@@ -445,7 +445,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                 {/* Right Actions - Desktop only */}
                 <div className="hidden md:flex items-center gap-1 text-white pr-2 shrink-0">
                     {/* Account Dropdown */}
-                    <div className="relative group/user" ref={userRef} onMouseEnter={() => setUserMenuOpen(true)} onMouseLeave={() => setUserMenuOpen(false)}>
+                    <div className="relative group/user" ref={userRef}>
                         <div 
                             onClick={() => setUserMenuOpen(!userMenuOpen)}
                             className="flex flex-col p-1 px-2 rounded-sm cursor-pointer leading-tight min-w-[120px] select-none hover:bg-white/10 transition-colors"

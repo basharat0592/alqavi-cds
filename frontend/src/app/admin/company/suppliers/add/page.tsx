@@ -4,32 +4,27 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { userService, roleService, AppRole } from '@/lib/api';
 import {
-    ArrowLeft, User, Mail, Phone, KeyRound,
-    Shield, CheckCircle, Save, Loader2, XCircle,
+    Mail, Phone, KeyRound,
+    Shield, Save, Loader2,
     Building2, MapPin, BadgeCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PageHeader, Card, Button } from '@/components/admin/ui';
 
 // -- Shared Utilities --------------------------------
 const INPUT = (err?: boolean) =>
-    `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-lg text-sm outline-none transition-all
-    focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 placeholder:text-gray-400
-    ${err ? 'border-red-500' : 'border-slate-200 dark:border-white/10'}`;
+    `w-full px-4 py-2.5 bg-white border rounded-lg text-sm text-slate-800 outline-none transition-all
+    focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-400
+    ${err ? 'border-rose-400' : 'border-slate-200'}`;
 
-const LABEL = 'block text-[10px] font-black text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-widest';
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
+const LABEL = 'block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest';
 
 const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon?: any; subtitle?: string }) => (
-    <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 border-b border-slate-200 dark:border-white/10">
+    <div className="bg-slate-50/60 px-6 py-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
-            {Icon && <Icon className="w-5 h-5 text-[#F59E0B]" />}
+            {Icon && <Icon className="w-5 h-5 text-indigo-600" />}
             <div>
-                <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
+                <span className="text-sm font-bold text-slate-900 tracking-tight">{title}</span>
                 {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{subtitle}</p>}
             </div>
         </div>
@@ -105,28 +100,23 @@ export default function OnboardSupplier() {
     };
 
     return (
-        <div className="max-w-[1000px] mx-auto py-12 px-6 font-sans">
-            <div className="flex items-center justify-between mb-10 pb-6 border-b border-slate-200 dark:border-white/10">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#F59E0B] rounded-2xl flex items-center justify-center shadow-xl shadow-yellow-500/20">
-                        <Building2 className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                            Add Supplier
-                        </h1>
-                    </div>
-                </div>
-                <button
-                    onClick={() => router.push('/admin/company/suppliers')}
-                    className="group text-sm text-slate-400 hover:text-[#F59E0B] flex items-center gap-2 uppercase font-bold tracking-widest transition-all"
-                >
-                    <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back
-                </button>
-            </div>
+        <div className="max-w-[1000px] mx-auto">
+            <PageHeader
+                title="Add Supplier"
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Suppliers', href: '/admin/company/suppliers' },
+                    { label: 'Add Supplier' },
+                ]}
+                actions={
+                    <Button variant="outline" onClick={() => router.push('/admin/company/suppliers')}>
+                        Back
+                    </Button>
+                }
+            />
 
             <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <SectionCard>
+                <Card className="overflow-hidden">
                     <SectionHeader title="User Details" icon={Shield} />
                     <div className="p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
@@ -154,7 +144,7 @@ export default function OnboardSupplier() {
                             </div>
                         </div>
 
-                        <hr className="my-2 border-slate-100 dark:border-white/5" />
+                        <hr className="my-2 border-slate-100" />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                             <div className="space-y-1.5">
@@ -170,9 +160,9 @@ export default function OnboardSupplier() {
                             </div>
                         </div>
                     </div>
-                </SectionCard>
+                </Card>
 
-                <SectionCard>
+                <Card className="overflow-hidden">
                     <SectionHeader title="Company Details" icon={Building2} />
                     <div className="p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
@@ -188,29 +178,30 @@ export default function OnboardSupplier() {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-emerald-50/50 dark:bg-emerald-500/5 p-3 rounded-lg border border-emerald-100/50 dark:border-emerald-500/10 flex gap-3 items-center">
+                        <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-100 flex gap-3 items-center">
                             <BadgeCheck className="w-5 h-5 text-emerald-500 shrink-0" />
-                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight">This user will have supplier level access.</p>
+                            <p className="text-[11px] text-emerald-700 font-bold uppercase tracking-tight">This user will have supplier level access.</p>
                         </div>
                     </div>
-                </SectionCard>
+                </Card>
 
                 <div className="flex justify-end gap-4 pb-12">
-                    <button
+                    <Button
                         type="button"
+                        variant="outline"
+                        size="lg"
                         onClick={() => router.push('/admin/company/suppliers')}
-                        className="px-8 py-3.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-[0.98]"
                     >
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="submit"
+                        size="lg"
                         disabled={saving}
-                        className="group px-10 py-3.5 bg-[#F59E0B] hover:bg-[#ebae1e] border border-[#F59E0B] rounded-xl text-[11px] font-bold uppercase tracking-widest text-white shadow-xl shadow-yellow-500/20 flex items-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
                     >
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4 text-white group-hover:scale-110 transition-transform" />}
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save
-                    </button>
+                    </Button>
                 </div>
             </form>
         </div>

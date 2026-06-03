@@ -24,7 +24,7 @@ interface NavGroup {
     items: NavItem[];
 }
 
-export default function AdminSidebar({ isCollapsed = false, onToggle }: { isCollapsed?: boolean; onToggle?: () => void }) {
+export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate }: { isCollapsed?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
     const pathname = usePathname();
     const [settings, setSettings] = useState<SiteSettings | null>(null);
 
@@ -140,25 +140,22 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: { isColl
     return (
         <>
             <style>{`
-                .sidebar-scroll::-webkit-scrollbar { width: 3px; }
+                .sidebar-scroll::-webkit-scrollbar { width: 4px; }
                 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-                .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
-                .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
-                .nav-item-glow { box-shadow: inset 3px 0 0 #f59e0b, inset 0 0 20px rgba(245,158,11,0.06); }
+                .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 99px; }
+                .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
             `}</style>
 
-            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden ${isCollapsed ? 'w-[64px]' : 'w-[235px]'}`}
-                style={{ background: '#2E3A48' }}>
+            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-slate-900 border-r border-slate-800/70 ${isCollapsed ? 'w-[64px]' : 'w-[235px]'}`}>
 
-                <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Link href="/admin/dashboard" onClick={() => onToggle?.()} className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border"
-                            style={{ background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)' }}>
-                            <span className="font-black text-[13px]" style={{ color: '#f59e0b' }}>AQ</span>
+                <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between border-b border-white/5">
+                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center bg-indigo-500/15 border border-indigo-400/30">
+                            <span className="font-black text-[13px] text-indigo-400">AQ</span>
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5" style={{ color: '#f59e0b' }}>Central Console</span>
+                                <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5 text-indigo-400">Central Console</span>
                                 <span className="text-[13px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
                             </div>
                         )}
@@ -166,7 +163,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: { isColl
                     {/* Close button — mobile only */}
                     <button
                         onClick={onToggle}
-                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/10 text-white/60 hover:text-white"
+                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/10 text-slate-400 hover:text-white"
                         aria-label="Close sidebar"
                     >
                         <X size={18} />
@@ -180,16 +177,14 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: { isColl
                     {filteredGroups.map((group, gIdx) => (
                         <div key={group.label} className={gIdx !== 0 ? 'mt-5' : ''}>
                             {!isCollapsed && (
-                                <div className="px-4 mb-1 flex items-center justify-between">
-                                    <span className="text-[9.5px] font-bold uppercase tracking-[0.18em]"
-                                        style={{ color: 'rgba(245,158,11,0.55)' }}>
+                                <div className="px-4 mb-1.5">
+                                    <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500">
                                         {group.label}
                                     </span>
-                                    {/* collapse/expand control removed */}
                                 </div>
                             )}
                             {isCollapsed && gIdx !== 0 && (
-                                <div className="mx-3 mb-1" style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+                                <div className="mx-3 mb-1 h-px bg-white/5" />
                             )}
 
                             <div className="space-y-[1px] px-2">
@@ -197,34 +192,21 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: { isColl
                                     const active = isActive(item.href);
                                     return (
                                         <Link key={item.href} href={item.href}
-                                            onClick={() => onToggle?.()}
-                                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'}`}
-                                            style={active ? {
-                                                background: 'rgba(245,158,11,0.1)',
-                                                boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.15)',
-                                            } : {}}
-                                            onMouseEnter={e => {
-                                                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.04)';
-                                            }}
-                                            onMouseLeave={e => {
-                                                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                                            }}>
+                                            onClick={() => onNavigate?.()}
+                                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'} ${active ? 'bg-indigo-500/15 ring-1 ring-indigo-400/20' : 'hover:bg-white/5'}`}>
 
                                             {/* Active left indicator */}
                                             {active && !isCollapsed && (
-                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                                                    style={{ background: '#f59e0b' }} />
+                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-indigo-400" />
                                             )}
 
                                             <item.icon
-                                                className="shrink-0 transition-colors duration-150"
+                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'}`}
                                                 size={15}
-                                                style={{ color: active ? '#f59e0b' : 'rgba(255,255,255,0.38)' }}
                                             />
 
                                             {!isCollapsed && (
-                                                <span className="text-[13px] font-medium tracking-tight whitespace-nowrap truncate transition-colors duration-150"
-                                                    style={{ color: '#ffffff' }}>
+                                                <span className={`text-[13px] tracking-tight whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                                     {item.name}
                                                 </span>
                                             )}
@@ -232,13 +214,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: { isColl
                                             {/* Tooltip when collapsed */}
                                             {isCollapsed && (
                                                 <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
-                                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]"
-                                                    style={{
-                                                        background: '#1e293b',
-                                                        color: '#f1f5f9',
-                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-                                                        border: '1px solid rgba(255,255,255,0.08)'
-                                                    }}>
+                                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
+                                                    bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
                                                     {item.name}
                                                 </div>
                                             )}
@@ -252,51 +229,30 @@ export default function AdminSidebar({ isCollapsed = false, onToggle }: { isColl
 
                 {/* ── FOOTER / SETTINGS ── */}
                 {visibility['/admin/settings'] !== false && (
-                    <div className="flex-shrink-0 px-2 pb-3 pt-2"
-                        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex-shrink-0 px-2 pb-3 pt-2 border-t border-white/5">
                         <Link href="/admin/settings"
-                            onClick={() => onToggle?.()}
-                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'}`}
-                            style={isActive('/admin/settings') ? {
-                                background: 'rgba(245,158,11,0.1)',
-                                boxShadow: 'inset 0 0 0 1px rgba(245,158,11,0.15)',
-                            } : {}}
-                            onMouseEnter={e => {
-                                if (!isActive('/admin/settings'))
-                                    (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.04)';
-                            }}
-                            onMouseLeave={e => {
-                                if (!isActive('/admin/settings'))
-                                    (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                            }}>
+                            onClick={() => onNavigate?.()}
+                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'} ${isActive('/admin/settings') ? 'bg-indigo-500/15 ring-1 ring-indigo-400/20' : 'hover:bg-white/5'}`}>
 
                             {isActive('/admin/settings') && !isCollapsed && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                                    style={{ background: '#f59e0b' }} />
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-indigo-400" />
                             )}
 
                             <Settings
                                 size={15}
-                                className="shrink-0 transition-colors duration-150"
-                                style={{ color: isActive('/admin/settings') ? '#f59e0b' : 'rgba(255,255,255,0.38)' }}
+                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'}`}
                             />
 
                             {!isCollapsed && (
-                                <span className="text-[13px] font-medium tracking-tight"
-                                    style={{ color: '#ffffff' }}>
+                                <span className={`text-[13px] tracking-tight transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                     System Settings
                                 </span>
                             )}
 
                             {isCollapsed && (
                                 <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
-                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]"
-                                    style={{
-                                        background: '#1e293b',
-                                        color: '#f1f5f9',
-                                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-                                        border: '1px solid rgba(255,255,255,0.08)'
-                                    }}>
+                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
+                                    bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
                                     System Settings
                                 </div>
                             )}

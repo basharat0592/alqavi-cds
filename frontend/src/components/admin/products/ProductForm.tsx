@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Package, RefreshCw, ChevronRight, ChevronLeft, Image as ImageIcon,
-    Activity, ShieldCheck, Save, DollarSign, Percent, ArrowRight,
-    Search, Info, CheckCircle, Plus, X, ChevronDown, MapPin
+    Activity, ShieldCheck, Save,
+    Search, Info, Plus, X, ChevronDown, MapPin
 } from 'lucide-react';
 import { productService, inventoryService, categoryService } from '@/lib/api';
 import { companyService } from '@/services/company.service';
@@ -19,12 +19,12 @@ import Link from 'next/link';
 
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-indigo-600 border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700 text-white shadow-sm hover:shadow',
+        secondary: 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-10 px-4 rounded-lg text-[13px] font-semibold border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
@@ -33,12 +33,12 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children, className = "" }: { label: string; required?: boolean; children: React.ReactNode; className?: string }) => (
     <div className={`w-full ${className}`}>
-        <label className="block text-[13px] font-bold text-[#0f1111] mb-1 uppercase tracking-tighter">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{label}{required && <span className="text-rose-500 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
 
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all disabled:bg-[#f3f3f3] disabled:text-[#565959]";
+const inputCls = "w-full h-10 px-3 border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-400 bg-white transition-all disabled:bg-slate-50 disabled:text-slate-400";
 
 /* ─── Professional Searchable Select ─── */
 const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Select...", searchable = false, required = false }: any) => {
@@ -67,22 +67,22 @@ const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Se
                 <button
                     type="button"
                     onClick={() => setOpen(!open)}
-                    className={`${inputCls} flex items-center justify-between text-left bg-white h-[31px]`}
+                    className={`${inputCls} flex items-center justify-between text-left bg-white h-10`}
                 >
-                    <span className={selectedOption ? 'text-[#111]' : 'text-gray-400'}>
+                    <span className={selectedOption ? 'text-[#0f172a]' : 'text-gray-400'}>
                         {selectedOption ? selectedOption.name : placeholder}
                     </span>
                     <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
                 </button>
 
                 {open && (
-                    <div className="absolute z-[120] w-full mt-1 bg-white border border-[#cdcdcd] rounded-[4px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute z-[120] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                         {searchable && (
-                            <div className="p-2 border-b border-[#eee] bg-[#f9f9f9]">
+                            <div className="p-2 border-b border-slate-100 bg-slate-50">
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
                                     <input
-                                        className="w-full pl-7 pr-2 py-1 text-[12px] border border-[#ddd] rounded-[2px] outline-none focus:border-[#e77600]"
+                                        className="w-full pl-7 pr-2 py-1 text-[12px] border border-slate-200 rounded-md outline-none focus:border-[#4f46e5]"
                                         placeholder="Search..."
                                         value={search}
                                         onChange={e => setSearch(e.target.value)}
@@ -96,7 +96,7 @@ const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Se
                                 filtered.map((opt: any) => (
                                     <div
                                         key={opt.id}
-                                        className={`px-3 py-2 text-[13px] hover:bg-[#f3f7f7] cursor-pointer transition-colors ${String(value || '') === String(opt.id || '') ? 'bg-orange-50 font-bold text-[#e77600]' : 'text-[#111]'}`}
+                                        className={`px-3 py-2 text-[13px] hover:bg-slate-50 cursor-pointer transition-colors ${String(value || '') === String(opt.id || '') ? 'bg-indigo-50 font-bold text-[#4f46e5]' : 'text-[#0f172a]'}`}
                                         onClick={() => {
                                             onChange(opt.id.toString());
                                             setOpen(false);
@@ -164,7 +164,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className={inputCls + " flex items-center justify-between text-left h-[42px] px-2"}
+                className="w-full px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all flex items-center justify-between text-left h-[46px]"
             >
                 {selectedGrouped ? (
                     <div className="flex items-center gap-2 overflow-hidden py-1">
@@ -177,29 +177,29 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                         </div>
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-1.5 truncate">
-                                <span className="text-[13px] font-bold text-[#111]">{selectedGrouped.product_name.replace(/\s*\(.*?\)\s*$/, '')}</span>
+                                <span className="text-[13px] font-bold text-[#0f172a]">{selectedGrouped.product_name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                 {(selectedGrouped.weight || selectedGrouped.size) && (
-                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                    <span className="text-[10px] text-[#4f46e5] font-black uppercase tracking-tight shrink-0">
                                         — {selectedGrouped.weight}{selectedGrouped.weight && selectedGrouped.size ? ' • ' : ''}{selectedGrouped.size}
                                     </span>
                                 )}
                             </div>
-                            <span className="text-[10px] text-[#565959] uppercase font-bold tracking-tighter leading-none">
+                            <span className="text-[10px] text-[#64748b] uppercase font-bold tracking-tighter leading-none">
                                 Rs. {Number(selectedGrouped.price_per_item).toLocaleString()} • {selectedGrouped.total_quantity} In Total Stock
                             </span>
                         </div>
                     </div>
-                ) : <span className="text-[#565959] italic">Search Stock Registry...</span>}
+                ) : <span className="text-[#64748b] italic">Search Stock Registry...</span>}
                 <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
 
             {open && (
-                <div className="absolute z-[100] w-[120%] mt-1 bg-white border border-[#cdcdcd] rounded-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden">
-                    <div className="p-2 bg-[#f3f3f3] border-b border-[#ddd]">
+                <div className="absolute z-[100] w-[120%] mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden">
+                    <div className="p-2 bg-slate-100 border-b border-slate-200">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                             <input
-                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#888c8e] rounded-[3px] outline-none bg-white focus:border-[#e77600]"
+                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-300 rounded-lg outline-none bg-white focus:border-[#4f46e5]"
                                 placeholder="Type product name, SKU or barcode..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
@@ -212,10 +212,10 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                             filtered.map((s: any, idx: number) => (
                                 <div
                                     key={s.id || idx}
-                                    className="p-3 hover:bg-[#f3f7f7] cursor-pointer border-b border-[#eee] last:border-0 transition-all group flex items-start gap-3"
+                                    className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-all group flex items-start gap-3"
                                     onClick={() => { onSelect(s.id.toString()); setOpen(false); }}
                                 >
-                                    <div className="w-10 h-10 bg-white rounded border border-[#ddd] overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#e77600] transition-colors">
+                                    <div className="w-10 h-10 bg-white rounded border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#4f46e5] transition-colors">
                                         {getCatalogImg(s.product_name) ? (
                                             <img src={getImageUrl(getCatalogImg(s.product_name)) || ''} className="w-full h-full object-contain p-1" alt="" />
                                         ) : (
@@ -225,9 +225,9 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                     <div className="flex-1 flex justify-between items-start">
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-[13px] font-bold text-[#111] group-hover:text-[#e77600] group-hover:underline">{s.product_name.replace(/\s*\(.*?\)\s*$/, '')}</span>
+                                                <span className="text-[13px] font-bold text-[#0f172a] group-hover:text-[#4f46e5] group-hover:underline">{s.product_name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                                 {(s.weight || s.size) && (
-                                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                    <span className="text-[10px] text-[#4f46e5] font-black uppercase tracking-tight shrink-0">
                                                         — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
                                                     </span>
                                                 )}
@@ -235,13 +235,13 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className="text-[10px] text-emerald-600 font-bold">{s.total_quantity} Units</span>
                                                 <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                                                <span className="text-[10px] text-[#007185] font-bold uppercase tracking-tighter flex items-center gap-0.5">
+                                                <span className="text-[10px] text-[#4f46e5] font-bold uppercase tracking-tighter flex items-center gap-0.5">
                                                     <MapPin size={10} /> {s.warehouse_name || 'Unassigned'}
                                                 </span>
                                                 {s.supplier_name && (
                                                     <>
                                                         <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                                                        <span className="text-[10px] text-purple-600 font-bold uppercase tracking-tighter">
+                                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
                                                             {s.supplier_name}
                                                         </span>
                                                     </>
@@ -249,7 +249,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                                 {s.category_name && (
                                                     <>
                                                         <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                                                        <span className="text-[10px] text-blue-600 font-bold uppercase tracking-tighter">
+                                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
                                                             {s.category_name}
                                                         </span>
                                                     </>
@@ -270,7 +270,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-[12px] font-bold text-[#b12704]">Rs. {Number(s.price_per_item).toLocaleString()}</span>
+                                            <span className="text-[12px] font-bold text-slate-900">Rs. {Number(s.price_per_item).toLocaleString()}</span>
                                             <p className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">Shared Cost</p>
                                         </div>
                                     </div>
@@ -579,39 +579,39 @@ export default function ProductForm({ id }: ProductFormProps) {
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen bg-[#F8F9FA]">
-            <RefreshCw className="w-10 h-10 animate-spin text-[#c45500] opacity-20" />
+            <RefreshCw className="w-10 h-10 animate-spin text-[#4338ca] opacity-20" />
         </div>
     );
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f172a]">
             <div className="max-w-[1100px] mx-auto px-6 pt-5">
 
                 {/* Breadcrumb */}
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
+                <div className="flex items-center gap-1 text-[12px] text-[#64748b] mb-2">
+                    <Link href="/admin/dashboard" className="hover:text-[#4338ca] hover:underline">Dashboard</Link>
                     <ChevronRight size={10} />
-                    <Link href="/admin/products" className="hover:text-[#c45500] hover:underline">Product Registry</Link>
+                    <Link href="/admin/products" className="hover:text-[#4338ca] hover:underline">Product Registry</Link>
                     <ChevronRight size={10} />
-                    <span className="text-[#c45500]">{isEdit ? 'Update Product' : 'Add Product'}</span>
+                    <span className="text-[#4338ca]">{isEdit ? 'Update Product' : 'Add Product'}</span>
                 </div>
 
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-[22px] font-normal">{isEdit ? 'Update Product' : 'Add New Product'}</h1>
-                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{isEdit ? 'Update Product' : 'Add New Product'}</h1>
+                    <button onClick={() => router.back()} className="text-[13px] text-[#4f46e5] hover:text-[#4338ca] hover:underline flex items-center gap-1">
                         <ChevronLeft size={14} /> Back to registry
                     </button>
                 </div>
-                <div className="border-b border-[#ddd] mb-8" />
+                <div className="border-b border-slate-200 mb-8" />
 
                 <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-6">
 
                         {/* 1. PRODUCT & STOCK INFO */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm relative z-[50]">
-                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] rounded-t-[4px]">
+                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] relative z-[50]">
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-2xl">
                                 <h2 className="text-[14px] font-bold">1. Product & Stock Info</h2>
-                                <p className="text-[12px] text-[#565959]">Link this product to your warehouse stock.</p>
+                                <p className="text-[12px] text-[#64748b]">Link this product to your warehouse stock.</p>
                             </div>
                             <div className="p-6 space-y-5">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -643,9 +643,9 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
 
                                 {selectedStock && (
-                                    <div className="bg-[#fcfdff] border border-blue-100 rounded-[3px] p-4 animate-in zoom-in-95 mt-2 space-y-4">
+                                    <div className="bg-indigo-50/40 border border-indigo-100 rounded-lg p-4 animate-in zoom-in-95 mt-2 space-y-4">
                                         <div className="flex gap-4">
-                                            <Info className="text-[#007185] shrink-0" size={18} />
+                                            <Info className="text-[#4f46e5] shrink-0" size={18} />
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
                                                 <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cost Base</p><p className="text-[14px] font-bold">Rs. {Number(selectedGrouped?.price_per_item).toLocaleString()}</p></div>
                                                 <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</p><p className="text-[14px] font-bold">{selectedGrouped?.category_name || 'Generic'}</p></div>
@@ -659,14 +659,14 @@ export default function ProductForm({ id }: ProductFormProps) {
                         </div>
 
                         {/* 2. PRICING */}
-                        <div className={`bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
-                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                        <div className={`bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
                                 <h2 className="text-[14px] font-bold">2. Pricing</h2>
                             </div>
                             <div className="p-6 space-y-6">
-                                <div className="flex bg-[#f3f3f3] border border-[#d5d9d9] rounded-[3px] p-[2px] w-[180px]">
-                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-[2px] transition-all ${pricingMode === 'percent' ? 'bg-white text-[#111] shadow-sm' : 'text-[#565959]'}`}>Profit %</button>
-                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-[2px] transition-all ${pricingMode === 'manual' ? 'bg-white text-[#111] shadow-sm' : 'text-[#565959]'}`}>Manual Price</button>
+                                <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-[2px] w-[180px]">
+                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-indigo-700 shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
+                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-indigo-700 shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -679,17 +679,17 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
 
                                 {sellingPrice && costPrice > 0 && (
-                                    <div className={`p-5 rounded-[3px] border flex items-center justify-between ${parseFloat(sellingPrice) >= costPrice ? 'bg-green-50/30 border-green-100' : 'bg-red-50 border-red-100 animate-pulse'}`}>
+                                    <div className={`p-5 rounded-lg border flex items-center justify-between ${parseFloat(sellingPrice) >= costPrice ? 'bg-green-50/30 border-green-100' : 'bg-red-50 border-red-100 animate-pulse'}`}>
                                         <div className="flex items-center gap-4">
                                             <Activity className={parseFloat(sellingPrice) >= costPrice ? 'text-green-600' : 'text-red-600'} size={20} />
                                             <div>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#565959]">Net Profit</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Net Profit</p>
                                                 <p className={`text-[18px] font-bold ${parseFloat(sellingPrice) >= costPrice ? 'text-green-700' : 'text-red-600'}`}>Rs. {profitAmount}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#565959]">Final Customer Price</p>
-                                            <p className="text-[24px] font-bold text-[#c45500]">Rs. {parseFloat(sellingPrice).toLocaleString()}</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Final Customer Price</p>
+                                            <p className="text-[24px] font-bold text-[#4338ca]">Rs. {parseFloat(sellingPrice).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 )}
@@ -697,8 +697,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                         </div>
 
                         {/* 3. OTHER DETAILS */}
-                        <div className={`bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
-                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                        <div className={`bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
                                 <h2 className="text-[14px] font-bold">3. Other Details</h2>
                             </div>
                             <div className="p-6 space-y-5">
@@ -749,15 +749,15 @@ export default function ProductForm({ id }: ProductFormProps) {
                                     />
                                 </div>
                                 <Field label="Product Description">
-                                    <textarea rows={4} className={`${inputCls} h-auto py-2`} value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="Enter product details..." />
+                                    <textarea rows={4} className={`${inputCls} !h-auto py-2`} value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="Enter product details..." />
                                 </Field>
                             </div>
                         </div>
                     </div>
 
                     <aside className="w-full lg:w-[320px] shrink-0 space-y-4 lg:sticky lg:top-4">
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
+                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
+                            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
                                 <h3 className="text-[14px] font-bold text-center">Product Image</h3>
                             </div>
                             <div className="p-6 text-center">
@@ -766,7 +766,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                     onDragOver={(e) => { e.preventDefault(); setIsDraggingMain(true); }}
                                     onDragLeave={() => setIsDraggingMain(false)}
                                     onDrop={(e) => handleDrop(e, 'main')}
-                                    className={`aspect-square bg-[#fcfcfc] border-2 border-dashed rounded-[3px] flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#e77600] bg-orange-50' : 'border-[#adb1b8] hover:border-[#e77600]'}`}
+                                    className={`aspect-square bg-slate-50 border-2 border-dashed rounded-lg flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#4f46e5] bg-indigo-50' : 'border-slate-300 hover:border-[#4f46e5]'}`}
                                 >
                                     {imagePreview ? (
                                         <img src={imagePreview} className="w-full h-full object-contain p-2" alt="Preview" />
@@ -780,41 +780,41 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
 
                                 <div className="mt-6 text-left">
-                                    <h4 className="text-[11px] font-bold text-[#565959] uppercase tracking-widest mb-3">Gallery Pictures</h4>
+                                    <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-widest mb-3">Gallery Pictures</h4>
                                     <div
                                         onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
                                         onDragLeave={() => setIsDraggingGallery(false)}
                                         onDrop={(e) => handleDrop(e, 'gallery')}
-                                        className={`grid grid-cols-4 gap-2 p-2 rounded-[4px] transition-colors ${isDraggingGallery ? 'bg-orange-50 border border-dashed border-[#e77600]' : ''}`}
+                                        className={`grid grid-cols-4 gap-2 p-2 rounded-xl transition-colors ${isDraggingGallery ? 'bg-indigo-50 border border-dashed border-[#4f46e5]' : ''}`}
                                     >
                                         {galleryPreviews.map((src, i) => (
-                                            <div key={i} className="aspect-square bg-white border border-[#ddd] rounded-[2px] relative group overflow-hidden">
+                                            <div key={i} className="aspect-square bg-white border border-slate-200 rounded-md relative group overflow-hidden">
                                                 <img src={src} className="w-full h-full object-cover" />
                                                 <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-0 right-0 bg-black/50 text-white p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <X size={10} />
                                                 </button>
                                             </div>
                                         ))}
-                                        <button type="button" onClick={() => galleryInputRef.current?.click()} className="aspect-square border border-dashed border-[#adb1b8] rounded-[2px] flex items-center justify-center hover:bg-[#f7f8fa] transition-colors">
-                                            <Plus size={16} className="text-[#565959]" />
+                                        <button type="button" onClick={() => galleryInputRef.current?.click()} className="aspect-square border border-dashed border-slate-300 rounded-md flex items-center justify-center hover:bg-slate-50 transition-colors">
+                                            <Plus size={16} className="text-[#64748b]" />
                                         </button>
                                     </div>
                                     <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
                                 </div>
 
-                                <div className="mt-8 space-y-3 pt-6 border-t border-[#eee]">
-                                    <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
+                                <div className="mt-8 space-y-3 pt-6 border-t border-slate-100">
+                                    <Btn className="w-full text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
                                         <Save size={14} /> {isEdit ? 'Update Product' : 'Add Product'}
                                     </Btn>
-                                    <button onClick={() => router.push('/admin/products')} className="w-full text-[12px] text-[#565959] hover:text-[#c45500] hover:underline text-center">
+                                    <button onClick={() => router.push('/admin/products')} className="w-full text-[12px] text-[#64748b] hover:text-[#4338ca] hover:underline text-center">
                                         Discard
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-[#fff9e6] border border-[#ffebcc] rounded-[4px] p-4 flex gap-3 shadow-inner">
-                            <ShieldCheck className="text-[#e47911] shrink-0" size={20} />
-                            <p className="text-[12px] text-[#565959] leading-relaxed italic">Products are linked to their source stock signatures for data integrity.</p>
+                        <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 flex gap-3">
+                            <ShieldCheck className="text-indigo-600 shrink-0" size={20} />
+                            <p className="text-[12px] text-[#64748b] leading-relaxed italic">Products are linked to their source stock signatures for data integrity.</p>
                         </div>
                     </aside>
                 </form>

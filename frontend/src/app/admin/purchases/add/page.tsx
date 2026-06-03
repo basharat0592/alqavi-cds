@@ -2,40 +2,39 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Plus, Trash2, CheckCircle, Package, ArrowLeft, ChevronRight, RefreshCw, Search, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Package, ArrowLeft, RefreshCw, Search, ChevronDown } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { userService } from '@/services/user.service';
 import { inventoryService } from '@/services/inventory.service';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
+import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
 
 /* ─── Shared Components ─── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
+    <Button
+        type={type}
+        onClick={onClick}
+        disabled={loading || disabled}
+        variant={variant === 'secondary' ? 'outline' : 'primary'}
+        className={className}
+    >
+        {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+        {children}
+    </Button>
+);
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[13px] font-bold text-[#0f1111] mb-1">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        <label className="block text-[13px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
 
-const inputCls = "w-full h-[38px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const inputCls = ui.inputBase;
 const selectCls = `${inputCls} cursor-pointer`;
 
 const EMPTY_FORM = {
@@ -84,41 +83,41 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className={inputCls + " flex items-center justify-between text-left bg-white hover:bg-[#f3f7f7] group transition-all duration-200 shadow-sm border-[#888c8e]"}
+                className={inputCls + " flex items-center justify-between text-left bg-white hover:bg-slate-50 group transition-all duration-200"}
             >
                 {selected ? (
                     <div className="flex items-center gap-2 overflow-hidden py-1">
-                        <div className="w-8 h-8 rounded border border-gray-100 overflow-hidden shrink-0 bg-white">
+                        <div className="w-8 h-8 rounded border border-slate-100 overflow-hidden shrink-0 bg-white">
                             {selected.image ? (
                                 <img src={getImageUrl(selected.image) || ''} className="w-full h-full object-contain p-0.5" alt="" />
                             ) : (
-                                <Package size={14} className="text-gray-300 m-auto mt-2" />
+                                <Package size={14} className="text-slate-300 m-auto mt-2" />
                             )}
                         </div>
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-baseline gap-1 truncate leading-tight">
-                                <span className="text-[12px] font-bold text-[#111]">{selected.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
+                                <span className="text-[12px] font-bold text-slate-900">{selected.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                 {(selected.weight || selected.size) && (
-                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                    <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
                                         - {selected.weight}{selected.weight && selected.size ? ' • ' : ''}{selected.size}
                                     </span>
                                 )}
                             </div>
-                            <span className="text-[10px] text-[#565959] uppercase font-bold tracking-tighter shrink-0 mt-0.5">SKU: {selected.sku || 'N/A'}</span>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter shrink-0 mt-0.5">SKU: {selected.sku || 'N/A'}</span>
                         </div>
                     </div>
-                ) : <span className="text-[#565959] italic">Search Amazon products...</span>}
-                <ChevronDown size={14} className={`text-[#888c8e] transition-transform duration-300 ${open ? 'rotate-180 text-[#e77600]' : ''}`} />
+                ) : <span className="text-slate-400 italic">Search products...</span>}
+                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${open ? 'rotate-180 text-indigo-600' : ''}`} />
             </button>
 
             {open && (
-                <div className="absolute z-[100] w-[180%] left-0 mt-1 bg-white border border-[#cdcdcd] rounded-[4px] shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute z-[100] w-[180%] left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                     {/* Search Header */}
-                    <div className="p-2.5 bg-[#f3f3f3] border-b border-[#ddd]">
+                    <div className="p-2.5 bg-slate-50 border-b border-slate-100">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                             <input
-                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#888c8e] rounded-[3px] focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] outline-none bg-white"
+                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-lg focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none bg-white transition-all"
                                 placeholder="Type to filter products..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
@@ -131,59 +130,59 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
                         {filtered.length > 0 ? (
                             filtered.map((p: any) => (
-                                <div 
-                                    key={p.id} 
-                                    className="p-3.5 hover:bg-[#f3f7f7] cursor-pointer border-b border-[#eee] last:border-0 transition-all flex items-start gap-4 group"
+                                <div
+                                    key={p.id}
+                                    className="p-3.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-all flex items-start gap-4 group"
                                     onClick={() => { onSelect(p.id); setOpen(false); }}
                                 >
                                     {/* Thumbnail */}
-                                    <div className="w-12 h-12 bg-white rounded border border-[#ddd] overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#e77600] transition-colors">
+                                    <div className="w-12 h-12 bg-white rounded border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center group-hover:border-indigo-400 transition-colors">
                                         {p.image ? (
                                             <img src={getImageUrl(p.image) || ''} className="w-full h-full object-contain p-1" alt="" />
                                         ) : (
-                                            <Package size={20} className="text-gray-200" />
+                                            <Package size={20} className="text-slate-200" />
                                         )}
                                     </div>
 
                                     {/* Info */}
                                     <div className="flex-1 flex justify-between gap-4 min-w-0">
                                         <div className="flex flex-col min-w-0">
-                                            <div className="flex items-baseline gap-1 leading-[1.2] group-hover:text-[#e77600]">
-                                                <span className="text-[13px] font-bold text-[#111] group-hover:underline line-clamp-1">{p.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
+                                            <div className="flex items-baseline gap-1 leading-[1.2] group-hover:text-indigo-600">
+                                                <span className="text-[13px] font-bold text-slate-900 group-hover:underline line-clamp-1">{p.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                                 {(p.weight || p.size) && (
-                                                    <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                    <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
                                                         - {p.weight}{p.weight && p.size ? ' • ' : ''}{p.size}
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-y-0.5 gap-x-2 mt-1">
-                                                <span className="text-[10px] font-black text-[#565959] uppercase tracking-wider">SKU: {p.sku || 'N/A'}</span>
-                                                <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                                <span className={`text-[10px] font-bold ${p.quantity < 10 ? 'text-[#b12704]' : 'text-green-700'}`}>
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">SKU: {p.sku || 'N/A'}</span>
+                                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                <span className={`text-[10px] font-bold ${p.quantity < 10 ? 'text-rose-600' : 'text-emerald-700'}`}>
                                                     {p.quantity} in stock
                                                 </span>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Price Section */}
                                         <div className="flex flex-col items-end shrink-0">
-                                            <span className="text-[15px] font-black text-[#b12704]">{formatCurrency(p.retail_price || 0)}</span>
-                                            <span className="text-[9px] text-gray-400 font-medium">Retail Price</span>
+                                            <span className="text-[15px] font-black text-slate-900">{formatCurrency(p.retail_price || 0)}</span>
+                                            <span className="text-[9px] text-slate-400 font-medium">Retail Price</span>
                                         </div>
                                     </div>
                                 </div>
                             ))
                         ) : (
                             <div className="p-12 text-center flex flex-col items-center gap-2">
-                                <Search size={24} className="text-gray-300" />
-                                <span className="text-gray-400 text-[13px]">No results found for "{search}"</span>
+                                <Search size={24} className="text-slate-300" />
+                                <span className="text-slate-400 text-[13px]">No results found for "{search}"</span>
                             </div>
                         )}
                     </div>
 
                     {/* Footer View */}
-                    <div className="px-4 py-2 bg-[#f8f8f8] border-t border-[#ddd] text-center">
-                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Inventory Management Console</span>
+                    <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-center">
+                        <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Inventory Management Console</span>
                     </div>
                 </div>
             )}
@@ -211,15 +210,15 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
     return (
         <div className="relative w-full" ref={containerRef}>
             <button type="button" onClick={() => setOpen(!open)} className={inputCls + " flex items-center justify-between text-left"}>
-                <span className={selected ? 'text-[#0f1111]' : 'text-[#565959]'}>{selected ? selected.name : 'Select Supplier...'}</span>
-                <ChevronDown size={14} className="text-gray-400" />
+                <span className={selected ? 'text-slate-900' : 'text-slate-400'}>{selected ? selected.name : 'Select Supplier...'}</span>
+                <ChevronDown size={14} className="text-slate-400" />
             </button>
             {open && (
-                <div className="absolute z-[50] w-full mt-1 bg-white border border-[#ddd] rounded-md shadow-xl overflow-hidden">
-                    <div className="p-2 border-b"><input className="w-full px-3 py-1.5 text-[13px] border rounded outline-none" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                    <div className="p-2 border-b border-slate-100"><input className="w-full px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
                     <div className="max-h-[200px] overflow-y-auto">
                         {filtered.map((s: any) => (
-                            <div key={s.id} className="px-4 py-2 hover:bg-[#f3f7f7] cursor-pointer text-[13px] border-b border-gray-50 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
+                            <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[13px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
                         ))}
                     </div>
                 </div>
@@ -354,32 +353,28 @@ export default function AddPurchasePage() {
     const totalAmount = items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5">
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                    <ChevronRight size={10} />
-                    <Link href="/admin/purchases" className="hover:text-[#c45500] hover:underline">Purchases</Link>
-                    <ChevronRight size={10} />
-                    <span className="text-[#c45500]">New Purchase</span>
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-[22px] font-normal">Create Purchase Order</h1>
-                    <button onClick={() => router.back()} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
-                        <ArrowLeft size={14} /> Back
-                    </button>
-                </div>
-                <div className="border-b border-[#ddd] mb-6" />
+        <div className="pb-20">
+            <div className="max-w-[1100px] mx-auto">
+                <PageHeader
+                    title="New Purchase"
+                    subtitle="Create a purchase order with supplier, items, and totals."
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: 'New Purchase' }]}
+                    actions={
+                        <Button variant="outline" onClick={() => router.back()}>
+                            <ArrowLeft size={14} /> Back
+                        </Button>
+                    }
+                />
 
                 {loading ? (
-                    <div className="text-center py-20 text-[13px] text-[#565959]">Loading data...</div>
+                    <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-6 items-start">
                         <div className="flex-1 min-w-0 space-y-5">
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm">
-                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
-                                    <h2 className="text-[14px] font-bold">Order Information</h2>
-                                    <p className="text-[12px] text-[#565959]">Enter order number, supplier, and date.</p>
+                            <Card>
+                                <div className="px-6 py-4 border-b border-slate-100">
+                                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Information</h2>
+                                    <p className="text-[12px] text-slate-500">Enter order number, supplier, and date.</p>
                                 </div>
                                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <Field label="Order Number" required>
@@ -405,24 +400,24 @@ export default function AddPurchasePage() {
                                     </Field>
                                     <Field label="Shipping Cost">
                                         <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[13px]">$</span>
-                                            <input 
-                                                className={inputCls + " pl-6"} 
-                                                type="number" 
-                                                value={(form as any).shipping_cost || ''} 
-                                                onChange={e => setForm(f => ({ ...f, shipping_cost: parseFloat(e.target.value) || 0 }))} 
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">$</span>
+                                            <input
+                                                className={inputCls + " pl-6"}
+                                                type="number"
+                                                value={(form as any).shipping_cost || ''}
+                                                onChange={e => setForm(f => ({ ...f, shipping_cost: parseFloat(e.target.value) || 0 }))}
                                                 placeholder="0.00"
                                             />
                                         </div>
                                     </Field>
                                     <Field label="Tax Rate (%)">
                                         <div className="relative">
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-[13px]">%</span>
-                                            <input 
-                                                className={inputCls + " pr-8"} 
-                                                type="number" 
-                                                value={(form as any).tax_rate || ''} 
-                                                onChange={e => setForm(f => ({ ...f, tax_rate: parseFloat(e.target.value) || 0 }))} 
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
+                                            <input
+                                                className={inputCls + " pr-8"}
+                                                type="number"
+                                                value={(form as any).tax_rate || ''}
+                                                onChange={e => setForm(f => ({ ...f, tax_rate: parseFloat(e.target.value) || 0 }))}
                                                 placeholder="0"
                                             />
                                         </div>
@@ -436,13 +431,13 @@ export default function AddPurchasePage() {
                                         </select>
                                     </Field>
                                 </div>
-                            </div>
+                            </Card>
 
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm relative z-[10]">
-                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                            <Card className="relative z-[10]">
+                                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-[14px] font-bold">Order Items</h2>
-                                        <p className="text-[12px] text-[#565959]">Select products and quantities.</p>
+                                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Items</h2>
+                                        <p className="text-[12px] text-slate-500">Select products and quantities.</p>
                                     </div>
                                     <Btn variant="secondary" onClick={addItem}><Plus size={14} /> Add Item</Btn>
                                 </div>
@@ -453,22 +448,22 @@ export default function AddPurchasePage() {
                                         const isMax = p && item.quantity >= maxQty;
 
                                         return (
-                                            <div key={i} className="bg-white border border-[#e3e6e6] rounded-[8px] p-4 transition-all hover:border-[#e77600] hover:shadow-md group">
+                                            <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-4 transition-all hover:border-indigo-400 hover:shadow-md group">
                                                 <div className="grid grid-cols-12 gap-4 items-center">
                                                     <div className="col-span-12 lg:col-span-5">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Product</label>
+                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</label>
                                                         <ProductSelector selectedId={item.product} products={products} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'product', val)} />
                                                     </div>
                                                     <div className="col-span-4 lg:col-span-2 text-center">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Type</label>
+                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
                                                         <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
                                                             <option value="SINGLE">Single</option>
                                                             <option value="CARTON">Carton</option>
                                                         </select>
                                                     </div>
                                                     <div className="col-span-4 lg:col-span-2 relative text-center">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Qty</label>
-                                                        <input className={inputCls + " text-center font-bold " + (isMax ? 'text-red-600 border-red-400' : 'text-[#c45500]')} type="number" min="1" value={item.quantity || ''} onChange={e => {
+                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Qty</label>
+                                                        <input className={inputCls + " text-center font-bold tabular-nums " + (isMax ? 'text-rose-600 border-rose-400' : 'text-indigo-600')} type="number" min="1" value={item.quantity || ''} onChange={e => {
                                                             let val = e.target.value === '' ? 0 : parseInt(e.target.value);
                                                             const p = products.find(prod => String(prod.id) === String(item.product));
                                                             if (p) {
@@ -477,82 +472,78 @@ export default function AddPurchasePage() {
                                                             }
                                                             updateItem(i, 'quantity', val);
                                                         }} />
-                                                        {isMax && <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[7px] font-black text-red-600 uppercase">MAX</span>}
+                                                        {isMax && <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[7px] font-black text-rose-600 uppercase">MAX</span>}
                                                     </div>
                                                     <div className="col-span-3 lg:col-span-2 text-center">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pcs/Ctn</label>
-                                                        <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-gray-50' : '') + " text-center"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
+                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pcs/Ctn</label>
+                                                        <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-slate-50' : '') + " text-center tabular-nums"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
                                                     </div>
-                                                    <div className="col-span-1 flex justify-center pt-5"><button onClick={() => removeItem(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={18} /></button></div>
+                                                    <div className="col-span-1 flex justify-center pt-5"><button onClick={() => removeItem(i)} className="text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={18} /></button></div>
                                                 </div>
                                                 {item.product && (
-                                                    <div className="mt-3 pt-3 border-t border-gray-50 flex justify-between items-center text-[11px]">
-                                                        <div className="flex gap-4 text-gray-500">
-                                                            <span>Cost: <b className="text-gray-800">{formatCurrency(item.unit_price)}</b></span>
-                                                            <span className="w-[1px] h-3 bg-gray-200" />
-                                                            <span>Total: <b className="text-gray-800">{item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity} Pcs</b></span>
+                                                    <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-[11px]">
+                                                        <div className="flex gap-4 text-slate-500">
+                                                            <span>Cost: <b className="text-slate-800 tabular-nums">{formatCurrency(item.unit_price)}</b></span>
+                                                            <span className="w-[1px] h-3 bg-slate-200" />
+                                                            <span>Total: <b className="text-slate-800 tabular-nums">{item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity} Pcs</b></span>
                                                         </div>
-                                                        <div className="text-[14px] font-black text-[#b12704]">{formatCurrency(calculateSubtotal(item))}</div>
+                                                        <div className="text-[14px] font-black text-slate-900 tabular-nums">{formatCurrency(calculateSubtotal(item))}</div>
                                                     </div>
                                                 )}
                                             </div>
                                         );
                                     })}
                                 </div>
-                            </div>
+                            </Card>
 
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm">
-                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]"><h2 className="text-[14px] font-bold">Notes (Optional)</h2></div>
-                                <div className="p-6"><textarea className="w-full p-3 border rounded text-[13px] outline-none focus:border-[#e77600]" rows={3} placeholder="Any notes for this purchase..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
-                            </div>
+                            <Card>
+                                <div className="px-6 py-4 border-b border-slate-100"><h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Notes (Optional)</h2></div>
+                                <div className="p-6"><textarea className="w-full p-3 border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" rows={3} placeholder="Any notes for this purchase..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+                            </Card>
                         </div>
 
                         <div className="w-full lg:w-[300px] space-y-4">
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm p-5">
-                                <h3 className="text-[14px] font-bold mb-4">Order Summary</h3>
-                                <div className="space-y-3 border-b pb-4 mb-4">
+                            <Card className="p-5">
+                                <h3 className="text-[14px] font-bold text-slate-900 tracking-tight mb-4">Order Summary</h3>
+                                <div className="space-y-3 border-b border-slate-100 pb-4 mb-4">
                                     <div className="flex justify-between text-[13px]">
-                                        <span className="text-[#565959]">Items Total:</span>
-                                        <span className="font-medium">{formatCurrency(totalAmount)}</span>
+                                        <span className="text-slate-500">Items Total:</span>
+                                        <span className="font-medium text-slate-700 tabular-nums">{formatCurrency(totalAmount)}</span>
                                     </div>
                                     <div className="flex justify-between text-[13px]">
-                                        <span className="text-[#565959]">Shipping:</span>
-                                        <span className={((form as any).shipping_cost > 0) ? "font-medium" : "text-green-700 font-bold"}>
+                                        <span className="text-slate-500">Shipping:</span>
+                                        <span className={((form as any).shipping_cost > 0) ? "font-medium text-slate-700 tabular-nums" : "text-emerald-700 font-bold"}>
                                             {(form as any).shipping_cost > 0 ? formatCurrency((form as any).shipping_cost) : 'FREE'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-[13px]">
-                                        <span className="text-[#565959]">Estimated Tax ({(form as any).tax_rate}%):</span>
-                                        <span className="font-medium">{formatCurrency((totalAmount * ((form as any).tax_rate || 0)) / 100)}</span>
+                                        <span className="text-slate-500">Estimated Tax ({(form as any).tax_rate}%):</span>
+                                        <span className="font-medium text-slate-700 tabular-nums">{formatCurrency((totalAmount * ((form as any).tax_rate || 0)) / 100)}</span>
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center mb-6">
-                                    <span className="text-[16px] font-bold">Order Total:</span>
-                                    <span className="text-[18px] font-black text-[#b12704]">
+                                    <span className="text-[16px] font-bold text-slate-900">Order Total:</span>
+                                    <span className="text-[18px] font-black text-slate-900 tabular-nums">
                                         {formatCurrency(totalAmount + ((form as any).shipping_cost || 0) + (totalAmount * ((form as any).tax_rate || 0)) / 100)}
                                     </span>
                                 </div>
-                                <Btn className="w-full h-[35px] text-[14px] justify-center" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>Place Order</Btn>
-                            </div>
+                                <Btn className="w-full justify-center" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>Place Order</Btn>
+                            </Card>
                         </div>
                     </div>
                 )}
 
-                {successOrder && (
-                    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-                        <div className="bg-white w-full max-w-[450px] rounded-[8px] overflow-hidden shadow-2xl scale-in-center">
-                            <div className="p-8 text-center">
-                                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
-                                <h2 className="text-[20px] font-bold mb-2 text-[#0f1111]">Order Placed Successfully!</h2>
-                                <p className="text-[13px] text-[#565959] mb-6">Your purchase order <b className="text-[#0f1111]">{successOrder.purchase_number}</b> has been recorded.</p>
-                                <div className="flex flex-col gap-2">
-                                    <Btn className="w-full h-[35px] justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
-                                    <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#007185] hover:underline">Create Another Order</button>
-                                </div>
-                            </div>
+                <Modal open={!!successOrder} onClose={() => setSuccessOrder(null)} size="sm">
+                    <div className="py-4 text-center">
+                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
+                        <h2 className="text-[20px] font-bold tracking-tight mb-2 text-slate-900">Order Placed Successfully!</h2>
+                        <p className="text-[13px] text-slate-500 mb-6">Your purchase order <b className="text-slate-900">{successOrder?.purchase_number}</b> has been recorded.</p>
+                        <div className="flex flex-col gap-2">
+                            <Btn className="w-full justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
+                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline">Create Another Order</button>
                         </div>
                     </div>
-                )}
+                </Modal>
             </div>
 
             <WarehouseSelectionModal isOpen={isWarehouseModalOpen} onClose={() => setIsWarehouseModalOpen(false)} onConfirm={(whId) => handleSave(whId)} loading={saving} />

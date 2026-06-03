@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import {
-    Globe, Layout, Image as ImageIcon, Phone, Settings, Menu,
-    Palette, CheckCircle, Loader2, Eye, RefreshCw, ChevronRight
+    Globe, Layout, Image as ImageIcon, Phone, Menu,
+    Palette, CheckCircle, Loader2, Eye, RefreshCw
 } from 'lucide-react';
 import cmsService, { SiteSettings, WebsiteSection, MediaAsset } from '@/services/cms.service';
 import { productService, categoryService } from '@/lib/api';
-import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { PageHeader, Button, Badge } from '@/components/admin/ui';
 
 import BrandingTab from './tabs/BrandingTab';
 import SectionsTab from './tabs/SectionsTab';
@@ -34,21 +34,6 @@ const defaultSettings: SiteSettings = {
     address: '', google_maps_url: '', instagram_url: '', facebook_url: '', tiktok_url: '', youtube_url: '',
     meta_title: '', meta_description: '', meta_keywords: '',
     google_analytics_id: '', pixel_id: '',
-};
-
-// ── AMAZON DESIGN SYSTEM COMPONENTS ──
-const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[31px] px-4 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <Loader2 className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
 };
 
 export default function WebsiteSettingsPage() {
@@ -108,65 +93,55 @@ export default function WebsiteSettingsPage() {
     };
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-[70vh] bg-white">
+        <div className="flex items-center justify-center min-h-[70vh]">
             <div className="text-center space-y-4">
-                <Loader2 className="w-12 h-12 text-[#c45500] animate-spin mx-auto" strokeWidth={1} />
-                <p className="text-[#565959] font-medium text-[13px] animate-pulse">Loading CMS Console...</p>
+                <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" strokeWidth={1} />
+                <p className="text-slate-500 font-medium text-[13px] animate-pulse">Loading CMS Console...</p>
             </div>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#F8F9FA] pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-4 md:px-6 pt-4 md:pt-5 text-left">
-                {/* ── BREADCRUMB ── */}
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
-                    <span className="hover:text-[#c45500] hover:underline cursor-pointer">Dashboard</span>
-                    <ChevronRight size={10} />
-                    <span className="text-[#c45500]">Website CMS</span>
-                </div>
-
-                {/* ── TITLE SECTION ── */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
-                    <div className="flex flex-col gap-0.5 w-full md:w-auto">
-                        <div className="flex items-center flex-wrap gap-2 sm:gap-3">
-                            <h1 className="text-[22px] font-normal text-[#111]">Elite CMS Console</h1>
+        <div className="pb-20">
+            <div className="max-w-[1100px] mx-auto text-left">
+                {/* ── PAGE HEADER ── */}
+                <PageHeader
+                    title="Website CMS"
+                    subtitle="Manage landing page sections, media, and site identity."
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Website CMS' }]}
+                    actions={
+                        <div className="flex items-center gap-2">
                             {saving ? (
-                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full uppercase animate-pulse">
+                                <Badge tone="amber">
                                     <RefreshCw size={10} className="animate-spin" /> Auto-Saving
-                                </span>
+                                </Badge>
                             ) : lastSaved && (
-                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-green-600 bg-green-50 border border-green-100 px-2.5 py-0.5 rounded-full uppercase">
+                                <Badge tone="green">
                                     <CheckCircle size={10} /> Synced {lastSaved.toLocaleTimeString()}
-                                </span>
+                                </Badge>
                             )}
+                            <Button variant="outline" size="sm" onClick={loadAll}>
+                                <RefreshCw size={14} /> Refresh
+                            </Button>
+                            <a href="/" target="_blank" className="contents">
+                                <Button variant="primary" size="sm">
+                                    <Eye size={14} /> View Site
+                                </Button>
+                            </a>
                         </div>
-                        <p className="text-[13px] text-[#565959]">Manage landing page sections, media, and site identity.</p>
-                    </div>
-
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                        <AmazonBtn variant="secondary" onClick={loadAll} className="w-full md:w-auto justify-center">
-                            <RefreshCw size={14} /> Refresh
-                        </AmazonBtn>
-                        <a href="/" target="_blank" className="contents">
-                            <AmazonBtn className="w-full md:w-auto justify-center">
-                                <Eye size={14} /> View Site
-                            </AmazonBtn>
-                        </a>
-                    </div>
-                </div>
-                <div className="border-b border-[#ddd] mb-6" />
+                    }
+                />
 
                 {/* ── TABS NAVIGATION ── */}
-                <div className="flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide border-b border-[#ddd] mb-6 pb-0.5">
+                <div className="flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide border-b border-slate-200 mb-6 pb-0.5">
                     {TABS.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 pb-3.5 text-[14px] font-medium transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-[#c45500]' : 'text-[#565959] hover:text-[#111]'
+                            className={`flex items-center gap-2 pb-3.5 text-[14px] font-semibold transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'
                                 }`}>
                             <tab.icon size={16} />
                             <span>{tab.label}</span>
                             {activeTab === tab.id && (
-                                <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#c45500]" />
+                                <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-indigo-600" />
                             )}
                         </button>
                     ))}

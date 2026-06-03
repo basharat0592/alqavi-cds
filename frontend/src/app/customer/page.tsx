@@ -32,7 +32,7 @@ export default function Home() {
     const [activeCategory, setActiveCategory] = useState('All');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { addToCart } = useCart();
+    const { addToCart, closeCart } = useCart();
     const [openFaq, setOpenFaq] = useState<number | null>(null);
     const [maxItems, setMaxItems] = useState(12);
     const [isReviewOpen, setIsReviewOpen] = useState(false);
@@ -233,51 +233,81 @@ export default function Home() {
                                                 initial={{ opacity: 0, y: 28, scale: 0.95 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
-                                                className="group/promo pointer-events-auto relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl ring-1 ring-black/5 hover:-translate-y-1 transition-transform duration-500"
+                                                className="group/promo pointer-events-auto relative w-full max-w-md overflow-hidden rounded-[30px] bg-gradient-to-br from-white/[0.14] via-white/[0.06] to-white/[0.03] backdrop-blur-2xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.75)] ring-1 ring-white/10 border border-white/15 hover:-translate-y-1.5 transition-all duration-500"
                                             >
-                                                {/* Discount seal */}
-                                                {heroPromoDiscount > 0 && (
-                                                    <div className="absolute -top-4 -right-4 z-10 w-16 h-16 rounded-full bg-gradient-to-br from-[#E6C04D] to-[#C7991F] text-white flex flex-col items-center justify-center shadow-xl border-[3px] border-white rotate-12">
-                                                        <span className="text-base font-black leading-none">{heroPromoDiscount}%</span>
-                                                        <span className="text-[8px] font-black uppercase tracking-[0.25em] mt-0.5">Off</span>
-                                                    </div>
-                                                )}
+                                                {/* Top sheen */}
+                                                <div className="pointer-events-none absolute inset-x-8 top-0 z-20 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
 
-                                                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-[#119AB8]">
-                                                    <Sparkles size={12} /> Special Offer
-                                                </span>
+                                                {/* Cover image */}
+                                                <div className="relative h-48 overflow-hidden">
+                                                    <img
+                                                        src={getImageUrl(heroPromoContent.image || heroPromoProduct.image || heroPromoProduct.catalog_image || heroPromoProduct.image_url)}
+                                                        className="w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-700"
+                                                        alt={heroPromoProduct.product_name || 'Special Offer'}
+                                                    />
+                                                    {/* Legibility gradient */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-slate-950/40" />
 
-                                                <div className="flex items-center gap-4 mt-3.5">
-                                                    <div className="w-20 h-20 shrink-0 rounded-2xl bg-[#F0F7FF] border border-slate-100 overflow-hidden flex items-center justify-center">
-                                                        <img
-                                                            src={getImageUrl(heroPromoContent.image || heroPromoProduct.image || heroPromoProduct.catalog_image || heroPromoProduct.image_url)}
-                                                            className="w-full h-full object-cover group-hover/promo:scale-105 transition-transform duration-500"
-                                                            alt={heroPromoProduct.product_name || 'Special Offer'}
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="text-[#0f1111] font-bold text-sm leading-snug line-clamp-2 tracking-tight">
+                                                    {/* Eyebrow */}
+                                                    <span className="absolute top-5 left-6 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-white/90 shadow">
+                                                        <Sparkles size={12} className="text-[#5FDDEE]" /> Special Offer
+                                                    </span>
+
+                                                    {/* Discount pill */}
+                                                    {heroPromoDiscount > 0 && (
+                                                        <span className="absolute top-5 right-6 rounded-full bg-gradient-to-r from-[#E6C04D] to-[#C7991F] px-3 py-1.5 text-[11px] font-black tracking-wide text-[#1a1205] shadow-lg shadow-black/30">
+                                                            −{heroPromoDiscount}% OFF
+                                                        </span>
+                                                    )}
+
+                                                    {/* Title + price over image */}
+                                                    <div className="absolute bottom-5 left-6 right-6">
+                                                        <h3 className="text-white font-semibold text-[18px] leading-snug line-clamp-2 tracking-tight drop-shadow-md">
                                                             {heroPromoContent.title || heroPromoProduct.product_name}
                                                         </h3>
-                                                        <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
-                                                            <span className="text-[#0f1111] text-2xl font-black tracking-tight leading-none">Rs. {heroPromoFinal.toLocaleString()}</span>
+                                                        <div className="flex items-baseline gap-2.5 mt-2 flex-wrap">
+                                                            <span className="text-white text-[34px] font-black tracking-tight leading-none drop-shadow-lg">Rs. {heroPromoFinal.toLocaleString()}</span>
                                                             {heroPromoDiscount > 0 && (
-                                                                <span className="text-slate-400 line-through text-[13px] font-bold">Rs. {heroPromoPrice.toLocaleString()}</span>
+                                                                <span className="text-white/60 line-through text-[15px] font-medium">Rs. {heroPromoPrice.toLocaleString()}</span>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <button
-                                                    onClick={() => {
-                                                        handleAdd(heroPromoProduct);
-                                                        router.push('/customer/checkout');
-                                                    }}
-                                                    className="group/btn mt-5 w-full py-3.5 bg-[#119AB8] hover:bg-[#13B0D1] text-white rounded-xl font-black uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95 shadow-lg shadow-[#119AB8]/25 flex items-center justify-center gap-2"
-                                                >
-                                                    {heroPromoContent.cta_text || 'Grab Deal'}
-                                                    <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                                                </button>
+                                                {/* CTA section */}
+                                                <div className="relative p-5">
+                                                    {heroPromoDiscount > 0 && heroPromoPrice > heroPromoFinal && (
+                                                        <div className="mb-3 flex items-center justify-between">
+                                                            <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#5FDDEE]">
+                                                                <Zap size={14} className="fill-[#5FDDEE]" /> You save Rs. {(heroPromoPrice - heroPromoFinal).toLocaleString()}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                                                                <Clock size={11} /> Limited time
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        onClick={() => {
+                                                            handleAdd(heroPromoProduct);
+                                                            closeCart();
+                                                            router.push('/customer/checkout');
+                                                        }}
+                                                        className="group/btn relative w-full overflow-hidden rounded-2xl py-4 bg-gradient-to-r from-[#0E8AA6] via-[#13B0D1] to-[#0E8AA6] bg-[length:200%_100%] text-white font-bold uppercase tracking-[0.25em] text-[12px] shadow-lg shadow-[#13B0D1]/30 transition-all duration-500 active:scale-[0.98] hover:bg-[position:100%_0]"
+                                                    >
+                                                        <span className="relative z-10 flex items-center justify-center gap-2">
+                                                            {heroPromoContent.cta_text || 'Grab Deal'}
+                                                            <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                                                        </span>
+                                                        <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700" />
+                                                    </button>
+
+                                                    {/* Trust row */}
+                                                    <div className="mt-3.5 flex items-center justify-center gap-4 text-[10px] font-medium text-white/55">
+                                                        <span className="inline-flex items-center gap-1.5"><ShieldCheck size={13} className="text-[#5FDDEE]" /> 100% Authentic</span>
+                                                        <span className="h-3 w-px bg-white/15" />
+                                                        <span className="inline-flex items-center gap-1.5"><Truck size={13} className="text-[#5FDDEE]" /> Fast Delivery</span>
+                                                    </div>
+                                                </div>
                                             </motion.div>
                                         </div>
                                     )}

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { inventoryService } from '@/lib/api';
 import {
-    ArrowLeft, History, Save, Loader2, Info,
-    ArrowRightLeft, Package, Warehouse, User, AlertCircle
+    ArrowLeft, Save, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
 export default function AddMovementPage() {
     const router = useRouter();
@@ -76,46 +76,55 @@ export default function AddMovementPage() {
     };
 
     const inputCls = (field: string) =>
-        `w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border rounded text-sm font-medium text-gray-900 dark:text-white outline-none transition-all focus:bg-white dark:focus:bg-slate-900 ${errors[field]
-            ? 'border-red-300 focus:border-red-400'
-            : 'border-gray-200 dark:border-slate-700 focus:border-[#F59E0B]'
+        `${ui.inputBase} ${errors[field]
+            ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-500/10'
+            : ''
         }`;
 
-    const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-slate-400 mb-1.5";
+    const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5";
 
     return (
-        <div className="max-w-[800px] mx-auto pb-12 font-sans px-4 mt-8">
+        <div className="max-w-[800px] mx-auto pb-12">
 
-            {/* Page Header */}
-            <div className="flex items-center gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
-                <Link href="/admin/inventory/movements" className="p-2 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded text-gray-400 hover:text-[#F59E0B] transition-all shadow-sm">
-                    <ArrowLeft className="h-4 w-4" />
-                </Link>
-                <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Log Manual Movement</h1>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Record a physical stock transition or return event</p>
-                </div>
-            </div>
+            <PageHeader
+                title="New Stock Movement"
+                subtitle="Record a physical stock transition or return event"
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Stock Movements', href: '/admin/inventory/movements' },
+                    { label: 'New Stock Movement' },
+                ]}
+                actions={
+                    <Link
+                        href="/admin/inventory/movements"
+                        className="inline-flex items-center justify-center gap-2 h-10 px-4 text-[13.5px] rounded-lg font-semibold bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 transition-all"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </Link>
+                }
+            />
 
             {/* Form Card */}
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-[0_8px_30_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30_rgba(0,0,0,0.2)] overflow-hidden">
+            <Card className="overflow-hidden">
+                <form onSubmit={handleSubmit}>
                 <div className="p-8 space-y-8">
 
                     {/* Product & Warehouse */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
-                            <label className={labelCls}>Inventory Item <span className="text-red-500">*</span></label>
+                            <label className={labelCls}>Inventory Item <span className="text-rose-500">*</span></label>
                             <select value={form.product} onChange={e => handle('product', e.target.value)}
-                                className={`${inputCls('product')} font-bold`}>
+                                className={inputCls('product')}>
                                 <option value="">Select SKU/Location</option>
                                 {products.map(p => (
                                     <option key={p.id} value={p.product}>{p.product_name} — {p.warehouse_name}</option>
                                 ))}
                             </select>
-                            {errors.product && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.product}</p>}
+                            {errors.product && <p className="text-rose-500 text-[11px] font-semibold mt-1">{errors.product}</p>}
                         </div>
                         <div>
-                            <label className={labelCls}>Select Warehouse Node <span className="text-red-500">*</span></label>
+                            <label className={labelCls}>Select Warehouse Node <span className="text-rose-500">*</span></label>
                             <select value={form.warehouse} onChange={e => handle('warehouse', e.target.value)}
                                 className={inputCls('warehouse')}>
                                 <option value="">Select Target Node</option>
@@ -123,7 +132,7 @@ export default function AddMovementPage() {
                                     <option key={wh.id} value={wh.id}>{wh.name}</option>
                                 ))}
                             </select>
-                            {errors.warehouse && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.warehouse}</p>}
+                            {errors.warehouse && <p className="text-rose-500 text-[11px] font-semibold mt-1">{errors.warehouse}</p>}
                         </div>
                     </div>
 
@@ -140,10 +149,10 @@ export default function AddMovementPage() {
                             </select>
                         </div>
                         <div>
-                            <label className={labelCls}>Quantity Delta <span className="text-red-500">*</span></label>
+                            <label className={labelCls}>Quantity Delta <span className="text-rose-500">*</span></label>
                             <input type="number" value={form.quantity} onChange={e => handle('quantity', e.target.value)}
-                                className={`${inputCls('quantity')} font-black`} placeholder="0" />
-                            {errors.quantity && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.quantity}</p>}
+                                className={`${inputCls('quantity')} tabular-nums font-semibold`} placeholder="0" />
+                            {errors.quantity && <p className="text-rose-500 text-[11px] font-semibold mt-1">{errors.quantity}</p>}
                         </div>
                         <div>
                             <label className={labelCls}>Reference ID / Doc #</label>
@@ -152,29 +161,28 @@ export default function AddMovementPage() {
                         </div>
                     </div>
 
-                    <hr className="border-gray-100 dark:border-slate-800" />
+                    <hr className="border-slate-100" />
 
                     {/* Notes */}
                     <div>
                         <label className={labelCls}>Transaction Notes</label>
                         <textarea value={form.notes} onChange={e => handle('notes', e.target.value)}
-                            className={`${inputCls('notes')} h-32 resize-none shadow-inner`} placeholder="Physical shipment details, tracking info, or reason..." />
+                            className={`${inputCls('notes')} h-32 py-2.5 resize-none`} placeholder="Physical shipment details, tracking info, or reason..." />
                     </div>
                 </div>
 
                 {/* Footer Controls */}
-                <div className="bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-800 p-6 flex items-center justify-end gap-3">
-                    <Link href="/admin/inventory/movements" className="px-6 py-2 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-[10px] uppercase tracking-widest rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                <div className="bg-slate-50/60 border-t border-slate-200/70 p-6 flex items-center justify-end gap-3">
+                    <Link href="/admin/inventory/movements" className="inline-flex items-center justify-center h-10 px-4 text-[13.5px] rounded-lg font-semibold bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 transition-all">
                         Cancel
                     </Link>
-                    <button type="submit" disabled={saving}
-                        style={{ backgroundColor: '#F59E0B' }}
-                        className="flex items-center gap-2 px-8 py-2 text-white font-bold text-[10px] uppercase tracking-widest rounded transition-all shadow-sm disabled:opacity-50">
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                    <Button type="submit" variant="primary" disabled={saving}>
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {saving ? 'Recording...' : 'Commit Movement Record'}
-                    </button>
+                    </Button>
                 </div>
-            </form>
+                </form>
+            </Card>
         </div>
     );
 }

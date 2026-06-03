@@ -102,6 +102,9 @@ export const authService = {
             const refreshToken = data.refresh;
             const safeUser = data.user as User;
             authService.setSession(token, refreshToken, safeUser);
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem('admin_session_start', String(Date.now())); // fresh dashboard session timer
+            }
             return { user: safeUser, token };
         } catch (error: any) {
             const isNetworkError = !error.response;
@@ -118,6 +121,7 @@ export const authService = {
         sessionStorage.removeItem(STORAGE_KEY_USER);
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('admin_session_start'); // reset dashboard session timer
     },
 
     getUser: (): User | null => {

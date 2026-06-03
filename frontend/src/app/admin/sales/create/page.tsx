@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { productService, userService, orderService, companyService, Product, inventoryService } from '@/lib/api';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
+import { PageHeader, Card, Button, Modal } from '@/components/admin/ui';
 
 const EMPTY_FORM = {
     order_number: '', 
@@ -27,28 +28,28 @@ type LineItem = { product: string; product_name: string; quantity: number; unit_
 
 // ── Reusable form field wrappers ──────────────────────────────────────────────
 const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
-    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
+    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
         {children}{required && <span className="text-red-500 ml-0.5">*</span>}
     </label>
 );
 
 const fieldCls = (err?: boolean) =>
-    `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-400' : 'border-slate-200 dark:border-white/10'}`;
+    `w-full px-3 py-2 text-sm bg-white border rounded-lg outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400 text-slate-800 ${err ? 'border-red-400' : 'border-slate-200'}`;
 
-const selectCls = `w-full px-3 py-2 text-sm bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/10 text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-50`;
+const selectCls = `w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 text-slate-800 cursor-pointer disabled:opacity-50`;
 
 // ── Section panel wrapper ─────────────────────────────────────────────────────
 const Panel = ({ title, icon: Icon, action, children }: { title: string; icon?: any; action?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
+    <Card className="overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
             <div className="flex items-center gap-2">
-                {Icon && <Icon className="h-4 w-4 text-[#F59E0B]" />}
-                <span className="text-sm font-semibold text-slate-800 dark:text-white">{title}</span>
+                {Icon && <Icon className="h-4 w-4 text-indigo-600" />}
+                <span className="text-sm font-semibold text-slate-800">{title}</span>
             </div>
             {action}
         </div>
         <div className="p-5">{children}</div>
-    </div>
+    </Card>
 );
 
 /* ─── Searchable Customer Selector (Custom) ─── */
@@ -85,7 +86,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, selectCls }: any) =
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#F59E0B]" />
+                <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600" />
                 <input
                     className={selectCls + " pl-10 pr-10 cursor-pointer"}
                     placeholder="Search customer account..."
@@ -98,22 +99,22 @@ const CustomerSelector = ({ selectedId, onSelect, customers, selectCls }: any) =
             </div>
 
             {open && (
-                <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl z-[1001] overflow-hidden">
+                <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl z-[1001] overflow-hidden">
                     <div className="max-h-[300px] overflow-y-auto">
-                        <div 
+                        <div
                             onClick={() => { onSelect(null); setOpen(false); }}
-                            className="p-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer border-b border-slate-100 dark:border-white/5 flex items-center gap-3"
+                            className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex items-center gap-3"
                         >
-                            <div className="w-8 h-8 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center text-slate-400"><X size={14} /></div>
+                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"><X size={14} /></div>
                             <span className="text-[13px] font-bold text-slate-500 italic">Guest Customer (No Account)</span>
                         </div>
                         {filtered.map((c: any) => (
                             <div
                                 key={c.id}
                                 onClick={() => { onSelect(c); setOpen(false); }}
-                                className="flex items-center gap-3 p-3 hover:bg-[#F59E0B]/5 cursor-pointer border-b last:border-0 border-slate-100 dark:border-white/5"
+                                className="flex items-center gap-3 p-3 hover:bg-indigo-50 cursor-pointer border-b last:border-0 border-slate-100"
                             >
-                                <div className="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10 shrink-0">
+                                <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                                     {c.avatar ? (
                                         <img src={getAvatarUrl(c.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                     ) : (
@@ -121,7 +122,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, selectCls }: any) =
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-bold text-slate-800 dark:text-white truncate">{c.first_name} {c.last_name}</p>
+                                    <p className="text-[13px] font-bold text-slate-800 truncate">{c.first_name} {c.last_name}</p>
                                     <p className="text-[10px] text-slate-500 font-medium">Ph: {c.phone || 'N/A'}</p>
                                 </div>
                             </div>
@@ -159,7 +160,7 @@ const ProductSelector = ({ selectedId, onSelect, products, selectCls }: any) => 
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <Package size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#F59E0B]" />
+                <Package size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600" />
                 <input
                     className={selectCls + " pl-10 pr-10 cursor-pointer"}
                     placeholder="Search product..."
@@ -172,7 +173,7 @@ const ProductSelector = ({ selectedId, onSelect, products, selectCls }: any) => 
             </div>
 
             {open && (
-                <div className="absolute top-[calc(100%+4px)] left-0 w-[400px] bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl z-[1001] overflow-hidden">
+                <div className="absolute top-[calc(100%+4px)] left-0 w-[400px] bg-white border border-slate-200 rounded-xl shadow-2xl z-[1001] overflow-hidden">
                     <div className="max-h-[300px] overflow-y-auto">
                         {filtered.length === 0 && (
                             <div className="p-10 text-center">
@@ -183,9 +184,9 @@ const ProductSelector = ({ selectedId, onSelect, products, selectCls }: any) => 
                             <div
                                 key={p.id}
                                 onClick={() => { onSelect(p.id); setOpen(false); }}
-                                className={`flex items-center gap-3 p-3 hover:bg-[#F59E0B]/5 cursor-pointer border-b last:border-0 border-slate-100 dark:border-white/5 ${!p.is_in_stock ? 'opacity-50 grayscale' : ''}`}
+                                className={`flex items-center gap-3 p-3 hover:bg-indigo-50 cursor-pointer border-b last:border-0 border-slate-100 ${!p.is_in_stock ? 'opacity-50 grayscale' : ''}`}
                             >
-                                <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10 shrink-0">
+                                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                                     {(p.image || p.catalog_image) ? (
                                         <img src={getImageUrl(p.image || p.catalog_image)} alt="" className="w-full h-full object-cover" />
                                     ) : (
@@ -194,7 +195,7 @@ const ProductSelector = ({ selectedId, onSelect, products, selectCls }: any) => 
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[13px] font-bold text-slate-800 dark:text-white truncate">
+                                        <p className="text-[13px] font-bold text-slate-800 truncate">
                                             {p.name}
                                             {(p.weight || p.size) && (
                                                 <span className="ml-1.5 text-[10px] text-slate-500 font-normal">
@@ -202,7 +203,7 @@ const ProductSelector = ({ selectedId, onSelect, products, selectCls }: any) => 
                                                 </span>
                                             )}
                                         </p>
-                                        <p className="text-[13px] font-black text-[#F59E0B]">{formatCurrency(p.selling_price)}</p>
+                                        <p className="text-[13px] font-black text-indigo-600">{formatCurrency(p.selling_price)}</p>
                                     </div>
                                     <p className="text-[10px] font-medium text-slate-500">
                                         Stock: <span className={p.stock > 0 ? 'text-emerald-600' : 'text-red-600'}>{p.stock} units</span>
@@ -343,7 +344,7 @@ export default function CreateSalePage() {
     if (loading) {
         return (
             <div className="flex flex-col h-[60vh] items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 text-[#F59E0B] animate-spin" />
+                <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
                 <p className="text-sm text-slate-500">Loading products...</p>
             </div>
         );
@@ -353,19 +354,17 @@ export default function CreateSalePage() {
         <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-4 font-sans">
 
             {/* ── Page Header ── */}
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-200 dark:border-white/10">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Point of Sale (Shop)</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Quickly record a physical shop sale</p>
-                </div>
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Dashboard
-                </button>
-            </div>
+            <PageHeader
+                title="Create Sale"
+                subtitle="Quickly record a physical shop sale"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Create Sale' }]}
+                actions={
+                    <Button variant="outline" size="md" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Dashboard
+                    </Button>
+                }
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
@@ -416,15 +415,15 @@ export default function CreateSalePage() {
                         action={
                             <button
                                 onClick={addItem}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F59E0B] bg-[#F59E0B]/5 rounded-lg hover:bg-[#F59E0B]/10 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
                             >
                                 <Plus className="h-3.5 w-3.5" /> Add Product
                             </button>
                         }
                     >
                         {errors.items && (
-                            <div className="mb-4 px-3 py-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg">
-                                <p className="text-red-600 text-xs">{errors.items}</p>
+                            <div className="mb-4 px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg">
+                                <p className="text-rose-600 text-xs">{errors.items}</p>
                             </div>
                         )}
 
@@ -438,7 +437,7 @@ export default function CreateSalePage() {
 
                         <div className="space-y-2">
                             {items.map((item, i) => (
-                                <div key={i} className="grid grid-cols-12 gap-3 items-center p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] rounded-lg">
+                                <div key={i} className="grid grid-cols-12 gap-3 items-center p-3 bg-slate-50 border border-slate-100 rounded-lg">
                                     <div className="col-span-6">
                                         <ProductSelector 
                                             selectedId={item.product}
@@ -540,22 +539,23 @@ export default function CreateSalePage() {
                             <div className="pt-2">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-xs text-slate-500">Items Total</span>
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 pr-1">{formatCurrency(String(lineTotal))}</span>
+                                    <span className="text-sm font-bold text-slate-700 pr-1 tabular-nums">{formatCurrency(String(lineTotal))}</span>
                                 </div>
-                                <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-white/10 mt-3">
-                                    <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Total Payable</span>
-                                    <span className="text-2xl font-black text-[#F59E0B]">{formatCurrency(String(grandTotal))}</span>
+                                <div className="flex justify-between items-center pt-3 border-t border-slate-200 mt-3">
+                                    <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Total Payable</span>
+                                    <span className="text-2xl font-black text-indigo-600 tabular-nums">{formatCurrency(String(grandTotal))}</span>
                                 </div>
                             </div>
 
-                            <button
+                            <Button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="w-full py-3 bg-[#F59E0B] text-white text-sm font-black uppercase tracking-[0.2em] rounded-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-[#F59E0B]/20 mt-4 active:scale-95"
+                                size="lg"
+                                className="w-full uppercase tracking-[0.2em] font-black mt-4"
                             >
                                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                                 {saving ? 'Processing...' : 'Complete Sale'}
-                            </button>
+                            </Button>
                         </div>
                     </Panel>
                 </div>
@@ -564,54 +564,47 @@ export default function CreateSalePage() {
             {/* ── Toast ── */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[300] animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl text-white text-sm font-bold border-l-4 ${toast.type === 'success' ? 'bg-slate-900 border-[#F59E0B]' : 'bg-red-600 border-red-800'}`}>
+                    <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl text-white text-sm font-bold border-l-4 ${toast.type === 'success' ? 'bg-slate-900 border-indigo-500' : 'bg-rose-600 border-rose-800'}`}>
                         {toast.type === 'success'
-                            ? <CheckCircle className="h-5 w-5 text-[#F59E0B]" />
+                            ? <CheckCircle className="h-5 w-5 text-indigo-400" />
                             : <AlertTriangle className="h-5 w-5 text-white" />}
                         {toast.msg}
                     </div>
                 </div>
             )}
             {/* ── Stock Error Modal ── */}
-            {stockError && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[2000] p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a252f] rounded-2xl w-full max-w-[440px] shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6">
-                            <div className="flex items-center gap-4 mb-5">
-                                <div className="w-12 h-12 bg-orange-50 dark:bg-orange-500/10 rounded-full flex items-center justify-center text-orange-600 shrink-0">
-                                    <AlertTriangle size={24} />
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Inventory Issue</h3>
-                            </div>
-                            
-                            <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl p-4 mb-6">
-                                <p className="text-sm text-red-600 dark:text-red-400 font-bold leading-relaxed">
-                                    {stockError}
-                                </p>
-                            </div>
-
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-                                The selected warehouse doesn't have sufficient stock for this order. You can try selecting another warehouse or adjust the quantities.
-                            </p>
-
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
-                                <button 
-                                    onClick={() => setStockError(null)}
-                                    className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all"
-                                >
-                                    Dismiss
-                                </button>
-                                <button 
-                                    onClick={() => setStockError(null)}
-                                    className="px-5 py-2.5 text-sm font-black text-white bg-[#F59E0B] rounded-xl hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
-                                >
-                                    Change Warehouse
-                                </button>
-                            </div>
-                        </div>
+            <Modal
+                open={!!stockError}
+                onClose={() => setStockError(null)}
+                size="sm"
+                footer={
+                    <>
+                        <Button variant="ghost" onClick={() => setStockError(null)}>
+                            Dismiss
+                        </Button>
+                        <Button variant="primary" onClick={() => setStockError(null)}>
+                            Change Warehouse
+                        </Button>
+                    </>
+                }
+            >
+                <div className="flex items-center gap-4 mb-5">
+                    <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600 shrink-0">
+                        <AlertTriangle size={24} />
                     </div>
+                    <h3 className="text-xl font-bold text-slate-900">Inventory Issue</h3>
                 </div>
-            )}
+
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
+                    <p className="text-sm text-rose-600 font-bold leading-relaxed">
+                        {stockError}
+                    </p>
+                </div>
+
+                <p className="text-sm text-slate-500 leading-relaxed">
+                    The selected warehouse doesn't have sufficient stock for this order. You can try selecting another warehouse or adjust the quantities.
+                </p>
+            </Modal>
         </div>
     );
 }

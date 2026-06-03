@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import {
-    LayoutDashboard, Package, TrendingUp, Tag,
+    Package, TrendingUp, Tag,
     Boxes, ChevronRight, Settings, UserCheck, ShoppingBag,
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    Truck, Book, FileText, AlertTriangle, Search, Star
+    Truck, Book, FileText, AlertTriangle, Globe
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 
 interface PageButton {
     name: string;
+    desc?: string;
     href: string;
     icon: any;
     theme?: {
@@ -31,13 +32,13 @@ interface GroupSection {
 }
 
 export default function AdminDashboard() {
-    const [searchQuery, setSearchQuery] = useState('');
-    const { stats } = useAdminDashboard();
+    const { stats, products, loading } = useAdminDashboard();
 
     // ── CORE OPERATIONS & KEY PAGES (PROMINENT BUTTONS) ──
     const corePages: PageButton[] = [
         {
             name: 'Point of Sale (POS)',
+            desc: 'Sell at the counter',
             href: '/admin/sale',
             icon: Monitor,
             theme: {
@@ -51,6 +52,7 @@ export default function AdminDashboard() {
         },
         {
             name: 'New Purchase Order',
+            desc: 'Restock your inventory',
             href: '/admin/purchases/add',
             icon: ShoppingCart,
             theme: {
@@ -63,7 +65,8 @@ export default function AdminDashboard() {
             keywords: ['draft', 'buy', 'stock order', 'procurement', 'purchase']
         },
         {
-            name: 'Sales Invoices',
+            name: 'Invoices',
+            desc: 'Billing & receipts',
             href: '/admin/invoices',
             icon: FileText,
             theme: {
@@ -77,11 +80,12 @@ export default function AdminDashboard() {
         },
         {
             name: 'Reports Center',
+            desc: 'Analytics & insights',
             href: '/admin/reports',
             icon: BarChart3,
             theme: {
                 border: 'group-hover:border-violet-500',
-                iconBg: 'bg-violet-50 border-violet-100 text-violet-650 group-hover:bg-violet-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)]',
+                iconBg: 'bg-violet-50 border-violet-100 text-violet-600 group-hover:bg-violet-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)]',
                 leftBar: 'bg-violet-600',
                 chevron: 'text-violet-400 group-hover:text-violet-600',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(139,92,246,0.06)]'
@@ -90,6 +94,7 @@ export default function AdminDashboard() {
         },
         {
             name: 'Accounting & Finance',
+            desc: 'Ledgers & cashflow',
             href: '/admin/reports/accounting',
             icon: CreditCard,
             theme: {
@@ -102,25 +107,13 @@ export default function AdminDashboard() {
             keywords: ['p&l', 'cashflow', 'tax', 'finance', 'ledger']
         },
         {
-            name: 'Console Dashboard',
-            href: '/admin/dashboard',
-            icon: LayoutDashboard,
-            theme: {
-                border: 'group-hover:border-fuchsia-500',
-                iconBg: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(217,70,239,0.2)]',
-                leftBar: 'bg-fuchsia-600',
-                chevron: 'text-fuchsia-400 group-hover:text-fuchsia-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(217,70,239,0.06)]'
-            },
-            keywords: ['stats', 'sales', 'live', 'dashboard']
-        },
-        {
             name: 'Order List',
+            desc: 'Manage online orders',
             href: '/admin/orders',
             icon: ShoppingBag,
             theme: {
                 border: 'group-hover:border-rose-500',
-                iconBg: 'bg-rose-50 border-rose-100 text-rose-605 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
+                iconBg: 'bg-rose-50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
                 leftBar: 'bg-rose-600',
                 chevron: 'text-rose-400 group-hover:text-rose-600',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
@@ -129,19 +122,133 @@ export default function AdminDashboard() {
         },
         {
             name: 'Product List',
+            desc: 'Catalog & SKUs',
             href: '/admin/products',
             icon: Package,
             theme: {
                 border: 'group-hover:border-teal-500',
-                iconBg: 'bg-teal-50 border-teal-100 text-teal-650 group-hover:bg-teal-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(20,184,166,0.2)]',
-                leftBar: 'bg-teal-650',
+                iconBg: 'bg-teal-50 border-teal-100 text-teal-600 group-hover:bg-teal-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(20,184,166,0.2)]',
+                leftBar: 'bg-teal-600',
                 chevron: 'text-teal-400 group-hover:text-teal-600',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(20,184,166,0.06)]'
             },
             keywords: ['items', 'catalog', 'skus', 'edit']
         },
         {
+            name: 'Add Product',
+            desc: 'Create a new item',
+            href: '/admin/products/add',
+            icon: PlusIcon,
+            theme: {
+                border: 'group-hover:border-green-500',
+                iconBg: 'bg-green-50 border-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(22,163,74,0.2)]',
+                leftBar: 'bg-green-600',
+                chevron: 'text-green-400 group-hover:text-green-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(22,163,74,0.06)]'
+            },
+            keywords: ['create', 'new item', 'upload', 'add product']
+        },
+        {
+            name: 'Current Stocks',
+            desc: 'Live stock levels',
+            href: '/admin/inventory/list',
+            icon: Boxes,
+            theme: {
+                border: 'group-hover:border-orange-500',
+                iconBg: 'bg-orange-50 border-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(234,88,12,0.2)]',
+                leftBar: 'bg-orange-600',
+                chevron: 'text-orange-400 group-hover:text-orange-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(234,88,12,0.06)]'
+            },
+            keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory']
+        },
+        {
+            name: 'Warehouses',
+            desc: 'Storage locations',
+            href: '/admin/inventory/warehouses',
+            icon: Store,
+            theme: {
+                border: 'group-hover:border-stone-500',
+                iconBg: 'bg-stone-100 border-stone-200 text-stone-600 group-hover:bg-stone-700 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(87,83,78,0.2)]',
+                leftBar: 'bg-stone-700',
+                chevron: 'text-stone-400 group-hover:text-stone-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(87,83,78,0.06)]'
+            },
+            keywords: ['storage', 'depots', 'distribution', 'warehouse']
+        },
+        {
+            name: 'Order Tracking',
+            desc: 'Delivery & dispatch',
+            href: '/admin/tracking',
+            icon: Truck,
+            theme: {
+                border: 'group-hover:border-blue-500',
+                iconBg: 'bg-blue-50 border-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]',
+                leftBar: 'bg-blue-600',
+                chevron: 'text-blue-400 group-hover:text-blue-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(37,99,235,0.06)]'
+            },
+            keywords: ['delivery', 'courier', 'dispatch', 'tracking']
+        },
+        {
+            name: 'Supplier Registry',
+            desc: 'Vendors & contacts',
+            href: '/admin/company/suppliers',
+            icon: UserCheck,
+            theme: {
+                border: 'group-hover:border-purple-500',
+                iconBg: 'bg-purple-50 border-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(147,51,234,0.2)]',
+                leftBar: 'bg-purple-600',
+                chevron: 'text-purple-400 group-hover:text-purple-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(147,51,234,0.06)]'
+            },
+            keywords: ['vendors', 'manufacturers', 'contacts', 'supplier']
+        },
+        {
+            name: 'Customer Registry',
+            desc: 'Clients & profiles',
+            href: '/admin/company/customers',
+            icon: Users,
+            theme: {
+                border: 'group-hover:border-pink-500',
+                iconBg: 'bg-pink-50 border-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(219,39,119,0.2)]',
+                leftBar: 'bg-pink-600',
+                chevron: 'text-pink-400 group-hover:text-pink-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(219,39,119,0.06)]'
+            },
+            keywords: ['clients', 'profiles', 'ledger', 'customer']
+        },
+        {
+            name: 'System Alerts',
+            desc: 'Errors & warnings',
+            href: '/admin/alerts',
+            icon: AlertTriangle,
+            theme: {
+                border: 'group-hover:border-red-500',
+                iconBg: 'bg-red-50 border-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(220,38,38,0.2)]',
+                leftBar: 'bg-red-600',
+                chevron: 'text-red-400 group-hover:text-red-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(220,38,38,0.06)]'
+            },
+            keywords: ['errors', 'warnings', 'alarms', 'alerts']
+        },
+        {
+            name: 'Website CMS',
+            desc: 'Storefront content & banners',
+            href: '/admin/website-settings',
+            icon: Globe,
+            theme: {
+                border: 'group-hover:border-cyan-500',
+                iconBg: 'bg-cyan-50 border-cyan-100 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(6,182,212,0.2)]',
+                leftBar: 'bg-cyan-600',
+                chevron: 'text-cyan-400 group-hover:text-cyan-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(6,182,212,0.06)]'
+            },
+            keywords: ['slider', 'banners', 'content', 'seo', 'footer', 'cms', 'website', 'storefront', 'landing']
+        },
+        {
             name: 'System Settings',
+            desc: 'Configure the system',
             href: '/admin/settings',
             icon: Settings,
             theme: {
@@ -154,17 +261,6 @@ export default function AdminDashboard() {
             keywords: ['config', 'sidebar', 'site details', 'settings', 'configure']
         },
     ];
-
-    const getButtonTheme = (href: string) => {
-        const found = corePages.find(p => p.href === href);
-        return found?.theme || {
-            border: 'group-hover:border-[#e47911]',
-            iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
-            leftBar: 'bg-amber-500',
-            chevron: 'text-amber-400 group-hover:text-amber-600',
-            hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
-        };
-    };
 
     // ── UTILITIES & LESS FREQUENT PAGES (SIMPLE LIST LINKS) ──
     const utilitySections: GroupSection[] = [
@@ -237,215 +333,163 @@ export default function AdminDashboard() {
         );
     }
 
-    const filteredButtons = useMemo(() => {
-        if (!searchQuery.trim()) return null;
-        const q = searchQuery.toLowerCase();
-        const results: { name: string; href: string; icon: any; category: string }[] = [];
+    // ── REMAINING PAGES (everything not already promoted to Core Operations) ──
+    const otherPages = useMemo(() => {
+        const coreHrefs = new Set(corePages.map(p => p.href));
+        const seen = new Set<string>();
+        const out: Omit<PageButton, 'theme'>[] = [];
+        utilitySections.forEach(sec => sec.items.forEach(item => {
+            if (coreHrefs.has(item.href) || seen.has(item.href)) return;
+            seen.add(item.href);
+            out.push(item);
+        }));
+        return out;
+    }, []);
 
-        // Search in core pages
-        corePages.forEach(item => {
-            if (item.name.toLowerCase().includes(q) || item.keywords.some(k => k.includes(q))) {
-                results.push({ name: item.name, href: item.href, icon: item.icon, category: 'Core Operations' });
-            }
-        });
-
-        // Search in utility sections
-        utilitySections.forEach(sec => {
-            sec.items.forEach(item => {
-                const matches = item.name.toLowerCase().includes(q) ||
-                    sec.title.toLowerCase().includes(q) ||
-                    item.keywords.some(k => k.includes(q));
-                if (matches) {
-                    if (!results.some(r => r.href === item.href)) {
-                        results.push({
-                            name: item.name,
-                            href: item.href,
-                            icon: item.icon,
-                            category: sec.title
-                        });
-                    }
-                }
-            });
-        });
-        return results;
-    }, [searchQuery, searchQuery]);
+    // Low-stock products (at or below the alert threshold)
+    const LOW_STOCK_MIN = 10;
+    const lowStock = useMemo(() => {
+        return (products || [])
+            .map((p: any) => ({ ...p, _qty: Number(p.total_quantity ?? p.available_quantity ?? 0) }))
+            .filter((p: any) => p._qty <= LOW_STOCK_MIN)
+            .sort((a: any, b: any) => a._qty - b._qty)
+            .slice(0, 60);
+    }, [products]);
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
-            <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-6">
+            <div className="max-w-[1440px] mx-auto px-4 md:px-8 pt-4">
+                <div className="flex flex-col xl:flex-row gap-6 xl:gap-8 items-stretch">
 
-                {/* ── BREADCRUMB ── */}
-                <div className="flex items-center gap-1 text-[12px] text-slate-400 mb-4 select-none">
-                    <span>Console</span>
-                    <ChevronRight size={10} className="text-slate-300" />
-                    <span className="text-[#e47911] font-semibold">Overview</span>
-                </div>
-
-                {/* ── SMART SEARCH BAR + SETTINGS BUTTON ── */}
-                <div className="flex items-center gap-3 mb-10 w-full">
-                    <div className="relative flex-1 max-w-lg shadow-[0_6px_24px_rgba(0,0,0,0.03)] rounded-xl border border-slate-100">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        <input
-                            type="text"
-                            placeholder="Search for any action or page..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-11 pl-11 pr-12 bg-white rounded-xl text-[13.5px] text-slate-900 outline-none focus:border-[#e47911] focus:ring-4 focus:ring-[#e47911]/5 transition-all font-medium placeholder:text-slate-400 border border-slate-100"
-                        />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10.5px] font-black text-slate-400 hover:text-[#e47911] px-2 py-1"
-                            >
-                                CLEAR
-                            </button>
-                        )}
-                    </div>
-                    <Link
-                        href="/admin/settings"
-                        className="flex items-center gap-2 px-4 h-11 bg-white border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:shadow-sm transition-all group shrink-0 ml-auto"
-                    >
-                        <Settings size={14} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
-                        System Settings
-                    </Link>
-                </div>
-
-                {/* ── DIRECTORY DISPLAY ── */}
-                {filteredButtons !== null ? (
-                    /* ── FILTERED BUTTONS GRID ── */
-                    <div className="space-y-4 animate-in fade-in duration-150 text-left">
-                        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-                            <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-400">Search Results</h2>
-                            <span className="bg-[#e47911]/10 text-[#e47911] px-2.5 py-0.5 rounded-full text-[10.5px] font-bold">{filteredButtons.length}</span>
-                        </div>
-                        {filteredButtons.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                                {filteredButtons.map((btn) => {
-                                    const Icon = btn.icon;
-                                    const theme = getButtonTheme(btn.href);
-                                    return (
-                                        <Link
-                                            key={btn.href}
-                                            href={btn.href}
-                                            className={`flex items-center gap-3.5 p-4 bg-white border border-slate-200/80 rounded-xl transition-all duration-300 group relative overflow-hidden ${theme.border} ${theme.hoverGlow} hover:-translate-y-0.5 hover:bg-slate-50/30`}
-                                        >
-                                            <span className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all transform scale-y-0 group-hover:scale-y-100 ${theme.leftBar}`} />
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all shrink-0 ${theme.iconBg}`}>
-                                                <Icon size={16} />
-                                            </div>
-                                            <div className="text-left min-w-0 flex-1 pl-1">
-                                                <h3 className="text-[13.5px] font-extrabold text-slate-800 group-hover:text-slate-900 transition-colors truncate flex items-center gap-1.5">
-                                                    {btn.name}
-                                                    {btn.href === '/admin/orders' && stats?.pendingOrders > 0 && (
-                                                        <span className="bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 select-none shrink-0 ml-1.5">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                                                            <span>{stats.pendingOrders}</span>
-                                                        </span>
-                                                    )}
-                                                </h3>
-                                                <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 block truncate">
-                                                    {btn.category}
-                                                </span>
-                                            </div>
-                                            <ChevronRight size={13} className={`transition-transform group-hover:translate-x-0.5 shrink-0 ${theme.chevron}`} />
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="bg-white border border-slate-200/85 rounded-xl p-12 text-center text-slate-400 text-[13px] italic shadow-sm">
-                                No matching console pages found.
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    /* ── MAIN DIRECTORY SEGMENTED HUB ── */
-                    <div className="space-y-12 animate-in fade-in duration-300 text-left">
+                {/* ── MAIN: DIRECTORY ── */}
+                <div className="flex-1 min-w-0 space-y-12 animate-in fade-in duration-300 text-left">
 
                         {/* ── CORE OPERATIONS & KEY PAGES (PROMINENT ACCENT BUTTON-CARDS) ── */}
-                        <div className="space-y-4">
-                            <h2 className="text-[12.5px] font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-1.5 border-b border-amber-100 pb-2.5 select-none text-left">
-                                <Star size={14} className="fill-amber-500 text-amber-500 animate-pulse" /> Core Operations & Key Pages
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {corePages.map((btn) => {
                                     const Icon = btn.icon;
-                                    const theme = btn.theme || getButtonTheme(btn.href);
+                                    const isOrders = btn.href === '/admin/orders';
                                     return (
                                         <Link
                                             key={btn.href}
                                             href={btn.href}
-                                            className={`flex items-center gap-3.5 p-4 bg-white border border-slate-200/80 rounded-xl transition-all duration-300 group relative overflow-hidden ${theme.border} ${theme.hoverGlow} hover:-translate-y-0.5 hover:bg-slate-50/30`}
+                                            className="group relative flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-indigo-300/80 hover:shadow-[0_12px_28px_-12px_rgba(79,70,229,0.35)] hover:-translate-y-0.5 transition-all duration-200"
                                         >
-                                            {/* Hover Left Accent Bar */}
-                                            <span className={`absolute left-0 top-0 bottom-0 w-[4px] transition-all transform scale-y-0 group-hover:scale-y-100 ${theme.leftBar}`} />
-
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all shrink-0 ${theme.iconBg}`}>
+                                            <div className="w-9 h-9 rounded-lg flex items-center justify-center border border-indigo-100 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.25)] transition-all duration-200 shrink-0">
                                                 <Icon size={16} />
                                             </div>
-                                            <span className="text-[13.5px] font-extrabold text-slate-800 group-hover:text-slate-900 transition-colors truncate text-left flex-1 min-w-0 pl-1 flex items-center gap-1.5">
-                                                {btn.name}
-                                                {btn.href === '/admin/orders' && stats?.pendingOrders > 0 && (
-                                                    <span className="bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 select-none shrink-0 ml-1.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                                                        <span>{stats.pendingOrders}</span>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="text-[13px] font-semibold text-slate-900 tracking-tight leading-tight line-clamp-2">
+                                                    {btn.name}
+                                                </h3>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {isOrders && stats?.pendingOrders > 0 && (
+                                                    <span className="bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 select-none">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                        {stats.pendingOrders}
                                                     </span>
                                                 )}
-                                            </span>
-                                            <ChevronRight size={13} className={`transition-transform group-hover:translate-x-0.5 shrink-0 ${theme.chevron}`} />
+                                                <ChevronRight size={15} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+                                            </div>
                                         </Link>
                                     );
                                 })}
                             </div>
                         </div>
-
-                        {/* ── OTHER UTILITIES & MINOR CHANNELS (COMPACT LIST LINKS AT THE BOTTOM) ── */}
-                        <div className="border-t border-slate-200/80 pt-8 space-y-6">
-                            <div>
-                                <h2 className="text-[14px] font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                                    <span className="w-1.5 h-3.5 bg-amber-500 rounded-full" />
-                                    Console Utilities & System Mappings
-                                </h2>
-                                <p className="text-[11.5px] text-slate-400 mt-0.5">Underlying administrative links, configurations, registry books, and sub-reports.</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {utilitySections.map((sec) => (
-                                    <div key={sec.title} className="bg-white border border-slate-200/60 rounded-xl p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-shadow duration-300">
-                                        <h3 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2 mb-3 select-none flex items-center justify-between">
-                                            <span>{sec.title}</span>
-                                            <span className="text-[9.5px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-                                                {sec.items.length} items
-                                            </span>
-                                        </h3>
-                                        <div className="flex flex-col gap-1">
-                                            {sec.items.map((item) => {
-                                                const ItemIcon = item.icon;
-                                                return (
-                                                    <Link
-                                                        key={item.href}
-                                                        href={item.href}
-                                                        className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 group/link transition-all duration-200"
-                                                    >
-                                                        <div className="flex items-center gap-2.5 min-w-0">
-                                                            <div className="w-6 h-6 rounded bg-slate-50 text-slate-400 group-hover/link:bg-amber-50 group-hover/link:text-[#e47911] flex items-center justify-center transition-colors">
-                                                                <ItemIcon size={12} className="transition-colors shrink-0" />
-                                                            </div>
-                                                            <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-800 transition-colors truncate">
-                                                                {item.name}
-                                                            </span>
-                                                        </div>
-                                                        <ChevronRight size={11} className="text-slate-300 group-hover/link:text-[#e47911] transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
-                                                    </Link>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
-                )}
+
+                    {/* ── RIGHT: LOW STOCK ALERT ── */}
+                    <aside className="w-full xl:w-[340px] shrink-0">
+                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col xl:h-full">
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                                        <AlertTriangle size={16} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Low Stock Alert</h3>
+                                        <p className="text-[10.5px] text-slate-400 font-medium">At or below {LOW_STOCK_MIN} units</p>
+                                    </div>
+                                </div>
+                                <span className="text-[11px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full shrink-0">{lowStock.length}</span>
+                            </div>
+
+                            <div className="flex items-center px-5 py-2 text-[9.5px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50/60">
+                                <span className="flex-1">Product</span>
+                                <span className="w-12 text-right">Qty</span>
+                                <span className="w-12 text-right">Min</span>
+                            </div>
+
+                            <div className="flex-1 max-h-[calc(100vh-150px)] overflow-y-auto divide-y divide-slate-50">
+                                {loading ? (
+                                    <div className="px-5 py-10 text-center text-[12px] text-slate-400">Loading…</div>
+                                ) : lowStock.length === 0 ? (
+                                    <div className="px-5 py-10 text-center text-[12px] text-slate-400">
+                                        <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
+                                        All products are well stocked.
+                                    </div>
+                                ) : (
+                                    lowStock.map((p: any) => (
+                                        <Link
+                                            key={p.id}
+                                            href="/admin/products"
+                                            className="group flex items-center px-5 py-2.5 hover:bg-slate-50 transition-colors"
+                                        >
+                                            <span className="flex-1 min-w-0 truncate pr-2 text-[12px] font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
+                                                {p.product_name || p.name || 'Unnamed product'}
+                                            </span>
+                                            <span className={`w-12 text-right text-[12.5px] font-black tabular-nums ${p._qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
+                                                {p._qty}
+                                            </span>
+                                            <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{LOW_STOCK_MIN}</span>
+                                        </Link>
+                                    ))
+                                )}
+                            </div>
+
+                            <Link
+                                href="/admin/inventory/list"
+                                className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
+                            >
+                                View full inventory <ChevronRight size={13} />
+                            </Link>
+                        </div>
+                    </aside>
+                </div>
+
+                {/* ── OTHER PAGES (FULL WIDTH) ── */}
+                <div className="mt-10 border-t border-slate-200/70 pt-8 space-y-5">
+                    <div className="flex items-center gap-3 select-none">
+                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Other Pages</h2>
+                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{otherPages.length}</span>
+                        <div className="h-px flex-1 bg-slate-200/70" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-1">
+                        {otherPages.map((item) => {
+                            const ItemIcon = item.icon;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className="flex items-center justify-between py-2 px-2.5 rounded-lg group/link transition-colors duration-200"
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover/link:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
+                                            <ItemIcon size={13} className="transition-colors shrink-0" />
+                                        </div>
+                                        <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-900 transition-colors truncate">
+                                            {item.name}
+                                        </span>
+                                    </div>
+                                    <ChevronRight size={12} className="text-slate-300 group-hover/link:text-indigo-600 transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </div>
     );

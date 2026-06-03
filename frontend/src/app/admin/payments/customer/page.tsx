@@ -10,22 +10,23 @@ import {
     ChevronDown, Save, FileText, Download, User,
     DollarSign, AlertTriangle
 } from 'lucide-react';
+import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
 
 /* ══════════════════════════════════════════════
    COMPONENTS & STYLES
    ══════════════════════════════════════════════ */
 const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl shadow-sm overflow-hidden ${className}`}>
+    <Card className={`overflow-hidden ${className}`}>
         {children}
-    </div>
+    </Card>
 );
 
 const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: any; subtitle?: string }) => (
-    <div className="bg-slate-50 dark:bg-white/5 px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+    <div className="bg-slate-50/60 px-4 py-3 border-b border-slate-200/70 flex items-center justify-between">
         <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-[#F59E0B]" />
+            <Icon className="h-4 w-4 text-indigo-600" />
             <div>
-                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{title}</span>
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-tight">{title}</span>
                 {subtitle && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{subtitle}</p>}
             </div>
         </div>
@@ -33,14 +34,9 @@ const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string; icon: a
 );
 
 const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg text-sm outline-none transition-all
-    focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 placeholder:text-slate-400
-    ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
+    `${ui.inputBase} ${err ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : ''}`;
 
-const LABEL = "block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-1.5";
-
-const PRIMARY_BTN = "bg-[#F59E0B] hover:bg-[#1e40af] text-white font-bold rounded-lg shadow-sm text-[11px] uppercase tracking-widest py-2.5 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
-const SECONDARY_BTN = "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 rounded-lg shadow-sm text-[11px] font-bold uppercase tracking-widest py-2.5 px-4 transition-all flex items-center justify-center gap-2 active:scale-95";
+const LABEL = "block text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] mb-1.5";
 
 interface Payment {
     id: number;
@@ -93,39 +89,35 @@ export default function CustomerPaymentsPage() {
     const totalInbound = filtered.reduce((sum, p) => sum + parseFloat(String(p.amount)), 0);
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-6 pb-12">
+        <div className="max-w-[1400px] mx-auto pb-12">
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#F59E0B] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Users className="h-5 w-5 text-white" strokeWidth={2.5} />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Client Balances</h1>
-                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Inbound Capital Registry</p>
-                    </div>
-                </div>
+            <PageHeader
+                title="Customer Payments"
+                subtitle="Inbound Capital Registry"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Customer Payments' }]}
+                actions={
+                    !formOpen ? (
+                        <>
+                            <Button variant="outline" size="sm" onClick={load}>
+                                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                Sync Registry
+                            </Button>
+                            <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
+                                <Plus className="h-3.5 w-3.5" />
+                                Record Receipt
+                            </Button>
+                        </>
+                    ) : (
+                        <Button variant="outline" size="sm" onClick={() => setFormOpen(false)}>
+                            <X className="h-3.5 w-3.5" />
+                            Cancel Entry
+                        </Button>
+                    )
+                }
+            />
 
-                {!formOpen && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={load} className={SECONDARY_BTN}>
-                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            Sync Registry
-                        </button>
-                        <button onClick={() => setFormOpen(true)} className={PRIMARY_BTN}>
-                            <Plus className="h-3.5 w-3.5" />
-                            Record Receipt
-                        </button>
-                    </div>
-                )}
-                {formOpen && (
-                    <button onClick={() => setFormOpen(false)} className={SECONDARY_BTN}>
-                        <X className="h-3.5 w-3.5" />
-                        Cancel Entry
-                    </button>
-                )}
-            </div>
+          <div className="space-y-6">
 
             {formOpen ? (
                 <CreateView
@@ -137,61 +129,61 @@ export default function CustomerPaymentsPage() {
                 <>
                     {/* Summary Bar */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <SectionCard className="p-4 flex items-center justify-between border-emerald-500/10">
+                        <SectionCard className="p-4 flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Collected</p>
-                                <p className="text-2xl font-black text-emerald-600 tracking-tighter leading-none">{formatCurrency(totalInbound)}</p>
+                                <p className="text-2xl font-black text-emerald-600 tracking-tighter leading-none tabular-nums">{formatCurrency(totalInbound)}</p>
                             </div>
-                            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
+                            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                                 <Banknote className="h-5 w-5 text-emerald-600" />
                             </div>
                         </SectionCard>
                         <SectionCard className="p-4 flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Registry Volume</p>
-                                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{filtered.length} Entries</p>
+                                <p className="text-2xl font-black text-slate-900 tracking-tighter leading-none tabular-nums">{filtered.length} Entries</p>
                             </div>
-                            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                                 <Users className="h-5 w-5 text-slate-400" />
                             </div>
                         </SectionCard>
                     </div>
 
                     {/* Search Hub */}
-                    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl p-3">
+                    <Card className="p-3">
                         <div className="relative group max-w-xl">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#F59E0B] transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                             <input
                                 type="text"
                                 placeholder="Search client entity or transaction ID..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all font-medium"
+                                className={`${ui.inputBase} pl-10`}
                             />
                         </div>
-                    </div>
+                    </Card>
 
                     {/* Journal Table */}
                     <SectionCard>
                         <SectionHeader title="Receipt Journal" icon={FileText} subtitle="Inbound client settlements" />
                         {loading ? (
                             <div className="py-20 flex flex-col items-center justify-center gap-3">
-                                <Loader2 className="h-8 w-8 text-[#F59E0B] animate-spin" />
+                                <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validating Registry...</p>
                             </div>
                         ) : filtered.length === 0 ? (
                             <div className="py-24 text-center">
-                                <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-white/10">
+                                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-200">
                                     <ShoppingCart className="h-6 w-6 text-slate-300" />
                                 </div>
-                                <h3 className="text-slate-900 dark:text-white font-bold uppercase tracking-tight">No Receipts Found</h3>
+                                <h3 className="text-slate-900 font-bold uppercase tracking-tight">No Receipts Found</h3>
                                 <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 font-medium italic">Refine your search or record a new transaction.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                                        <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                                             <th className="px-4 py-3 whitespace-nowrap">Receipt</th>
                                             <th className="px-4 py-3 whitespace-nowrap">Client Entity</th>
                                             <th className="px-4 py-3 whitespace-nowrap">Classification</th>
@@ -200,40 +192,38 @@ export default function CustomerPaymentsPage() {
                                             <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                    <tbody className="divide-y divide-slate-100">
                                         {filtered.map((payment) => (
-                                            <tr key={payment.id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors group text-sm">
+                                            <tr key={payment.id} className="hover:bg-slate-50 transition-colors group text-sm">
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col">
-                                                        <span className="font-medium text-[#F59E0B]">#{payment.id}</span>
+                                                        <span className="font-medium text-indigo-600">#{payment.id}</span>
                                                         <span className="text-[11px] text-slate-500 font-medium">{formatDate(payment.date)}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-[#F59E0B] uppercase border border-white/10">
+                                                        <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-600 uppercase border border-indigo-100">
                                                             {payment.payer_payee[0]}
                                                         </div>
-                                                        <span className="font-medium text-slate-800 dark:text-slate-200">{payment.payer_payee}</span>
+                                                        <span className="font-medium text-slate-800">{payment.payer_payee}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-block px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-[#F59E0B] text-[11px] font-semibold uppercase tracking-tight">
-                                                        {payment.category_name}
-                                                    </span>
+                                                    <Badge tone="indigo">{payment.category_name}</Badge>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="text-slate-500 dark:text-slate-400 font-medium">{payment.method.replace('_', ' ')}</span>
+                                                    <span className="text-slate-500 font-medium">{payment.method.replace('_', ' ')}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
-                                                    <span className="font-bold text-emerald-600 tracking-tight">+{formatCurrency(payment.amount)}</span>
+                                                    <span className="font-bold text-emerald-600 tracking-tight tabular-nums">+{formatCurrency(payment.amount)}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-[#F59E0B] hover:bg-blue-50 dark:hover:bg-[#F59E0B]/10 transition-colors" title="View Receipt">
+                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="View Receipt">
                                                             <Eye className="h-4 w-4" />
                                                         </button>
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-[#F59E0B] hover:bg-blue-50 dark:hover:bg-[#F59E0B]/10 transition-colors" title="Print Statement">
+                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Print Statement">
                                                             <Printer className="h-4 w-4" />
                                                         </button>
                                                     </div>
@@ -247,12 +237,13 @@ export default function CustomerPaymentsPage() {
                     </SectionCard>
                 </>
             )}
+          </div>
 
             {/* Notification Hub */}
             {toast && (
                 <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right duration-300">
-                    <div className={`flex items-center gap-3 px-6 py-3 rounded shadow-2xl border-l-[6px] ${toast.type === 'success' ? 'bg-[#232f3e] border-[#F59E0B] text-white' : 'bg-red-900 border-red-500 text-white'}`}>
-                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#F59E0B]" /> : <AlertTriangle className="h-5 w-5 text-red-400" />}
+                    <div className={`flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl border-l-[6px] ${toast.type === 'success' ? 'bg-slate-900 border-indigo-500 text-white' : 'bg-rose-900 border-rose-500 text-white'}`}>
+                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-indigo-400" /> : <AlertTriangle className="h-5 w-5 text-rose-400" />}
                         <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
                         <button onClick={() => setToast(null)} className="ml-4 hover:opacity-70 transition-opacity">
                             <X className="h-4 w-4" />
@@ -299,7 +290,7 @@ function CreateView({ onClose, onSuccess, categories }: any) {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Receipt Core */}
                         <div className="space-y-6">
-                            <div className="p-5 bg-emerald-50/10 dark:bg-emerald-900/5 border border-emerald-500/10 rounded shadow-inner">
+                            <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
                                 <label className={LABEL}>Receipt Valuation (PKR)</label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">Rs.</span>
@@ -331,7 +322,7 @@ function CreateView({ onClose, onSuccess, categories }: any) {
                         </div>
 
                         {/* Remittance Detail */}
-                        <div className="space-y-6 lg:border-x lg:border-slate-100 lg:dark:border-white/5 lg:px-8">
+                        <div className="space-y-6 lg:border-x lg:border-slate-100 lg:px-8">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={LABEL}>Protocol</label>
@@ -388,12 +379,12 @@ function CreateView({ onClose, onSuccess, categories }: any) {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-5 bg-slate-50 dark:bg-white/5 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
-                    <button type="button" onClick={onClose} className={SECONDARY_BTN + " !px-8"}>Discard Receipt</button>
-                    <button type="submit" disabled={loading} className={PRIMARY_BTN + " !px-10"}>
+                <div className="px-8 py-5 bg-slate-50/60 border-t border-slate-200/70 flex items-center justify-between">
+                    <Button type="button" variant="outline" onClick={onClose} className="px-8">Discard Receipt</Button>
+                    <Button type="submit" variant="primary" disabled={loading} className="px-10">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {loading ? 'Processing...' : 'Authorize Receipt'}
-                    </button>
+                    </Button>
                 </div>
             </form>
         </SectionCard>

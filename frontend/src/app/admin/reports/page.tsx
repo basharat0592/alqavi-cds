@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import {
-    BarChart3, Calendar, RefreshCw, Printer, FileStack, FileSpreadsheet,
+    BarChart3, Calendar, Printer, FileStack, FileSpreadsheet,
     ListFilter, Search, Download, ClipboardList, Info, CheckCircle,
     ChevronRight, ChevronLeft, LayoutDashboard, AlertTriangle, Clock,
     User, CreditCard, ShoppingBag, Package, Boxes, TrendingUp, RotateCcw,
@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
     productService, orderService, userService,
     purchaseService, supplierService, categoryService,
@@ -20,25 +19,12 @@ import { inventoryService } from '@/services/inventory.service';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
+import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - MANUAL REPORT GENERATOR
+   ADMIN DESIGN SYSTEM - MANUAL REPORT GENERATOR
    ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
-            {children}
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-        </button>
-    );
-};
-
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all font-medium";
+const inputCls = ui.inputBase;
 
 const CATEGORIES = [
     { id: 'sales', label: 'Sale Order' },
@@ -219,36 +205,31 @@ function ReportsEngineInner() {
     if (loading) return <PageLoader />;
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1440px] mx-auto px-4 md:px-6 pt-4 md:pt-5">
+        <div className="pb-20">
+            <div className="max-w-[1440px] mx-auto">
 
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2 no-print">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                    <ChevronRight size={10} />
-                    <span className="text-[#c45500] font-bold uppercase tracking-tight">Report Center</span>
+                <div className="no-print">
+                    <PageHeader
+                        title="Reports & Analytics"
+                        breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Reports' }]}
+                        actions={
+                            <>
+                                <Button variant="outline" size="sm" onClick={() => exportToCSV(reportResult, 'Report.csv')} disabled={reportResult.length === 0}>
+                                    <FileSpreadsheet size={14} /> Export CSV
+                                </Button>
+                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0}>
+                                    <Printer size={14} /> Print Report
+                                </Button>
+                            </>
+                        }
+                    />
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 no-print">
-                    <div className="flex items-center gap-3">
-                        <BarChart3 className="text-[#111] h-5 w-5" />
-                        <h1 className="text-[22px] font-normal text-[#111]">Reports & Analytics</h1>
-                    </div>
-                    <div className="flex gap-2 w-full sm:w-auto justify-end">
-                        <Btn variant="secondary" onClick={() => exportToCSV(reportResult, 'Report.csv')} disabled={reportResult.length === 0} className="flex-1 sm:flex-initial">
-                            <FileSpreadsheet size={14} /> Export CSV
-                        </Btn>
-                        <Btn variant="secondary" onClick={() => window.print()} disabled={reportResult.length === 0} className="flex-1 sm:flex-initial">
-                            <Printer size={14} /> Print Report
-                        </Btn>
-                    </div>
-                </div>
-                <div className="border-b border-[#ddd] mb-6 no-print" />
-
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-6 mb-6 shadow-sm no-print">
+                <Card className="p-6 mb-6 no-print">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-end">
 
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-[#0f1111]">1. Select Category</label>
+                            <label className="text-[13px] font-bold text-slate-900">1. Select Category</label>
                             <select
                                 value={filters.category}
                                 onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); }}
@@ -260,12 +241,12 @@ function ReportsEngineInner() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-[#0f1111]">2. Select View</label>
+                            <label className="text-[13px] font-bold text-slate-900">2. Select View</label>
                             <select
                                 value={filters.view}
                                 onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); }}
                                 disabled={!filters.category}
-                                className={inputCls + " disabled:bg-[#f7f8fa]"}
+                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400"}
                             >
                                 <option value="">Select Option...</option>
                                 {filters.category && SUB_OPTIONS[filters.category]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -274,7 +255,7 @@ function ReportsEngineInner() {
 
                         {isThreeLevel && (
                             <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
-                                <label className="text-[13px] font-bold text-[#0f1111]">3. Select Filter</label>
+                                <label className="text-[13px] font-bold text-slate-900">3. Select Filter</label>
                                 <select
                                     value={filters.subView}
                                     onChange={e => { setFilters({ ...filters, subView: e.target.value }); setHasGenerated(false); }}
@@ -294,17 +275,17 @@ function ReportsEngineInner() {
                             <div key={field} className="space-y-1.5 animate-in slide-in-from-left-2 duration-300">
                                 {field === 'dateRange' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-[#0f1111]">Date Range</label>
+                                        <label className="text-[13px] font-bold text-slate-900">Date Range</label>
                                         <div className="flex items-center gap-2">
                                             <input type="date" value={filters.dateFrom} onChange={e => { setFilters({ ...filters, dateFrom: e.target.value }); setHasGenerated(false); }} className={inputCls} />
-                                            <span className="text-[12px] font-bold text-[#565959]">to</span>
+                                            <span className="text-[12px] font-bold text-slate-400">to</span>
                                             <input type="date" value={filters.dateTo} onChange={e => { setFilters({ ...filters, dateTo: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                         </div>
                                     </>
                                 )}
                                 {field === 'supplierId' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-[#0f1111]">Select Supplier</label>
+                                        <label className="text-[13px] font-bold text-slate-900">Select Supplier</label>
                                         <select value={filters.supplierId} onChange={e => { setFilters({ ...filters, supplierId: e.target.value }); setHasGenerated(false); }} className={inputCls}>
                                             <option value="">All Suppliers</option>
                                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -313,7 +294,7 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'categoryId' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-[#0f1111]">Select Category</label>
+                                        <label className="text-[13px] font-bold text-slate-900">Select Category</label>
                                         <select value={filters.categoryId} onChange={e => { setFilters({ ...filters, categoryId: e.target.value }); setHasGenerated(false); }} className={inputCls}>
                                             <option value="">All Categories</option>
                                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -322,7 +303,7 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'priceRange' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-[#0f1111]">Price Range</label>
+                                        <label className="text-[13px] font-bold text-slate-900">Price Range</label>
                                         <div className="flex items-center gap-2">
                                             <input type="number" placeholder="Min" value={filters.minPrice} onChange={e => { setFilters({ ...filters, minPrice: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                             <input type="number" placeholder="Max" value={filters.maxPrice} onChange={e => { setFilters({ ...filters, maxPrice: e.target.value }); setHasGenerated(false); }} className={inputCls} />
@@ -331,13 +312,13 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'customerId' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-[#0f1111]">Search Customer</label>
+                                        <label className="text-[13px] font-bold text-slate-900">Search Customer</label>
                                         <input placeholder="Search name/ID..." value={filters.customerId} onChange={e => { setFilters({ ...filters, customerId: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'invoiceNo' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-[#0f1111]">Invoice Number</label>
+                                        <label className="text-[13px] font-bold text-slate-900">Invoice Number</label>
                                         <input placeholder="e.g. INV-001" value={filters.invoiceNo} onChange={e => { setFilters({ ...filters, invoiceNo: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
@@ -345,41 +326,42 @@ function ReportsEngineInner() {
                         ))}
 
                         <div className="flex items-end">
-                            <button
+                            <Button
+                                variant="primary"
                                 onClick={generateReport}
                                 disabled={generating || !filters.view}
-                                className="w-full h-[31px] bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] rounded-[3px] font-bold text-[13px] shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full"
                             >
                                 <BarChart3 className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
                                 Generate Report
-                            </button>
+                            </Button>
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 {reportResult.length > 0 ? (
                     <div className="animate-in fade-in duration-700">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2 mb-4 no-print">
                              <div className="flex items-center gap-2">
-                                 <CheckCircle className="text-green-600 h-4 w-4" />
-                                 <p className="text-[13px] text-[#565959] font-medium">
-                                     Report Summary: <span className="font-bold text-[#111]">{reportResult.length} Items Found</span>
+                                 <CheckCircle className="text-emerald-600 h-4 w-4" />
+                                 <p className="text-[13px] text-slate-600 font-medium">
+                                     Report Summary: <span className="font-bold text-slate-900">{reportResult.length} Items Found</span>
                                  </p>
                              </div>
                              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                                 <div className="text-[13px] text-[#565959] font-medium">
-                                     Total Amount: <span className="text-[#B12704] font-black">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.price_per_item || r.total_amount || r.total_refund_amount || r.price || 0), 0))}</span>
+                                 <div className="text-[13px] text-slate-600 font-medium">
+                                     Total Amount: <span className="text-indigo-600 font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + Number(r.price_per_item || r.total_amount || r.total_refund_amount || r.price || 0), 0))}</span>
                                  </div>
-                                 <div className="text-[13px] text-[#565959] font-medium">
-                                     Total Quantity: <span className="text-[#111] font-black">{reportResult.reduce((s, r) => s + Number(r.total_quantity || r.stock_quantity || r.quantity || 0), 0)}</span>
+                                 <div className="text-[13px] text-slate-600 font-medium">
+                                     Total Quantity: <span className="text-slate-900 font-black tabular-nums">{reportResult.reduce((s, r) => s + Number(r.total_quantity || r.stock_quantity || r.quantity || 0), 0)}</span>
                                  </div>
                              </div>
                          </div>
- 
-                         <div className="bg-white border border-[#e1e4e8] rounded-[2px] shadow-sm overflow-x-auto no-print">
+
+                         <Card className="overflow-x-auto no-print">
                              <table className="w-full text-left border-collapse">
                                  <thead>
-                                     <tr className="bg-[#f6f8fa] border-b border-[#e1e4e8] text-[9.5px] font-bold text-[#57606a] uppercase tracking-wider">
+                                     <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                                          <th className="px-4 py-2.5 w-16">ID</th>
                                          <th className="px-4 py-2.5 w-28">Date</th>
                                          <th className="px-4 py-2.5">Details / Description</th>
@@ -387,39 +369,38 @@ function ReportsEngineInner() {
                                          <th className="px-4 py-2.5 text-right w-32">Amount</th>
                                      </tr>
                                  </thead>
-                                 <tbody className="divide-y divide-[#f0f2f5]">
+                                 <tbody className="divide-y divide-slate-100">
                                      {reportResult.map((row, idx) => (
-                                         <tr key={idx} className="hover:bg-[#f8f9fa] transition-colors group text-[10px]">
-                                             <td className="px-4 py-2 font-bold text-[#0052cc]">
+                                         <tr key={idx} className="hover:bg-slate-50 transition-colors group text-[10px]">
+                                             <td className="px-4 py-2 font-bold text-indigo-600 tabular-nums">
                                                  #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
                                              </td>
-                                             <td className="px-4 py-2 text-[#57606a] font-medium">
+                                             <td className="px-4 py-2 text-slate-500 font-medium">
                                                  {formatDate(row.created_at || row.order_date || row.date_joined || row.updated_at)}
                                              </td>
                                              <td className="px-4 py-2">
-                                                 <div className="text-[#1a1d23] font-bold uppercase tracking-tight text-[10.5px]">{row.product_name || row.company || row.name || row.customer_name || row.supplier_name || row.full_name || row.username || 'Record'}</div>
-                                                 <div className="text-[9px] text-[#8c959f] mt-0.5 font-medium italic">
+                                                 <div className="text-slate-900 font-bold uppercase tracking-tight text-[10.5px]">{row.product_name || row.company || row.name || row.customer_name || row.supplier_name || row.full_name || row.username || 'Record'}</div>
+                                                 <div className="text-[9px] text-slate-400 mt-0.5 font-medium italic">
                                                      {row.return_number || row.order_number || (row.warehouse_name ? `Warehouse: ${row.warehouse_name}` : row.reason || row.tracking_id || filters.category)}
                                                  </div>
                                              </td>
                                              <td className="px-4 py-2 text-center">
-                                                 <span className={`px-2 py-0.5 rounded-[1px] text-[8.5px] font-black uppercase ${row.status === 'Completed' || row.status === 'Paid' || row.is_active ? 'bg-[#dafbe1] text-[#1a7f37]' : 'bg-[#f6f8fa] text-[#57606a]'
-                                                     }`}>
+                                                 <Badge tone={row.status === 'Completed' || row.status === 'Paid' || row.is_active ? 'green' : 'neutral'}>
                                                      {row.status || (row.is_active ? 'Active' : 'Pending')}
-                                                 </span>
+                                                 </Badge>
                                              </td>
                                              <td className="px-4 py-2 text-right">
-                                                 <div className="font-black text-[#cf222e] text-[11px]">{formatCurrency(row.price_per_item || row.total_amount || row.total_refund_amount || row.price || row.selling_price || 0)}</div>
+                                                 <div className="font-black text-slate-900 text-[11px] tabular-nums">{formatCurrency(row.price_per_item || row.total_amount || row.total_refund_amount || row.price || row.selling_price || 0)}</div>
                                                  {(row.total_quantity !== undefined || row.stock_quantity !== undefined || row.quantity !== undefined || (row.items && row.items.length > 0)) && (
-                                                     <div className="text-[8.5px] text-[#57606a] font-bold uppercase tracking-tighter mt-0.5 italic">Qty: {row.total_quantity || row.stock_quantity || row.quantity || row.items?.length || 0}</div>
+                                                     <div className="text-[8.5px] text-slate-500 font-bold uppercase tracking-tighter mt-0.5 italic tabular-nums">Qty: {row.total_quantity || row.stock_quantity || row.quantity || row.items?.length || 0}</div>
                                                  )}
                                              </td>
                                          </tr>
                                      ))}
                                  </tbody>
                              </table>
-                         </div>
- 
+                         </Card>
+
                         {/* ── PRINT ONLY INVOICE STYLE REPORT ── */}
                         <div className="hidden print:block bg-white p-2">
                             {/* Visual Header */}
@@ -567,20 +548,20 @@ function ReportsEngineInner() {
                         `}</style>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-28 bg-white border border-[#ddd] rounded-[4px] text-center px-10 shadow-sm">
-                        <div className="opacity-10 mb-4">
-                            {hasGenerated ? <AlertTriangle size={60} className="mx-auto text-orange-500" /> : <BarChart3 size={60} className="mx-auto" />}
+                    <Card className="flex flex-col items-center justify-center py-28 text-center px-10 no-print">
+                        <div className="mb-4">
+                            {hasGenerated ? <AlertTriangle size={60} className="mx-auto text-amber-400" /> : <BarChart3 size={60} className="mx-auto text-slate-300" />}
                         </div>
-                        <h3 className="text-[16px] font-bold text-[#111]">
+                        <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">
                             {hasGenerated ? "No items found for this selection." : "Report Generator"}
                         </h3>
-                        <p className="text-[13px] text-[#565959] mt-2 max-w-sm leading-relaxed">
+                        <p className="text-[13px] text-slate-600 mt-2 max-w-sm leading-relaxed">
                             {hasGenerated
                                 ? "We couldn't find any data matching your criteria. Please adjust your filters and try again."
                                 : "Select your filters above and click **Generate Report** to see the results."
                             }
                         </p>
-                    </div>
+                    </Card>
                 )}
             </div>
         </div>

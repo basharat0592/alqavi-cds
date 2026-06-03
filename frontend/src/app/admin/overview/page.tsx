@@ -10,6 +10,7 @@ import {
     Truck, Book, FileText, AlertTriangle, Search, Star
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
+import { PageHeader, Card } from '@/components/admin/ui';
 
 interface PageButton {
     name: string;
@@ -67,11 +68,11 @@ export default function OverviewPage() {
             href: '/admin/invoices',
             icon: FileText,
             theme: {
-                border: 'group-hover:border-amber-500',
-                iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
-                leftBar: 'bg-amber-600',
-                chevron: 'text-amber-400 group-hover:text-amber-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
+                border: 'group-hover:border-indigo-500',
+                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-indigo-600',
+                chevron: 'text-indigo-400 group-hover:text-indigo-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
             },
             keywords: ['billing', 'receipts', 'print', 'invoice']
         },
@@ -145,11 +146,11 @@ export default function OverviewPage() {
     const getButtonTheme = (href: string) => {
         const found = corePages.find(p => p.href === href);
         return found?.theme || {
-            border: 'group-hover:border-[#e47911]',
-            iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
-            leftBar: 'bg-amber-500',
-            chevron: 'text-amber-400 group-hover:text-amber-600',
-            hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
+            border: 'group-hover:border-indigo-500',
+            iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+            leftBar: 'bg-indigo-600',
+            chevron: 'text-indigo-400 group-hover:text-indigo-600',
+            hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
         };
     };
 
@@ -258,30 +259,28 @@ export default function OverviewPage() {
     }, [searchQuery, searchQuery]);
 
     return (
-        <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
+        <div className="pb-24 text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-6">
 
-                {/* ── BREADCRUMB ── */}
-                <div className="flex items-center gap-1 text-[12px] text-slate-400 mb-4 select-none">
-                    <span>Console</span>
-                    <ChevronRight size={10} className="text-slate-300" />
-                    <span className="text-[#e47911] font-semibold">Overview</span>
-                </div>
+                <PageHeader
+                    title="Overview"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Overview' }]}
+                />
 
                 {/* ── SMART SEARCH BAR ── */}
-                <div className="relative mb-10 max-w-lg shadow-[0_6px_24px_rgba(0,0,0,0.03)] rounded-xl border border-slate-100">
+                <div className="relative mb-10 max-w-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] rounded-xl border border-slate-200/70">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <input
                         type="text"
                         placeholder="Search for any action or page..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-11 pl-11 pr-12 bg-white rounded-xl text-[13.5px] text-slate-900 outline-none focus:border-[#e47911] focus:ring-4 focus:ring-[#e47911]/5 transition-all font-medium placeholder:text-slate-400 border border-slate-100"
+                        className="w-full h-11 pl-11 pr-12 bg-white rounded-xl text-[13.5px] text-slate-900 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium placeholder:text-slate-400 border border-slate-200/70"
                     />
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10.5px] font-black text-slate-400 hover:text-[#e47911] px-2 py-1"
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10.5px] font-black text-slate-400 hover:text-indigo-600 px-2 py-1"
                         >
                             CLEAR
                         </button>
@@ -294,7 +293,7 @@ export default function OverviewPage() {
                     <div className="space-y-4 animate-in fade-in duration-150">
                         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                             <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-400">Search Results</h2>
-                            <span className="bg-[#e47911]/10 text-[#e47911] px-2.5 py-0.5 rounded-full text-[10.5px] font-bold">{filteredButtons.length}</span>
+                            <span className="bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold">{filteredButtons.length}</span>
                         </div>
                         {filteredButtons.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -342,8 +341,8 @@ export default function OverviewPage() {
 
                         {/* ── CORE OPERATIONS & KEY PAGES (PROMINENT ACCENT BUTTON-CARDS) ── */}
                         <div className="space-y-4">
-                            <h2 className="text-[12.5px] font-extrabold uppercase tracking-wider text-amber-600 flex items-center gap-1.5 border-b border-amber-100 pb-2.5 select-none">
-                                <Star size={14} className="fill-amber-500 text-amber-500 animate-pulse" /> Core Operations & Key Pages
+                            <h2 className="text-[12.5px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-1.5 border-b border-indigo-100 pb-2.5 select-none">
+                                <Star size={14} className="fill-indigo-500 text-indigo-500 animate-pulse" /> Core Operations & Key Pages
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                                 {corePages.map((btn) => {
@@ -381,7 +380,7 @@ export default function OverviewPage() {
                         <div className="border-t border-slate-200/80 pt-8 space-y-6">
                             <div>
                                 <h2 className="text-[14px] font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                                    <span className="w-1.5 h-3.5 bg-amber-500 rounded-full" />
+                                    <span className="w-1.5 h-3.5 bg-indigo-600 rounded-full" />
                                     Console Utilities & System Mappings
                                 </h2>
                                 <p className="text-[11.5px] text-slate-450 mt-0.5">Underlying administrative links, configurations, registry books, and sub-reports.</p>
@@ -389,7 +388,7 @@ export default function OverviewPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {utilitySections.map((sec) => (
-                                    <div key={sec.title} className="bg-white border border-slate-200/60 rounded-xl p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-shadow duration-300">
+                                    <Card key={sec.title} className="rounded-xl p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-shadow duration-300">
                                         <h3 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2 mb-3 select-none flex items-center justify-between">
                                             <span>{sec.title}</span>
                                             <span className="text-[9.5px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
@@ -406,19 +405,19 @@ export default function OverviewPage() {
                                                         className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 group/link transition-all duration-200"
                                                     >
                                                         <div className="flex items-center gap-2.5 min-w-0">
-                                                            <div className="w-6 h-6 rounded bg-slate-50 text-slate-400 group-hover/link:bg-amber-50 group-hover/link:text-[#e47911] flex items-center justify-center transition-colors">
+                                                            <div className="w-6 h-6 rounded bg-slate-50 text-slate-400 group-hover/link:bg-indigo-50 group-hover/link:text-indigo-600 flex items-center justify-center transition-colors">
                                                                 <ItemIcon size={12} className="transition-colors shrink-0" />
                                                             </div>
                                                             <span className="text-[12.5px] font-semibold text-slate-650 group-hover/link:text-slate-800 transition-colors truncate">
                                                                 {item.name}
                                                             </span>
                                                         </div>
-                                                        <ChevronRight size={11} className="text-slate-300 group-hover/link:text-[#e47911] transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
+                                                        <ChevronRight size={11} className="text-slate-300 group-hover/link:text-indigo-600 transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
                                                     </Link>
                                                 );
                                             })}
                                         </div>
-                                    </div>
+                                    </Card>
                                 ))}
                             </div>
                         </div>

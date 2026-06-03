@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import NotificationPanel, { type ActivityItem } from '@/components/admin/NotificationPanel';
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
-    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, RefreshCw, Shield,
-    ChevronDown
+    User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
+    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
-import { productService, orderService, userService, settingsService } from '@/lib/api';
+import { userService, settingsService } from '@/lib/api';
+import { ADMIN_PAGES } from '@/lib/adminPages';
 import { getImageUrl, cn } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
@@ -35,7 +36,7 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
             </button>
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center group">
                 <span className="font-extrabold text-sm tracking-widest text-slate-800 dark:text-white group-hover:opacity-85 transition-opacity">
-                    AL-QAVI <span className="bg-gradient-to-r from-amber-500 to-[#F59E0B] bg-clip-text text-transparent">TRADES</span>
+                    AL-QAVI <span className="bg-gradient-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent">TRADES</span>
                 </span>
             </Link>
             <div className="flex items-center gap-3">
@@ -66,6 +67,54 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
 /* ═══════════════════════════════════════════════
    MAIN ADMIN LAYOUT
    ═══════════════════════════════════════════════ */
+/* Live session timer — shown in the navbar (global across all admin pages) */
+const SESSION_MAX_SECONDS = 24 * 60 * 60; // auto sign-out after 24 hours
+
+function SessionTimer({ className = '', onTimeout }: { className?: string; onTimeout?: () => void }) {
+    const [sessionTime, setSessionTime] = useState('00:00:00');
+    const onTimeoutRef = useRef(onTimeout);
+    onTimeoutRef.current = onTimeout;
+    useEffect(() => {
+        const KEY = 'admin_session_start';
+        let start = Number(sessionStorage.getItem(KEY));
+        if (!start || Number.isNaN(start)) {
+            start = Date.now();
+            sessionStorage.setItem(KEY, String(start));
+        }
+        let fired = false;
+        const tick = () => {
+            const elapsed = Math.max(0, Math.floor((Date.now() - start) / 1000));
+            if (elapsed >= SESSION_MAX_SECONDS) {
+                setSessionTime('24:00:00');
+                if (!fired) { fired = true; onTimeoutRef.current?.(); }
+                return;
+            }
+            const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+            const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            setSessionTime(`${h}:${m}:${s}`);
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, []);
+    return (
+        <div
+            title="Current session duration"
+            className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[12.5px] font-semibold text-slate-600 dark:text-slate-300 select-none", className)}
+        >
+            <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+            <span className="text-slate-500 dark:text-slate-400">Session Time</span>
+            <span className="h-3.5 w-px bg-slate-200 dark:bg-white/10" />
+            <span className="tabular-nums tracking-wide font-bold text-slate-700 dark:text-slate-200">{sessionTime}</span>
+        </div>
+    );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -73,13 +122,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [isNavigating, setIsNavigating] = useState(false);
 
     // Sidebar & Profile States
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<any>({ products: [], orders: [], users: [] });
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+    // Page results for the global navbar search (jump to any admin page)
+    const pageResults = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return [];
+        return ADMIN_PAGES
+            .filter(p => p.name.toLowerCase().includes(q) || p.keywords?.some(k => k.includes(q)))
+            .slice(0, 8);
+    }, [searchQuery]);
 
     // Session Data
     const [adminName, setAdminName] = useState('');
@@ -99,6 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const user = authService.getUser();
@@ -115,7 +172,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const s = await settingsService.getSettings();
                 setTheme('light');
                 setAnimationsEnabled(s.animations ?? true);
-                setSidebarCollapsed(s.sidebar_collapsed ?? true);
+                setSidebarCollapsed(s.sidebar_collapsed ?? false);
             } catch { }
         };
 
@@ -143,6 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const handleClickOutside = (e: MouseEvent) => {
             if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
             if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearchDropdown(false);
         };
 
         window.addEventListener('profileUpdated', handleUpdate);
@@ -213,23 +271,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } catch { }
     };
 
-    const handleSearch = async () => {
-        if (!searchQuery.trim()) return;
-        setIsSearching(true);
-        setShowSearchDropdown(true);
-        try {
-            const [pRes, oRes, uRes] = await Promise.all([
-                productService.getAll(), orderService.getAll(), userService.getAll()
-            ]);
-            setSearchResults({
-                products: (Array.isArray(pRes) ? pRes : []).filter((p: any) => p.name?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3),
-                orders: (Array.isArray(oRes) ? oRes : []).filter((o: any) => String(o.id).includes(searchQuery) || o.order_number?.includes(searchQuery)).slice(0, 3),
-                users: (Array.isArray(uRes) ? uRes : []).filter((u: any) => (`${u.first_name} ${u.last_name} ${u.email}`).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3),
-            });
-        } catch { } finally { setIsSearching(false); }
+    const goToPage = (href: string) => {
+        router.push(href);
+        setSearchQuery('');
+        setShowSearchDropdown(false);
+    };
+
+    const handleSearch = () => {
+        // Enter / submit jumps to the top matching page
+        if (pageResults.length > 0) {
+            goToPage(pageResults[0].href);
+        }
     };
 
     const handleLogout = () => { authService.logout(); router.push('/login'); };
+    const handleSessionTimeout = () => {
+        toast.error('Session timed out after 24 hours. Please sign in again.', { duration: 5000 });
+        // brief delay so the message is visible before the redirect
+        setTimeout(() => { authService.logout(); router.replace('/login'); }, 1200);
+    };
     const handleProfileUpdated = (name: string, email: string, avatar?: string) => {
         setAdminName(name); setAdminEmail(email); if (avatar) setAdminAvatar(avatar);
         setProfileOpen(false);
@@ -251,7 +311,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         />
                         {/* Sidebar Panel */}
                         <div className="relative z-10 h-full overflow-y-auto shadow-2xl animate-in slide-in-from-left duration-200">
-                            <AdminSidebar isCollapsed={false} onToggle={() => setMobileOpen(false)} />
+                            <AdminSidebar isCollapsed={false} onToggle={() => setMobileOpen(false)} onNavigate={() => setMobileOpen(false)} />
                         </div>
                     </div>
                 )}
@@ -295,31 +355,83 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <button
                                 type="button"
                                 onClick={toggleSidebar}
-                                className="p-1.5 border border-[#ddd] rounded-[3px] bg-white hover:bg-[#f7f8fa] text-[#565959] hover:text-[#e77600] transition-all shadow-sm shrink-0"
+                                className="p-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-all shrink-0"
                                 title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                             >
                                 <Menu className="h-5 w-5" />
                             </button>
 
                             {/* Search Bar */}
-                            <div className="relative flex-1 max-w-2xl">
+                            <div className="relative flex-1 max-w-2xl" ref={searchRef}>
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                    className="flex items-center bg-white rounded-[2px] border border-[#888c8e] overflow-hidden focus-within:ring-[2px] focus-within:ring-[#e77600] focus-within:border-[#e77600] transition-all">
-                                    <button type="button" className="px-3 h-9 bg-[#f3f3f3] border-r border-[#bbb] text-[12px] text-[#565959] hover:bg-[#e7e7e7] font-medium flex items-center gap-1">
-                                        All <ChevronDown size={14} />
-                                    </button>
-                                    <input type="text" placeholder="Search orders, products, or suppliers..."
-                                        className="flex-1 h-9 px-3 bg-transparent text-[14px] text-[#111] outline-none placeholder:text-[#aaa] font-medium"
-                                        value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                                    <button type="submit" className="w-12 h-9 bg-[#febd69] hover:bg-[#f3a847] flex items-center justify-center text-[#111] transition-colors">
-                                        {isSearching ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5 stroke-[2.5]" />}
-                                    </button>
+                                    className="group flex items-center gap-2.5 h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl transition-all hover:bg-white focus-within:bg-white focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10">
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 shrink-0 transition-colors" />
+                                    <input type="text" placeholder="Search pages, products, orders..."
+                                        className="flex-1 h-full bg-transparent text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
+                                        value={searchQuery}
+                                        onChange={e => { setSearchQuery(e.target.value); setShowSearchDropdown(true); }}
+                                        onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)} />
+                                    {searchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSearchQuery(''); setShowSearchDropdown(false); }}
+                                            className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors"
+                                            aria-label="Clear search"
+                                        >
+                                            <X size={15} />
+                                        </button>
+                                    )}
                                 </form>
+
+                                {/* Page search dropdown */}
+                                {showSearchDropdown && searchQuery.trim() && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.25)] z-[70] overflow-hidden">
+                                        <div className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 border-b border-slate-100 flex items-center justify-between">
+                                            <span>Pages</span>
+                                            <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-[9px]">{pageResults.length}</span>
+                                        </div>
+                                        {pageResults.length > 0 ? (
+                                            <div className="max-h-[60vh] overflow-y-auto py-1.5">
+                                                {pageResults.map((p, i) => (
+                                                    <button
+                                                        key={p.href}
+                                                        type="button"
+                                                        onClick={() => goToPage(p.href)}
+                                                        className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors group"
+                                                    >
+                                                        <div className="flex items-center gap-2.5 min-w-0">
+                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
+                                                                <FileText size={13} />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="text-[13px] font-semibold text-slate-700 group-hover:text-slate-900 truncate">{p.name}</p>
+                                                                <p className="text-[10.5px] text-slate-400 truncate">{p.href}</p>
+                                                            </div>
+                                                        </div>
+                                                        {i === 0 ? (
+                                                            <span className="hidden lg:flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-1.5 py-1 rounded shrink-0">
+                                                                <CornerDownLeft size={10} /> Enter
+                                                            </span>
+                                                        ) : (
+                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="px-4 py-6 text-center text-[12.5px] text-slate-400">
+                                                No pages found for “{searchQuery}”
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-3">
+                            <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
+                            <div className="hidden lg:block h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <Link href="/" className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
                                 <ExternalLink className="h-3.5 w-3.5 opacity-80" /> View Store
                             </Link>
@@ -350,7 +462,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
                                             {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
                                         </p>
-                                        <span className="inline-block text-[9px] font-extrabold text-sky-500 bg-sky-500/10 dark:text-sky-400 dark:bg-sky-500/15 px-2 py-0.5 rounded-full border border-sky-500/20 dark:border-sky-500/10 mt-1 uppercase tracking-wider">
+                                        <span className="inline-block text-[9px] font-extrabold text-indigo-600 bg-indigo-500/10 dark:text-indigo-400 dark:bg-indigo-500/15 px-2 py-0.5 rounded-full border border-indigo-500/20 dark:border-indigo-500/10 mt-1 uppercase tracking-wider">
                                             {adminRole}
                                         </span>
                                     </div>

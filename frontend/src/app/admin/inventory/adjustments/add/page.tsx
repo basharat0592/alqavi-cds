@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-    ChevronLeft, Save, RefreshCw, Package, 
-    FileText, Info, AlertTriangle 
+import {
+    Save, RefreshCw, Package,
+    FileText, Info
 } from 'lucide-react';
 import { inventoryService } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { PageHeader, Card, Button } from '@/components/admin/ui';
 
-const inputCls = (err?: boolean) => `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border rounded-xl text-sm outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all placeholder:text-slate-400 text-slate-800 dark:text-slate-200 ${err ? 'border-red-600' : 'border-slate-200 dark:border-white/10'}`;
-const selectCls = `w-full px-4 py-2.5 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-xl text-sm outline-none focus:border-[#F59E0B] text-slate-600 dark:text-slate-300 cursor-pointer transition-all`;
-const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
+const inputCls = (err?: boolean) => `w-full h-10 px-3.5 bg-white rounded-lg text-[13.5px] outline-none border transition-all placeholder:text-slate-400 text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 ${err ? 'border-rose-500' : 'border-slate-200'}`;
+const selectCls = `w-full h-10 px-3.5 bg-white border border-slate-200 rounded-lg text-[13.5px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 text-slate-600 cursor-pointer transition-all`;
+const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
 export default function AddAdjustmentPage() {
     const router = useRouter();
@@ -81,26 +81,44 @@ export default function AddAdjustmentPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto py-8 px-6 font-sans">
-            <div className="mb-8">
-                <Link 
-                    href="/admin/inventory/adjustments" 
-                    className="text-sm font-medium text-slate-500 hover:text-[#F59E0B] transition-colors mb-4 flex items-center gap-1"
-                >
-                    <ChevronLeft className="h-4 w-4" /> Back to Adjustments
-                </Link>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Log Adjustment</h1>
-                <p className="text-sm text-slate-500">Record a manual override or audit corrective action</p>
-            </div>
+        <div className="max-w-4xl mx-auto">
+            <PageHeader
+                title="New Stock Adjustment"
+                subtitle="Record a manual override or audit corrective action"
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Inventory', href: '/admin/inventory/adjustments' },
+                    { label: 'New Stock Adjustment' },
+                ]}
+                actions={
+                    <>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => router.push('/admin/inventory/adjustments')}
+                        >
+                            Discard
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="adjustment-form"
+                            disabled={saving}
+                        >
+                            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Commit Adjustment
+                        </Button>
+                    </>
+                }
+            />
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <Package className="h-4 w-4 text-[#F59E0B]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Manifest Target</h2>
+            <form id="adjustment-form" onSubmit={handleSubmit} className="space-y-6">
+                <Card className="overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/60">
+                        <Package className="h-4 w-4 text-indigo-600" />
+                        <h2 className="text-sm font-bold text-slate-900">Manifest Target</h2>
                     </div>
                     <div className="p-6 space-y-6">
-                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3 text-blue-700">
+                        <div className="p-4 bg-sky-50 border border-sky-100 rounded-xl flex gap-3 text-sky-700">
                             <Info className="h-5 w-5 shrink-0" />
                             <p className="text-xs font-medium leading-relaxed">
                                 Mandatory Audit Warning: This operation immediately updates live inventory and generates a permanent ledger entry.
@@ -109,7 +127,7 @@ export default function AddAdjustmentPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1">
-                                <label className={labelCls}>Target Asset <span className="text-red-500">*</span></label>
+                                <label className={labelCls}>Target Asset <span className="text-rose-500">*</span></label>
                                 <select 
                                     className={selectCls} 
                                     value={form.product} 
@@ -120,10 +138,10 @@ export default function AddAdjustmentPage() {
                                         <option key={p.id} value={p.product}>{p.product_name} — {p.warehouse_name}</option>
                                     ))}
                                 </select>
-                                {errors.product && <p className="text-xs text-red-500">{errors.product}</p>}
+                                {errors.product && <p className="text-xs text-rose-500">{errors.product}</p>}
                             </div>
                             <div className="space-y-1">
-                                <label className={labelCls}>Warehouse Location <span className="text-red-500">*</span></label>
+                                <label className={labelCls}>Warehouse Location <span className="text-rose-500">*</span></label>
                                 <select 
                                     className={selectCls} 
                                     value={form.warehouse} 
@@ -134,7 +152,7 @@ export default function AddAdjustmentPage() {
                                         <option key={wh.id} value={wh.id}>{wh.name}</option>
                                     ))}
                                 </select>
-                                {errors.warehouse && <p className="text-xs text-red-500">{errors.warehouse}</p>}
+                                {errors.warehouse && <p className="text-xs text-rose-500">{errors.warehouse}</p>}
                             </div>
                         </div>
 
@@ -147,7 +165,7 @@ export default function AddAdjustmentPage() {
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className={labelCls}>Delta Quantity <span className="text-red-500">*</span></label>
+                                <label className={labelCls}>Delta Quantity <span className="text-rose-500">*</span></label>
                                 <input 
                                     type="number" 
                                     className={inputCls(!!errors.quantity)} 
@@ -155,7 +173,7 @@ export default function AddAdjustmentPage() {
                                     value={form.quantity} 
                                     onChange={e => handle('quantity', e.target.value)} 
                                 />
-                                {errors.quantity && <p className="text-xs text-red-500">{errors.quantity}</p>}
+                                {errors.quantity && <p className="text-xs text-rose-500">{errors.quantity}</p>}
                             </div>
                             <div className="space-y-1">
                                 <label className={labelCls}>Reason Code</label>
@@ -170,12 +188,12 @@ export default function AddAdjustmentPage() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </Card>
 
-                <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-[16px] overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 dark:border-white/10 flex items-center gap-3 bg-slate-50 dark:bg-white/5">
-                        <FileText className="h-4 w-4 text-[#F59E0B]" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">Audit Documentation</h2>
+                <Card className="overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/60">
+                        <FileText className="h-4 w-4 text-indigo-600" />
+                        <h2 className="text-sm font-bold text-slate-900">Audit Documentation</h2>
                     </div>
                     <div className="p-6">
                         <div className="space-y-1">
@@ -188,24 +206,25 @@ export default function AddAdjustmentPage() {
                             />
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 <div className="flex justify-end gap-3 pt-4">
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="lg"
                         onClick={() => router.push('/admin/inventory/adjustments')}
-                        className="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10 transition-colors"
                     >
                         Discard
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="submit"
+                        size="lg"
                         disabled={saving}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-[#F59E0B] text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                     >
                         {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Commit Adjustment
-                    </button>
+                    </Button>
                 </div>
             </form>
         </div>

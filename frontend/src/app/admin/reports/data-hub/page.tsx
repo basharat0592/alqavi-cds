@@ -1,34 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { 
-    Download, Database, Calendar, Filter, 
-    FileSpreadsheet, FileJson, FileText, 
+import {
+    Download, FileSpreadsheet,
     ShoppingCart, Truck, Users, Package,
-    RefreshCw, AlertCircle, ChevronRight, Info
+    RefreshCw, AlertCircle
 } from 'lucide-react';
 import { orderService, productService, userService } from '@/lib/api';
 import toast from 'react-hot-toast';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - DATA HUB
-   ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[35px] px-6 rounded-[3px] text-[13px] font-bold border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] ${styles[variant as keyof typeof styles]} ${className}`}>
-            {children}
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-        </button>
-    );
-};
-
-const inputCls = "h-[35px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all font-medium";
+import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
 export default function DataHubPage() {
     const [dateFrom, setDateFrom] = useState('');
@@ -88,44 +68,39 @@ export default function DataHubPage() {
     };
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+        <div className="pb-20">
             <div className="max-w-[1440px] mx-auto px-6 pt-5 text-left">
-                
-                {/* ── Breadcrumb ── */}
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2 no-print">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                    <ChevronRight size={10} />
-                    <Link href="/admin/reports" className="hover:text-[#c45500] hover:underline">Reports Center</Link>
-                    <ChevronRight size={10} />
-                    <span className="text-[#c45500] font-bold">Data Hub</span>
-                </div>
 
-                <div className="mb-6 no-print">
-                    <h1 className="text-[22px] font-normal text-[#111]">System Data Extraction & Hub</h1>
-                    <p className="text-[13px] text-[#565959] mt-1">Generate and download secure manifest registries in CSV format.</p>
-                </div>
-                <div className="border-b border-[#ddd] mb-8 no-print" />
+                <PageHeader
+                    title="Data Hub"
+                    subtitle="Generate and download secure manifest registries in CSV format."
+                    breadcrumbs={[
+                        { label: 'Console', href: '/admin/dashboard' },
+                        { label: 'Reports Center', href: '/admin/reports' },
+                        { label: 'Data Hub' },
+                    ]}
+                />
 
                 {/* Range Selection */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-6 mb-8 shadow-sm no-print">
+                <Card className="p-6 mb-8 no-print">
                     <div className="flex flex-wrap items-end gap-6">
                         <div className="space-y-1.5 flex-1 min-w-[200px]">
-                            <label className="text-[11px] font-bold text-[#111] uppercase tracking-wider">Start Date (From)</label>
-                            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={inputCls + " w-full"} />
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Start Date (From)</label>
+                            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={ui.inputBase} />
                         </div>
                         <div className="space-y-1.5 flex-1 min-w-[200px]">
-                            <label className="text-[11px] font-bold text-[#111] uppercase tracking-wider">End Date (To)</label>
-                            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={inputCls + " w-full"} />
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">End Date (To)</label>
+                            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={ui.inputBase} />
                         </div>
-                        <div className="flex-1 min-w-[250px] bg-[#f7f8fa] p-4 border border-[#ddd] rounded-[4px]">
+                        <div className="flex-1 min-w-[250px] bg-slate-50 p-4 border border-slate-200/70 rounded-xl">
                             <div className="flex items-center gap-2 mb-1">
-                                <FileSpreadsheet size={16} className="text-[#007600]" />
-                                <span className="text-[12px] font-bold text-[#111]">Standard Output: Universal CSV</span>
+                                <FileSpreadsheet size={16} className="text-emerald-600" />
+                                <span className="text-[12px] font-bold text-slate-900">Standard Output: Universal CSV</span>
                             </div>
-                            <p className="text-[11px] text-[#565959]">Optimized for Excel, Google Sheets, and PowerBI integration.</p>
+                            <p className="text-[11px] text-slate-500">Optimized for Excel, Google Sheets, and PowerBI integration.</p>
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 {/* Export Options Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -135,31 +110,34 @@ export default function DataHubPage() {
                         { id: 'users', title: 'Identity Ledger', desc: 'Complete personnel directory with role attributes.', icon: Users },
                         { id: 'inventory', title: 'Asset Inventory', desc: 'Product stock audits including pricing and status.', icon: Package },
                     ].map((opt) => (
-                        <div key={opt.id} className="bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm flex flex-col justify-between hover:border-[#c45500] transition-colors group">
+                        <Card key={opt.id} className="p-6 flex flex-col justify-between hover:border-indigo-300 transition-colors group">
                             <div>
-                                <div className="w-10 h-10 bg-[#f0f2f2] rounded-[4px] flex items-center justify-center mb-4 border border-[#ddd] group-hover:border-[#c45500]">
-                                    <opt.icon size={20} className="text-[#565959] group-hover:text-[#c45500]" />
+                                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mb-4 border border-indigo-100 group-hover:border-indigo-300 transition-colors">
+                                    <opt.icon size={20} className="text-indigo-600" />
                                 </div>
-                                <h3 className="text-[14px] font-bold text-[#111] mb-2">{opt.title}</h3>
-                                <p className="text-[12px] text-[#565959] mb-6 leading-relaxed italic">{opt.desc}</p>
+                                <h3 className="text-[14px] font-bold text-slate-900 mb-2">{opt.title}</h3>
+                                <p className="text-[12px] text-slate-600 mb-6 leading-relaxed">{opt.desc}</p>
                             </div>
-                            <Btn 
-                                onClick={() => handleExport(opt.id)} 
-                                loading={loadingMap[opt.id]}
+                            <Button
+                                className="w-full"
+                                onClick={() => handleExport(opt.id)}
                                 disabled={loadingMap[opt.id]}
                             >
-                                <Download size={14} /> Extract Data
-                            </Btn>
-                        </div>
+                                {loadingMap[opt.id]
+                                    ? <RefreshCw size={14} className="animate-spin" />
+                                    : <Download size={14} />}
+                                Extract Data
+                            </Button>
+                        </Card>
                     ))}
                 </div>
 
                 {/* Enterprise Note */}
-                <div className="mt-12 bg-[#fff4e5] border border-[#ffb347]/30 rounded-[4px] p-5 flex gap-4 items-start animate-in fade-in duration-1000">
-                    <AlertCircle className="text-[#e47911] shrink-0 mt-0.5" size={20} />
+                <div className="mt-12 bg-amber-50 border border-amber-200 rounded-2xl p-5 flex gap-4 items-start animate-in fade-in duration-1000">
+                    <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={20} />
                     <div>
-                        <p className="text-[13px] font-bold text-[#111]">Enterprise Data Governance</p>
-                        <p className="text-[12px] text-[#565959] leading-relaxed font-medium">All data extractions are logged for security audits. Ensure that downloaded manifests are handled according to your company's data privacy policies.</p>
+                        <p className="text-[13px] font-bold text-slate-900">Enterprise Data Governance</p>
+                        <p className="text-[12px] text-slate-600 leading-relaxed">All data extractions are logged for security audits. Ensure that downloaded manifests are handled according to your company's data privacy policies.</p>
                     </div>
                 </div>
             </div>

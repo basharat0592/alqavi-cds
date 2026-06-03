@@ -4,31 +4,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Plus, Search, Edit, Trash2, Package,
-    RefreshCw, Filter, Image as ImageIcon,
-    X, AlertTriangle, CheckCircle, Building2, Activity,
+    RefreshCw,
+    AlertTriangle,
     ChevronLeft, ChevronRight, Truck, MapPin, TrendingUp
 } from 'lucide-react';
 import { productService, categoryService, supplierService, inventoryService } from '@/lib/api';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - PRODUCT LIST
-   ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
+import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -146,101 +129,96 @@ export default function ProductsPage() {
     const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+        <div className="pb-20">
             <div className="max-w-[1100px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
 
-                {/* Breadcrumb */}
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                    <ChevronRight size={10} />
-                    <span className="text-[#c45500]">Products</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                    <h1 className="text-[22px] font-normal">Products List</h1>
-                    <div className="flex gap-2 w-full sm:w-auto justify-end">
-                        <Btn variant="secondary" onClick={loadData} loading={syncing} className="flex-1 sm:flex-initial justify-center">
-                            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
-                        </Btn>
-                        <Btn onClick={() => router.push('/admin/products/add')} className="flex-1 sm:flex-initial justify-center">
-                            <Plus size={14} /> Add Product
-                        </Btn>
-                    </div>
-                </div>
-                <div className="border-b border-[#ddd] mb-6" />
+                <PageHeader
+                    title="Products"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Products' }]}
+                    actions={
+                        <>
+                            <Button variant="outline" size="sm" onClick={loadData} disabled={syncing}>
+                                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
+                            </Button>
+                            <Button variant="primary" size="sm" onClick={() => router.push('/admin/products/add')}>
+                                <Plus size={14} /> Add Product
+                            </Button>
+                        </>
+                    }
+                />
 
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-4 sm:p-5 mb-6 shadow-sm flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <Card className="p-4 sm:p-5 mb-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     <div className="relative flex-1 min-w-0 sm:min-w-[250px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                             value={search}
                             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                             placeholder="Search by name, code or supplier..."
-                            className="w-full h-[35px] pl-10 pr-4 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] transition-all"
+                            className={`${ui.inputBase} pl-10`}
                         />
                     </div>
                     <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
-                        <select value={category} onChange={e => { setCategory(e.target.value); setCurrentPage(1); }} className="h-[35px] px-2 sm:px-3 bg-white border border-[#888c8e] rounded-[3px] text-[13px] outline-none cursor-pointer w-full">
+                        <select value={category} onChange={e => { setCategory(e.target.value); setCurrentPage(1); }} className={`${ui.inputBase} px-2 sm:px-3 cursor-pointer sm:w-auto`}>
                             <option value="">All Categories</option>
                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-                        <select value={supplier} onChange={e => { setSupplier(e.target.value); setCurrentPage(1); }} className="h-[35px] px-2 sm:px-3 bg-white border border-[#888c8e] rounded-[3px] text-[13px] outline-none cursor-pointer w-full">
+                        <select value={supplier} onChange={e => { setSupplier(e.target.value); setCurrentPage(1); }} className={`${ui.inputBase} px-2 sm:px-3 cursor-pointer sm:w-auto`}>
                             <option value="">All Suppliers</option>
                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
-                </div>
+                </Card>
 
                 {/* Table */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden mb-6">
+                <Card className="overflow-hidden mb-6">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[#f7f8fa] border-b border-[#ddd] transition-colors">
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111]">Product</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111]">Price</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111] text-center">Status</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111] text-right">Current Units</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[12px] font-bold text-[#111] text-right">Actions</th>
+                                <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">Status</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Current Units</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#eee]">
+                            <tbody className="divide-y divide-slate-100">
                                 {loading && products.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">Loading...</td></tr>
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
                                 ) : products.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No products found.</td></tr>
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
                                 ) : (
                                     groupedProducts.map(prod => {
                                         return (
-                                            <tr key={prod.id} className="hover:bg-[#fcfdff] transition-colors group">
+                                            <tr key={prod.id} className="hover:bg-slate-50 transition-colors group">
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
                                                     <div className="flex items-center gap-2 sm:gap-4">
-                                                        <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-[#eee] rounded-[3px] flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
+                                                        <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-slate-200 rounded-lg flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
                                                             {(() => {
                                                                 const finalImg = prod.image || prod.catalog_image;
                                                                 return finalImg ? (
                                                                     <img src={getImageUrl(finalImg)} alt="" className="w-full h-full object-contain" />
                                                                 ) : (
-                                                                    <Package className="h-6 w-6 text-slate-100" />
+                                                                    <Package className="h-6 w-6 text-slate-200" />
                                                                 );
                                                             })()}
                                                         </div>
                                                         <div>
                                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                                                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                                                                    <div className="text-[14px] font-bold text-[#007185] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
+                                                                    <div className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
                                                                         {prod.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                                     </div>
                                                                     {(prod.weight || prod.size) && (
-                                                                        <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                                        <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
                                                                             — {prod.weight}{prod.weight && prod.size ? ' • ' : ''}{prod.size}
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                {prod.badge && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[#e47911] text-white rounded-[2px] uppercase">{prod.badge}</span>}
+                                                                {prod.badge && <Badge tone="indigo">{prod.badge}</Badge>}
                                                             </div>
-                                                            <div className="text-[11px] text-[#565959] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                                                 <span className="flex items-center gap-1"><Truck size={12} className="opacity-40" /> {prod.supplier_name}</span>
                                                                 <span className="opacity-20 hidden sm:inline">|</span>
                                                                 <span className="flex items-center gap-1"><MapPin size={11} className="opacity-40" /> {prod.warehouse_name}</span>
@@ -249,44 +227,44 @@ export default function ProductsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
-                                                    <div className="text-[14px] sm:text-[15px] font-bold text-[#111]">{formatCurrency(prod.selling_price)}</div>
+                                                    <div className="text-[14px] sm:text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(prod.selling_price)}</div>
                                                     <div className="flex items-center gap-1 mt-0.5">
-                                                        <TrendingUp className="h-3 w-3 text-green-600 shrink-0" />
-                                                        <span className="text-[10px] font-bold text-green-700 leading-none">
+                                                        <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
+                                                        <span className="text-[10px] font-bold text-emerald-700 leading-none tabular-nums">
                                                             {Number(prod.profit_margin).toFixed(1)}% <span className="hidden sm:inline">profit</span>
                                                         </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-center">
-                                                    <span className={`inline-flex items-center justify-center rounded-[2px] text-[10px] font-bold uppercase border ${
-                                                        prod.status === 'ACTIVE' 
-                                                            ? 'bg-green-50 text-green-700 border-green-200 px-2 py-0.5' 
-                                                            : 'bg-slate-50 text-slate-400 border-slate-200 px-2 py-0.5'
+                                                    <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold uppercase border ${
+                                                        prod.status === 'ACTIVE'
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 px-2 py-0.5'
+                                                            : 'bg-slate-100 text-slate-400 border-slate-200 px-2 py-0.5'
                                                     } max-sm:w-2.5 max-sm:h-2.5 max-sm:rounded-full max-sm:p-0 max-sm:border-0 ${
-                                                        prod.status === 'ACTIVE' ? 'max-sm:bg-green-500' : 'max-sm:bg-slate-400'
+                                                        prod.status === 'ACTIVE' ? 'max-sm:bg-emerald-500' : 'max-sm:bg-slate-400'
                                                     }`} title={prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}>
                                                         <span className="max-sm:hidden">{prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}</span>
                                                     </span>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className={`text-[14px] sm:text-[16px] font-black ${(prod.total_quantity || 0) < 10 ? 'text-red-600' : 'text-[#111]'}`}>
+                                                    <div className={`text-[14px] sm:text-[16px] font-black tabular-nums ${(prod.total_quantity || 0) < 10 ? 'text-rose-600' : 'text-slate-900'}`}>
                                                         {(prod.total_quantity || 0).toLocaleString()}
                                                     </div>
-                                                    <div className="hidden sm:block text-[9px] sm:text-[10px] text-[#aaa] font-bold uppercase tracking-tighter">Unit Balance</div>
+                                                    <div className="hidden sm:block text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Unit Balance</div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
                                                     <div className="flex justify-end gap-1.5 sm:gap-2 transition-opacity">
-                                                        <button 
-                                                            onClick={() => router.push(`/admin/products/edit/${prod.id}`)} 
-                                                            className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959] hover:text-[#e77600] flex items-center gap-1 shadow-sm shrink-0"
+                                                        <button
+                                                            onClick={() => router.push(`/admin/products/edit/${prod.id}`)}
+                                                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 hover:border-slate-300 flex items-center gap-1 shadow-sm shrink-0 transition-colors"
                                                             title="Edit"
                                                         >
                                                             <Edit size={13} />
                                                             <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
                                                         </button>
-                                                        <button 
-                                                            onClick={() => setDeleteProd(prod)} 
-                                                            className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600 flex items-center gap-1 shadow-sm shrink-0"
+                                                        <button
+                                                            onClick={() => setDeleteProd(prod)}
+                                                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-rose-50 hover:border-rose-200 text-rose-600 flex items-center gap-1 shadow-sm shrink-0 transition-colors"
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={13} />
@@ -304,40 +282,38 @@ export default function ProductsPage() {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="px-6 py-4 bg-[#f7f8fa] border-t border-[#ddd] flex items-center justify-between">
-                            <p className="text-[11px] text-[#565959] italic">Showing {products.length} of {totalCount} products</p>
+                        <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-200/70 flex items-center justify-between">
+                            <p className="text-[11px] text-slate-500 italic">Showing {products.length} of {totalCount} products</p>
                             <div className="flex items-center gap-1">
-                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 disabled:opacity-30 text-[#007185] hover:bg-white rounded"><ChevronLeft size={20} /></button>
-                                <span className="text-[13px] font-bold px-4">Page {currentPage} of {totalPages}</span>
-                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1 disabled:opacity-30 text-[#007185] hover:bg-white rounded"><ChevronRight size={20} /></button>
+                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 disabled:opacity-30 text-indigo-600 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={20} /></button>
+                                <span className="text-[13px] font-bold px-4 text-slate-700 tabular-nums">Page {currentPage} of {totalPages}</span>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1 disabled:opacity-30 text-indigo-600 hover:bg-white rounded-lg transition-colors"><ChevronRight size={20} /></button>
                             </div>
                         </div>
                     )}
-                </div>
+                </Card>
             </div>
 
             {/* Delete Modal */}
-            {deleteProd && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-xl text-center">
-                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
-                            <AlertTriangle size={24} className="text-red-600" />
-                        </div>
-                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Delete Product?</h3>
-                        <p className="text-[13px] text-[#565959]">
-                            Delete <span className="font-bold text-[#111]">"{deleteProd.product_name}"</span>?
-                        </p>
-                        <div className="mt-6 space-y-2">
-                            <button onClick={handleDelete} disabled={deleting} className="w-full h-[31px] bg-red-600 text-white border border-red-700 rounded-[3px] text-[13px] font-medium shadow-sm active:bg-red-800">
-                                {deleting ? 'Deleting...' : 'Confirm Delete'}
-                            </button>
-                            <button onClick={() => setDeleteProd(null)} className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline">
-                                Cancel
-                            </button>
-                        </div>
+            <Modal open={!!deleteProd} onClose={() => setDeleteProd(null)} size="sm">
+                <div className="text-center">
+                    <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                        <AlertTriangle size={24} className="text-rose-600" />
+                    </div>
+                    <h3 className="text-[17px] font-bold text-slate-900 tracking-tight mb-2">Delete Product?</h3>
+                    <p className="text-[13px] text-slate-600">
+                        Delete <span className="font-bold text-slate-900">"{deleteProd?.product_name}"</span>?
+                    </p>
+                    <div className="mt-6 space-y-2">
+                        <Button variant="danger" onClick={handleDelete} disabled={deleting} className="w-full">
+                            {deleting ? 'Deleting...' : 'Confirm Delete'}
+                        </Button>
+                        <button onClick={() => setDeleteProd(null)} className="w-full text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline">
+                            Cancel
+                        </button>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

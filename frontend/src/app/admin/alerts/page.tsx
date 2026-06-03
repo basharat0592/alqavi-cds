@@ -4,29 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { productService, orderService, userService } from '@/lib/api';
 import { purchaseService } from '@/services/purchase.service';
 import {
-    Bell, AlertTriangle, ShoppingBag, CheckCircle2, Clock,
-    RefreshCw, ChevronRight, Plus, Activity, ClipboardList,
+    AlertTriangle, ShoppingBag, CheckCircle2, Clock,
+    RefreshCw, Plus, Activity, ClipboardList,
     ShoppingCart, UserPlus, XCircle, ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import PageLoader from '@/components/ui/PageLoader';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - SYSTEM MONITOR & ALERTS
-   ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] whitespace-nowrap ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
+import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
 export default function AlertsPage() {
     const [loading, setLoading] = useState(true);
@@ -147,72 +131,63 @@ export default function AlertsPage() {
     const lowStockCount = alerts.length - outOfStockCount;
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111] text-left">
-            
-            {/* Header */}
-            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-3 sm:px-6">
-                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
-                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                        <ChevronRight size={10} />
-                        <span className="text-[#c45500]">Alerts</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                            <h1 className="text-[22px] font-normal text-[#111]">Stock & Activity Alerts</h1>
-                            <p className="text-[13px] text-[#565959] mt-0.5">Real-time updates on low stock and recent events</p>
-                        </div>
-                        <div className="flex gap-4 w-full sm:w-auto items-center justify-between sm:justify-end">
-                            <Btn variant="secondary" onClick={() => fetchData()} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                            </Btn>
-                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-green-700 uppercase tracking-wider">
-                                <ShieldCheck className="h-4 w-4" /> All Systems Good
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div className="text-left">
 
-            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 mt-6 space-y-8">
-                
+            <PageHeader
+                title="System Alerts"
+                subtitle="Real-time updates on low stock and recent events"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'System Alerts' }]}
+                actions={
+                    <div className="flex items-center gap-3">
+                        <Badge tone="green">
+                            <ShieldCheck className="h-3.5 w-3.5" /> All Systems Good
+                        </Badge>
+                        <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading}>
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                        </Button>
+                    </div>
+                }
+            />
+
+            <div className="space-y-8">
+
                 {/* INVENTORY MESH MONITOR */}
                 <section className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-l-4 border-red-500 pl-4 py-0.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <h2 className="text-[14px] font-bold text-[#111] uppercase tracking-tight flex items-center gap-2">
-                                <Activity className="h-4 w-4 text-red-500" /> Low Stock Alerts
+                            <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-indigo-600" /> Low Stock Alerts
                             </h2>
-                            <p className="text-[11px] text-[#565959] uppercase tracking-widest mt-0.5">Products running low or out of stock</p>
+                            <p className="text-[12px] text-slate-500 mt-0.5">Products running low or out of stock</p>
                         </div>
-                        <span className="self-start sm:self-auto text-[10px] bg-red-50 text-red-700 px-3 py-1 rounded-[2px] font-bold uppercase tracking-wider border border-red-200">
+                        <Badge tone="red" className="self-start sm:self-auto">
                             {outOfStockCount} Out of Stock / {lowStockCount} Low Stock
-                        </span>
+                        </Badge>
                     </div>
 
                     {alerts.length === 0 ? (
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-12 text-center shadow-sm">
-                            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-100">
-                                <CheckCircle2 className="h-8 w-8 text-green-600" />
+                        <Card className="p-12 text-center">
+                            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+                                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                             </div>
-                            <p className="text-[12px] font-bold text-[#565959] uppercase tracking-widest leading-relaxed">All products have sufficient stock levels.</p>
-                        </div>
+                            <p className="text-[13px] font-semibold text-slate-500 leading-relaxed">All products have sufficient stock levels.</p>
+                        </Card>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {alerts.map(a => (
-                                <div key={a.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                                <Card key={a.id} className="hover:shadow-md transition-all flex flex-col justify-between">
                                     <div className="p-4 flex-1">
                                         <div className="flex items-center justify-between mb-4">
-                                            <div className={`w-8 h-8 ${a.bg} ${a.color} rounded-[3px] flex items-center justify-center shrink-0 border ${a.border}`}>
+                                            <div className={`w-8 h-8 ${a.bg} ${a.color} rounded-lg flex items-center justify-center shrink-0 border ${a.border}`}>
                                                 <a.icon size={16} />
                                             </div>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[2px] border uppercase tracking-wider ${a.color} ${a.bg} ${a.border}`}>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${a.color} ${a.bg} ${a.border}`}>
                                                 {a.remaining} Left
                                             </span>
                                         </div>
                                         <div>
                                             <Link href={a.href || '#'} className="block group">
-                                                <h3 className="text-[13px] font-bold text-[#007185] group-hover:text-[#c45500] group-hover:underline truncate">{a.product}</h3>
+                                                <h3 className="text-[13px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline truncate">{a.product}</h3>
                                             </Link>
                                             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1 ${a.color}`}>
                                                 <AlertTriangle className="h-3.5 w-3.5" /> {a.type.replace(/_/g, ' ')}
@@ -221,12 +196,12 @@ export default function AlertsPage() {
                                     </div>
                                     <div className="p-4 pt-0">
                                         <Link href={`/admin/purchases/add?product_id=${a.productId}&product_name=${encodeURIComponent(a.product)}&quantity=0`} className="block w-full">
-                                            <button className="w-full flex items-center justify-center gap-1.5 h-[29px] bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] rounded-[3px] text-[11px] font-bold uppercase tracking-wider shadow-sm">
+                                            <Button variant="outline" size="sm" className="w-full uppercase tracking-wider text-[11px]">
                                                 <Plus size={13} /> Order Stock
-                                            </button>
+                                            </Button>
                                         </Link>
                                     </div>
-                                </div>
+                                </Card>
                             ))}
                         </div>
                     )}
@@ -234,37 +209,37 @@ export default function AlertsPage() {
 
                 {/* RECENT ACTIVITY LOG */}
                 <section className="space-y-4">
-                    <div className="border-l-4 border-[#e47911] pl-4 py-0.5">
-                        <h2 className="text-[14px] font-bold text-[#111] uppercase tracking-tight flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4 text-[#e47911]" /> Recent Activity Log
+                    <div>
+                        <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4 text-indigo-600" /> Recent Activity Log
                         </h2>
-                        <p className="text-[11px] text-[#565959] uppercase tracking-widest mt-0.5">Recent actions on orders, users, and purchases</p>
+                        <p className="text-[12px] text-slate-500 mt-0.5">Recent actions on orders, users, and purchases</p>
                     </div>
 
                     <div className="relative">
-                        <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-[#eee]" />
+                        <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-slate-100" />
                         <div className="space-y-4">
                             {activities.map((act) => (
                                 <div key={act.id} className="relative pl-14 group">
-                                    <div className={`absolute left-0 top-1.5 w-9 h-9 ${act.bg} ${act.color} rounded-[3px] z-10 flex items-center justify-center shadow-sm border ${act.border} transform group-hover:scale-105 transition-all`}>
+                                    <div className={`absolute left-0 top-1.5 w-9 h-9 ${act.bg} ${act.color} rounded-lg z-10 flex items-center justify-center shadow-sm border ${act.border} transform group-hover:scale-105 transition-all`}>
                                         <act.icon size={16} />
                                     </div>
-                                    <div className="bg-white border border-[#ddd] rounded-[4px] p-4 shadow-sm hover:bg-[#fcfdff] transition-all">
+                                    <Card className="p-4 hover:bg-slate-50 transition-all">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-[2px] bg-[#f7f8fa] border border-[#ddd] text-[#565959] uppercase tracking-wider">{act.type}</span>
-                                                <h3 className="text-[13px] font-bold text-[#111] uppercase tracking-tight">{act.title}</h3>
+                                                <Badge tone="neutral">{act.type}</Badge>
+                                                <h3 className="text-[13px] font-bold text-slate-900 tracking-tight">{act.title}</h3>
                                             </div>
-                                            <div className="text-[10px] font-bold text-[#565959] flex items-center gap-1.5 uppercase tracking-wider">
-                                                <Clock size={11} className="text-[#e47911]" /> {act.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider tabular-nums">
+                                                <Clock size={11} className="text-indigo-600" /> {act.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         </div>
-                                        <p className="text-[12px] text-[#565959] font-medium leading-relaxed">{act.message}</p>
-                                    </div>
+                                        <p className="text-[12px] text-slate-600 font-medium leading-relaxed">{act.message}</p>
+                                    </Card>
                                 </div>
                             ))}
                             {activities.length === 0 && !loading && (
-                                <p className="text-[12px] text-[#565959] font-bold text-center py-20 uppercase tracking-widest">No recent activity recorded.</p>
+                                <p className="text-[13px] text-slate-400 font-semibold text-center py-20">No recent activity recorded.</p>
                             )}
                         </div>
                     </div>
