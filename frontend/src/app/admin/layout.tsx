@@ -355,10 +355,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <button
                                 type="button"
                                 onClick={toggleSidebar}
-                                className="p-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-all shrink-0"
+                                className="-ml-2 w-10 h-10 rounded-full bg-[#0F172A] hover:bg-[#1B2335] text-white flex items-center justify-center transition-colors shrink-0"
                                 title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                             >
-                                <Menu className="h-5 w-5" />
+                                {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
                             </button>
 
                             {/* Search Bar */}

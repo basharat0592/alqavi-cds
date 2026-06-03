@@ -322,6 +322,7 @@ export default function ProductForm({ id }: ProductFormProps) {
         description: '',
         weight: '',
         size: '',
+        min_count: '10',
     });
 
     const [image, setImage] = useState<File | null>(null);
@@ -375,6 +376,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                         description: prod.description || '',
                         weight: prod.weight || '',
                         size: prod.size || '',
+                        min_count: prod.min_count != null ? String(prod.min_count) : '10',
                     });
                     setSellingPrice(prod.selling_price || '');
 
@@ -639,6 +641,19 @@ export default function ProductForm({ id }: ProductFormProps) {
                                         onChange={(val: string) => setFormData(p => ({ ...p, category: val }))}
                                         searchable
                                     />
+
+                                    <Field label="Min Count (Low Stock Alert)">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={formData.min_count}
+                                            onChange={e => setFormData(p => ({ ...p, min_count: e.target.value }))}
+                                            placeholder="10"
+                                            className={inputCls}
+                                        />
+                                        <p className="text-[11px] text-[#94a3b8] mt-1.5">Alert on the dashboard when stock falls at or below this number.</p>
+                                    </Field>
 
                                 </div>
 

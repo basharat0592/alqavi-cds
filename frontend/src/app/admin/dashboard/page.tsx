@@ -4,10 +4,11 @@ import React, { useMemo } from 'react';
 import Link from 'next/link';
 import {
     Package, TrendingUp, Tag,
-    Boxes, ChevronRight, Settings, UserCheck, ShoppingBag,
+    Boxes, ChevronRight, Settings, UserCheck,
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    Truck, Book, FileText, AlertTriangle, Globe
+    Truck, Book, AlertTriangle, Globe,
+    ScanLine, Receipt, Landmark, ClipboardList, PackagePlus, Warehouse, Building2
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 
@@ -40,9 +41,9 @@ export default function AdminDashboard() {
             name: 'Point of Sale (POS)',
             desc: 'Sell at the counter',
             href: '/admin/sale',
-            icon: Monitor,
+            icon: ScanLine,
             theme: {
-                border: 'group-hover:border-indigo-500',
+                border: 'hover:border-indigo-500',
                 iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
                 leftBar: 'bg-indigo-600',
                 chevron: 'text-indigo-400 group-hover:text-indigo-600',
@@ -56,7 +57,7 @@ export default function AdminDashboard() {
             href: '/admin/purchases/add',
             icon: ShoppingCart,
             theme: {
-                border: 'group-hover:border-emerald-500',
+                border: 'hover:border-emerald-500',
                 iconBg: 'bg-emerald-50 border-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)]',
                 leftBar: 'bg-emerald-600',
                 chevron: 'text-emerald-400 group-hover:text-emerald-600',
@@ -65,12 +66,26 @@ export default function AdminDashboard() {
             keywords: ['draft', 'buy', 'stock order', 'procurement', 'purchase']
         },
         {
+            name: 'Purchase Returns',
+            desc: 'Return to supplier',
+            href: '/admin/purchases/returns',
+            icon: RefreshCcw,
+            theme: {
+                border: 'hover:border-lime-500',
+                iconBg: 'bg-lime-50 border-lime-100 text-lime-700 group-hover:bg-lime-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(101,163,13,0.2)]',
+                leftBar: 'bg-lime-600',
+                chevron: 'text-lime-500 group-hover:text-lime-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(101,163,13,0.06)]'
+            },
+            keywords: ['refunds', 'damaged', 'shipback', 'purchase returns']
+        },
+        {
             name: 'Invoices',
             desc: 'Billing & receipts',
             href: '/admin/invoices',
-            icon: FileText,
+            icon: Receipt,
             theme: {
-                border: 'group-hover:border-amber-500',
+                border: 'hover:border-amber-500',
                 iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
                 leftBar: 'bg-amber-600',
                 chevron: 'text-amber-400 group-hover:text-amber-600',
@@ -84,7 +99,7 @@ export default function AdminDashboard() {
             href: '/admin/reports',
             icon: BarChart3,
             theme: {
-                border: 'group-hover:border-violet-500',
+                border: 'hover:border-violet-500',
                 iconBg: 'bg-violet-50 border-violet-100 text-violet-600 group-hover:bg-violet-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)]',
                 leftBar: 'bg-violet-600',
                 chevron: 'text-violet-400 group-hover:text-violet-600',
@@ -96,9 +111,9 @@ export default function AdminDashboard() {
             name: 'Accounting & Finance',
             desc: 'Ledgers & cashflow',
             href: '/admin/reports/accounting',
-            icon: CreditCard,
+            icon: Landmark,
             theme: {
-                border: 'group-hover:border-sky-500',
+                border: 'hover:border-sky-500',
                 iconBg: 'bg-sky-50 border-sky-100 text-sky-600 group-hover:bg-sky-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(14,165,233,0.2)]',
                 leftBar: 'bg-sky-600',
                 chevron: 'text-sky-400 group-hover:text-sky-600',
@@ -110,9 +125,9 @@ export default function AdminDashboard() {
             name: 'Order List',
             desc: 'Manage online orders',
             href: '/admin/orders',
-            icon: ShoppingBag,
+            icon: ClipboardList,
             theme: {
-                border: 'group-hover:border-rose-500',
+                border: 'hover:border-rose-500',
                 iconBg: 'bg-rose-50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
                 leftBar: 'bg-rose-600',
                 chevron: 'text-rose-400 group-hover:text-rose-600',
@@ -121,12 +136,26 @@ export default function AdminDashboard() {
             keywords: ['orders', 'shipping', 'list']
         },
         {
+            name: 'Sale Returns',
+            desc: 'Customer refunds',
+            href: '/admin/sale-returns',
+            icon: RotateCcw,
+            theme: {
+                border: 'hover:border-fuchsia-500',
+                iconBg: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(192,38,211,0.2)]',
+                leftBar: 'bg-fuchsia-600',
+                chevron: 'text-fuchsia-400 group-hover:text-fuchsia-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(192,38,211,0.06)]'
+            },
+            keywords: ['returns', 'refunds', 'customer returns', 'sale returns']
+        },
+        {
             name: 'Product List',
             desc: 'Catalog & SKUs',
             href: '/admin/products',
             icon: Package,
             theme: {
-                border: 'group-hover:border-teal-500',
+                border: 'hover:border-teal-500',
                 iconBg: 'bg-teal-50 border-teal-100 text-teal-600 group-hover:bg-teal-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(20,184,166,0.2)]',
                 leftBar: 'bg-teal-600',
                 chevron: 'text-teal-400 group-hover:text-teal-600',
@@ -138,9 +167,9 @@ export default function AdminDashboard() {
             name: 'Add Product',
             desc: 'Create a new item',
             href: '/admin/products/add',
-            icon: PlusIcon,
+            icon: PackagePlus,
             theme: {
-                border: 'group-hover:border-green-500',
+                border: 'hover:border-green-500',
                 iconBg: 'bg-green-50 border-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(22,163,74,0.2)]',
                 leftBar: 'bg-green-600',
                 chevron: 'text-green-400 group-hover:text-green-600',
@@ -154,7 +183,7 @@ export default function AdminDashboard() {
             href: '/admin/inventory/list',
             icon: Boxes,
             theme: {
-                border: 'group-hover:border-orange-500',
+                border: 'hover:border-orange-500',
                 iconBg: 'bg-orange-50 border-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(234,88,12,0.2)]',
                 leftBar: 'bg-orange-600',
                 chevron: 'text-orange-400 group-hover:text-orange-600',
@@ -166,9 +195,9 @@ export default function AdminDashboard() {
             name: 'Warehouses',
             desc: 'Storage locations',
             href: '/admin/inventory/warehouses',
-            icon: Store,
+            icon: Warehouse,
             theme: {
-                border: 'group-hover:border-stone-500',
+                border: 'hover:border-stone-500',
                 iconBg: 'bg-stone-100 border-stone-200 text-stone-600 group-hover:bg-stone-700 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(87,83,78,0.2)]',
                 leftBar: 'bg-stone-700',
                 chevron: 'text-stone-400 group-hover:text-stone-600',
@@ -182,7 +211,7 @@ export default function AdminDashboard() {
             href: '/admin/tracking',
             icon: Truck,
             theme: {
-                border: 'group-hover:border-blue-500',
+                border: 'hover:border-blue-500',
                 iconBg: 'bg-blue-50 border-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]',
                 leftBar: 'bg-blue-600',
                 chevron: 'text-blue-400 group-hover:text-blue-600',
@@ -194,9 +223,9 @@ export default function AdminDashboard() {
             name: 'Supplier Registry',
             desc: 'Vendors & contacts',
             href: '/admin/company/suppliers',
-            icon: UserCheck,
+            icon: Building2,
             theme: {
-                border: 'group-hover:border-purple-500',
+                border: 'hover:border-purple-500',
                 iconBg: 'bg-purple-50 border-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(147,51,234,0.2)]',
                 leftBar: 'bg-purple-600',
                 chevron: 'text-purple-400 group-hover:text-purple-600',
@@ -210,7 +239,7 @@ export default function AdminDashboard() {
             href: '/admin/company/customers',
             icon: Users,
             theme: {
-                border: 'group-hover:border-pink-500',
+                border: 'hover:border-pink-500',
                 iconBg: 'bg-pink-50 border-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(219,39,119,0.2)]',
                 leftBar: 'bg-pink-600',
                 chevron: 'text-pink-400 group-hover:text-pink-600',
@@ -224,7 +253,7 @@ export default function AdminDashboard() {
             href: '/admin/alerts',
             icon: AlertTriangle,
             theme: {
-                border: 'group-hover:border-red-500',
+                border: 'hover:border-red-500',
                 iconBg: 'bg-red-50 border-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(220,38,38,0.2)]',
                 leftBar: 'bg-red-600',
                 chevron: 'text-red-400 group-hover:text-red-600',
@@ -238,7 +267,7 @@ export default function AdminDashboard() {
             href: '/admin/website-settings',
             icon: Globe,
             theme: {
-                border: 'group-hover:border-cyan-500',
+                border: 'hover:border-cyan-500',
                 iconBg: 'bg-cyan-50 border-cyan-100 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(6,182,212,0.2)]',
                 leftBar: 'bg-cyan-600',
                 chevron: 'text-cyan-400 group-hover:text-cyan-600',
@@ -252,7 +281,7 @@ export default function AdminDashboard() {
             href: '/admin/settings',
             icon: Settings,
             theme: {
-                border: 'group-hover:border-slate-500',
+                border: 'hover:border-slate-500',
                 iconBg: 'bg-slate-100 border-slate-200 text-slate-600 group-hover:bg-slate-700 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(71,85,105,0.2)]',
                 leftBar: 'bg-slate-700',
                 chevron: 'text-slate-400 group-hover:text-slate-600',
@@ -346,12 +375,16 @@ export default function AdminDashboard() {
         return out;
     }, []);
 
-    // Low-stock products (at or below the alert threshold)
-    const LOW_STOCK_MIN = 10;
+    // Low-stock products (at or below each product's own min count threshold)
+    const DEFAULT_LOW_STOCK_MIN = 10;
     const lowStock = useMemo(() => {
         return (products || [])
-            .map((p: any) => ({ ...p, _qty: Number(p.total_quantity ?? p.available_quantity ?? 0) }))
-            .filter((p: any) => p._qty <= LOW_STOCK_MIN)
+            .map((p: any) => ({
+                ...p,
+                _qty: Number(p.total_quantity ?? p.available_quantity ?? 0),
+                _min: Number(p.min_count ?? DEFAULT_LOW_STOCK_MIN),
+            }))
+            .filter((p: any) => p._qty <= p._min)
             .sort((a: any, b: any) => a._qty - b._qty)
             .slice(0, 60);
     }, [products]);
@@ -370,14 +403,15 @@ export default function AdminDashboard() {
                                 {corePages.map((btn) => {
                                     const Icon = btn.icon;
                                     const isOrders = btn.href === '/admin/orders';
+                                    const theme = btn.theme;
                                     return (
                                         <Link
                                             key={btn.href}
                                             href={btn.href}
-                                            className="group relative flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-indigo-300/80 hover:shadow-[0_12px_28px_-12px_rgba(79,70,229,0.35)] hover:-translate-y-0.5 transition-all duration-200"
+                                            className="group relative flex items-center gap-3.5 overflow-hidden rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-10px_rgba(15,23,42,0.18)] transition-all duration-200"
                                         >
-                                            <div className="w-9 h-9 rounded-lg flex items-center justify-center border border-indigo-100 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.25)] transition-all duration-200 shrink-0">
-                                                <Icon size={16} />
+                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-200 shrink-0 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                                                <Icon size={18} strokeWidth={1.75} className="transition-transform duration-200 group-hover:scale-110" />
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="text-[13px] font-semibold text-slate-900 tracking-tight leading-tight line-clamp-2">
@@ -391,7 +425,7 @@ export default function AdminDashboard() {
                                                         {stats.pendingOrders}
                                                     </span>
                                                 )}
-                                                <ChevronRight size={15} className="text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+                                                <ChevronRight size={15} className={`text-slate-300 group-hover:translate-x-0.5 transition-all ${theme?.chevron || 'group-hover:text-indigo-600'}`} />
                                             </div>
                                         </Link>
                                     );
@@ -410,7 +444,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div className="min-w-0">
                                         <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Low Stock Alert</h3>
-                                        <p className="text-[10.5px] text-slate-400 font-medium">At or below {LOW_STOCK_MIN} units</p>
+                                        <p className="text-[10.5px] text-slate-400 font-medium">At or below each product's min count</p>
                                     </div>
                                 </div>
                                 <span className="text-[11px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full shrink-0">{lowStock.length}</span>
@@ -443,7 +477,7 @@ export default function AdminDashboard() {
                                             <span className={`w-12 text-right text-[12.5px] font-black tabular-nums ${p._qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
                                                 {p._qty}
                                             </span>
-                                            <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{LOW_STOCK_MIN}</span>
+                                            <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{p._min}</span>
                                         </Link>
                                     ))
                                 )}

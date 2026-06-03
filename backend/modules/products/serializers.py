@@ -34,8 +34,8 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'stock', 'product_name', 'category', 'category_name', 'sections', 'section_names',
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
-            'cost_price', 'total_quantity', 'reserved_quantity', 'available_quantity', 'image', 'additional_images', 
-            'description', 'sku', 'barcode', 'selling_price', 'batch', 'badge', 'weight', 'size', 'status', 
+            'cost_price', 'total_quantity', 'reserved_quantity', 'available_quantity', 'min_count', 'image', 'additional_images',
+            'description', 'sku', 'barcode', 'selling_price', 'batch', 'badge', 'weight', 'size', 'status',
             'profit_margin', 'created_at', 'catalog_image'
         ]
         read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'section_names', 'profit_margin', 'catalog_image']

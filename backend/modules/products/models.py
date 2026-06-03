@@ -67,6 +67,7 @@ class Product(BaseModel):
     cost_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     total_quantity = models.IntegerField(null=True, blank=True) # Physical Stock
     reserved_quantity = models.IntegerField(default=0)          # Ordered but not delivered
+    min_count = models.IntegerField(default=10)                 # Low-stock alert threshold
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)

@@ -13,6 +13,7 @@ import { cn, getImageUrl, checkIsVideo } from '@/lib/utils';
 import MediaPickerModal from '../components/MediaPickerModal';
 
 const SECTION_TYPES = [
+    { type: 'announcement', label: 'Announcement Bar', icon: '📢', desc: 'Top header notification bar' },
     { type: 'hero', label: 'Hero / Slider', icon: '🎯', desc: 'Main banner with slides' },
     { type: 'products', label: 'Product Grid', icon: '🛍️', desc: 'Showcase products' },
     { type: 'categories', label: 'Categories', icon: '🗂️', desc: 'Category cards' },
@@ -71,19 +72,19 @@ const DEFAULT_CONTENT: Record<string, any> = {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-indigo-600 hover:bg-indigo-700 text-white border border-transparent shadow-sm shadow-indigo-600/20',
+        secondary: 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[31px] px-4 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+            className={`h-9 px-4 rounded-lg text-[13px] font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const inputCls = "w-full h-9 px-3 border border-slate-200 rounded-lg text-[13px] outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400 bg-white transition-all";
 
 interface Props {
     sections: WebsiteSection[];
@@ -118,6 +119,20 @@ export default function SectionsTab({ sections, setSections, products = [], cate
     });
 
     const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+    const [editingAnnouncement, setEditingAnnouncement] = useState(false);
+
+    // The Announcement Bar lives in site settings (not a DB section). Presence in the layout
+    // list is tracked with a dedicated flag (NOT derived from the live form) so that re-syncing
+    // settings — or toggling Live/Hidden — never makes the row flicker. It is "added" once the
+    // bar is enabled or has text, and only removed via the explicit Delete action.
+    const [announcementAdded, setAnnouncementAdded] = useState<boolean>(
+        !!(settings?.show_announcement || (settings?.announcement_text || '').trim())
+    );
+    useEffect(() => {
+        if (settings && (settings.show_announcement || (settings.announcement_text || '').trim())) {
+            setAnnouncementAdded(true);
+        }
+    }, [settings]);
 
     useEffect(() => {
         if (settings) {
@@ -139,10 +154,32 @@ export default function SectionsTab({ sections, setSections, products = [], cate
         setSavingAnnouncement(true);
         try {
             await onSave(announcementForm);
+            setEditingAnnouncement(false);
         } catch {
             toast.error('Failed to save Announcement Bar');
         } finally {
             setSavingAnnouncement(false);
+        }
+    };
+
+    // Toggle the storefront visibility of the announcement bar (keeps it in the list).
+    const toggleAnnouncement = async () => {
+        const updated = { ...announcementForm, show_announcement: !announcementForm.show_announcement };
+        setAnnouncementForm(updated);
+        if (onSave) {
+            try { await onSave(updated); } catch { toast.error('Failed to update'); }
+        }
+    };
+
+    // Remove the announcement bar from the layout (disable + clear text).
+    const removeAnnouncement = async () => {
+        const cleared = { ...announcementForm, show_announcement: false, announcement_text: '' };
+        setAnnouncementForm(cleared);
+        setAnnouncementAdded(false);
+        setEditingAnnouncement(false);
+        if (onSave) {
+            try { await onSave(cleared); toast.success('Announcement Bar removed'); }
+            catch { toast.error('Failed to remove'); }
         }
     };
 
@@ -156,6 +193,15 @@ export default function SectionsTab({ sections, setSections, products = [], cate
     };
 
     const addSection = async (type: string) => {
+        // Announcement Bar is not a DB section — it's a site setting. Adding it just
+        // enables it and opens its editor; it then appears as a row in the list below.
+        if (type === 'announcement') {
+            setShowAddModal(false);
+            setAnnouncementAdded(true);
+            setAnnouncementForm(f => ({ ...f, show_announcement: true }));
+            setEditingAnnouncement(true);
+            return;
+        }
         const meta = SECTION_TYPES.find(t => t.type === type)!;
         setLoading(-1);
         try {
@@ -222,28 +268,33 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 text-left">
-            {/* ── HEADER ANNOUNCEMENT BAR SETTINGS ── */}
-            {settings && (
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                    <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3 flex items-center justify-between">
+            {/* ── ANNOUNCEMENT BAR EDITOR (opens from "Add Page Section" → Announcement Bar, or the row's Edit) ── */}
+            {editingAnnouncement && settings && (
+              <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 text-left">
+                    <div className="bg-slate-50/60 border-b border-slate-100 px-6 py-4 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
-                            <span className="text-[15px] font-bold text-[#111]">Announcement Bar</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full border border-orange-200 animate-pulse">Header Notification</span>
+                            <span className="text-[15px] font-bold text-slate-900">Announcement Bar</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full border border-indigo-100">Header Notification</span>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="hidden"
-                                checked={!!announcementForm.show_announcement}
-                                onChange={() => setAnnouncementForm(f => ({ ...f, show_announcement: !f.show_announcement }))}
-                            />
-                            <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#c45500]' : 'bg-[#ccc]'}`}>
-                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
-                            </div>
-                        </label>
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Live</span>
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={!!announcementForm.show_announcement}
+                                    onChange={() => setAnnouncementForm(f => ({ ...f, show_announcement: !f.show_announcement }))}
+                                />
+                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
+                                </div>
+                            </label>
+                            <button onClick={() => setEditingAnnouncement(false)} className="text-slate-400 hover:text-slate-900"><X size={20} /></button>
+                        </div>
                     </div>
 
-                    <div className="p-6 space-y-6">
+                    <div className="p-6 space-y-6 overflow-y-auto">
                         {/* Row 1: Text and Link */}
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
@@ -277,7 +328,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         type="color"
                                         value={announcementForm.announcement_bg_color}
                                         onChange={e => setAnnouncementForm(f => ({ ...f, announcement_bg_color: e.target.value }))}
-                                        className="w-9 h-[31px] rounded-[3px] border border-[#ddd] cursor-pointer p-0.5"
+                                        className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
                                     />
                                     <input
                                         type="text"
@@ -294,7 +345,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         type="color"
                                         value={announcementForm.announcement_text_color}
                                         onChange={e => setAnnouncementForm(f => ({ ...f, announcement_text_color: e.target.value }))}
-                                        className="w-9 h-[31px] rounded-[3px] border border-[#ddd] cursor-pointer p-0.5"
+                                        className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
                                     />
                                     <input
                                         type="text"
@@ -314,7 +365,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             checked={!!announcementForm.announcement_scroll}
                                             onChange={() => setAnnouncementForm(f => ({ ...f, announcement_scroll: !f.announcement_scroll }))}
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#c45500]' : 'bg-[#ccc]'}`}>
+                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-indigo-600' : 'bg-slate-300'}`}>
                                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.announcement_scroll ? 'left-[20px]' : 'left-0.5'}`} />
                                         </div>
                                     </label>
@@ -326,7 +377,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     value={announcementForm.announcement_scroll_speed}
                                     onChange={e => setAnnouncementForm(f => ({ ...f, announcement_scroll_speed: e.target.value }))}
                                     disabled={!announcementForm.announcement_scroll}
-                                    className="w-full h-[31px] px-2 border border-[#888c8e] rounded-[3px] text-[13px] bg-white outline-none focus:border-[#e77600] disabled:bg-slate-50 disabled:text-slate-400"
+                                    className="w-full h-9 px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-400"
                                 >
                                     <option value="slow">Slow</option>
                                     <option value="medium">Medium</option>
@@ -346,26 +397,29 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-4 border-t">
-                            <AmazonBtn onClick={handleSaveAnnouncement} loading={savingAnnouncement}>
-                                Save Announcement Bar
-                            </AmazonBtn>
-                        </div>
+                    </div>
+
+                    <div className="bg-slate-50/60 border-t border-slate-100 px-6 py-4 flex justify-end gap-2 shrink-0">
+                        <AmazonBtn variant="secondary" onClick={() => setEditingAnnouncement(false)}>Cancel</AmazonBtn>
+                        <AmazonBtn onClick={handleSaveAnnouncement} loading={savingAnnouncement}>
+                            Save Announcement Bar
+                        </AmazonBtn>
                     </div>
                 </div>
+              </div>
             )}
 
-            <div className="bg-white border border-[#ddd] rounded-[4px] px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="bg-white border border-slate-200/70 rounded-2xl px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                 <div>
-                    <h3 className="text-[15px] font-bold text-[#111]">Landing Page Layout Builder</h3>
-                    <p className="text-[12px] text-[#565959]">Manage the sequence and content of sections on your storefront.</p>
+                    <h3 className="text-[15px] font-bold text-slate-900">Landing Page Layout Builder</h3>
+                    <p className="text-[12px] text-slate-500">Manage the sequence and content of sections on your storefront.</p>
                 </div>
                 <AmazonBtn onClick={() => setShowAddModal(true)} className="w-full sm:w-auto justify-center whitespace-nowrap">
                     <Plus size={16} /> Add Page Section
                 </AmazonBtn>
             </div>
 
-            <div className="bg-[#f7f8fa] border border-[#ddd] rounded-[4px] p-0 shadow-sm overflow-hidden relative min-h-[400px]">
+            <div className="bg-slate-50/60 border border-slate-200/70 rounded-2xl p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden relative min-h-[400px]">
                 {/* ── SYNCHRONIZING OVERLAY (FIXED VIEWPORT CENTER - DARK BG) ── */}
                 {isSyncing && (
                     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
@@ -383,7 +437,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         </div>
                     </div>
                 )}
-                <div className="hidden md:grid grid-cols-12 px-6 py-3 border-b border-[#ddd] text-[11px] font-bold text-[#565959] uppercase tracking-wider bg-[#f7f8fa]">
+                <div className="hidden md:grid grid-cols-12 px-6 py-3 border-b border-slate-200/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/80">
                     <div className="col-span-1">Order</div>
                     <div className="col-span-1">Type</div>
                     <div className="col-span-6">Section Name & Details</div>
@@ -392,10 +446,63 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                 </div>
 
                 <div className="bg-white divide-y divide-[#eee]">
-                    {sections.length === 0 ? (
+                    {/* ── PINNED ANNOUNCEMENT BAR ROW (settings-backed, not a DB section) ── */}
+                    {announcementAdded && (
+                        <div className="relative bg-indigo-50/20">
+                            {/* DESKTOP */}
+                            <div className="hidden md:grid grid-cols-12 items-center px-6 py-4 w-full">
+                                <div className="col-span-1">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Pinned</span>
+                                </div>
+                                <div className="col-span-1">
+                                    <div className="w-8 h-8 rounded-[4px] bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
+                                </div>
+                                <div className="col-span-6">
+                                    <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
+                                    <p className="text-[12px] text-slate-500">Top header notification bar</p>
+                                </div>
+                                <div className="col-span-2">
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={toggleAnnouncement} className={cn("relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none", announcementForm.show_announcement ? "bg-green-600" : "bg-gray-300")}>
+                                            <span className={cn("pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", announcementForm.show_announcement ? "translate-x-4" : "translate-x-0")} />
+                                        </button>
+                                        <span className={cn("text-[10px] font-black uppercase tracking-tight", announcementForm.show_announcement ? "text-green-700" : "text-gray-400")}>{announcementForm.show_announcement ? 'Live' : 'Hidden'}</span>
+                                    </div>
+                                </div>
+                                <div className="col-span-2 flex items-center justify-end gap-3">
+                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                    <span className="text-[#ddd]">|</span>
+                                    <button onClick={removeAnnouncement} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                </div>
+                            </div>
+                            {/* MOBILE */}
+                            <div className="flex md:hidden flex-col p-4 gap-3 w-full">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Pinned</span>
+                                        <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-[4px] bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
+                                </div>
+                                <div className="flex items-center justify-between border-t border-[#eee] pt-3">
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={toggleAnnouncement} className={cn("relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors", announcementForm.show_announcement ? "bg-green-600" : "bg-gray-300")}>
+                                            <span className={cn("pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow transition", announcementForm.show_announcement ? "translate-x-4" : "translate-x-0")} />
+                                        </button>
+                                        <span className={cn("text-[10px] font-black uppercase", announcementForm.show_announcement ? "text-green-700" : "text-gray-400")}>{announcementForm.show_announcement ? 'Live' : 'Hidden'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-indigo-600 hover:bg-slate-50">Edit</button>
+                                        <button onClick={removeAnnouncement} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {sections.length === 0 && !announcementAdded ? (
                         <div className="p-16 text-center text-[#888]">
                             <p className="text-[14px]">No layout sections defined yet.</p>
-                            <button onClick={() => setShowAddModal(true)} className="text-[#007185] font-bold hover:underline mt-2">Get started by adding a hero section</button>
+                            <button onClick={() => setShowAddModal(true)} className="text-indigo-600 font-bold hover:underline mt-2">Get started by adding a hero section</button>
                         </div>
                     ) : (
                         sections.map((s: WebsiteSection, idx: number) => {
@@ -436,7 +543,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             !s.is_visible && 'opacity-60 bg-slate-50/50',
                                             dragIndex === idx && 'bg-blue-50 border-blue-500 shadow-inner scale-[0.98]',
                                             dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50',
-                                            previewId === s.id && 'bg-[#fff9e6] border-l-[#e77600]'
+                                            previewId === s.id && 'bg-indigo-50/40 border-l-indigo-500'
                                         )}>
 
                                         {/* Drop Indicator */}
@@ -457,14 +564,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                         disabled={idx === 0}
-                                                        className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronUp size={16} strokeWidth={3} />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                         disabled={idx === sections.length - 1}
-                                                        className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronDown size={16} strokeWidth={3} />
                                                     </button>
@@ -519,7 +626,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                 >
                                                     {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 </button>
-                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#007185] hover:underline">Edit</button>
+                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
                                                 <span className="text-[#ddd]">|</span>
                                                 <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
@@ -536,14 +643,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                             disabled={idx === 0}
-                                                            className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronUp size={16} strokeWidth={3} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                             disabled={idx === sections.length - 1}
-                                                            className="text-[#999] hover:text-[#007185] disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronDown size={16} strokeWidth={3} />
                                                         </button>
@@ -598,7 +705,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     >
                                                         {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                     </button>
-                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-[#adb1b8] rounded-[3px] text-[12px] font-bold text-[#007185] hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
+                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-indigo-600 hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
                                                     <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#c40000]/20 rounded-[3px] text-[12px] font-bold text-[#c40000] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
                                                 </div>
                                             </div>
@@ -640,24 +747,24 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
             {showAddModal && (
                 <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 md:px-6 py-4 flex items-center justify-between">
-                            <h3 className="font-bold text-[#111] text-[17px]">Select Section Type</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-slate-50/60 border-b border-slate-100 px-4 md:px-6 py-4 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-900 text-[17px]">Select Section Type</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-900"><X size={20} /></button>
                         </div>
                         <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {SECTION_TYPES.map(t => (
                                 <button key={t.type} onClick={() => addSection(t.type)}
-                                    className="flex items-center gap-4 p-4 border border-[#ddd] rounded-[4px] hover:border-[#e77600] hover:bg-[#fff9e6] transition-all group text-left">
-                                    <span className="text-2xl w-10 h-10 bg-[#f7f8fa] flex items-center justify-center border border-[#eee] rounded-[4px]">{t.icon}</span>
+                                    className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/40 transition-all group text-left">
+                                    <span className="text-2xl w-10 h-10 bg-slate-50 flex items-center justify-center border border-slate-100 rounded-xl">{t.icon}</span>
                                     <div>
-                                        <p className="font-bold text-[#111] text-[14px]">{t.label}</p>
-                                        <p className="text-[11px] text-[#565959]">{t.desc}</p>
+                                        <p className="font-bold text-slate-900 text-[14px]">{t.label}</p>
+                                        <p className="text-[11px] text-slate-500">{t.desc}</p>
                                     </div>
                                 </button>
                             ))}
                         </div>
-                        <div className="bg-[#f7f8fa] border-t border-[#ddd] px-6 py-4 flex justify-end">
+                        <div className="bg-slate-50/60 border-t border-slate-100 px-6 py-4 flex justify-end">
                             <AmazonBtn variant="secondary" onClick={() => setShowAddModal(false)}>Close</AmazonBtn>
                         </div>
                     </div>
@@ -1160,7 +1267,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
                                         <label className="text-[13px] font-bold text-[#111]">Carousel Slides ({(form.content.slides || []).length})</label>
                                         <button onClick={() => updateContent('slides', [...(form.content.slides || []), { title: 'New Slide', subtitle: '', description: '', media_type: 'image', image: '', cta_text: '', cta_link: '', color: '', thumbnail: '' }])}
-                                            className="text-[12px] font-bold text-[#007185] hover:underline">+ Add Slide</button>
+                                            className="text-[12px] font-bold text-indigo-600 hover:underline">+ Add Slide</button>
                                     </div>
                                     <div className="space-y-4">
                                         {(form.content.slides || []).map((s: any, i: number) => (
@@ -1627,7 +1734,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const key = form.content.items ? 'items' : 'logos';
                                                 const newItem = key === 'items' ? { title: '', image: '', link: '' } : '';
                                                 updateContent(key, [...(form.content[key] || []), newItem]);
-                                            }} className="text-[12px] font-bold text-[#007185] hover:underline">+ Add Item</button>
+                                            }} className="text-[12px] font-bold text-indigo-600 hover:underline">+ Add Item</button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             {(form.content.items || form.content.logos || []).map((item: any, i: number) => (
@@ -1677,7 +1784,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
                                                         { title: '', text: '' };
                                             updateContent(key, [...(form.content[key] || []), newItem]);
-                                        }} className="text-[12px] font-bold text-[#007185] hover:underline">+ Add Entry</button>
+                                        }} className="text-[12px] font-bold text-indigo-600 hover:underline">+ Add Entry</button>
                                     </div>
                                     <div className="grid gap-3">
                                         {(form.content.items || form.content.reviews || []).map((item: any, i: number) => (
@@ -1888,7 +1995,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                 </div>
 
                 <div className="bg-[#f7f8fa] border-t border-[#ddd] px-8 py-4 flex justify-between items-center">
-                    <button onClick={onClose} className="text-[13px] font-bold text-[#007185] hover:underline">Dismiss Changes</button>
+                    <button onClick={onClose} className="text-[13px] font-bold text-indigo-600 hover:underline">Dismiss Changes</button>
                     <div className="flex gap-2">
                         <AmazonBtn variant="secondary" onClick={onClose}>Cancel</AmazonBtn>
                         <AmazonBtn onClick={save} loading={saving} className="min-w-[140px]">Update Section</AmazonBtn>
