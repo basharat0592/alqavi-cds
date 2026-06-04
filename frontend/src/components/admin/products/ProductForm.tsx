@@ -587,7 +587,7 @@ export default function ProductForm({ id }: ProductFormProps) {
 
     return (
         <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f172a]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5">
+            <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
 
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-1 text-[12px] text-[#64748b] mb-2">

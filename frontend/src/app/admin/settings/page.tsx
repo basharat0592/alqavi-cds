@@ -175,7 +175,7 @@ export default function SettingsPage() {
         <div className="pb-20">
 
             {/* ── BREADCRUMB + TITLE ── */}
-            <div className="max-w-[1100px] mx-auto px-3 sm:px-6 pt-2">
+            <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-2">
                 <PageHeader
                     title={tabLabel[activeTab]}
                     breadcrumbs={activeTab !== 'main'
@@ -189,7 +189,7 @@ export default function SettingsPage() {
                 />
             </div>
 
-            <div className="max-w-[1100px] mx-auto px-3 sm:px-6">
+            <div className="max-w-[1100px] mx-auto px-0 sm:px-6">
 
                 {/* ── MAIN HUB ── */}
                 {activeTab === 'main' && (

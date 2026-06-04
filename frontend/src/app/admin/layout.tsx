@@ -8,7 +8,7 @@ import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
-    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock
+    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -22,9 +22,10 @@ import toast from 'react-hot-toast';
 /* ═══════════════════════════════════════════════
    MOBILE TOP BAR (CLEAN LIGHT THEME)
    ═══════════════════════════════════════════════ */
-function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile }: {
+function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile, showBack, onBack }: {
     onMenuToggle: () => void; adminName: string; adminAvatar: string | null; unreadCount: number;
     onToggleNotifications: () => void; onToggleProfile: () => void;
+    showBack: boolean; onBack: () => void;
 }) {
     return (
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-800 dark:text-white px-4 py-3 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm transition-colors duration-300">
@@ -39,9 +40,18 @@ function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onTog
                     AL-QAVI <span className="bg-gradient-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent">TRADES</span>
                 </span>
             </Link>
-            <div className="flex items-center gap-3">
-                <button 
-                    onClick={onToggleNotifications} 
+            <div className="flex items-center gap-2">
+                {showBack && (
+                    <button
+                        onClick={onBack}
+                        aria-label="Go back"
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                    </button>
+                )}
+                <button
+                    onClick={onToggleNotifications}
                     className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition relative text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                 >
                     <Bell className="h-5 w-5" />
@@ -328,6 +338,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <MobileTopBar
                         onMenuToggle={() => setMobileOpen(!mobileOpen)} adminName={adminName} adminAvatar={adminAvatar}
                         unreadCount={unreadCount} onToggleNotifications={() => setNotifOpen(!notifOpen)} onToggleProfile={() => setProfileOpen(!profileOpen)}
+                        showBack={pathname !== '/admin/dashboard'} onBack={() => router.back()}
                     />
 
                     {/* ═══ MOBILE NOTIFICATIONS PANEL ═══ */}

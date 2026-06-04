@@ -130,7 +130,7 @@ export default function ProductsPage() {
 
     return (
         <div className="pb-20">
-            <div className="max-w-[1100px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5 text-left">
+            <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5 text-left">
 
                 <PageHeader
                     title="Products"

@@ -38,7 +38,7 @@ export default function NotificationPanel({
     const unread = activities.filter(a => !a.read).length;
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-96 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-white/5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200 text-slate-800 dark:text-slate-100 font-sans">
+        <div className="relative w-full md:absolute md:top-full md:right-0 md:mt-3 md:w-96 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-white/5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200 text-slate-800 dark:text-slate-100 font-sans">
             
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/55 dark:bg-white/5">
@@ -68,7 +68,7 @@ export default function NotificationPanel({
             </div>
 
             {/* Notification Feed */}
-            <div className="max-h-[420px] overflow-y-auto">
+            <div className="max-h-[55vh] md:max-h-[420px] overflow-y-auto">
                 {loading ? (
                     <div className="py-20 flex flex-col items-center justify-center gap-3 bg-slate-50/50 dark:bg-white/5">
                         <RefreshCw className="h-6 w-6 text-slate-300 dark:text-zinc-500 animate-spin" />

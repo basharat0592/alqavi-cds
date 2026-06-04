@@ -159,7 +159,7 @@ export default function AdminOrdersPage() {
 
     return (
         <div className="pb-20">
-            <div className="max-w-[1440px] mx-auto px-6 pt-5">
+            <div className="max-w-[1440px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
                 <PageHeader
                     title="Orders"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Orders' }]}

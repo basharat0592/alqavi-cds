@@ -391,7 +391,7 @@ export default function AdminDashboard() {
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
-            <div className="max-w-[1440px] mx-auto px-4 md:px-8 pt-4">
+            <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
                 <div className="flex flex-col xl:flex-row gap-6 xl:gap-8 items-stretch">
 
                 {/* ── MAIN: DIRECTORY ── */}

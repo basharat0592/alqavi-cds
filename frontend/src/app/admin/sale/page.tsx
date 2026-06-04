@@ -438,7 +438,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     return (
         <div className="pb-20 text-left text-slate-800">
-            <div className="max-w-[1200px] mx-auto px-3 sm:px-6 pt-4 sm:pt-5">
+            <div className="max-w-[1200px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
 
                 <PageHeader
                     title="Point of Sale"
