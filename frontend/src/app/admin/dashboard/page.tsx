@@ -399,7 +399,7 @@ export default function AdminDashboard() {
 
                         {/* ── CORE OPERATIONS & KEY PAGES (PROMINENT ACCENT BUTTON-CARDS) ── */}
                         <div className="space-y-5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                                 {corePages.map((btn) => {
                                     const Icon = btn.icon;
                                     const isOrders = btn.href === '/admin/orders';
@@ -408,13 +408,13 @@ export default function AdminDashboard() {
                                         <Link
                                             key={btn.href}
                                             href={btn.href}
-                                            className="group relative flex items-center gap-3.5 overflow-hidden rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-10px_rgba(15,23,42,0.18)] transition-all duration-200"
+                                            className="group relative flex items-center gap-2 sm:gap-3.5 overflow-hidden rounded-lg sm:rounded-xl border border-slate-200/80 bg-white px-2.5 sm:px-3.5 py-2 sm:py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-10px_rgba(15,23,42,0.18)] transition-all duration-200"
                                         >
-                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-200 shrink-0 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
-                                                <Icon size={18} strokeWidth={1.75} className="transition-transform duration-200 group-hover:scale-110" />
+                                            <div className={`w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-200 shrink-0 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                                                <Icon strokeWidth={1.75} className="w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-200 group-hover:scale-110" />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <h3 className="text-[13px] font-semibold text-slate-900 tracking-tight leading-tight line-clamp-2">
+                                                <h3 className="text-[11px] sm:text-[13px] font-semibold text-slate-900 tracking-tight leading-tight line-clamp-2">
                                                     {btn.name}
                                                 </h3>
                                             </div>
@@ -425,7 +425,7 @@ export default function AdminDashboard() {
                                                         {stats.pendingOrders}
                                                     </span>
                                                 )}
-                                                <ChevronRight size={15} className={`text-slate-300 group-hover:translate-x-0.5 transition-all ${theme?.chevron || 'group-hover:text-indigo-600'}`} />
+                                                <ChevronRight className={`w-3.5 h-3.5 sm:w-[15px] sm:h-[15px] text-slate-300 group-hover:translate-x-0.5 transition-all ${theme?.chevron || 'group-hover:text-indigo-600'}`} />
                                             </div>
                                         </Link>
                                     );

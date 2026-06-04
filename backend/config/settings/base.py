@@ -15,6 +15,11 @@ ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+# Behind the nginx TLS-terminating proxy: trust X-Forwarded-Proto so Django builds
+# absolute URLs (e.g. media) with the https scheme instead of http (mixed content).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 CSRF_TRUSTED_ORIGINS = [
     'https://alqavitraders.com',
     'https://www.alqavitraders.com',

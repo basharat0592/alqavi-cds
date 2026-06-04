@@ -147,16 +147,16 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
 
     // 3. Handle Absolute URLs
     if (url.startsWith('http')) {
-        let finalUrl = url;
-        // Normalize our own local domain if it mismatches the current host
-        if (url.includes('localhost:8000') || url.includes('127.0.0.1:8000')) {
-            const currentHost = (typeof window !== 'undefined') ? window.location.hostname : 'localhost';
-            finalUrl = url.replace(/localhost|127\.0\.0\.1/, currentHost);
-            
-            // Add cache buster for our own local media
-            return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}v=${CACHE_BUSTER}`;
+        // Any backend media URL (regardless of scheme/host/port) is served same-origin
+        // by nginx at /media/. Stripping to the relative path avoids mixed-content (http
+        // on an https page) and unreachable internal hosts/ports (e.g. :8000 from SSR).
+        const mediaIdx = url.indexOf('/media/');
+        if (mediaIdx !== -1) {
+            const relPath = url.slice(mediaIdx).split('?')[0];
+            return `${relPath}?v=${CACHE_BUSTER}`;
         }
-        return finalUrl;
+        // External absolute URL (CDN, social, etc.) — leave untouched
+        return url;
     }
 
     // 4. Handle Relative Paths

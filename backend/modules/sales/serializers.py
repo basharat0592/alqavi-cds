@@ -68,10 +68,6 @@ class CreateOrderSerializer(serializers.ModelSerializer):
             user_obj = None # Prefer linked Customer
         
         if not customer_obj and request and hasattr(request, 'user') and request.user.is_authenticated:
-            # Audit log for debugging
-            with open('scratch/user_log.txt', 'a') as f:
-                f.write(f"User: {request.user} | Class: {request.user.__class__.__name__} | ID: {getattr(request.user, 'id', 'NO_ID')} | Type: {type(request.user)}\n")
-            
             # Identify the real identity of the user
             from modules.customer.models import Customer
             
@@ -95,11 +91,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                 else:
                     user_obj = request.user
                     customer_obj = None
-        else:
-            # Guest order logging
-            with open('scratch/guest_order_log.txt', 'a') as f:
-                f.write(f"Guest order attempt at {timezone.now()}\n")
-            
+
         try:
             with transaction.atomic():
                 # Build params dynamically to avoid passing None to a field that 
