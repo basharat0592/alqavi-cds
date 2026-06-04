@@ -473,7 +473,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
 
                     {/* ═══ MAIN CONTENT ═══ */}
-                    <main className="flex-1 overflow-y-auto p-0 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white">
+                    <main className="flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white">
                         {isNavigating && <PageLoader />}
                         {children}
                     </main>
