@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, Save, X, Loader2, Eye, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, X, Loader2, Check, AlertCircle } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,7 @@ interface NavbarPage {
     id?: number;
     name: string;
     slug?: string;
+    link: string;
     description: string;
     icon_url: string;
     order: number;
@@ -15,6 +16,8 @@ interface NavbarPage {
     created_at?: string;
     updated_at?: string;
 }
+
+const EMPTY_PAGE: NavbarPage = { name: '', slug: '', link: '', description: '', icon_url: '', order: 0, is_visible: true };
 
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, size = 'md' }: any) => {
@@ -39,15 +42,62 @@ const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className 
 
 const inputCls = "h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
 
+// Shared form fields used by both the "Add" panel and the "Edit" modal.
+const PageForm = ({ page, onChange }: { page: NavbarPage; onChange: (p: NavbarPage) => void }) => (
+    <div className="space-y-4">
+        <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#111]">Page Name *</label>
+                <input type="text" value={page.name}
+                    onChange={e => onChange({ ...page, name: e.target.value })}
+                    placeholder="e.g., Skincare Products"
+                    className={`${inputCls} w-full`} />
+            </div>
+            <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#111]">Link / URL</label>
+                <input type="text" value={page.link}
+                    onChange={e => onChange({ ...page, link: e.target.value })}
+                    placeholder="e.g., /about or /customer/shop"
+                    className={`${inputCls} w-full`} />
+            </div>
+            <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#111]">Icon URL</label>
+                <input type="text" value={page.icon_url}
+                    onChange={e => onChange({ ...page, icon_url: e.target.value })}
+                    placeholder="e.g., /icons/skincare.svg"
+                    className={`${inputCls} w-full`} />
+            </div>
+            <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#111]">Display Order</label>
+                <input type="number" value={page.order}
+                    onChange={e => onChange({ ...page, order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                    className={`${inputCls} w-full`} />
+            </div>
+        </div>
+        <div className="space-y-1.5">
+            <label className="text-[13px] font-bold text-[#111]">Description</label>
+            <textarea rows={2} value={page.description}
+                onChange={e => onChange({ ...page, description: e.target.value })}
+                placeholder="Internal description for admin"
+                className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white resize-none" />
+        </div>
+        <div className="flex items-center gap-2 pt-4 border-t border-[#eee]">
+            <input type="checkbox" id={`visible-${page.id ?? 'new'}`} checked={page.is_visible}
+                onChange={e => onChange({ ...page, is_visible: e.target.checked })}
+                className="cursor-pointer w-4 h-4" />
+            <label htmlFor={`visible-${page.id ?? 'new'}`} className="text-[13px] font-medium text-[#111] cursor-pointer">Visible on storefront</label>
+        </div>
+    </div>
+);
+
 export default function NavbarPagesTab() {
     const [pages, setPages] = useState<NavbarPage[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [addingNew, setAddingNew] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [newPage, setNewPage] = useState<NavbarPage>({
-        name: '', slug: '', description: '', icon_url: '', order: 0, is_visible: true
-    });
+    const [editingPage, setEditingPage] = useState<NavbarPage | null>(null);
+    const [newPage, setNewPage] = useState<NavbarPage>({ ...EMPTY_PAGE });
     const [categoriesCounts, setCategoriesCounts] = useState<Record<number, number>>({});
 
     useEffect(() => {
@@ -87,7 +137,7 @@ export default function NavbarPagesTab() {
         try {
             const created = await cmsService.createNavbarPage(newPage);
             setPages([...pages, created]);
-            setNewPage({ name: '', slug: '', description: '', icon_url: '', order: 0, is_visible: true });
+            setNewPage({ ...EMPTY_PAGE });
             setAddingNew(false);
             toast.success('Navbar page created');
         } catch (error) {
@@ -97,13 +147,24 @@ export default function NavbarPagesTab() {
         }
     };
 
-    const handleUpdatePage = async (page: NavbarPage) => {
-        if (!page.id) return;
+    const handleUpdatePage = async () => {
+        if (!editingPage?.id) return;
+        if (!editingPage.name.trim()) {
+            toast.error('Please enter a page name');
+            return;
+        }
         setSaving(true);
         try {
-            const updated = await cmsService.updateNavbarPage(page.id, page);
-            setPages(pages.map(p => p.id === page.id ? updated : p));
-            setEditingId(null);
+            const updated = await cmsService.updateNavbarPage(editingPage.id, {
+                name: editingPage.name,
+                link: editingPage.link,
+                icon_url: editingPage.icon_url,
+                description: editingPage.description,
+                order: editingPage.order,
+                is_visible: editingPage.is_visible,
+            });
+            setPages(pages.map(p => p.id === editingPage.id ? updated : p));
+            setEditingPage(null);
             toast.success('Navbar page updated');
         } catch (error) {
             toast.error('Failed to update navbar page');
@@ -120,17 +181,6 @@ export default function NavbarPagesTab() {
             toast.success('Navbar page deleted');
         } catch (error) {
             toast.error('Failed to delete navbar page');
-        }
-    };
-
-    const handleReorder = async (pages: NavbarPage[]) => {
-        try {
-            const orders = pages.map((p, idx) => ({ id: p.id, order: idx }));
-            await cmsService.reorderNavbarPages(orders);
-            setPages(pages.sort((a, b) => a.order - b.order));
-            toast.success('Order updated');
-        } catch {
-            toast.error('Failed to reorder pages');
         }
     };
 
@@ -164,37 +214,9 @@ export default function NavbarPagesTab() {
                             <X size={18} />
                         </button>
                     </div>
-                    <div className="p-6 space-y-4">
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[13px] font-bold text-[#111]">Page Name *</label>
-                                <input type="text" value={newPage.name}
-                                    onChange={e => setNewPage({ ...newPage, name: e.target.value })}
-                                    placeholder="e.g., Skincare Products"
-                                    className={inputCls} />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[13px] font-bold text-[#111]">Icon URL</label>
-                                <input type="text" value={newPage.icon_url}
-                                    onChange={e => setNewPage({ ...newPage, icon_url: e.target.value })}
-                                    placeholder="e.g., /icons/skincare.svg"
-                                    className={inputCls} />
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-[#111]">Description</label>
-                            <textarea rows={2} value={newPage.description}
-                                onChange={e => setNewPage({ ...newPage, description: e.target.value })}
-                                placeholder="Internal description for admin"
-                                className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white resize-none" />
-                        </div>
-                        <div className="flex items-center gap-2 pt-4 border-t border-[#eee]">
-                            <input type="checkbox" id="visible" checked={newPage.is_visible}
-                                onChange={e => setNewPage({ ...newPage, is_visible: e.target.checked })}
-                                className="cursor-pointer" />
-                            <label htmlFor="visible" className="text-[13px] font-medium text-[#111] cursor-pointer">Visible on storefront</label>
-                        </div>
-                        <div className="flex items-center justify-end gap-3 pt-4">
+                    <div className="p-6">
+                        <PageForm page={newPage} onChange={setNewPage} />
+                        <div className="flex items-center justify-end gap-3 pt-6">
                             <AmazonBtn onClick={() => setAddingNew(false)} variant="secondary" size="sm">Cancel</AmazonBtn>
                             <AmazonBtn onClick={handleAddPage} loading={saving} size="sm">
                                 <Check size={14} /> Create Page
@@ -222,6 +244,7 @@ export default function NavbarPagesTab() {
                                 <tr className="border-b border-[#eee] bg-[#fafbfc]">
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">ID</th>
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">Name</th>
+                                    <th className="px-6 py-3 text-left font-bold text-[#111]">Link</th>
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">Slug</th>
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">Categories</th>
                                     <th className="px-6 py-3 text-center font-bold text-[#111]">Order</th>
@@ -234,13 +257,12 @@ export default function NavbarPagesTab() {
                                     <tr key={page.id ?? idx} className="border-b border-[#eee] hover:bg-[#fafbfc] transition-colors group">
                                         <td className="px-6 py-3 text-[13px] text-[#444]">{page.id ?? '-'}</td>
                                         <td className="px-6 py-3">
-                                            {editingId === page.id ? (
-                                                <input type="text" value={page.name}
-                                                    onChange={e => setPages(pages.map(p => p.id === page.id ? { ...p, name: e.target.value } : p))}
-                                                    className={inputCls} />
-                                            ) : (
-                                                <div className="font-medium text-[#111]">{page.name}</div>
-                                            )}
+                                            <div className="font-medium text-[#111]">{page.name}</div>
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            {page.link
+                                                ? <a href={page.link} target="_blank" rel="noopener noreferrer" className="text-[#0066c0] hover:text-[#c45500] hover:underline text-[12px]">{page.link}</a>
+                                                : <span className="text-[#aaa] text-[12px]">—</span>}
                                         </td>
                                         <td className="px-6 py-3">
                                             <code className="bg-[#f1f3f5] text-[#d63031] px-2 py-1 rounded text-[11px] font-mono">{page.slug}</code>
@@ -251,48 +273,23 @@ export default function NavbarPagesTab() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-3 text-center">
-                                            {editingId === page.id ? (
-                                                <input type="number" value={page.order}
-                                                    onChange={e => setPages(pages.map(p => p.id === page.id ? { ...p, order: parseInt(e.target.value) } : p))}
-                                                    className={`${inputCls} text-center w-16 mx-auto`} />
-                                            ) : (
-                                                <span className="font-medium">{page.order}</span>
-                                            )}
+                                            <span className="font-medium">{page.order}</span>
                                         </td>
                                         <td className="px-6 py-3 text-center">
-                                            {editingId === page.id ? (
-                                                <input type="checkbox" checked={page.is_visible}
-                                                    onChange={e => setPages(pages.map(p => p.id === page.id ? { ...p, is_visible: e.target.checked } : p))}
-                                                    className="cursor-pointer w-5 h-5" />
+                                            {page.is_visible ? (
+                                                <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-[11px] font-bold">Active</span>
                                             ) : (
-                                                page.is_visible ? (
-                                                    <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-[11px] font-bold">Active</span>
-                                                ) : (
-                                                    <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-[11px] font-bold">Hidden</span>
-                                                )
+                                                <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-[11px] font-bold">Hidden</span>
                                             )}
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center gap-2">
-                                                {editingId === page.id ? (
-                                                    <>
-                                                        <AmazonBtn onClick={() => handleUpdatePage(page)} loading={saving} size="sm" className="gap-1">
-                                                            <Save size={12} /> Save
-                                                        </AmazonBtn>
-                                                        <AmazonBtn onClick={() => setEditingId(null)} variant="secondary" size="sm" className="gap-1">
-                                                            <X size={12} /> Cancel
-                                                        </AmazonBtn>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <AmazonBtn onClick={() => setEditingId(page.id || null)} variant="secondary" size="sm" className="gap-1">
-                                                            <Edit3 size={12} /> Edit
-                                                        </AmazonBtn>
-                                                        <AmazonBtn onClick={() => handleDeletePage(page.id!)} variant="danger" size="sm" className="gap-1">
-                                                            <Trash2 size={12} /> Delete
-                                                        </AmazonBtn>
-                                                    </>
-                                                )}
+                                                <AmazonBtn onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} variant="secondary" size="sm" className="gap-1">
+                                                    <Edit3 size={12} /> Edit
+                                                </AmazonBtn>
+                                                <AmazonBtn onClick={() => handleDeletePage(page.id!)} variant="danger" size="sm" className="gap-1">
+                                                    <Trash2 size={12} /> Delete
+                                                </AmazonBtn>
                                             </div>
                                         </td>
                                     </tr>
@@ -310,6 +307,33 @@ export default function NavbarPagesTab() {
                     <span><strong>Tip:</strong> Create navbar pages first, then assign categories to them. Categories will appear as dropdown items in the navbar under their parent page.</span>
                 </p>
             </div>
+
+            {/* ── EDIT MODAL ── */}
+            {editingPage && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" onClick={() => !saving && setEditingPage(null)} />
+                    <div className="relative bg-white rounded-[6px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                        <div className="sticky top-0 bg-[#f7f8fa] border-b border-[#ddd] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-[#111] text-[16px]">Edit Navbar Page</h3>
+                                <p className="text-[12px] text-[#565959] mt-0.5">ID #{editingPage.id} · slug: <code className="font-mono text-[#d63031]">{editingPage.slug}</code></p>
+                            </div>
+                            <button onClick={() => !saving && setEditingPage(null)} className="text-[#565959] hover:text-[#111]">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <PageForm page={editingPage} onChange={setEditingPage} />
+                        </div>
+                        <div className="sticky bottom-0 bg-white border-t border-[#eee] px-6 py-4 flex items-center justify-end gap-3">
+                            <AmazonBtn onClick={() => setEditingPage(null)} variant="secondary" size="md" disabled={saving}>Cancel</AmazonBtn>
+                            <AmazonBtn onClick={handleUpdatePage} loading={saving} size="md">
+                                <Save size={14} /> Save Changes
+                            </AmazonBtn>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

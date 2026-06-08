@@ -113,16 +113,22 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "`n[2/4] Rebuilding containers on server..." -ForegroundColor Yellow
 
 $buildCmd = "cd $REMOTE_DIR"
+# The Next.js bundle is produced by the profiled `frontend-builder` service, which bakes
+# NEXT_PUBLIC_API_URL into the bundle and writes it to the frontend_build volume. It must be
+# built AND run (its CMD repopulates the volume); a plain `up -d` skips profiled services.
+$frontendBuild = "docker compose --env-file .env --profile build build frontend-builder" `
+    + " && docker compose --env-file .env --profile build run --rm frontend-builder"
 if (-not $SkipBuild) {
     if ($BackendOnly) {
         $buildCmd += " && docker compose --env-file .env build backend"
     } elseif ($FrontendOnly) {
-        $buildCmd += " && docker compose --env-file .env build frontend"
+        $buildCmd += " && $frontendBuild"
     } else {
-        $buildCmd += " && docker compose --env-file .env build"
+        $buildCmd += " && docker compose --env-file .env build backend && $frontendBuild"
     }
 }
-$buildCmd += " && docker compose --env-file .env up -d && docker compose --env-file .env restart nginx"
+# Restart frontend too so node picks up the freshly repopulated volume.
+$buildCmd += " && docker compose --env-file .env up -d && docker compose --env-file .env restart frontend nginx"
 
 python -c @"
 import paramiko, sys, time

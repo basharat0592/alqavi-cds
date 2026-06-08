@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
     return (
         <div className="h-screen bg-white flex font-sans overflow-hidden">
             {/* Left Column: Form Area */}
-            <div className="w-full lg:w-[48%] xl:w-[42%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-12 md:py-20 relative z-10 shadow-2xl">
+            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-12 md:py-20 relative z-10 shadow-2xl">
                 <div className="max-w-md mx-auto w-full animate-in fade-in slide-in-from-left-4 duration-700">
                     <div className="mb-10 text-center">
                         <Link href="/" className="inline-block mb-10 opacity-80 hover:opacity-100 transition-opacity">

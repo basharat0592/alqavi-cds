@@ -114,6 +114,7 @@ class NavbarPage(models.Model):
     """Navbar Pages - Category groupings that appear in the top navbar."""
     name = models.CharField(max_length=255, unique=True, help_text="Name of this navbar section")
     slug = models.SlugField(max_length=255, unique=True, blank=True)
+    link = models.CharField(max_length=500, blank=True, default='', help_text="Destination URL/route this navbar item links to (e.g. /about)")
     description = models.TextField(blank=True, null=True, help_text="Internal description")
     icon_url = models.CharField(max_length=500, blank=True, null=True, help_text="URL or icon class")
     order = models.PositiveIntegerField(default=0, help_text="Display order in navbar")

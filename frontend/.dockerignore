@@ -1,6 +1,7 @@
 node_modules
 .next
 .git
+*.log
 log.txt
 ts_errors.txt
 tsc_output.txt

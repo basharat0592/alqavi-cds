@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
 import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Printer, ArrowLeft, Share2, Check } from 'lucide-react';
+import { Printer, Share2, Check } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import Logo from '@/components/ui/Logo';
 import { PageHeader, Button } from '@/components/admin/ui';
 import toast from 'react-hot-toast';
 
 export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
-    const router = useRouter();
     const { id } = use(params);
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
@@ -80,10 +78,6 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                     className="mb-0 pb-6 border-b border-slate-100"
                     actions={
                         <>
-                            <Button variant="outline" size="sm" onClick={() => router.back()}>
-                                <ArrowLeft size={14} /> Back
-                            </Button>
-                            <div className="h-6 w-px bg-slate-200 mx-1"></div>
                             <select
                                 value={(order.status || '').toLowerCase()}
                                 onChange={(e) => handleUpdateStatus(e.target.value)}

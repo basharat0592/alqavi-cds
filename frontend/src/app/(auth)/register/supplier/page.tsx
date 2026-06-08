@@ -82,7 +82,7 @@ export default function SupplierRegisterPage() {
 
     return (
         <div className="h-screen bg-white flex font-sans overflow-hidden">
-            <div className="w-full lg:w-[48%] xl:w-[42%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-6 md:py-8 relative z-10">
+            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-6 md:py-8 relative z-10">
                 <div className="max-w-lg mx-auto w-full animate-in fade-in slide-in-from-left-4 duration-700">
                     <div className="mb-8 text-left pt-4 pl-2">
                         <div className="flex items-center justify-between mb-3">

@@ -116,6 +116,7 @@ class User(AbstractUser, StatusMixin):
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
     plain_password = models.CharField(max_length=255, blank=True, null=True)
+    page_permissions = models.JSONField(default=list, blank=True)
     
     class Meta:
         ordering = ['-date_joined']

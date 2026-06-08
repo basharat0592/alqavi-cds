@@ -102,8 +102,14 @@ export default function Home() {
                     return { sections: [], settings: null };
                 });
 
-                setSections(cmsData.sections || []);
-                setSettings(cmsData.settings || null);
+                // Only update state when the data actually changed. Returning the
+                // previous reference makes React bail out of the re-render, so the
+                // 1-second sync below doesn't re-mount the Hero / promo card and
+                // replay their entrance animations every second.
+                const nextSections = cmsData.sections || [];
+                const nextSettings = cmsData.settings || null;
+                setSections((prev: any) => JSON.stringify(prev) === JSON.stringify(nextSections) ? prev : nextSections);
+                setSettings((prev: any) => JSON.stringify(prev) === JSON.stringify(nextSettings) ? prev : nextSettings);
 
                 // 2. Get Catalog Data
                 const [catData, prodData] = await Promise.all([
@@ -111,9 +117,10 @@ export default function Home() {
                     productService.getAll({ no_pagination: 'true' }).catch(() => [])
                 ]);
 
-                setCategories(Array.isArray(catData) ? catData : (catData as any).results || []);
+                const nextCategories = Array.isArray(catData) ? catData : (catData as any).results || [];
                 const prods = Array.isArray(prodData) ? prodData : (prodData as any).results || [];
-                setAllProducts(prods);
+                setCategories((prev: any) => JSON.stringify(prev) === JSON.stringify(nextCategories) ? prev : nextCategories);
+                setAllProducts((prev: any) => JSON.stringify(prev) === JSON.stringify(prods) ? prev : prods);
             } catch (error: any) {
                 console.error("Home page data initialization error", error);
                 setError(error.message || "Connection Error");

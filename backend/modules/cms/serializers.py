@@ -80,6 +80,6 @@ class NavigationMenuSerializer(serializers.ModelSerializer):
 class NavbarPageSerializer(serializers.ModelSerializer):
     class Meta:
         model = NavbarPage
-        fields = ['id', 'name', 'slug', 'description', 'icon_url', 'order', 'is_visible', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'slug', 'link', 'description', 'icon_url', 'order', 'is_visible', 'created_at', 'updated_at']
         read_only_fields = ['slug', 'created_at', 'updated_at']
 

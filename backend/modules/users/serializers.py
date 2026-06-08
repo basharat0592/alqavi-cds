@@ -51,9 +51,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name', 'phone', 
+            'id', 'username', 'email', 'first_name', 'last_name', 'phone',
             'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'permissions', 
+            'status', 'status_display', 'is_active', 'permissions', 'page_permissions',
             'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at']
@@ -87,8 +87,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'username', 'email', 'password', 'password_confirm', 'first_name', 
-            'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role'
+            'username', 'email', 'password', 'password_confirm', 'first_name',
+            'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role',
+            'page_permissions'
         ]
     
     def validate(self, data):
@@ -112,8 +113,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'first_name', 'last_name', 'email', 'phone', 'avatar', 'address', 
-            'city', 'country', 'postal_code', 'role'
+            'first_name', 'last_name', 'email', 'phone', 'avatar', 'address',
+            'city', 'country', 'postal_code', 'role', 'page_permissions'
         ]
 
 
@@ -192,6 +193,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'role': role,
                     'is_staff': user.is_staff,
                     'is_superuser': user.is_superuser,
+                    'page_permissions': user.page_permissions or [],
                 }
                 return data
             except Exception:

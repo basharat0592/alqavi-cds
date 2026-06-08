@@ -41,10 +41,12 @@ class CmsConfigViewSet(viewsets.ViewSet):
 
         sections = WebsiteSection.objects.all().order_by('order')
         menus = NavigationMenu.objects.all()
+        navbar_pages = NavbarPage.objects.filter(is_visible=True).order_by('order')
         return Response({
             "settings": SiteSettingsSerializer(settings, context={'request': request}).data if settings else {},
             "sections": WebsiteSectionSerializer(sections, many=True, context={'request': request}).data,
-            "menus": NavigationMenuSerializer(menus, many=True, context={'request': request}).data
+            "menus": NavigationMenuSerializer(menus, many=True, context={'request': request}).data,
+            "navbar_pages": NavbarPageSerializer(navbar_pages, many=True, context={'request': request}).data
         })
 
     @action(detail=False, methods=['patch'])

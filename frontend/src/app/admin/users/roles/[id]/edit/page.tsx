@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { roleService } from '@/lib/api';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
@@ -74,15 +74,6 @@ export default function EditRolePage() {
                     { label: 'Roles', href: '/admin/users/roles' },
                     { label: 'Edit Role' },
                 ]}
-                actions={
-                    <Link
-                        href="/admin/users/roles"
-                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-[13.5px] font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back
-                    </Link>
-                }
             />
 
             {/* Form */}

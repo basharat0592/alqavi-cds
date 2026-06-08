@@ -1,7 +1,13 @@
 .venv
+venv
+requirements/venv
 __pycache__
-*.pyc
+**/__pycache__
+**/*.pyc
+**/*.pyo
 .git
 db.sqlite3
 scratch
 .env
+*.log
+media

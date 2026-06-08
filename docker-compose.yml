@@ -32,6 +32,7 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
+      - ./backend:/app          # live source mount — no rebuild needed for code changes
       - backend_static:/app/static
       - backend_media:/app/media
     depends_on:
@@ -44,13 +45,30 @@ services:
     image: redis:7-alpine
     restart: always
 
-  frontend:
+  # Runs next build and writes output to a named volume.
+  # Called by deploy.sh for frontend deploys; not a long-running service.
+  frontend-builder:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.builder
       args:
-        NEXT_PUBLIC_API_URL: /api
+        # NEXT_PUBLIC_* must be present at build time — Next.js inlines it into the bundle.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    volumes:
+      - frontend_build:/build
+    profiles:
+      - build
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: node server.js
     restart: always
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    volumes:
+      - frontend_build:/app          # built artifacts from frontend-builder
     depends_on:
       - backend
     ports:
@@ -82,5 +100,6 @@ volumes:
   mysql_data:
   backend_static:
   backend_media:
+  frontend_build:
   certbot_www:
   certbot_conf:

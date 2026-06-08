@@ -16,11 +16,21 @@ import { productService } from '@/lib/api';
 import Logo from "@/components/ui/Logo";
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Fallback links used only until the dynamic navbar pages are loaded from the CMS.
+const DEFAULT_NAV_PAGES = [
+    { name: 'About Us', link: '/about' },
+    { name: 'Track Order', link: '/customer/tracking' },
+    { name: 'Customer Service', link: '/contact' },
+    { name: 'Gift Cards', link: '/gift-cards' },
+    { name: 'Wishlists', link: '/customer/wishlist' },
+];
+
 export default function Navbar({ settings }: { settings?: any }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [user, setUser] = useState<AuthUser | null>(null);
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [siteSettings, setSiteSettings] = useState<any>(settings);
+    const [navbarPages, setNavbarPages] = useState<any[]>([]);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchOpen, setSearchOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -47,14 +57,14 @@ export default function Navbar({ settings }: { settings?: any }) {
             setAllProducts(apiArr);
         }).catch(() => { });
 
-        // Fetch settings if not provided
-        if (settings) {
-            setSiteSettings(settings);
-        } else {
-            import('@/services/cms.service').then(m => m.default.getFullState()).then(state => {
-                setSiteSettings(state.settings);
-            });
-        }
+        // Always fetch full state once for the dynamic navbar pages (public endpoint),
+        // and use it to hydrate settings when they weren't passed in as a prop.
+        import('@/services/cms.service').then(m => m.default.getFullState()).then(state => {
+            if (Array.isArray(state?.navbar_pages)) setNavbarPages(state.navbar_pages);
+            if (!settings && state?.settings) setSiteSettings(state.settings);
+        }).catch(() => { });
+
+        if (settings) setSiteSettings(settings);
     }, [settings]);
 
     useEffect(() => {
@@ -626,11 +636,16 @@ export default function Navbar({ settings }: { settings?: any }) {
                         <Menu size={20} />
                         <span className="font-bold">All</span>
                     </button>
-                    <Link href="/about" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/about' ? '#EFB366' : 'white' }}>About Us</Link>
-                    <Link href="/customer/tracking" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/customer/tracking' ? '#EFB366' : 'white' }}>Track Order</Link>
-                    <Link href="/contact" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/contact' ? '#EFB366' : 'white' }}>Customer Service</Link>
-                    <Link href="/gift-cards" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/gift-cards' ? '#EFB366' : 'white' }}>Gift Cards</Link>
-                    <Link href="/customer/wishlist" className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors" style={{ color: pathname === '/customer/wishlist' ? '#EFB366' : 'white' }}>Wishlists</Link>
+                    {(navbarPages.length > 0 ? navbarPages : DEFAULT_NAV_PAGES).map((p: any) => (
+                        <Link
+                            key={p.id ?? p.link}
+                            href={p.link || '#'}
+                            className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors"
+                            style={{ color: pathname === p.link ? '#EFB366' : 'white' }}
+                        >
+                            {p.name}
+                        </Link>
+                    ))}
 
                     {/* Right-most Become a Seller Link */}
                     <Link

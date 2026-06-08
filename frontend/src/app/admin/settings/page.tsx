@@ -178,6 +178,7 @@ export default function SettingsPage() {
             <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-2">
                 <PageHeader
                     title={tabLabel[activeTab]}
+                    hideBack={activeTab !== 'main'}
                     breadcrumbs={activeTab !== 'main'
                         ? [{ label: 'Console', href: '/admin/dashboard' }, { label: 'Settings' }, { label: tabLabel[activeTab] }]
                         : [{ label: 'Console', href: '/admin/dashboard' }, { label: 'Settings' }]}

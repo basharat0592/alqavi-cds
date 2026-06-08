@@ -16,6 +16,7 @@ export interface User {
     phone_number?: string;
     is_staff?: boolean;
     is_superuser?: boolean;
+    page_permissions?: string[];
 }
 
 const STORAGE_KEY_USER = 'cosmetic_distro_user';

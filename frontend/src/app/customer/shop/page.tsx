@@ -25,6 +25,8 @@ function ShopContent() {
     const [selectedCat, setSelectedCat] = useState<string>(catQuery);
     const [priceRange, setPriceRange] = useState<string | null>(null);
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+    const [sortBy, setSortBy] = useState<string>('featured');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     useEffect(() => {
         productService.getAll()
@@ -73,7 +75,21 @@ function ShopContent() {
         setFiltered(Array.from(groups.values()));
     }, [products, searchQuery, selectedCat, priceRange]);
 
-    const cats = Array.from(new Set(products.map(p => p.category_name || p.category?.name).filter(Boolean))) as string[];
+    const uniqueProducts = Array.from(
+        new Map(products.map(p => [`${(p.product_name || p.name || '').toLowerCase().trim()}_${parseFloat(p.selling_price || p.price || 0)}`, p])).values()
+    );
+    const cats = Array.from(new Set(uniqueProducts.map(p => p.category_name || p.category?.name).filter(Boolean))) as string[];
+    const catCounts: Record<string, number> = {};
+    uniqueProducts.forEach(p => { const c = (p.category_name || p.category?.name); if (c) catCounts[c] = (catCounts[c] || 0) + 1; });
+
+    const sorted = [...filtered].sort((a, b) => {
+        const pa = parseFloat(a.selling_price || a.price || 0);
+        const pb = parseFloat(b.selling_price || b.price || 0);
+        if (sortBy === 'price_asc') return pa - pb;
+        if (sortBy === 'price_desc') return pb - pa;
+        if (sortBy === 'name_asc') return (a.product_name || a.name || '').localeCompare(b.product_name || b.name || '');
+        return 0;
+    });
 
     if (loading) return <PageLoader />;
 
@@ -81,15 +97,7 @@ function ShopContent() {
         <div className="min-h-screen bg-white font-sans text-[#111]">
             <Navbar />
 
-            {/* Same to Same Header - EXPANDED WIDTH */}
-            <div className="hidden md:block bg-white border-b border-[#D5D9D9] py-4 md:py-5 mb-6 md:mb-10">
-                <div className="max-w-[1440px] mx-auto px-4 md:px-6">
-                    <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight uppercase">Distributor Catalog</h1>
-                    <p className="text-[13px] sm:text-[14px] text-[#565959] mt-1 font-medium">Regional inventory of premium cosmetics and authentic skincare</p>
-                </div>
-            </div>
-
-            <main className="max-w-[1440px] mx-auto px-4 md:px-6 pt-4 md:pt-0 pb-20 md:pb-32">
+            <main className="max-w-[1440px] mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-20 md:pb-32">
 
                 {/* Mobile Shop Header & Quick Filters */}
                 <div className="lg:hidden mb-6">
@@ -174,79 +182,153 @@ function ShopContent() {
                     )}
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-12">
+                <div className="flex flex-col lg:flex-row gap-8">
 
                     {/* Sidebar Filters - Desktop Only */}
-                    <aside className="hidden lg:block w-72 flex-shrink-0 space-y-10">
-                        <div className="p-8 border border-[#D5D9D9] rounded-[12px] bg-[#f7f8fa]">
-                            <h3 className="text-[12px] font-black text-[#565959] uppercase tracking-[0.2em] mb-6">Inventory Filter</h3>
+                    <aside className="hidden lg:block w-52 flex-shrink-0">
+                        <div className="sticky top-4 space-y-7">
+                            {/* Filters header */}
+                            <div className="flex items-center justify-between pb-3 border-b border-[#eaeded]">
+                                <h3 className="text-[13px] font-bold text-[#111] flex items-center gap-2">
+                                    <Sliders size={14} className="text-[#119AB8]" /> Filters
+                                </h3>
+                                {(selectedCat || priceRange) && (
+                                    <button
+                                        onClick={() => { setSelectedCat(''); setPriceRange(null); }}
+                                        className="text-[10px] font-bold text-[#119AB8] hover:underline uppercase tracking-wider"
+                                    >
+                                        Clear all
+                                    </button>
+                                )}
+                            </div>
 
-                            <div className="space-y-8">
-                                <div>
-                                    <h4 className="text-[14px] font-bold mb-4 uppercase tracking-tight">Departments</h4>
-                                    <div className="space-y-2">
+                            {/* Departments */}
+                            <div>
+                                <h4 className="text-[11px] font-bold text-[#111] uppercase tracking-[0.16em] mb-3 flex items-center gap-2">
+                                    <span className="h-3 w-[3px] bg-[#119AB8] rounded-full" /> Departments
+                                </h4>
+                                <div className="flex flex-col">
+                                    <button
+                                        onClick={() => setSelectedCat('')}
+                                        className={cn(
+                                            "flex items-center justify-between text-left text-[13px] py-1.5 pl-3 pr-1 border-l-2 transition-colors",
+                                            !selectedCat
+                                                ? "border-[#119AB8] text-[#119AB8] font-semibold"
+                                                : "border-[#eaeded] text-[#565959] hover:text-[#111] hover:border-[#bcc1c4] font-medium"
+                                        )}
+                                    >
+                                        <span>Full Catalog</span>
+                                        <span className="text-[10px] text-[#9ca3af] tabular-nums">{uniqueProducts.length}</span>
+                                    </button>
+                                    {cats.map(c => (
                                         <button
-                                            onClick={() => setSelectedCat('')}
+                                            key={c}
+                                            onClick={() => setSelectedCat(c)}
                                             className={cn(
-                                                "block text-[13px] hover:text-[#119AB8] transition-colors uppercase tracking-tight",
-                                                !selectedCat ? "font-bold text-[#111]" : "text-[#565959] font-medium"
+                                                "flex items-center justify-between text-left text-[13px] py-1.5 pl-3 pr-1 border-l-2 transition-colors capitalize",
+                                                selectedCat === c
+                                                    ? "border-[#119AB8] text-[#119AB8] font-semibold"
+                                                    : "border-[#eaeded] text-[#565959] hover:text-[#111] hover:border-[#bcc1c4] font-medium"
                                             )}
                                         >
-                                            Full Catalog
+                                            <span>{c.toLowerCase()}</span>
+                                            <span className="text-[10px] text-[#9ca3af] tabular-nums">{catCounts[c] || 0}</span>
                                         </button>
-                                        {cats.map(c => (
-                                            <button
-                                                key={c}
-                                                onClick={() => setSelectedCat(c)}
-                                                className={cn(
-                                                    "block text-[13px] hover:text-[#119AB8] transition-colors pl-3 border-l border-[#D5D9D9] uppercase tracking-tight",
-                                                    selectedCat === c ? "font-bold text-[#111] border-[#119AB8]" : "text-[#565959] font-medium"
-                                                )}
-                                            >
-                                                {c}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-[14px] font-bold mb-4 uppercase tracking-tight">Price Structure</h4>
-                                    <div className="space-y-2">
-                                        {[
-                                            { label: 'All Wholesale Prices', value: null },
-                                            { label: 'Under PKR 1,000', value: 'Under 1000' },
-                                            { label: 'PKR 1,000 - 5,000', value: '1000-5000' },
-                                            { label: 'PKR 5,000 - 10,000', value: '5000-10000' },
-                                            { label: 'Over PKR 10,000', value: 'Above 10000' }
-                                        ].map(range => (
-                                            <button
-                                                key={range.label}
-                                                onClick={() => setPriceRange(range.value)}
-                                                className={cn(
-                                                    "block text-[13px] hover:text-[#119AB8] transition-colors uppercase tracking-tight",
-                                                    priceRange === range.value ? "font-bold text-[#111]" : "text-[#565959] font-medium"
-                                                )}
-                                            >
-                                                {range.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-8 border border-[#D5D9D9] rounded-[12px] bg-white">
-                            <h4 className="text-[12px] font-black text-[#565959] uppercase tracking-[0.2em] mb-4">Quality Verified</h4>
-                            <p className="text-[11px] text-[#565959] leading-relaxed font-medium">All items are sourced directly from authorized regional suppliers with guaranteed authenticity.</p>
+                            {/* Price Range */}
+                            <div>
+                                <h4 className="text-[11px] font-bold text-[#111] uppercase tracking-[0.16em] mb-3 flex items-center gap-2">
+                                    <span className="h-3 w-[3px] bg-[#119AB8] rounded-full" /> Price Range
+                                </h4>
+                                <div className="flex flex-col">
+                                    {[
+                                        { label: 'All Prices', value: null },
+                                        { label: 'Under PKR 1,000', value: 'Under 1000' },
+                                        { label: 'PKR 1,000 – 5,000', value: '1000-5000' },
+                                        { label: 'PKR 5,000 – 10,000', value: '5000-10000' },
+                                        { label: 'Over PKR 10,000', value: 'Above 10000' }
+                                    ].map(range => (
+                                        <button
+                                            key={range.label}
+                                            onClick={() => setPriceRange(range.value)}
+                                            className={cn(
+                                                "text-left text-[13px] py-1.5 pl-3 border-l-2 transition-colors",
+                                                priceRange === range.value
+                                                    ? "border-[#119AB8] text-[#119AB8] font-semibold"
+                                                    : "border-[#eaeded] text-[#565959] hover:text-[#111] hover:border-[#bcc1c4] font-medium"
+                                            )}
+                                        >
+                                            {range.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Quality Verified note */}
+                            <div className="pt-6 border-t border-[#eaeded] flex items-start gap-2.5">
+                                <CheckCircle size={15} className="text-[#119AB8] mt-0.5 shrink-0" />
+                                <div>
+                                    <h5 className="text-[12px] font-bold text-[#111] mb-1">Quality Verified</h5>
+                                    <p className="text-[11px] text-[#565959] leading-relaxed">Sourced directly from authorized regional suppliers with guaranteed authenticity.</p>
+                                </div>
+                            </div>
                         </div>
                     </aside>
 
                     {/* Product Listing */}
                     <div className="flex-1">
 
-                        {filtered.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
-                                {filtered.map((p) => (
+                        {/* Toolbar: result count + sort + view toggle (desktop) */}
+                        <div className="hidden lg:flex items-center justify-between gap-4 mb-5 pb-3 border-b border-[#eaeded]">
+                            <p className="text-[13px] text-[#565959] font-medium">
+                                <span className="font-bold text-[#111]">{sorted.length}</span> {sorted.length === 1 ? 'product' : 'products'}
+                                {selectedCat && <span className="capitalize"> in {selectedCat.toLowerCase()}</span>}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                {/* Sort */}
+                                <div className="relative">
+                                    <select
+                                        value={sortBy}
+                                        onChange={e => setSortBy(e.target.value)}
+                                        className="appearance-none h-9 pl-3 pr-8 border border-[#D5D9D9] rounded-md text-[12px] font-medium text-[#111] bg-white cursor-pointer hover:border-[#119AB8] focus:border-[#119AB8] outline-none transition-colors"
+                                    >
+                                        <option value="featured">Featured</option>
+                                        <option value="price_asc">Price: Low to High</option>
+                                        <option value="price_desc">Price: High to Low</option>
+                                        <option value="name_asc">Name: A–Z</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#565959] pointer-events-none" />
+                                </div>
+                                {/* View toggle */}
+                                <div className="flex items-center border border-[#D5D9D9] rounded-md overflow-hidden">
+                                    <button
+                                        onClick={() => setViewMode('grid')}
+                                        aria-label="Grid view"
+                                        className={cn("w-9 h-9 flex items-center justify-center transition-colors", viewMode === 'grid' ? "bg-[#119AB8] text-white" : "text-[#565959] hover:bg-slate-50")}
+                                    >
+                                        <LayoutGrid size={15} />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        aria-label="List view"
+                                        className={cn("w-9 h-9 flex items-center justify-center transition-colors border-l border-[#D5D9D9]", viewMode === 'list' ? "bg-[#119AB8] text-white" : "text-[#565959] hover:bg-slate-50")}
+                                    >
+                                        <List size={15} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {sorted.length > 0 ? (
+                            <div className={cn(
+                                viewMode === 'list'
+                                    ? "flex flex-col gap-4"
+                                    : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4"
+                            )}>
+                                {sorted.map((p) => (
                                     <ProductCard
                                         key={p.id}
                                         id={String(p.id)}
@@ -259,6 +341,7 @@ function ShopContent() {
                                         size={p.size || p.type}
                                         batch={p.batch_number || p.batch}
                                         stock={p.quantity_in_stock || p.total_quantity}
+                                        layout={viewMode === 'list' ? 'horizontal' : 'vertical'}
                                     />
                                 ))}
                             </div>

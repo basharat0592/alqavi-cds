@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    ChevronLeft, RefreshCw, Building2,
+    RefreshCw, Building2,
     MapPin
 } from 'lucide-react';
 import { inventoryService } from '@/lib/api';
@@ -157,11 +157,6 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
                     { label: 'Warehouses', href: '/admin/inventory/warehouses' },
                     { label: 'Edit Warehouse' },
                 ]}
-                actions={
-                    <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                        <ChevronLeft size={16} /> Back to list
-                    </Button>
-                }
             />
 
             <form onSubmit={handleSubmit} className="space-y-6 max-w-[900px] animate-in slide-in-from-bottom-5 duration-500">

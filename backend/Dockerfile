@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -5,16 +6,18 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     default-libmysqlclient-dev \
     build-essential \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+    pkg-config
 
 COPY requirements/base.txt requirements/base.txt
 COPY requirements/production.txt requirements/production.txt
 COPY requirement.txt requirement.txt
-RUN pip install --no-cache-dir -r requirements/production.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements/production.txt
 
 COPY . .
 

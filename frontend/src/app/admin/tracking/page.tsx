@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
     Search, Package, Truck, CheckCircle2, AlertCircle, MapPin,
-    ShoppingBag, Clock, ArrowLeft, RefreshCw, Loader2, ChevronRight,
+    ShoppingBag, Clock, RefreshCw, Loader2, ChevronRight,
     ChevronLeft, ShieldCheck, Box, MoreVertical, ExternalLink,
     Store, Info
 } from 'lucide-react';
@@ -107,14 +107,9 @@ export default function OrderTrackingPage() {
                         { label: 'Order Tracking' },
                     ]}
                     actions={
-                        <>
-                            <Button variant="outline" size="sm" onClick={() => router.back()}>
-                                <ArrowLeft size={14} /> Back
-                            </Button>
-                            <Button variant="secondary" size="sm" onClick={() => query && handleSearch(query)} disabled={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
-                            </Button>
-                        </>
+                        <Button variant="secondary" size="sm" onClick={() => query && handleSearch(query)} disabled={loading}>
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
+                        </Button>
                     }
                 />
 

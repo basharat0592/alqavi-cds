@@ -318,6 +318,7 @@ export default function WarehousesPage() {
             <div className="max-w-[1100px] mx-auto">
 
                 <PageHeader
+                    hideBack={view !== 'list'}
                     title={
                         view === 'list' ? 'Warehouses' :
                             view === 'products' ? `Products in ${selectedWh?.name}` :

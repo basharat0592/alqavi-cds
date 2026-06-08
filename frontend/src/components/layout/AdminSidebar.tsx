@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard, Package, TrendingUp, Tag,
-    Boxes, ChevronLeft, ChevronRight, Settings, UserCheck, ShoppingBag,
+    Boxes, Settings, UserCheck, ShoppingBag,
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    ChevronDown, Truck, Book, FileText, AlertTriangle, X
+    Truck, Book, FileText, AlertTriangle, X
 } from 'lucide-react';
-import cmsService, { SiteSettings } from '@/services/cms.service';
-import { getImageUrl } from '@/lib/utils';
+import cmsService from '@/services/cms.service';
+import { authService } from '@/lib/auth';
 
 interface NavItem {
     name: string;
@@ -24,13 +24,29 @@ interface NavGroup {
     items: NavItem[];
 }
 
+const FULL_ACCESS_ROLES = ['admin', 'superadmin', 'super admin'];
+
 export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate }: { isCollapsed?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
     const pathname = usePathname();
-    const [settings, setSettings] = useState<SiteSettings | null>(null);
 
     useEffect(() => {
-        cmsService.getFullState().then(data => setSettings(data.settings));
+        cmsService.getFullState().catch(() => {});
     }, []);
+
+    // Resolve current user's page_permissions from session
+    const [userPagePerms, setUserPagePerms] = useState<string[] | null>(null);
+
+    useEffect(() => {
+        const user = authService.getUser();
+        if (!user) { setUserPagePerms(null); return; }
+        const role = (user.role as string)?.toLowerCase() || '';
+        if (FULL_ACCESS_ROLES.includes(role) || user.is_staff || user.is_superuser) {
+            setUserPagePerms(null); // null = no restriction
+        } else {
+            const perms = (user as any).page_permissions;
+            setUserPagePerms(Array.isArray(perms) && perms.length > 0 ? perms : null);
+        }
+    }, [pathname]);
 
     const menuGroups: NavGroup[] = [
         {
@@ -132,9 +148,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         return pathname === href || (href !== '/admin/dashboard' && fullPath === href);
     };
 
+    const isPageAllowed = (href: string) => {
+        if (visibility[href] === false) return false;
+        if (userPagePerms === null) return true; // no restriction
+        return userPagePerms.includes(href);
+    };
+
     const filteredGroups = menuGroups.map(group => ({
         ...group,
-        items: group.items.filter(item => visibility[item.href] !== false)
+        items: group.items.filter(item => isPageAllowed(item.href))
     })).filter(group => group.items.length > 0);
 
     return (
@@ -228,7 +250,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 </nav>
 
                 {/* ── FOOTER / SETTINGS ── */}
-                {visibility['/admin/settings'] !== false && (
+                {isPageAllowed('/admin/settings') && (
                     <div className="flex-shrink-0 px-2 pb-3 pt-2 border-t border-white/5">
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
