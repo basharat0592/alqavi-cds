@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     Plus, Search, Mail, Phone, MapPin,
     Trash2, X, CheckCircle,
-    RefreshCw, ChevronRight, ChevronLeft, User, Shield, Eye, Pencil, Save, Loader2
+    RefreshCw, ChevronRight, ChevronLeft, User, Shield, Pencil, Save, Loader2
 } from 'lucide-react';
 import { companyService } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -257,28 +257,12 @@ export default function CustomersPage() {
                                 </div>
 
                                 {/* Row 4: Controls */}
-                                <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                    <button
-                                        onClick={() => setViewingCustomer(cust)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[34px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-indigo-600 text-[12px] font-bold transition-colors"
-                                        title="View Details"
-                                    >
-                                        <Eye size={13} /> View
-                                    </button>
-                                    <button
-                                        onClick={() => openEdit(cust)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[34px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold transition-colors"
-                                        title="Edit Profile"
-                                    >
-                                        <Pencil size={13} /> Edit
-                                    </button>
-                                    <button
-                                        onClick={() => setDeleteTarget(cust)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[34px] border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 text-[12px] font-bold transition-colors"
-                                        title="Delete Customer"
-                                    >
-                                        <Trash2 size={13} /> Delete
-                                    </button>
+                                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                                    <button onClick={() => setViewingCustomer(cust)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                    <span className="text-slate-300">|</span>
+                                    <button onClick={() => openEdit(cust)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                    <span className="text-slate-300">|</span>
+                                    <button onClick={() => setDeleteTarget(cust)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
                             </Card>
                         ))
@@ -349,16 +333,12 @@ export default function CustomersPage() {
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                <div className="flex justify-end gap-1.5">
-                                                    <button onClick={() => setViewingCustomer(cust)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="View Profile">
-                                                        <Eye size={18} />
-                                                    </button>
-                                                    <button onClick={() => openEdit(cust)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Edit Customer">
-                                                        <Pencil size={18} />
-                                                    </button>
-                                                    <button onClick={() => setDeleteTarget(cust)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Delete Account">
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                <div className="flex items-center justify-end gap-2.5">
+                                                    <button onClick={() => setViewingCustomer(cust)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => openEdit(cust)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteTarget(cust)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

@@ -358,12 +358,6 @@ export default function CreateSalePage() {
                 title="Create Sale"
                 subtitle="Quickly record a physical shop sale"
                 breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Create Sale' }]}
-                actions={
-                    <Button variant="outline" size="md" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Dashboard
-                    </Button>
-                }
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

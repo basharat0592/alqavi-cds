@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supplierProductService } from '@/services/supplierProduct.service';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader, Card, Button } from '@/components/admin/ui';
 
@@ -74,16 +74,15 @@ export default function SupplierProductsPage() {
                                         <td className="px-4 py-3 text-slate-900 tabular-nums">{it.price ? formatCurrency(it.price) : '—'}</td>
                                         <td className="px-4 py-3 text-slate-600 tabular-nums">{it.lead_time_days ? `${it.lead_time_days} d` : '—'}</td>
                                         <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-2">
+                                            <div className="flex items-center justify-end gap-2.5">
                                                 <Link
                                                     href={`/admin/supplier-products/${it.id}/edit`}
-                                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 transition-all"
+                                                    className="text-[12px] font-bold text-indigo-600 hover:underline"
                                                 >
-                                                    <Edit2 className="h-4 w-4" />
+                                                    Edit
                                                 </Link>
-                                                <Button variant="danger" size="sm" className="h-8 w-8 px-0">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <span className="text-slate-300">|</span>
+                                                <button className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
                                     </tr>

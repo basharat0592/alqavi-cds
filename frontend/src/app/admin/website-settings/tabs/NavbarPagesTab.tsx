@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, Save, X, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Plus, Save, X, Loader2, Check, AlertCircle } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import toast from 'react-hot-toast';
 
@@ -283,13 +283,10 @@ export default function NavbarPagesTab() {
                                             )}
                                         </td>
                                         <td className="px-6 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <AmazonBtn onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} variant="secondary" size="sm" className="gap-1">
-                                                    <Edit3 size={12} /> Edit
-                                                </AmazonBtn>
-                                                <AmazonBtn onClick={() => handleDeletePage(page.id!)} variant="danger" size="sm" className="gap-1">
-                                                    <Trash2 size={12} /> Delete
-                                                </AmazonBtn>
+                                            <div className="flex items-center justify-end gap-2.5">
+                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => handleDeletePage(page.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
                                     </tr>

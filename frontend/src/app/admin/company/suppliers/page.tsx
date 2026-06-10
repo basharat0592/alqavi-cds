@@ -197,28 +197,12 @@ export default function SuppliersPage() {
                                 </div>
 
                                 {/* Row 4: Controls */}
-                                <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                    <button
-                                        onClick={() => setSelectedForView(s)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[34px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-indigo-600 text-[12px] font-bold transition-colors"
-                                        title="Quick View"
-                                    >
-                                        <Eye size={13} /> View
-                                    </button>
-                                    <button
-                                        onClick={() => openEdit(s)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[34px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold transition-colors"
-                                        title="Edit Profile"
-                                    >
-                                        <Pencil size={13} /> Edit
-                                    </button>
-                                    <button
-                                        onClick={() => setDeleteItem(s)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[34px] border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 text-[12px] font-bold transition-colors"
-                                        title="Delete Supplier"
-                                    >
-                                        <Trash2 size={13} /> Delete
-                                    </button>
+                                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                                    <button onClick={() => setSelectedForView(s)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                    <span className="text-slate-300">|</span>
+                                    <button onClick={() => openEdit(s)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                    <span className="text-slate-300">|</span>
+                                    <button onClick={() => setDeleteItem(s)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
                             </Card>
                         ))
@@ -283,10 +267,12 @@ export default function SuppliersPage() {
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                <div className="flex justify-end gap-1.5">
-                                                    <button onClick={() => setSelectedForView(s)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Quick View"><Eye size={18} /></button>
-                                                    <button onClick={() => openEdit(s)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Edit Profile"><Pencil size={18} /></button>
-                                                    <button onClick={() => setDeleteItem(s)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Delete Supplier"><Trash2 size={18} /></button>
+                                                <div className="flex items-center justify-end gap-2.5">
+                                                    <button onClick={() => setSelectedForView(s)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => openEdit(s)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteItem(s)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     FileText, Search, Plus, Printer, Eye,
-    Download, RefreshCw, ShoppingCart, RotateCcw,
+    RefreshCw, ShoppingCart, RotateCcw,
     ShoppingBag, User, Calendar, DollarSign,
     CheckCircle2, Clock, ArrowUpRight,
     Package, TrendingUp, AlertCircle
 } from 'lucide-react';
 import { orderService, purchaseService, salesService } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
 
 type BadgeTone = 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue';
 
@@ -47,7 +47,7 @@ const StatCard = ({ label, value, icon: Icon, color }: any) => (
 );
 
 /* ── INVOICE TABLE ── */
-const InvoiceTable = ({ rows, onView, type }: { rows: any[]; onView: (id: any) => void; type: string }) => {
+const InvoiceTable = ({ rows, onView, onPrint, onDelete, type }: { rows: any[]; onView: (id: any) => void; onPrint: (id: any) => void; onDelete: (inv: any) => void; type: string }) => {
     if (rows.length === 0) return (
         <div className="py-16 text-center text-[13px] text-slate-400">No {type} invoices found.</div>
     );
@@ -83,7 +83,7 @@ const InvoiceTable = ({ rows, onView, type }: { rows: any[]; onView: (id: any) =
                         <td className="px-5 py-3.5 text-slate-500">
                             <div className="flex items-center gap-1.5 text-[12px]">
                                 <Calendar size={11} className="opacity-40" />
-                                {formatDate(inv.created_at || inv.date)}
+                                {formatDateTime(inv.created_at || inv.date)}
                             </div>
                         </td>
                         <td className="px-5 py-3.5 text-right font-semibold text-slate-900 tabular-nums">
@@ -93,19 +93,19 @@ const InvoiceTable = ({ rows, onView, type }: { rows: any[]; onView: (id: any) =
                             <StatusBadge status={inv.status} />
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                            <div className="flex justify-end items-center gap-3">
+                            <div className="flex items-center justify-end gap-2.5">
                                 <button
-                                    onClick={() => onView(inv.id)}
-                                    className="text-[12px] font-semibold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-2 transition-all"
+                                    onClick={() => onPrint(inv.id)}
+                                    className="text-[12px] font-bold text-slate-600 hover:underline"
                                 >
-                                    View
+                                    Print
                                 </button>
-                                <span className="text-slate-200">|</span>
+                                <span className="text-slate-300">|</span>
                                 <button
-                                    className="text-slate-400 hover:text-slate-700 transition-colors"
-                                    title="Download"
+                                    onClick={() => onDelete(inv)}
+                                    className="text-[12px] font-bold text-[#c40000] hover:underline"
                                 >
-                                    <Download size={14} />
+                                    Delete
                                 </button>
                             </div>
                         </td>
@@ -128,16 +128,18 @@ export default function InvoicesPage() {
     const [purchaseReturns, setPurchaseReturns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
+    const [deleteTarget, setDeleteTarget] = useState<any>(null);
+    const [deleting, setDeleting] = useState(false);
     const PAGE_SIZE = 10;
 
     const loadAll = async () => {
         setLoading(true);
         try {
             const [sales, purchases, saleRets, purchaseRets] = await Promise.all([
-                orderService.getAll().catch(() => []),
-                purchaseService.getAll().catch(() => []),
-                salesService.getReturns().catch(() => []),
-                purchaseService.getReturns().catch(() => []),
+                orderService.getAll({ no_pagination: 'true' }).catch(() => []),
+                purchaseService.getAll({ no_pagination: 'true' }).catch(() => []),
+                salesService.getReturns({ no_pagination: 'true' }).catch(() => []),
+                purchaseService.getReturns({ no_pagination: 'true' }).catch(() => []),
             ]);
             setSaleInvoices(Array.isArray(sales) ? sales : (sales as any)?.results || []);
             setPurchaseInvoices(Array.isArray(purchases) ? purchases : (purchases as any)?.results || []);
@@ -145,6 +147,22 @@ export default function InvoicesPage() {
             setPurchaseReturns(Array.isArray(purchaseRets) ? purchaseRets : (purchaseRets as any)?.results || []);
         } catch { toast.error('Failed to load invoices'); }
         finally { setLoading(false); }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        const id = deleteTarget.id;
+        setDeleting(true);
+        try {
+            if (activeTab === 'sale') { await orderService.delete(id); setSaleInvoices(p => p.filter(x => x.id !== id)); }
+            else if (activeTab === 'purchase') { await purchaseService.delete(id); setPurchaseInvoices(p => p.filter(x => x.id !== id)); }
+            else if (activeTab === 'sale-return') { await salesService.deleteReturn(id); setSaleReturns(p => p.filter(x => x.id !== id)); }
+            else { await purchaseService.deleteReturn(id); setPurchaseReturns(p => p.filter(x => x.id !== id)); }
+            toast.success('Invoice deleted');
+            setDeleteTarget(null);
+        } catch (e: any) {
+            toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Delete failed');
+        } finally { setDeleting(false); }
     };
 
     useEffect(() => { loadAll(); }, []);
@@ -271,6 +289,13 @@ export default function InvoicesPage() {
                                     else if (activeTab === 'sale-return') router.push(`/admin/sale-returns`);
                                     else router.push(`/admin/purchases/returns`);
                                 }}
+                                onPrint={(id) => {
+                                    if (activeTab === 'sale') router.push(`/admin/sales/${id}/invoice`);
+                                    else if (activeTab === 'purchase') router.push(`/admin/purchases/${id}/invoice`);
+                                    else if (activeTab === 'sale-return') router.push(`/admin/sale-returns`);
+                                    else router.push(`/admin/purchases/returns`);
+                                }}
+                                onDelete={(inv) => setDeleteTarget(inv)}
                             />
                         )}
                     </div>
@@ -303,6 +328,23 @@ export default function InvoicesPage() {
                         </div>
                     )}
                 </Card>
+
+                <Modal
+                    open={!!deleteTarget}
+                    onClose={() => !deleting && setDeleteTarget(null)}
+                    title="Delete Invoice"
+                    size="sm"
+                    footer={
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+                            <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting...' : 'Delete'}</Button>
+                        </>
+                    }
+                >
+                    <p className="text-[13px] text-slate-600 leading-relaxed">
+                        Are you sure you want to delete invoice <span className="font-bold text-slate-900">#{deleteTarget?.order_number || deleteTarget?.invoice_number || deleteTarget?.id}</span>? This action cannot be undone.
+                    </p>
+                </Modal>
 
                 {/* ── QUICK LINKS GRID (bottom shortcuts) ── */}
                 <div className="mt-8">

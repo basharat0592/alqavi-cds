@@ -205,10 +205,12 @@ export default function UsersPage() {
                                                 </select>
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => setSelectedUserForView(user)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="View Profile"><Eye size={16} /></button>
-                                                    <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Edit User"><Edit size={16} /></button>
-                                                    <button onClick={() => setDeleteUser(user)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Delete User"><Trash2 size={16} /></button>
+                                                <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setSelectedUserForView(user)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteUser(user)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

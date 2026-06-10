@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
-    Plus, X, AlertTriangle, Save
+    Plus, X, AlertTriangle, Save, ChevronDown, Search, Package
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { companyService } from '@/services/company.service';
 import { userService } from '@/services/user.service';
 import { inventoryService } from '@/services/inventory.service';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
@@ -24,7 +25,119 @@ const EMPTY_FORM = {
     purchase_order: '', status: 'WAITING_FOR_SUPPLIER', reason: '',
 };
 
-type LineItem = { product: string; product_name: string; quantity: number; refund_price: number };
+type LineItem = { product: string; product_name: string; quantity: number | ''; refund_price: number; max_quantity?: number };
+
+/* Professional searchable product picker (with image + stock). Renders its menu in a
+   portal with fixed positioning so the table's overflow never clips it. */
+const ProductSelector = ({ value, products, onSelect, disabled }: {
+    value: string;
+    products: any[];
+    onSelect: (p: any) => void;
+    disabled?: boolean;
+}) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+    const anchorRef = useRef<HTMLButtonElement>(null);
+    const popRef = useRef<HTMLDivElement>(null);
+
+    const reposition = () => {
+        const r = anchorRef.current?.getBoundingClientRect();
+        if (r) setCoords({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 340) });
+    };
+
+    useEffect(() => {
+        if (!open) return;
+        reposition();
+        // Close on page scroll, but NOT when scrolling inside the dropdown's own list.
+        const onScroll = (e: Event) => {
+            if (popRef.current?.contains(e.target as Node)) return;
+            setOpen(false);
+        };
+        const onResize = () => setOpen(false);
+        const onClick = (e: MouseEvent) => {
+            if (anchorRef.current?.contains(e.target as Node)) return;
+            if (popRef.current?.contains(e.target as Node)) return;
+            setOpen(false);
+        };
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', onResize);
+        document.addEventListener('mousedown', onClick);
+        return () => {
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', onResize);
+            document.removeEventListener('mousedown', onClick);
+        };
+    }, [open]);
+
+    const selected = products.find(p => String(p.product) === String(value));
+    const filtered = products.filter(p => (p.product_name || '').toLowerCase().includes(search.toLowerCase()));
+
+    return (
+        <>
+            <button
+                type="button"
+                ref={anchorRef}
+                disabled={disabled}
+                onClick={() => { if (!disabled) { setSearch(''); setOpen(o => !o); } }}
+                className={selectCls + ' flex items-center justify-between gap-2 text-left disabled:opacity-60 disabled:cursor-not-allowed'}
+            >
+                <span className={`truncate ${selected ? 'text-slate-800' : 'text-slate-400'}`}>
+                    {selected ? `${selected.product_name} (${selected.total_quantity} in stock)` : (disabled ? 'Select supplier first...' : 'Select product...')}
+                </span>
+                <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && coords && createPortal(
+                <div
+                    ref={popRef}
+                    style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }}
+                    className="bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden"
+                >
+                    <div className="p-2 border-b border-slate-100">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                autoFocus
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search products..."
+                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto">
+                        {filtered.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-[13px] text-slate-400 italic">No matching products</div>
+                        ) : filtered.map(p => (
+                            <div
+                                key={p.id}
+                                onClick={() => { onSelect(p); setOpen(false); }}
+                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-indigo-50/50 cursor-pointer border-b last:border-0 border-slate-100"
+                            >
+                                <div className="w-9 h-9 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                                    {p.product_image ? (
+                                        <img src={getImageUrl(p.product_image)} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Package size={16} className="text-slate-300" />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-bold text-slate-900 truncate">{p.product_name}</p>
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                        <span className={`font-bold ${Number(p.total_quantity) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>{p.total_quantity}</span> in stock
+                                        {p.sku ? ` · SKU: ${p.sku}` : ''}
+                                    </p>
+                                </div>
+                                <span className="text-[13px] font-black text-slate-900 tabular-nums shrink-0">{formatCurrency(p.price_per_item || 0)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>,
+                document.body
+            )}
+        </>
+    );
+};
 
 export default function AddPurchaseReturnPage() {
     const router = useRouter();
@@ -34,7 +147,7 @@ export default function AddPurchaseReturnPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM, return_number: `PR-${Date.now().toString().slice(-6)}` });
-    const [items, setItems] = useState<LineItem[]>([{ product: '', product_name: '', quantity: 1, refund_price: 0 }]);
+    const [items, setItems] = useState<LineItem[]>([{ product: '', product_name: '', quantity: '', refund_price: 0 }]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -76,10 +189,9 @@ export default function AddPurchaseReturnPage() {
 
     const handleSave = async () => {
         // Validate items
-        const validItems = items.filter(i => i.product && i.quantity > 0).map(i => ({
-            ...i,
-            product: i.product
-        }));
+        const validItems = items
+            .filter(i => i.product && Number(i.quantity) > 0)
+            .map(({ max_quantity, ...i }) => ({ ...i, quantity: Number(i.quantity), product: i.product }));
         if (validItems.length === 0) {
             toast.error('Please select at least one product to return');
             return;
@@ -100,14 +212,28 @@ export default function AddPurchaseReturnPage() {
         }
     };
 
-    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, refund_price: 0 }]);
+    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: '', refund_price: 0 }]);
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
                 const sItem = stocks.find(s => String(s.product) === String(val));
-                return { ...item, product: val, product_name: sItem?.product_name || '', refund_price: sItem?.price_per_item ? parseFloat(sItem.price_per_item) : item.refund_price };
+                const max = sItem ? Number(sItem.total_quantity) || 0 : 0;
+                const q = typeof item.quantity === 'number' && max ? Math.min(item.quantity, max) : item.quantity;
+                return {
+                    ...item,
+                    product: val,
+                    product_name: sItem?.product_name || '',
+                    refund_price: sItem?.price_per_item ? parseFloat(sItem.price_per_item) : item.refund_price,
+                    max_quantity: max,
+                    quantity: q,
+                };
+            }
+            if (field === 'quantity') {
+                if (val === '' || val === null || val === undefined) return { ...item, quantity: '' };
+                const max = item.max_quantity || Infinity;
+                return { ...item, quantity: Math.min(Math.max(1, Math.floor(Number(val)) || 1), max) };
             }
             return { ...item, [field]: val };
         }));
@@ -133,11 +259,6 @@ export default function AddPurchaseReturnPage() {
                         { label: 'Returns', href: '/admin/purchases/returns' },
                         { label: 'New Purchase Return' },
                     ]}
-                    actions={
-                        <Button variant="outline" size="md" onClick={() => router.back()}>
-                            Back to List
-                        </Button>
-                    }
                 />
 
                 {loading ? (
@@ -166,7 +287,7 @@ export default function AddPurchaseReturnPage() {
                                             value={form.supplier_name}
                                             onChange={e => {
                                                 setForm(f => ({ ...f, supplier_name: e.target.value }));
-                                                setItems([{ product: '', product_name: '', quantity: 1, refund_price: 0 }]); // Reset items when supplier changes
+                                                setItems([{ product: '', product_name: '', quantity: '', refund_price: 0 }]); // Reset items when supplier changes
                                             }}
                                         >
                                             <option value="">Select Supplier...</option>
@@ -176,22 +297,6 @@ export default function AddPurchaseReturnPage() {
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-semibold text-slate-700">Return Date *</label>
                                         <input type="date" className={inputCls} value={form.return_date} onChange={e => setForm(f => ({ ...f, return_date: e.target.value }))} />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[13px] font-semibold text-slate-700">Status</label>
-                                        <select className={selectCls} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                                            <option value="WAITING_FOR_SUPPLIER">Waiting for Supplier</option>
-                                            <option value="ACCEPTED">Accepted</option>
-                                            <option value="REJECTED">Rejected</option>
-                                            <option value="CANCELLED">Cancelled</option>
-                                        </select>
-                                    </div>
-                                    <div className="sm:col-span-2 space-y-1.5">
-                                        <label className="text-[13px] font-semibold text-slate-700">Purchase Order Ref (Optional)</label>
-                                        <select className={selectCls} value={form.purchase_order} onChange={e => setForm(f => ({ ...f, purchase_order: e.target.value }))}>
-                                            <option value="">None / Standalone</option>
-                                            {purchases.map(p => <option key={p.id} value={p.id}>{p.purchase_number}</option>)}
-                                        </select>
                                     </div>
                                 </div>
                             </Card>
@@ -257,22 +362,23 @@ export default function AddPurchaseReturnPage() {
                                             {items.map((item, i) => (
                                                 <tr key={i} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-3">
-                                                        <select
-                                                            className={selectCls}
+                                                        <ProductSelector
                                                             value={item.product}
-                                                            onChange={e => updateItem(i, 'product', e.target.value)}
+                                                            products={availableProducts.filter(s => s.product)}
+                                                            onSelect={(p) => updateItem(i, 'product', p.product)}
                                                             disabled={!form.supplier_name}
-                                                        >
-                                                            <option value="">{form.supplier_name ? 'Select product...' : 'Select supplier first...'}</option>
-                                                            {availableProducts.filter(s => s.product).map(s => (
-                                                                <option key={s.id} value={s.product}>
-                                                                    {s.product_name} ({s.total_quantity} Unit{s.total_quantity !== 1 ? 's' : ''} in stock)
-                                                                </option>
-                                                            ))}
-                                                        </select>
+                                                        />
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <input type="number" className={inputCls + " text-center tabular-nums"} value={item.quantity} onChange={e => updateItem(i, 'quantity', parseInt(e.target.value) || 1)} min="1" />
+                                                        <input
+                                                            type="number"
+                                                            className={inputCls + " text-center tabular-nums"}
+                                                            value={item.quantity}
+                                                            onChange={e => updateItem(i, 'quantity', e.target.value)}
+                                                            min="1"
+                                                            max={item.max_quantity || undefined}
+                                                            title={item.max_quantity ? `Max ${item.max_quantity} in stock` : undefined}
+                                                        />
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <input type="number" className={inputCls + " text-right font-bold text-slate-900 tabular-nums"} value={item.refund_price} onChange={e => updateItem(i, 'refund_price', parseFloat(e.target.value) || 0)} min="0" step="0.01" />

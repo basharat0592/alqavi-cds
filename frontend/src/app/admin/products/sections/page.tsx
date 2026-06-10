@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Plus, Search, Edit, Trash2, Layers,
+    Plus, Search, Trash2, Layers,
     RefreshCw, CheckCircle, Package,
     Save, ChevronLeft, X, AlertTriangle,
-    Activity, Loader2, ChevronRight, LayoutDashboard, Store, Trash
+    Activity, Loader2, ChevronRight, LayoutDashboard, Store
 } from 'lucide-react';
 import { sectionService, productService } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -438,9 +438,10 @@ export default function SectionsPage() {
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-2 opacity-50 group-hover:opacity-100 transition-all">
-                                                    <button onClick={() => handleEdit(cat)} className="p-1.5 border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-colors"><Edit size={14} /></button>
-                                                    <button onClick={() => setDeleteItem(cat)} className="p-1.5 border border-slate-200 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors"><Trash size={14} /></button>
+                                                <div className="flex items-center justify-end gap-2.5 opacity-50 group-hover:opacity-100 transition-all">
+                                                    <button onClick={() => handleEdit(cat)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteItem(cat)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

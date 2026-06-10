@@ -153,6 +153,14 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
         const mediaIdx = url.indexOf('/media/');
         if (mediaIdx !== -1) {
             const relPath = url.slice(mediaIdx).split('?')[0];
+            // In production the frontend and media share an origin (nginx serves /media/),
+            // so a relative path avoids mixed-content and unreachable internal hosts.
+            // In local dev the frontend (:3000) is a different origin than the media
+            // backend (:8000) with no /media proxy, so keep the absolute backend URL.
+            if (typeof window !== 'undefined' && window.location.origin !== domain &&
+                (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                return `${domain}${relPath}?v=${CACHE_BUSTER}`;
+            }
             return `${relPath}?v=${CACHE_BUSTER}`;
         }
         // External absolute URL (CDN, social, etc.) — leave untouched

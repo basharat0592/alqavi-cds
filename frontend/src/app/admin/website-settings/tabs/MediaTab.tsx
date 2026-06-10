@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef } from 'react';
-import { Upload, Trash2, Image as ImageIcon, Video, Search, X, Loader2, Copy, FileText, Globe } from 'lucide-react';
+import { Upload, Trash2, Image as ImageIcon, Video, Search, X, Loader2, FileText, Globe } from 'lucide-react';
 import cmsService, { MediaAsset } from '@/services/cms.service';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -146,16 +146,12 @@ export default function MediaTab({ media, setMedia }: Props) {
                                 )}
 
                                 {/* Hover Actions */}
-                                <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t border-[#ddd] p-1.5 flex items-center justify-around translate-y-full group-hover:translate-y-0 transition-transform">
+                                <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t border-[#ddd] p-1.5 flex items-center justify-end gap-2.5 translate-y-full group-hover:translate-y-0 transition-transform">
                                     <button onClick={e => { e.stopPropagation(); copyUrl(asset.file); }}
-                                        className="p-1.5 text-[#565959] hover:text-[#111] hover:bg-[#eee] rounded-[3px] flex items-center gap-1.5 text-[11px] font-bold">
-                                        <Copy size={12} /> Link
-                                    </button>
-                                    <div className="w-[1px] h-4 bg-[#ddd]" />
+                                        className="text-[12px] font-bold text-slate-600 hover:underline">Copy link</button>
+                                    <span className="text-slate-300">|</span>
                                     <button onClick={e => { e.stopPropagation(); setDeleteId(asset.id!); }}
-                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-[3px] flex items-center gap-1.5 text-[11px] font-bold">
-                                        <Trash2 size={12} /> Delete
-                                    </button>
+                                        className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
                             </div>
                             <div className="p-2 border-t border-[#eee]">

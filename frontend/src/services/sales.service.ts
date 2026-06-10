@@ -25,8 +25,8 @@ export const salesService = {
         await api.delete(`v1/sales/orders/${id}/`);
     },
     // Returns
-    getReturns: async () => {
-        const { data } = await api.get('v1/sales/returns/');
+    getReturns: async (params?: any) => {
+        const { data } = await api.get('v1/sales/returns/', { params });
         return Array.isArray(data) ? data : data.results || [];
     },
     createReturn: async (payload: any) => {

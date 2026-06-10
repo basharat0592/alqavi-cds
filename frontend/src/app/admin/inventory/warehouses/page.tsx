@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Plus, Search, Edit2, Trash2, MapPin,
+    Plus, Search, MapPin,
     Warehouse, Box, RefreshCw, Save, X,
     ChevronLeft, AlertTriangle,
-    ArrowRightLeft, Eye, History, Clock, ArrowUpRight, ArrowDownLeft
+    History, Clock, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
 import { inventoryService } from '@/services/inventory.service';
 import { productService } from '@/services/product.service';
@@ -380,9 +380,10 @@ export default function WarehousesPage() {
                                                     <h3 className="font-bold text-[15px] text-slate-900 group-hover:text-indigo-600 truncate max-w-[150px]">{wh.name}</h3>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, capacity: wh.capacity || '' }); setView('form'); }} className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white"><Edit2 size={14} /></button>
-                                                <button onClick={() => setDeleteWh(wh)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 bg-white"><Trash2 size={14} /></button>
+                                            <div className="flex items-center justify-end gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, capacity: wh.capacity || '' }); setView('form'); }} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => setDeleteWh(wh)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </div>
                                         <div className="p-5 space-y-3">
@@ -499,31 +500,30 @@ export default function WarehousesPage() {
                                                         <div className="text-[12px] text-slate-500 font-bold">{new Date(item.date).toLocaleDateString()}</div>
                                                     </td>
                                                     <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
+                                                        <div className="flex items-center justify-end gap-2.5">
                                                             <button
                                                                 onClick={() => handleViewMovements(item)}
-                                                                className="p-1 text-indigo-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-all shrink-0"
-                                                                title="View Movement History"
+                                                                className="text-[12px] font-bold text-slate-600 hover:underline"
                                                             >
-                                                                <Eye size={14} />
+                                                                History
                                                             </button>
+                                                            <span className="text-slate-300">|</span>
                                                             <button
                                                                 onClick={() => {
                                                                     setMoveStock(item);
                                                                     setTransferQty(item.total_quantity);
                                                                     setTransferDate(new Date().toISOString().slice(0, 10));
                                                                 }}
-                                                                className="p-1 text-indigo-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition-all shrink-0"
-                                                                title="Move to another Warehouse"
+                                                                className="text-[12px] font-bold text-slate-600 hover:underline"
                                                             >
-                                                                <ArrowRightLeft size={14} />
+                                                                Move
                                                             </button>
+                                                            <span className="text-slate-300">|</span>
                                                             <button
                                                                 onClick={() => setRemoveStock(item)}
-                                                                className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-100 transition-all shrink-0"
-                                                                title="Remove from Warehouse"
+                                                                className="text-[12px] font-bold text-[#c40000] hover:underline"
                                                             >
-                                                                <Trash2 size={14} />
+                                                                Remove
                                                             </button>
                                                         </div>
                                                     </td>

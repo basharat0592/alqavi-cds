@@ -420,9 +420,9 @@ export default function AdminDashboard() {
                                             </div>
                                             <div className="flex items-center gap-1.5 shrink-0">
                                                 {isOrders && stats?.pendingOrders > 0 && (
-                                                    <span className="bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 select-none">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                                                        {stats.pendingOrders}
+                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-sm shadow-rose-600/30 select-none tabular-nums">
+                                                        <span className="absolute inset-0 rounded-full bg-rose-500 opacity-40 motion-safe:animate-ping" style={{ animationDuration: '2.5s' }} />
+                                                        <span className="relative">{stats.pendingOrders}</span>
                                                     </span>
                                                 )}
                                                 <ChevronRight className={`w-3.5 h-3.5 sm:w-[15px] sm:h-[15px] text-slate-300 group-hover:translate-x-0.5 transition-all ${theme?.chevron || 'group-hover:text-indigo-600'}`} />

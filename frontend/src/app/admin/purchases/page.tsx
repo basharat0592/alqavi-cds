@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    ShoppingCart, Plus, Search, RefreshCw, Trash2, Eye, Edit2,
+    ShoppingCart, Plus, Search, RefreshCw, Trash2, Edit2,
     X, CheckCircle, AlertTriangle, Package, Loader2, Filter,
     Users, Clock, CreditCard, FileText, Lock, Calendar, FileSpreadsheet, Printer,
     ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone,
@@ -425,24 +425,26 @@ export default function PurchasesPage() {
                                 )}
 
                                 {/* Row 4: Action Controls */}
-                                <div className="flex gap-2 pt-2 border-t border-slate-100">
+                                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                                     <button
                                         onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-indigo-600 text-[12px] font-bold shadow-sm"
+                                        className="text-[12px] font-bold text-slate-600 hover:underline"
                                     >
-                                        <Truck size={13} /> Track
+                                        Track
                                     </button>
+                                    <span className="text-slate-300">|</span>
                                     <button
                                         onClick={() => handleViewDetails(p.id)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold shadow-sm"
+                                        className="text-[12px] font-bold text-slate-600 hover:underline"
                                     >
-                                        <Eye size={13} /> View
+                                        View
                                     </button>
+                                    <span className="text-slate-300">|</span>
                                     <button
                                         onClick={() => setDeleteRow(p)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 text-[12px] font-bold shadow-sm"
+                                        className="text-[12px] font-bold text-[#c40000] hover:underline"
                                     >
-                                        <Trash2 size={13} /> Delete
+                                        Delete
                                     </button>
                                 </div>
                             </Card>
@@ -547,10 +549,12 @@ export default function PurchasesPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-3 transition-opacity">
-                                                <button onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)} className="flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:underline"><Truck size={14} /> Track</button>
-                                                <button onClick={() => handleViewDetails(p.id)} className="flex items-center gap-1.5 text-[12px] font-bold text-slate-600 hover:underline"><Eye size={14} /> View</button>
-                                                <button onClick={() => setDeleteRow(p)} className="flex items-center gap-1.5 text-[12px] font-bold text-rose-600 hover:underline"><Trash2 size={14} /> Delete</button>
+                                            <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                <button onClick={() => router.push(`/admin/tracking?q=${p.purchase_number}`)} className="text-[12px] font-bold text-slate-600 hover:underline">Track</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => handleViewDetails(p.id)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => setDeleteRow(p)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
                                     </tr>

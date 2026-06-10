@@ -359,11 +359,6 @@ export default function AddPurchasePage() {
                     title="New Purchase"
                     subtitle="Create a purchase order with supplier, items, and totals."
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: 'New Purchase' }]}
-                    actions={
-                        <Button variant="outline" onClick={() => router.back()}>
-                            <ArrowLeft size={14} /> Back
-                        </Button>
-                    }
                 />
 
                 {loading ? (
@@ -400,9 +395,9 @@ export default function AddPurchasePage() {
                                     </Field>
                                     <Field label="Shipping Cost">
                                         <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">$</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
                                             <input
-                                                className={inputCls + " pl-6"}
+                                                className={inputCls + " pl-9"}
                                                 type="number"
                                                 value={(form as any).shipping_cost || ''}
                                                 onChange={e => setForm(f => ({ ...f, shipping_cost: parseFloat(e.target.value) || 0 }))}
@@ -421,14 +416,6 @@ export default function AddPurchasePage() {
                                                 placeholder="0"
                                             />
                                         </div>
-                                    </Field>
-                                    <Field label="Target Warehouse" required={form.status === 'RECEIVED'}>
-                                        <select className={selectCls} value={form.warehouse} onChange={e => setForm(f => ({ ...f, warehouse: e.target.value }))}>
-                                            <option value="">Select Warehouse...</option>
-                                            {warehouses.map(w => (
-                                                <option key={w.id} value={w.id}>{w.name}</option>
-                                            ))}
-                                        </select>
                                     </Field>
                                 </div>
                             </Card>

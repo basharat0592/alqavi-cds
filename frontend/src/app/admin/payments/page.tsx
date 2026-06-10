@@ -6,7 +6,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import {
     DollarSign, Search, RefreshCw, Plus, ArrowUpRight, ArrowDownLeft,
-    X, Loader2, CheckCircle2, Trash2, Eye, LayoutGrid, AlertTriangle
+    X, Loader2, CheckCircle2, LayoutGrid, AlertTriangle
 } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
 
@@ -169,9 +169,10 @@ export default function PaymentsPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
-                                                        <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                            <button className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600" title="View"><Eye size={14} /></button>
-                                                            <button className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-rose-50 text-rose-600" title="Delete"><Trash2 size={14} /></button>
+                                                        <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                            <button className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                            <span className="text-slate-300">|</span>
+                                                            <button className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                         </div>
                                                     </td>
                                                 </tr>

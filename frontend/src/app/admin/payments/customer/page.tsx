@@ -6,7 +6,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import {
     Users, Search, RefreshCw, Plus, ArrowDownLeft,
     Filter, X, Loader2, Banknote, CheckCircle2,
-    Trash2, Printer, Eye, ShoppingCart, UserCheck,
+    Trash2, ShoppingCart, UserCheck,
     ChevronDown, Save, FileText, Download, User,
     DollarSign, AlertTriangle
 } from 'lucide-react';
@@ -219,13 +219,10 @@ export default function CustomerPaymentsPage() {
                                                     <span className="font-bold text-emerald-600 tracking-tight tabular-nums">+{formatCurrency(payment.amount)}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="View Receipt">
-                                                            <Eye className="h-4 w-4" />
-                                                        </button>
-                                                        <button className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Print Statement">
-                                                            <Printer className="h-4 w-4" />
-                                                        </button>
+                                                    <div className="flex items-center justify-end gap-2.5">
+                                                        <button className="text-[12px] font-bold text-slate-600 hover:underline">Receipt</button>
+                                                        <span className="text-slate-300">|</span>
+                                                        <button className="text-[12px] font-bold text-slate-600 hover:underline">Statement</button>
                                                     </div>
                                                 </td>
                                             </tr>

@@ -30,16 +30,31 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     order_number = serializers.CharField(source='tracking_id', read_only=True)
+    customer_display_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
-            'shipping_address', 'phone_number', 'customer_name', 'notes',
+            'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'notes',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
         ]
         read_only_fields = ['id', 'tracking_id', 'order_number', 'created_at', 'updated_at']
+
+    def get_customer_display_name(self, obj):
+        """Resolve the real customer name: prefer the linked account, then the
+        snapshot field, ignoring generic placeholders like 'Registered Customer'."""
+        placeholders = {'', 'registered customer', 'walk-in customer', 'walk in customer', 'guest'}
+        if obj.customer_id and getattr(obj.customer, 'name', None):
+            return obj.customer.name
+        snapshot = (obj.customer_name or '').strip()
+        if snapshot and snapshot.lower() not in placeholders:
+            return snapshot
+        if obj.user_id:
+            full = f"{getattr(obj.user, 'first_name', '')} {getattr(obj.user, 'last_name', '')}".strip()
+            return full or getattr(obj.user, 'username', '') or snapshot
+        return snapshot or 'Walk-in Customer'
 
 class CreateOrderSerializer(serializers.ModelSerializer):
     items = serializers.JSONField()

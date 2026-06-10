@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Package, Search, Eye, Printer,
+    Package, Search,
     RefreshCw, AlertTriangle, XCircle,
     User, Clock, Loader2, CheckCircle2, Trash2
 } from 'lucide-react';
@@ -282,12 +282,12 @@ export default function SaleReturnsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="flex justify-end gap-1.5 transition-opacity">
-                                                    <button onClick={() => setSelectedReturn(r)} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 transition-colors" title="Inspect Request"><Eye size={14} /></button>
-                                                    <button className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 transition-colors" title="Print Details"><Printer size={14} /></button>
-                                                    <button onClick={() => setReturnToDelete(r)} className="p-1.5 border border-rose-200 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors" title="Delete Return">
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                    <button onClick={() => setSelectedReturn(r)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setReturnToDelete(r)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

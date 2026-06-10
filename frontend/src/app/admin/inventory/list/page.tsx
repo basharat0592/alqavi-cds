@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-    Search, Plus, Edit2, RefreshCw, Package, Truck, MapPin, Save,
-    ChevronRight, ChevronLeft, Trash, Loader2, Info, Box, Barcode,
-    Building2, Activity, Filter, Trash2, AlertTriangle, Eye, X, Calendar,
+    Search, Plus, RefreshCw, Package, Truck, MapPin, Save,
+    ChevronRight, ChevronLeft, ChevronDown, Trash, Loader2, Info, Box, Barcode,
+    Building2, Activity, Filter, Trash2, AlertTriangle, X, Calendar,
     ShieldCheck, TrendingUp, Warehouse, History as HistoryIcon
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -42,6 +42,68 @@ const Field = ({ label, required = false, children }: { label: string; required?
         {children}
     </div>
 );
+
+/** Custom, theme-matched product autocomplete (replaces the browser's native
+ *  <datalist>, which renders an inconsistent dark popup). */
+const ProductCombobox = ({ products, value, inputCls, onType, onPick }: {
+    products: any[]; value: string; inputCls: string;
+    onType: (v: string) => void; onPick: (p: any) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+
+    const clean = (n: string) => (n || '').replace(/\s*\(.*?\)\s*$/, '').trim();
+    const q = (value || '').toLowerCase().trim();
+    const list = (products || [])
+        .filter(p => (p.status || '').toUpperCase() === 'ACTIVE')
+        .filter(p => !q || (p.name || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q))
+        .slice(0, 50);
+
+    return (
+        <div className="relative" ref={ref}>
+            <input
+                className={inputCls + ' pr-9'}
+                value={value}
+                onChange={(e) => { onType(e.target.value); setOpen(true); }}
+                onFocus={() => setOpen(true)}
+                placeholder="Start typing product name..."
+                autoComplete="off"
+            />
+            <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180' : ''}`} />
+            {open && list.length > 0 && (
+                <div className="absolute z-50 mt-1.5 w-full max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 py-1 animate-in fade-in zoom-in-95 duration-150">
+                    {list.map(p => (
+                        <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => { onPick(p); setOpen(false); }}
+                            className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-slate-50 transition-colors"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                                <Package size={14} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[13px] font-semibold text-slate-800 truncate">{clean(p.name)}</p>
+                                <p className="text-[11px] text-slate-400 font-medium truncate">{p.sku || clean(p.name)}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+            {open && list.length === 0 && q && (
+                <div className="absolute z-50 mt-1.5 w-full rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 px-3.5 py-3 text-[12px] text-slate-500">
+                    No match — <span className="font-semibold text-slate-700">&ldquo;{value}&rdquo;</span> will be saved as a new product.
+                </div>
+            )}
+        </div>
+    );
+};
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, loading }: any) => {
     if (!isOpen) return null;
@@ -510,31 +572,33 @@ export default function InventoryListPage() {
                                         </div>
 
                                         {/* Row 4: Action Controls */}
-                                        <div className="flex gap-2 pt-2 border-t border-slate-100">
+                                        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                                             <button
                                                 onClick={() => setViewingStock(s)}
-                                                className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-indigo-600 text-[12px] font-bold shadow-sm"
+                                                className="text-[12px] font-bold text-slate-600 hover:underline"
                                             >
-                                                <Eye size={13} /> View
+                                                View
                                             </button>
+                                            <span className="text-slate-300">|</span>
                                             <button
                                                 onClick={() => {
                                                     setForm({ product_name: s.product_name, category: s.category || '', supplier: s.supplier, warehouse: s.warehouse, purchase_type: s.purchase_type, cartons: s.cartons || '', items_per_carton: s.items_per_carton || '', total_quantity: s.total_quantity, price_per_carton: s.price_per_carton || '', price_per_item: s.price_per_item, date: s.date, supplier_product_id: '' });
                                                     setIsEditing(true); setEditingId(s.id); setView('form');
                                                 }}
-                                                className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 text-[12px] font-bold shadow-sm"
+                                                className="text-[12px] font-bold text-indigo-600 hover:underline"
                                             >
-                                                <Edit2 size={13} /> Edit
+                                                Edit
                                             </button>
+                                            <span className="text-slate-300">|</span>
                                             <button
                                                 onClick={() => setDeleteModal({
                                                     open: true,
                                                     ids: s.items.map((i: any) => i.id),
                                                     name: s.product_name
                                                 })}
-                                                className="flex-1 flex items-center justify-center gap-1.5 h-[30px] border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 text-[12px] font-bold shadow-sm"
+                                                className="text-[12px] font-bold text-[#c40000] hover:underline"
                                             >
-                                                <Trash2 size={13} /> Delete
+                                                Delete
                                             </button>
                                         </div>
                                     </Card>
@@ -631,28 +695,28 @@ export default function InventoryListPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-2">
+                                                    <div className="flex items-center justify-end gap-2.5">
                                                         <button
                                                             onClick={() => setViewingStock(s)}
-                                                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-indigo-600 shadow-sm"
-                                                            title="View Details"
+                                                            className="text-[12px] font-bold text-slate-600 hover:underline"
                                                         >
-                                                            <Eye size={14} />
+                                                            View
                                                         </button>
+                                                        <span className="text-slate-300">|</span>
                                                         <button onClick={() => {
                                                             setForm({ product_name: s.product_name, category: s.category || '', supplier: s.supplier, warehouse: s.warehouse, purchase_type: s.purchase_type, cartons: s.cartons || '', items_per_carton: s.items_per_carton || '', total_quantity: s.total_quantity, price_per_carton: s.price_per_carton || '', price_per_item: s.price_per_item, date: s.date, supplier_product_id: '' });
                                                             setIsEditing(true); setEditingId(s.id); setView('form');
-                                                        }} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 shadow-sm"><Edit2 size={14} /></button>
+                                                        }} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                        <span className="text-slate-300">|</span>
                                                         <button
                                                             onClick={() => setDeleteModal({
                                                                 open: true,
                                                                 ids: s.items.map((i: any) => i.id),
                                                                 name: s.product_name
                                                             })}
-                                                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-rose-50 hover:border-rose-200 text-rose-600 shadow-sm"
-                                                            title="Delete Allover"
+                                                            className="text-[12px] font-bold text-[#c40000] hover:underline"
                                                         >
-                                                            <Trash2 size={14} />
+                                                            Delete
                                                         </button>
                                                     </div>
                                                 </td>
@@ -710,33 +774,32 @@ export default function InventoryListPage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div className="col-span-full">
                                             <Field label="Product Name (Select or Type New)" required>
-                                                <div className="relative">
-                                                    <input
-                                                        list="catalog-products"
-                                                        className={inputCls}
-                                                        value={form.product_name}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            const p = allProducts.find(item => item.name === val);
-                                                            setForm((f: any) => ({
-                                                                ...f,
-                                                                product_name: val,
-                                                                supplier_product_id: p ? String(p.id) : '',
-                                                                supplier: p ? p.supplier : f.supplier,
-                                                                category: p ? p.category : f.category,
-                                                                price_per_item: p ? p.cost_price || p.price : f.price_per_item
-                                                            }));
-                                                        }}
-                                                        placeholder="Start typing product name..."
-                                                    />
-                                                    <datalist id="catalog-products">
-                                                        {allProducts.filter(p => p.status === 'ACTIVE').map(p => (
-                                                            <option key={p.id} value={p.name}>
-                                                                {p.sku ? `${(p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()} (${p.sku})` : (p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
-                                                            </option>
-                                                        ))}
-                                                    </datalist>
-                                                </div>
+                                                <ProductCombobox
+                                                    products={allProducts}
+                                                    value={form.product_name}
+                                                    inputCls={inputCls}
+                                                    onType={(val) => {
+                                                        const p = allProducts.find(item => item.name === val);
+                                                        setForm((f: any) => ({
+                                                            ...f,
+                                                            product_name: val,
+                                                            supplier_product_id: p ? String(p.id) : '',
+                                                            supplier: p ? p.supplier : f.supplier,
+                                                            category: p ? p.category : f.category,
+                                                            price_per_item: p ? p.cost_price || p.price : f.price_per_item
+                                                        }));
+                                                    }}
+                                                    onPick={(p) => {
+                                                        setForm((f: any) => ({
+                                                            ...f,
+                                                            product_name: p.name,
+                                                            supplier_product_id: String(p.id),
+                                                            supplier: p.supplier,
+                                                            category: p.category,
+                                                            price_per_item: p.cost_price || p.price
+                                                        }));
+                                                    }}
+                                                />
                                             </Field>
                                         </div>
                                         <Field label="Category Group">

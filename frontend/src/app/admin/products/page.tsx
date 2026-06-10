@@ -253,23 +253,10 @@ export default function ProductsPage() {
                                                     <div className="hidden sm:block text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Unit Balance</div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className="flex justify-end gap-1.5 sm:gap-2 transition-opacity">
-                                                        <button
-                                                            onClick={() => router.push(`/admin/products/edit/${prod.id}`)}
-                                                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 hover:border-slate-300 flex items-center gap-1 shadow-sm shrink-0 transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit size={13} />
-                                                            <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setDeleteProd(prod)}
-                                                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-rose-50 hover:border-rose-200 text-rose-600 flex items-center gap-1 shadow-sm shrink-0 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={13} />
-                                                            <span className="hidden sm:inline text-[11px] font-bold">Delete</span>
-                                                        </button>
+                                                    <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                        <button onClick={() => router.push(`/admin/products/edit/${prod.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                        <span className="text-slate-300">|</span>
+                                                        <button onClick={() => setDeleteProd(prod)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                     </div>
                                                 </td>
                                             </tr>

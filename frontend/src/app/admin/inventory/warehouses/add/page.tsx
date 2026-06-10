@@ -68,11 +68,6 @@ export default function AddWarehousePage() {
                     { label: 'Warehouses', href: '/admin/inventory/warehouses' },
                     { label: 'Add Warehouse' },
                 ]}
-                actions={
-                    <Button variant="outline" size="sm" onClick={() => router.back()}>
-                        <ChevronLeft size={16} /> Back to list
-                    </Button>
-                }
             />
 
             <div className="max-w-[800px] animate-in slide-in-from-bottom-5 duration-500">

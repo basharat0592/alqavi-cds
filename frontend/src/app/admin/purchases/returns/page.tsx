@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    RotateCcw, Plus, Search, RefreshCw, Trash2, Eye,
+    RotateCcw, Plus, Search, RefreshCw,
     AlertTriangle,
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
@@ -186,22 +186,19 @@ export default function PurchaseReturnsPage() {
                                                 <StatusPill status={row.status} />
                                             </td>
                                             <td className="px-2.5 sm:px-4 py-3 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="flex justify-end gap-1.5 text-[13px]">
+                                                <div className="flex items-center justify-end gap-2.5">
                                                     <button
                                                         onClick={() => setViewRow(row)}
-                                                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 transition-all shrink-0 sm:border-0 sm:p-0 sm:hover:bg-transparent sm:hover:underline font-semibold"
-                                                        title="View"
+                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
                                                     >
-                                                        <span className="hidden sm:inline">View</span>
-                                                        <Eye size={14} className="sm:hidden" />
+                                                        View
                                                     </button>
+                                                    <span className="text-slate-300">|</span>
                                                     <button
                                                         onClick={() => setDeleteRow(row)}
-                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-100 transition-all shrink-0 sm:border-0 sm:p-0 sm:hover:bg-transparent sm:hover:underline font-semibold"
-                                                        title="Delete"
+                                                        className="text-[12px] font-bold text-[#c40000] hover:underline"
                                                     >
-                                                        <span className="hidden sm:inline">Delete</span>
-                                                        <Trash2 size={14} className="sm:hidden" />
+                                                        Delete
                                                     </button>
                                                 </div>
                                             </td>

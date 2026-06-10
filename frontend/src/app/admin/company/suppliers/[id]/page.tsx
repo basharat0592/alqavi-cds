@@ -58,11 +58,6 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                     { label: 'Suppliers', href: '/admin/company/suppliers' },
                     { label: 'Supplier Details' },
                 ]}
-                actions={
-                    <Button variant="outline" size="md" onClick={() => router.push('/admin/company/suppliers')}>
-                        <ArrowLeft className="h-4 w-4" /> Back to Registry
-                    </Button>
-                }
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

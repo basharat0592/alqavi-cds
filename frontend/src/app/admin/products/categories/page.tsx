@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Plus, Search, Edit,
-    RefreshCw, Save, ChevronLeft, AlertTriangle, Trash
+    Plus, Search,
+    RefreshCw, Save, ChevronLeft, AlertTriangle
 } from 'lucide-react';
 import { categoryService, ProductCategory } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -202,9 +202,10 @@ export default function ProductCategoriesPage() {
                                                     </Badge>
                                                 </td>
                                                 <td className="px-2 md:px-6 py-2 md:py-4 text-right">
-                                                    <div className="flex justify-end gap-1 md:gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => handleEdit(cat)} className="p-1 md:p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-500 hover:text-slate-700 transition-all"><Edit size={13} /></button>
-                                                        <button onClick={() => setDeleteCat(cat)} className="p-1 md:p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-rose-50 hover:border-rose-200 text-rose-600 transition-all"><Trash size={13} /></button>
+                                                    <div className="flex items-center justify-end gap-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => handleEdit(cat)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                        <span className="text-slate-300">|</span>
+                                                        <button onClick={() => setDeleteCat(cat)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                     </div>
                                                 </td>
                                             </tr>

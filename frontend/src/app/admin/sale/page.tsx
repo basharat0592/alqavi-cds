@@ -447,11 +447,6 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         { label: 'Sales History', href: '/admin/sales' },
                         { label: 'New Sale' },
                     ]}
-                    actions={
-                        <Button variant="outline" size="sm" onClick={() => router.back()} className="group">
-                            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
-                        </Button>
-                    }
                 />
 
                 {loading ? (
@@ -466,8 +461,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         <div className="flex-1 min-w-0 space-y-6">
 
                             {/* Order Info Panel */}
-                            <Card className="overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60">
+                            <Card className="overflow-visible animate-in fade-in slide-in-from-top-2">
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-2xl">
                                     <h2 className="text-[13px] sm:text-[14px] font-bold uppercase tracking-wider text-slate-700">Order Details</h2>
                                     <p className="text-[11px] text-slate-500 mt-0.5 font-medium italic">Choose customer and how they will pay.</p>
                                 </div>
@@ -505,8 +500,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             </Card>
 
                             {/* Line Items Detail */}
-                            <Card className="relative z-[10] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                            <Card className="relative z-[10] overflow-visible animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between rounded-t-2xl">
                                     <div>
                                         <h2 className="text-[13px] sm:text-[14px] font-bold uppercase tracking-wider text-slate-700">Sale Items</h2>
                                         <p className="text-[11px] text-slate-500 mt-0.5 font-medium italic">Add products and how many to sell.</p>

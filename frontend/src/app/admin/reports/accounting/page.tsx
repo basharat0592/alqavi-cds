@@ -7,8 +7,9 @@ import {
     Clock, Info, RefreshCw
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
-import toast from 'react-hot-toast';
 import { useAdminDashboard } from '@/hooks';
+import { purchaseService } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
 const formatK = (num: number) => {
@@ -67,14 +68,58 @@ export default function AccountingReportPage() {
         payment_method: paymentMethod !== 'ALL' ? paymentMethod : undefined
     }), [filterDate, paymentMethod]);
 
-    const { stats, loading: statsLoading, refetch } = useAdminDashboard(dashboardFilters);
+    const { stats, recentOrders, loading: statsLoading, refetch } = useAdminDashboard(dashboardFilters);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [purchases, setPurchases] = useState<any[]>([]);
 
     useEffect(() => {
         if (!statsLoading) {
             setInitialLoading(false);
         }
     }, [statsLoading]);
+
+    useEffect(() => {
+        purchaseService.getAll({ no_pagination: 'true' } as any)
+            .then((res: any) => setPurchases(Array.isArray(res) ? res : res?.results || []))
+            .catch(() => setPurchases([]));
+    }, []);
+
+    // Build a real general ledger from sales (income) and purchase orders (expense).
+    const ledger = useMemo(() => {
+        const inRange = (d: string) => !filterDate || String(d || '').slice(0, 10) === filterDate;
+
+        const sales = (recentOrders || [])
+            .filter((o: any) => inRange(o.created_at))
+            .filter((o: any) => paymentMethod === 'ALL' || String(o.payment_method || '').toUpperCase() === paymentMethod)
+            .map((o: any) => ({
+                id: o.order_number || o.tracking_id || String(o.id || '').slice(0, 8),
+                type: 'Income',
+                desc: `Sale Order #${o.order_number || o.tracking_id || ''} - ${o.customer_display_name || o.customer_name || 'Customer'}`,
+                debit: Number(o.total_amount || 0),
+                credit: 0,
+                date: o.created_at,
+            }));
+
+        // Purchases are expenses; hide them when filtering by a sales payment channel.
+        const buys = paymentMethod !== 'ALL' ? [] : (purchases || [])
+            .filter((p: any) => inRange(p.order_date))
+            .map((p: any) => ({
+                id: p.purchase_number || p.order_number || String(p.id || '').slice(0, 8),
+                type: 'Expense',
+                desc: `Supplier PO #${p.purchase_number || p.order_number || ''} - ${p.supplier_name || 'Supplier'}`,
+                debit: 0,
+                credit: Number(p.total_amount || 0),
+                date: p.order_date,
+            }));
+
+        return [...sales, ...buys].sort(
+            (a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()
+        );
+    }, [recentOrders, purchases, filterDate, paymentMethod]);
+
+    const netMargin = stats.totalRevenue ? ((stats.totalProfit || 0) / stats.totalRevenue) * 100 : 0;
+    const totalExpense = (purchases || []).reduce((s: number, p: any) => s + Number(p.total_amount || 0), 0);
+    const avgOrderValue = (stats as any).deliveredOrders ? (stats.totalRevenue || 0) / (stats as any).deliveredOrders : 0;
 
     if (initialLoading) return <PageLoader />;
 
@@ -106,7 +151,7 @@ export default function AccountingReportPage() {
                         <Button variant="outline" onClick={refetch}>
                             <RefreshCw size={14} className={statsLoading ? 'animate-spin' : ''} /> Refresh
                         </Button>
-                        <Button variant="secondary" onClick={() => toast.success('Balance Sheet Downloaded')}>
+                        <Button variant="secondary" onClick={() => window.print()}>
                             <Download size={14} /> Download PDF
                         </Button>
                         <Button variant="secondary" onClick={() => window.print()}>
@@ -173,21 +218,21 @@ export default function AccountingReportPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {[
-                                { id: '#TR-8291', type: 'Income', desc: 'Sale Order #SO-7721 - Customer Payment', d: 'Rs. 45,000', c: '-' },
-                                { id: '#TR-8290', type: 'Expense', desc: 'Supplier PO #PO-1120 - Cosmetic Restock', d: '-', c: 'Rs. 12,500' },
-                                { id: '#TR-8289', type: 'Revenue', desc: 'Service Fee Settlement', d: 'Rs. 2,500', c: '-' },
-                                { id: '#TR-8288', type: 'Payroll', desc: 'Monthly Salary Distribution - Logistics', d: '-', c: 'Rs. 150,000' },
-                                { id: '#TR-8287', type: 'Rent', desc: 'Warehouse Facility Rental - Zone A', d: '-', c: 'Rs. 85,000' },
-                            ].map((tr, i) => (
+                            {ledger.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-12 text-center text-[13px] text-slate-400 font-medium">
+                                        No ledger entries for this selection.
+                                    </td>
+                                </tr>
+                            ) : ledger.slice(0, 12).map((tr, i) => (
                                 <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
-                                    <td className="px-6 py-4 font-bold text-indigo-600">{tr.id}</td>
+                                    <td className="px-6 py-4 font-bold text-indigo-600">#{tr.id}</td>
                                     <td className="px-6 py-4">
                                         <div className="text-slate-900 font-medium">{tr.desc}</div>
                                         <span className={`text-[10px] font-black uppercase ${tr.type === 'Income' ? 'text-emerald-600' : 'text-slate-400'}`}>{tr.type}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-right text-emerald-600 font-bold tabular-nums">{tr.d}</td>
-                                    <td className="px-6 py-4 text-right text-rose-600 font-bold tabular-nums">{tr.c}</td>
+                                    <td className="px-6 py-4 text-right text-emerald-600 font-bold tabular-nums">{tr.debit ? formatCurrency(tr.debit) : '-'}</td>
+                                    <td className="px-6 py-4 text-right text-rose-600 font-bold tabular-nums">{tr.credit ? formatCurrency(tr.credit) : '-'}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -200,9 +245,10 @@ export default function AccountingReportPage() {
                         <h3 className="text-[14px] font-bold text-slate-900 tracking-tight mb-5 pb-2 border-b border-slate-100">Financial Efficiency</h3>
                         <div className="space-y-5">
                             {[
-                                { l: 'Net Margin', v: '18.4%', c: 'text-emerald-600' },
-                                { l: 'Burn Rate', v: 'Rs. 45k/mo', c: 'text-slate-500' },
-                                { l: 'Tax Liability', v: 'Rs. 12k', c: 'text-indigo-600' },
+                                { l: 'Net Margin', v: `${netMargin.toFixed(1)}%`, c: netMargin >= 0 ? 'text-emerald-600' : 'text-rose-600' },
+                                { l: 'Total Expense', v: formatCurrency(totalExpense), c: 'text-rose-600' },
+                                { l: 'Accounts Payable', v: formatCurrency(stats.totalPayable || 0), c: 'text-amber-600' },
+                                { l: 'Avg. Order Value', v: formatCurrency(avgOrderValue), c: 'text-indigo-600' },
                             ].map((h, i) => (
                                 <div key={i} className="flex items-center justify-between">
                                     <span className="text-[12px] font-medium text-slate-500">{h.l}</span>

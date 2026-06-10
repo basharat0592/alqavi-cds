@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Plus, Trash2, Edit3, Save, X, Loader2, ChevronRight, Menu as MenuIcon } from 'lucide-react';
+import { Plus, Save, X, Loader2, ChevronRight, Menu as MenuIcon } from 'lucide-react';
 import cmsService, { NavigationMenu, NavigationItem } from '@/services/cms.service';
 import toast from 'react-hot-toast';
 
@@ -163,9 +163,10 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                                                         <p className="text-[14px] font-bold text-[#111]">{item.title}</p>
                                                         <p className="text-[12px] text-[#007185] hover:underline cursor-pointer">{item.url}</p>
                                                     </div>
-                                                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-                                                        <button onClick={() => setEditingItem(item)} className="p-2 text-[#565959] hover:text-[#111] hover:bg-[#eee] rounded-[3px]"><Edit3 size={14} /></button>
-                                                        <button onClick={() => deleteItem(item.id!)} className="p-2 text-[#565959] hover:text-red-600 hover:bg-red-50 rounded-[3px]"><Trash2 size={14} /></button>
+                                                    <div className="flex items-center justify-end gap-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
+                                                        <button onClick={() => setEditingItem(item)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                        <span className="text-slate-300">|</span>
+                                                        <button onClick={() => deleteItem(item.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                     </div>
                                                 </>
                                             )}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { Package, Clock, MapPin, LayoutDashboard, Globe, MoreHorizontal, User, Phone, CheckCircle2, XCircle, AlertCircle, AlertTriangle, RefreshCw, Filter, ArrowRight, Eye, Printer, Hash, CreditCard, ShoppingCart, ChevronDown, Loader2, Truck, X, CheckCircle, Info } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Package, Clock, MapPin, LayoutDashboard, Globe, MoreHorizontal, User, Phone, CheckCircle2, XCircle, AlertCircle, AlertTriangle, RefreshCw, Filter, ArrowRight, Eye, Printer, Hash, CreditCard, ShoppingCart, ChevronDown, Loader2, Truck, X, CheckCircle, Info, Lock, Trash2, MessageCircle, Send } from 'lucide-react';
 import Link from 'next/link';
 import { salesService, orderService, inventoryService } from '@/lib/api';
 import PageLoader from '@/components/ui/PageLoader';
@@ -21,6 +22,115 @@ const STATUS_OPTIONS = [
     { label: 'Cancelled', value: 'CANCELLED', color: 'bg-slate-100 text-slate-600' },
 ];
 
+const STATUS_STYLES: Record<string, string> = {
+    PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
+    CONFIRMED: 'bg-teal-50 text-teal-700 border-teal-200',
+    PROCESSING: 'bg-blue-50 text-blue-700 border-blue-200',
+    SHIPPED: 'bg-purple-50 text-purple-700 border-purple-200',
+    DELIVERED: 'bg-green-50 text-green-700 border-green-200',
+    CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200',
+    CANCEL_REQUESTED: 'bg-amber-50 text-amber-700 border-amber-200',
+};
+const STATUS_DOT: Record<string, string> = {
+    PENDING: 'bg-amber-500', CONFIRMED: 'bg-teal-500', PROCESSING: 'bg-blue-500',
+    SHIPPED: 'bg-purple-500', DELIVERED: 'bg-green-500', CANCELLED: 'bg-rose-500',
+    CANCEL_REQUESTED: 'bg-amber-500',
+};
+const STATUS_FLOW = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+
+/** Professional status control:
+ *  - PENDING  → static badge (must be Accepted first; no dropdown)
+ *  - DELIVERED / CANCELLED → locked badge (finalised, not editable)
+ *  - otherwise → styled dropdown rendered in a portal so it is never clipped. */
+function StatusDropdown({ order, updating, onSelect }: { order: any; updating: boolean; onSelect: (status: string) => void; }) {
+    const [open, setOpen] = useState(false);
+    const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const status = (order.status || '').toUpperCase();
+    const style = STATUS_STYLES[status] || 'bg-slate-100 text-slate-700 border-slate-200';
+
+    const MENU_W = 176; // w-44
+
+    useEffect(() => {
+        if (!open) return;
+        const close = () => setOpen(false);
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', close);
+        return () => {
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
+        };
+    }, [open]);
+
+    // Locked: finalised orders cannot be changed.
+    if (status === 'DELIVERED' || status === 'CANCELLED') {
+        return (
+            <span className={`inline-flex items-center gap-1.5 min-w-[120px] justify-center rounded-full border px-3 py-1 font-bold text-[10px] uppercase tracking-wide ${style}`} title="This order is finalised and can no longer be changed">
+                <Lock size={10} /> {status}
+            </span>
+        );
+    }
+
+    // Pending: no dropdown until the order is Accepted.
+    if (status === 'PENDING') {
+        return (
+            <span className={`inline-flex items-center gap-1.5 min-w-[120px] justify-center rounded-full border px-3 py-1 font-bold text-[10px] uppercase tracking-wide ${style}`} title="Accept this order to unlock status changes">
+                <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[status]}`} /> {status}
+            </span>
+        );
+    }
+
+    const toggle = () => {
+        if (open) { setOpen(false); return; }
+        const r = btnRef.current?.getBoundingClientRect();
+        if (r) setCoords({ top: r.bottom + 6, left: Math.max(8, r.right - MENU_W) });
+        setOpen(true);
+    };
+
+    return (
+        <>
+            <button
+                ref={btnRef}
+                type="button"
+                disabled={updating}
+                onClick={toggle}
+                className={`inline-flex items-center justify-between gap-2 min-w-[120px] rounded-full border px-3 py-1 font-bold text-[10px] uppercase tracking-wide transition-all hover:shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ${style}`}
+            >
+                <span className="flex items-center gap-1.5">
+                    {updating ? <Loader2 size={11} className="animate-spin" /> : <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[status] || 'bg-slate-400'}`} />}
+                    {status || 'N/A'}
+                </span>
+                <ChevronDown size={11} className={`opacity-70 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && coords && createPortal(
+                <>
+                    <div className="fixed inset-0 z-[1090]" onClick={() => setOpen(false)} />
+                    <div
+                        style={{ top: coords.top, left: coords.left, width: MENU_W }}
+                        className="fixed z-[1100] rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 py-1 animate-in fade-in zoom-in-95 duration-150"
+                    >
+                        {STATUS_FLOW.map(s => {
+                            const active = s === status;
+                            return (
+                                <button
+                                    key={s}
+                                    onClick={() => { setOpen(false); if (s !== status) onSelect(s); }}
+                                    className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-[11px] font-semibold text-left transition-colors ${active ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                    <span className={`w-2 h-2 rounded-full ${STATUS_DOT[s]}`} />
+                                    <span className="capitalize">{s.toLowerCase()}</span>
+                                    {active && <CheckCircle2 size={13} className="ml-auto text-indigo-600" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>,
+                document.body
+            )}
+        </>
+    );
+}
+
 export default function AdminOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -37,6 +147,13 @@ export default function AdminOrdersPage() {
     const [deliveryModal, setDeliveryModal] = useState<{ orderId: string, status: string, order?: any } | null>(null);
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
+
+    // Delete States
+    const [deleteTarget, setDeleteTarget] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // WhatsApp confirmation popup
+    const [waModal, setWaModal] = useState<{ number: string; message: string; tracking: string } | null>(null);
 
     useEffect(() => {
         loadOrders();
@@ -80,16 +197,14 @@ export default function AdminOrdersPage() {
             const data = await salesService.updateOrderStatus(id, newStatus);
 
             if (newStatus === 'CONFIRMED') {
-                const encodedMsg = encodeURIComponent(data.whatsapp_message || '');
-                let cleanNumber = (data.whatsapp_number || '').replace(/\D/g, '');
-                if (cleanNumber.startsWith('0') && cleanNumber.length === 11) {
-                    cleanNumber = '92' + cleanNumber.slice(1);
-                } else if (cleanNumber.length === 10) {
-                    cleanNumber = '92' + cleanNumber;
-                }
-
-                window.open(`whatsapp://send/?phone=${cleanNumber}&text=${encodedMsg}`, '_blank');
-                toast.success('Order accepted! Opening WhatsApp Desktop...', { icon: '✅' });
+                // Show a confirmation popup so the admin can review/edit the message
+                // before sending it on WhatsApp.
+                setWaModal({
+                    number: data.whatsapp_number || data.phone_number || '',
+                    message: data.whatsapp_message || '',
+                    tracking: data.tracking_id || data.order_number || id,
+                });
+                toast.success('Order accepted!', { icon: '✅' });
             } else {
                 toast.success(`Status updated to ${newStatus}`);
             }
@@ -120,6 +235,39 @@ export default function AdminOrdersPage() {
         } finally {
             setIsSubmittingDelivery(false);
             setUpdatingRow(null);
+        }
+    };
+
+    const sendWhatsApp = () => {
+        if (!waModal) return;
+        let cleanNumber = (waModal.number || '').replace(/\D/g, '');
+        if (cleanNumber.startsWith('0') && cleanNumber.length === 11) {
+            cleanNumber = '92' + cleanNumber.slice(1);
+        } else if (cleanNumber.length === 10) {
+            cleanNumber = '92' + cleanNumber;
+        }
+        const encodedMsg = encodeURIComponent(waModal.message || '');
+        // Open in a NAMED window/tab ("whatsapp_session"). The browser reuses the same
+        // tab on every send, so the chat opens inside the already-open WhatsApp Web tab
+        // (or focuses it) instead of spawning a fresh tab each time.
+        const url = `https://web.whatsapp.com/send?phone=${cleanNumber}&text=${encodedMsg}`;
+        const win = window.open(url, 'whatsapp_session');
+        win?.focus();
+        setWaModal(null);
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
+        try {
+            await orderService.delete(deleteTarget.id?.toString());
+            toast.success(`Order #${deleteTarget.tracking_id || deleteTarget.id} deleted`);
+            setDeleteTarget(null);
+            loadOrders();
+        } catch {
+            toast.error('Failed to delete order');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -223,46 +371,11 @@ export default function AdminOrdersPage() {
                                                 <div className="text-[9px] font-bold text-slate-400 uppercase mt-0.5 tracking-wider">{order.payment_method || 'C.O.D'}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {(() => {
-                                                    const status = (order.status || '').toUpperCase();
-                                                    let badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
-                                                    if (status === 'PENDING') {
-                                                        badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
-                                                    } else if (status === 'CONFIRMED') {
-                                                        badgeStyle = "bg-teal-50 text-teal-700 border-teal-200";
-                                                    } else if (status === 'PROCESSING') {
-                                                        badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
-                                                    } else if (status === 'SHIPPED') {
-                                                        badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
-                                                    } else if (status === 'DELIVERED') {
-                                                        badgeStyle = "bg-green-50 text-green-700 border-green-200";
-                                                    } else if (status === 'CANCELLED') {
-                                                        badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
-                                                    } else if (status === 'CANCEL_REQUESTED') {
-                                                        badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
-                                                    }
-
-                                                    return (
-                                                        <div className={`relative inline-flex items-center min-w-[130px] rounded-full border px-3.5 py-1 font-bold text-[11px] uppercase transition-all duration-300 ${badgeStyle}`}>
-                                                            <select
-                                                                value={(order.status || '').toLowerCase()}
-                                                                onChange={(e) => handleStatusUpdateWithLoading(order.id?.toString(), e.target.value)}
-                                                                disabled={updatingRow === order.id?.toString() || (order.status || '').toUpperCase() === 'PENDING'}
-                                                                className="w-full bg-transparent border-none p-0 pr-5 text-[11px] font-bold uppercase cursor-pointer outline-none focus:ring-0 appearance-none disabled:cursor-not-allowed select-none"
-                                                            >
-                                                                {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
-                                                                    <option key={s} value={s} className="bg-white text-slate-800 lowercase first-letter:uppercase">{s}</option>
-                                                                ))}
-                                                            </select>
-                                                            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-70" />
-                                                            {updatingRow === order.id?.toString() && (
-                                                                <div className="absolute inset-0 bg-white/80 rounded-full flex items-center justify-center">
-                                                                    <Loader2 size={12} className="animate-spin" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })()}
+                                                <StatusDropdown
+                                                    order={order}
+                                                    updating={updatingRow === order.id?.toString()}
+                                                    onSelect={(s) => handleStatusUpdateWithLoading(order.id?.toString(), s)}
+                                                />
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -281,6 +394,14 @@ export default function AdminOrdersPage() {
                                                         onClick={() => { setSelectedOrder(order); setIsViewModalOpen(true); }}
                                                     >
                                                         <Eye size={12} /> View
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setDeleteTarget(order)}
+                                                        className="!text-rose-600 !border-rose-200 hover:!bg-rose-50"
+                                                    >
+                                                        <Trash2 size={12} /> Delete
                                                     </Button>
                                                 </div>
                                             </td>
@@ -422,48 +543,35 @@ export default function AdminOrdersPage() {
                                             </td>
                                             <td className="px-5 py-4 text-center">
                                                 <div className="flex justify-center">
-                                                    <div className={`relative inline-flex items-center min-w-[120px] rounded-full border px-3 py-0.5 font-bold text-[9px] uppercase transition-all duration-300 ${order.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                        order.status === 'CONFIRMED' ? 'bg-teal-50 text-teal-700 border-teal-200' :
-                                                            order.status === 'PROCESSING' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                                order.status === 'SHIPPED' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                                    order.status === 'DELIVERED' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                                        'bg-slate-100 text-slate-700 border-slate-200'
-                                                        }`}>
-                                                        <select
-                                                            value={(order.status || '').toLowerCase()}
-                                                            onChange={(e) => handleStatusUpdateWithLoading(order.id?.toString(), e.target.value)}
-                                                            disabled={updatingRow === order.id?.toString() || (order.status || '').toUpperCase() === 'PENDING'}
-                                                            className="w-full bg-transparent border-none p-0 pr-4 text-[9px] font-bold uppercase cursor-pointer outline-none focus:ring-0 appearance-none disabled:cursor-not-allowed select-none"
-                                                        >
-                                                            {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
-                                                                <option key={s} value={s} className="bg-white text-slate-800 lowercase first-letter:uppercase">{s}</option>
-                                                            ))}
-                                                        </select>
-                                                        <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-70" />
-                                                        {updatingRow === order.id && (
-                                                            <div className="absolute inset-0 bg-white/80 rounded-full flex items-center justify-center">
-                                                                <Loader2 size={11} className="animate-spin" />
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <StatusDropdown
+                                                        order={order}
+                                                        updating={updatingRow === order.id?.toString()}
+                                                        onSelect={(s) => handleStatusUpdateWithLoading(order.id?.toString(), s)}
+                                                    />
                                                 </div>
                                             </td>
                                             <td className="px-2.5 sm:px-5 py-3 sm:py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1.5 transition-all">
+                                                <div className="flex items-center justify-end gap-2.5 transition-all">
                                                     <button
                                                         onClick={() => { setSelectedOrder(order); setIsViewModalOpen(true); }}
-                                                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 transition-all"
-                                                        title="Quick View"
+                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
                                                     >
-                                                        <Eye size={12} className="sm:w-3.5 sm:h-3.5" />
+                                                        View
                                                     </button>
+                                                    <span className="text-slate-300">|</span>
                                                     <Link
                                                         href={`/admin/sales/${order.id}/invoice`}
-                                                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 transition-all"
-                                                        title="Print Invoice"
+                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
                                                     >
-                                                        <Printer size={12} className="sm:w-3.5 sm:h-3.5" />
+                                                        Print
                                                     </Link>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button
+                                                        onClick={() => setDeleteTarget(order)}
+                                                        className="text-[12px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
+                                                    >
+                                                        <Trash2 size={12} /> Delete
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -713,6 +821,102 @@ export default function AdminOrdersPage() {
                                     </>
                                 )}
                             </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* WhatsApp Confirmation Popup */}
+            {waModal && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 text-left">
+                    <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                    <MessageCircle size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Send Confirmation</h3>
+                                    <p className="text-[12px] text-slate-400 font-medium">Order #{waModal.tracking} accepted</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setWaModal(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="bg-emerald-50/60 border border-emerald-100 p-3.5 rounded-xl flex gap-3">
+                                <Info size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-emerald-700 leading-relaxed font-semibold">
+                                    Review the message below, then send it to the customer on WhatsApp.
+                                </p>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recipient Number</label>
+                                <div className="flex items-center gap-2 h-10 px-3 border border-slate-200 rounded-lg focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
+                                    <Phone size={14} className="text-slate-400 shrink-0" />
+                                    <input
+                                        value={waModal.number}
+                                        onChange={(e) => setWaModal(m => m ? { ...m, number: e.target.value } : m)}
+                                        placeholder="03xx-xxxxxxx"
+                                        className="w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none border-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Message</label>
+                                <textarea
+                                    value={waModal.message}
+                                    onChange={(e) => setWaModal(m => m ? { ...m, message: e.target.value } : m)}
+                                    rows={5}
+                                    className="w-full min-h-[120px] px-3.5 py-2.5 bg-white rounded-lg text-[13px] text-slate-800 outline-none border border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-y leading-relaxed"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <Button variant="outline" className="flex-1" onClick={() => setWaModal(null)}>
+                                Skip
+                            </Button>
+                            <button
+                                onClick={sendWhatsApp}
+                                disabled={!waModal.number.trim() || !waModal.message.trim()}
+                                className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-[12px] flex items-center justify-center gap-2 uppercase tracking-wide shadow-sm shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <Send size={14} /> Send on WhatsApp
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 text-left">
+                    <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
+                                <AlertTriangle size={24} />
+                            </div>
+                            <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">Delete Order?</h3>
+                            <p className="text-[13px] text-slate-500 font-medium mt-2 leading-relaxed">
+                                You are about to permanently delete order <span className="font-bold text-slate-700">#{deleteTarget.tracking_id || deleteTarget.id}</span> for <span className="font-bold text-slate-700">{deleteTarget.customer_name || 'this customer'}</span>. This action cannot be undone.
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+                                Cancel
+                            </Button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold text-[12px] flex items-center justify-center gap-2 uppercase tracking-wide shadow-sm shadow-rose-600/20 transition-all active:scale-[0.98] disabled:opacity-60"
+                            >
+                                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <><Trash2 size={14} /> Delete</>}
+                            </button>
                         </div>
                     </div>
                 </div>

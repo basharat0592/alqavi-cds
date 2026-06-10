@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Plus, Search, Edit, Trash2, Tag,
+    Plus, Search, Trash2, Tag,
     RefreshCw, Activity, ChevronLeft
 } from 'lucide-react';
 import { companyCategoryService, CompanyCategory } from '@/lib/api';
@@ -317,19 +317,10 @@ export default function CompanyCategoriesPage() {
                                                 <span className={`inline-block sm:hidden w-2 h-2 rounded-full ${cat.is_active ? 'bg-emerald-600' : 'bg-rose-600'}`} title={cat.is_active ? 'Active' : 'Disabled'} />
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-3.5 text-right whitespace-nowrap">
-                                                <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEdit(cat)}
-                                                        className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500 transition-colors"
-                                                    >
-                                                        <Edit className="h-[14px] w-[14px]" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setDeleteCat(cat)}
-                                                        className="p-1.5 border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 transition-colors"
-                                                    >
-                                                        <Trash2 className="h-[14px] w-[14px]" />
-                                                    </button>
+                                                <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEdit(cat)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteCat(cat)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

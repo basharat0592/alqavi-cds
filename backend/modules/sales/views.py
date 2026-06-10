@@ -62,7 +62,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Order.objects.none()
 
         if getattr(user, "is_staff", False):
-            queryset = Order.objects.all()
+            queryset = Order.objects.select_related('customer', 'user').all()
         else:
             from modules.customer.models import Customer
             from django.db.models import Q

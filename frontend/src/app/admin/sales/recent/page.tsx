@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
     Search, RefreshCw, Printer, Plus,
-    Eye, Trash2, Calendar, Phone
+    Trash2, Calendar, Phone
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PrintSlip } from '@/components/admin/PrintSlip';
@@ -203,10 +203,12 @@ export default function RecentOrdersPage() {
                                                 <StatusBadge status={o.status || 'PENDING'} />
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                    <button onClick={() => setSelectedOrder(o)} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-500"><Eye size={14} /></button>
-                                                    <button onClick={() => handlePrint(o)} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-indigo-50 text-indigo-600"><Printer size={14} /></button>
-                                                    <button onClick={() => setDeleteTarget(o)} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-rose-50 text-rose-600"><Trash2 size={14} /></button>
+                                                <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                    <button onClick={() => setSelectedOrder(o)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => handlePrint(o)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteTarget(o)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
                                             </td>
                                         </tr>

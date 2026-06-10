@@ -145,17 +145,18 @@ export default function UserRolesPage() {
                                             )}
                                         </td>
                                         <td className="px-2.5 sm:px-6 py-3.5 text-right whitespace-nowrap">
-                                            <div className="flex justify-end gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                <Link href={`/admin/users/roles/${role.id}/edit`}>
-                                                    <Button variant="outline" size="sm">Edit</Button>
-                                                </Link>
+                                            <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                <Link href={`/admin/users/roles/${role.id}/edit`} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</Link>
                                                 {!role.is_default && role.name?.toLowerCase() !== 'super admin' && (
-                                                    <button
-                                                        onClick={() => setDeleteRole(role)}
-                                                        className="p-1 border border-rose-200 rounded-lg bg-rose-50/50 hover:bg-rose-50 text-rose-600 h-8 w-8 flex items-center justify-center transition-colors"
-                                                    >
-                                                        <Trash2 size={13} />
-                                                    </button>
+                                                    <>
+                                                        <span className="text-slate-300">|</span>
+                                                        <button
+                                                            onClick={() => setDeleteRole(role)}
+                                                            className="text-[12px] font-bold text-[#c40000] hover:underline"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </td>

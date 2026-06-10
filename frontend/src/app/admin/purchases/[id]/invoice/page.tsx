@@ -24,6 +24,10 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
             try {
                 const data = await purchaseService.getById(id);
                 setPurchase(data);
+                // Auto-open the print/save-as-PDF dialog when launched with ?print=true
+                if (typeof window !== 'undefined' && window.location.search.includes('print=true')) {
+                    setTimeout(() => window.print(), 800);
+                }
             } catch (error) {
                 console.error("Failed to load purchase details", error);
                 toast.error("Failed to load record.");
@@ -71,9 +75,6 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                     ]}
                     actions={
                         <>
-                            <Button variant="outline" size="sm" onClick={() => router.back()}>
-                                <ArrowLeft size={14} /> Back
-                            </Button>
                             <Button variant="secondary" size="sm" onClick={handleShare}>
                                 {shared ? <Check size={14} className="text-emerald-600" /> : <Share2 size={14} />}
                                 {shared ? 'Copied' : 'Share Link'}

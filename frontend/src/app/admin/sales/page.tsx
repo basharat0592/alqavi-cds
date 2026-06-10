@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import {
-    ShoppingBag, Search, RefreshCw, Eye,
-    Plus, Printer, Loader2, User, CreditCard, Trash2, AlertTriangle, Clock, Warehouse
+    ShoppingBag, Search, RefreshCw,
+    Plus, Loader2, User, CreditCard, Trash2, AlertTriangle, Clock, Warehouse
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
@@ -180,16 +180,12 @@ export default function SalesPage() {
                             </div>
 
                             {/* Row 3: Actions */}
-                            <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
-                                <Button variant="outline" size="sm" onClick={() => router.push(`/admin/sales/${o.id}`)}>
-                                    <Eye size={12} /> View
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => router.push(`/admin/sales/${o.id}/invoice`)}>
-                                    <Printer size={12} /> Invoice
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setOrderToDelete(o as Order)} className="border-rose-200 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 text-rose-600">
-                                    {updatingRow === o.id.toString() ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                                </Button>
+                            <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-2.5">
+                                <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                <span className="text-slate-300">|</span>
+                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                <span className="text-slate-300">|</span>
+                                <button onClick={() => setOrderToDelete(o as Order)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                             </div>
                         </Card>
                     ))}
@@ -265,12 +261,12 @@ export default function SalesPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 transition-opacity">
-                                                <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-600 transition-colors" title="View Sale"><Eye size={14} /></button>
-                                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-600 transition-colors" title="Print Invoice"><Printer size={14} /></button>
-                                                <button onClick={() => setOrderToDelete(o as Order)} className="p-1.5 border border-rose-200 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors" title="Delete Sale">
-                                                    {updatingRow === o.id.toString() ? <Loader2 size={14} className="animate-spin text-rose-600" /> : <Trash2 size={14} />}
-                                                </button>
+                                            <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => setOrderToDelete(o as Order)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
                                     </tr>
