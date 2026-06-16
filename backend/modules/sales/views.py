@@ -756,7 +756,15 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                 return Response({"error": "Not authorized to confirm this payment"}, status=status.HTTP_403_FORBIDDEN)
         
         purchase.payment_confirmed = True
-        if purchase.payment_status == 'UNPAID':
+        # Resolve the status from the actual amount paid so partial vs full is always correct.
+        paid = purchase.paid_amount or 0
+        total = purchase.total_amount or 0
+        if total > 0 and paid >= total:
+            purchase.payment_status = 'PAID'
+        elif paid > 0:
+            purchase.payment_status = 'PARTIAL'
+        else:
+            # Cash-on-confirm with no recorded amount → treat as settled (legacy behaviour).
             purchase.payment_status = 'PAID'
         purchase.save()
         return Response({"message": "Payment verified and accepted", "status": purchase.payment_status})

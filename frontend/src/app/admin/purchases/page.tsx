@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Search, RefreshCw, Trash2, Edit2,
@@ -36,18 +37,48 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: any; dot
 
 const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusChange: (newStatus: string) => void }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [coords, setCoords] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
+    const btnRef = useRef<HTMLButtonElement>(null);
     const current = STATUS_CONFIG[status.toUpperCase()] || STATUS_CONFIG.PENDING;
     const Icon = current.icon;
+    const MENU_W = 208;
+    const MENU_H = 330;
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const close = () => setIsOpen(false);
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', close);
+        return () => {
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
+        };
+    }, [isOpen]);
+
+    const toggle = () => {
+        if (isOpen) { setIsOpen(false); return; }
+        const r = btnRef.current?.getBoundingClientRect();
+        if (r) {
+            const openUp = r.bottom + MENU_H > window.innerHeight && r.top > MENU_H;
+            setCoords({
+                top: openUp ? r.top - 8 : r.bottom + 8,
+                left: Math.max(8, Math.min(r.left, window.innerWidth - MENU_W - 8)),
+                openUp,
+            });
+        }
+        setIsOpen(true);
+    };
 
     return (
-        <div className="relative inline-block text-left">
+        <div className="inline-block text-left">
             <button
+                ref={btnRef}
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggle}
                 className={`
                     flex items-center gap-2.5 py-1.5 px-4 border rounded-full text-[10px] font-bold uppercase transition-all
                     shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_12px_-2px_rgba(15,23,42,0.12)]
-                    active:scale-95 group relative overflow-hidden tracking-widest border-opacity-60
+                    active:scale-95 group relative tracking-widest border-opacity-60
                     ${current.cls}
                 `}
             >
@@ -59,10 +90,18 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                 <ChevronDown size={12} className={`transition-transform duration-500 ${isOpen ? 'rotate-180' : 'opacity-40 group-hover:opacity-100'}`} />
             </button>
 
-            {isOpen && (
+            {isOpen && coords && createPortal(
                 <>
-                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
-                    <div className="absolute left-0 mt-2 w-52 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.15)] z-[101] overflow-hidden py-2 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 z-[1090]" onClick={() => setIsOpen(false)} />
+                    <div
+                        style={{
+                            top: coords.top,
+                            left: coords.left,
+                            width: MENU_W,
+                            transform: coords.openUp ? 'translateY(-100%)' : undefined,
+                        }}
+                        className="fixed z-[1100] bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.15)] overflow-hidden py-2 animate-in fade-in zoom-in-95 duration-200"
+                    >
                         <div className="px-5 py-3 border-b border-slate-100 mb-1">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Select New Status</p>
                         </div>
@@ -93,7 +132,8 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                             );
                         })}
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </div>
     );
@@ -518,9 +558,16 @@ export default function PurchasesPage() {
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-indigo-600'}`}>
-                                                        {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
-                                                    </div>
+                                                    <>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                                                            {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
+                                                        </div>
+                                                        {p.payment_status?.toLowerCase() === 'partial' && (
+                                                            <span className="text-[9px] text-slate-400 font-bold tabular-nums">
+                                                                Paid {formatCurrency(p.paid_amount || 0)} of {formatCurrency(p.total_amount || 0)}
+                                                            </span>
+                                                        )}
+                                                    </>
                                                 )}
 
                                                 {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
@@ -701,16 +748,20 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
     const [paymentSlip, setPaymentSlip] = useState<File | null>(null);
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
     const [transactionId, setTransactionId] = useState('');
-    const [paidAmount, setPaidAmount] = useState(0);
+    const [thisPayment, setThisPayment] = useState(0); // amount paid in THIS transaction
     const [paymentNotes, setPaymentNotes] = useState('');
+
+    const total = Number(purchase?.total_amount || 0);
+    const alreadyPaid = Number(purchase?.paid_amount || 0);
+    const remaining = Math.max(0, total - alreadyPaid);
 
     useEffect(() => {
         if (purchase && isOpen) {
-            setPaymentStatus(purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'PARTIAL' : '');
+            setPaymentStatus('');
             setPaymentMethod(purchase.payment_method?.toUpperCase() || 'CASH');
-            setPaymentDate(purchase.payment_date ? purchase.payment_date.slice(0, 10) : new Date().toISOString().slice(0, 10));
-            setTransactionId(purchase.transaction_id || '');
-            setPaidAmount(purchase.paid_amount || 0);
+            setPaymentDate(new Date().toISOString().slice(0, 10));
+            setTransactionId('');
+            setThisPayment(0);
             setPaymentNotes(purchase.payment_notes || '');
             setPaymentSlip(null);
         }
@@ -718,20 +769,28 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
 
     if (!isOpen || !purchase) return null;
 
+    // For a "Fully Paid" choice we settle the whole remaining balance; for partial we
+    // add the entered amount on top of what was already paid.
+    const payNow = paymentStatus === 'PAID' ? remaining : Math.max(0, Number(thisPayment) || 0);
+    const newPaidTotal = Math.min(total, alreadyPaid + payNow);
+    const newBalance = Math.max(0, total - newPaidTotal);
+    const effectiveStatus = newPaidTotal >= total ? 'PAID' : 'PARTIAL';
+
     const handleSubmit = () => {
         const formData = new FormData();
-        formData.append('payment_status', paymentStatus);
+        formData.append('payment_status', effectiveStatus);
         formData.append('payment_method', paymentMethod);
-        const finalPaid = paymentStatus === 'PAID' ? purchase.total_amount : paidAmount;
-        formData.append('paid_amount', finalPaid.toString());
+        formData.append('paid_amount', newPaidTotal.toString());
         formData.append('payment_date', paymentDate);
         formData.append('payment_notes', paymentNotes);
         if (transactionId) formData.append('transaction_id', transactionId);
         if (paymentSlip) formData.append('payment_slip', paymentSlip);
-        // Explicitly set payment_confirmed to false when distributor submits/updates payment
+        // Distributor just submitted/updated — supplier must verify again.
         formData.append('payment_confirmed', 'false');
         onSubmit(formData);
     };
+
+    const canSubmit = paymentStatus === 'PAID' ? remaining > 0 : payNow > 0;
 
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
@@ -739,8 +798,13 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                 {/* Header */}
                 <div className="px-8 py-6 flex justify-between items-center bg-white border-b border-slate-100 shrink-0">
                     <div>
-                        <h2 className="text-[17px] font-bold text-slate-900 tracking-tight">Verify Payment</h2>
-                        <p className="text-[13px] text-slate-600 mt-0.5">Purchase Order <span className="font-bold text-indigo-600">#{purchase.purchase_number}</span> • {formatCurrency(purchase.total_amount)}</p>
+                        <h2 className="text-[17px] font-bold text-slate-900 tracking-tight">Record Payment</h2>
+                        <p className="text-[13px] text-slate-600 mt-0.5">
+                            Purchase Order <span className="font-bold text-indigo-600">#{purchase.purchase_number}</span> • {formatCurrency(total)}
+                            {remaining > 0 && remaining < total && (
+                                <span className="text-rose-600 font-bold"> · Balance {formatCurrency(remaining)}</span>
+                            )}
+                        </p>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
                         <X size={24} />
@@ -825,26 +889,55 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                     />
                                 </div>
 
-                                {paymentStatus === 'PARTIAL' && (
-                                    <div className="col-span-2 p-5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
-                                        <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">Amount to Pay</label>
-                                            <div className="flex items-center text-[22px] font-bold text-rose-600">
-                                                <span className="mr-1 text-[16px]">Rs.</span>
+                                <div className="col-span-2 p-5 bg-slate-50 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
+                                    <div className="flex justify-between text-[12px]">
+                                        <span className="font-bold uppercase tracking-tighter text-slate-500">Order Total</span>
+                                        <span className="font-bold tabular-nums text-slate-900">{formatCurrency(total)}</span>
+                                    </div>
+                                    {alreadyPaid > 0 && (
+                                        <div className="flex justify-between text-[12px]">
+                                            <span className="font-bold uppercase tracking-tighter text-slate-500 flex items-center gap-1">
+                                                Already Paid
+                                                {purchase.payment_confirmed
+                                                    ? <span className="text-emerald-600 normal-case tracking-normal">· verified</span>
+                                                    : <span className="text-amber-600 normal-case tracking-normal">· pending</span>}
+                                            </span>
+                                            <span className="font-bold tabular-nums text-slate-900">{formatCurrency(alreadyPaid)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200">
+                                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">
+                                            {paymentStatus === 'PAID' ? 'Paying Now (full balance)' : 'This Payment'}
+                                        </span>
+                                        {paymentStatus === 'PARTIAL' ? (
+                                            <div className="flex items-center text-[20px] font-bold text-indigo-600">
+                                                <span className="mr-1 text-[15px]">Rs.</span>
                                                 <input
                                                     type="number"
-                                                    className="bg-transparent outline-none w-32 border-b border-dotted border-rose-600 focus:border-solid tabular-nums"
-                                                    value={paidAmount}
-                                                    onChange={e => setPaidAmount(parseFloat(e.target.value))}
+                                                    autoFocus
+                                                    max={remaining}
+                                                    className="bg-transparent outline-none w-28 text-right border-b border-dotted border-indigo-500 focus:border-solid tabular-nums"
+                                                    value={thisPayment || ''}
+                                                    placeholder="0"
+                                                    onChange={e => setThisPayment(Math.min(remaining, parseFloat(e.target.value) || 0))}
                                                 />
                                             </div>
-                                        </div>
-                                        <div className="text-right space-y-0.5">
-                                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">Remaining Balance</span>
-                                            <p className="text-[18px] font-bold text-slate-900 tabular-nums">{formatCurrency((purchase.total_amount || 0) - (paidAmount || 0))}</p>
-                                        </div>
+                                        ) : (
+                                            <span className="text-[20px] font-bold text-indigo-600 tabular-nums">{formatCurrency(remaining)}</span>
+                                        )}
                                     </div>
-                                )}
+                                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200">
+                                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">Remaining After</span>
+                                        <span className={`text-[16px] font-bold tabular-nums ${newBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                            {formatCurrency(newBalance)}
+                                        </span>
+                                    </div>
+                                    {paymentStatus === 'PARTIAL' && newBalance === 0 && payNow > 0 && (
+                                        <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1.5">
+                                            <CheckCircle2 size={13} /> This fully settles the order — it will be marked Paid.
+                                        </p>
+                                    )}
+                                </div>
 
                                 <div className="col-span-2 space-y-1.5">
                                     <label className="text-[13px] font-bold text-slate-900">Internal Notes</label>
@@ -872,11 +965,11 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                     {paymentStatus && (
                         <Button
                             onClick={handleSubmit}
-                            disabled={loading}
-                            className="min-w-[150px]"
+                            disabled={loading || !canSubmit}
+                            className="min-w-[170px]"
                         >
                             {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                            Confirm Payment
+                            {effectiveStatus === 'PAID' ? 'Submit Full Payment' : `Submit ${formatCurrency(payNow)}`}
                         </Button>
                     )}
                 </div>

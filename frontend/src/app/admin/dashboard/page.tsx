@@ -465,21 +465,31 @@ export default function AdminDashboard() {
                                         All products are well stocked.
                                     </div>
                                 ) : (
-                                    lowStock.map((p: any) => (
-                                        <Link
-                                            key={p.id}
-                                            href="/admin/products"
-                                            className="group flex items-center px-5 py-2.5 hover:bg-slate-50 transition-colors"
-                                        >
-                                            <span className="flex-1 min-w-0 truncate pr-2 text-[12px] font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
-                                                {p.product_name || p.name || 'Unnamed product'}
-                                            </span>
-                                            <span className={`w-12 text-right text-[12.5px] font-black tabular-nums ${p._qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                                                {p._qty}
-                                            </span>
-                                            <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{p._min}</span>
-                                        </Link>
-                                    ))
+                                    lowStock.map((p: any) => {
+                                        // Clicking a low-stock product opens the New Purchase page
+                                        // pre-filled with its last supplier + the product itself.
+                                        const params = new URLSearchParams();
+                                        if (p.supplier) params.set('supplier', String(p.supplier));
+                                        if (p.sku) params.set('sku', String(p.sku));
+                                        const pName = p.product_name || p.name || '';
+                                        if (pName) params.set('product_name', pName);
+                                        const qs = params.toString();
+                                        return (
+                                            <Link
+                                                key={p.id}
+                                                href={`/admin/purchases/add${qs ? `?${qs}` : ''}`}
+                                                className="group flex items-center px-5 py-2.5 hover:bg-slate-50 transition-colors"
+                                            >
+                                                <span className="flex-1 min-w-0 truncate pr-2 text-[12px] font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
+                                                    {pName || 'Unnamed product'}
+                                                </span>
+                                                <span className={`w-12 text-right text-[12.5px] font-black tabular-nums ${p._qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
+                                                    {p._qty}
+                                                </span>
+                                                <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{p._min}</span>
+                                            </Link>
+                                        );
+                                    })
                                 )}
                             </div>
 

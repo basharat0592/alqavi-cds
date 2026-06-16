@@ -173,6 +173,8 @@ export default function SupplierFinancialRegistry() {
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [viewedOrderIds, setViewedOrderIds] = useState<Set<string>>(new Set());
     const [lastSync, setLastSync] = useState<Date | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -232,6 +234,25 @@ export default function SupplierFinancialRegistry() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
+        try {
+            if (deleteTarget.is_wholesale) {
+                await purchaseService.delete(deleteTarget.id);
+            } else {
+                await api.delete(`/v1/sales/orders/${deleteTarget.id}/`);
+            }
+            toast.success(`Transaction #${deleteTarget.order_number || deleteTarget.tracking_id} deleted`);
+            setDeleteTarget(null);
+            fetchOrders();
+        } catch {
+            toast.error('Delete failed');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const filteredOrders = orders.filter(o => {
         if (filter === 'all') return true;
         return o.payment_status?.toLowerCase() === filter.toLowerCase();
@@ -244,6 +265,39 @@ export default function SupplierFinancialRegistry() {
     return (
         <div className="max-w-[1200px] mx-auto animate-in fade-in duration-500 font-sans p-6 text-left">
             {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
+
+            {/* Delete Confirmation Modal */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 border border-rose-100">
+                                <AlertTriangle size={24} />
+                            </div>
+                            <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">Delete Transaction?</h3>
+                            <p className="text-[13px] text-slate-500 font-medium mt-2 leading-relaxed">
+                                Permanently delete transaction <span className="font-bold text-slate-700">#{deleteTarget.order_number || deleteTarget.tracking_id}</span> ({fmt(parseFloat(deleteTarget.total_amount || 0))})? This cannot be undone.
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="flex-1 h-10 text-[13px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-all disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[13px] flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+                            >
+                                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <><Trash2 size={14} /> Delete</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Header (Same as Orders Page) ── */}
             <div className="mb-6">
@@ -363,6 +417,12 @@ export default function SupplierFinancialRegistry() {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <Badge variant={o.payment_status?.toLowerCase() || 'paid'}>{o.payment_status || 'PAID'}</Badge>
+                                                {isWaiting && (
+                                                    <div className="text-[10px] text-slate-500 font-semibold mt-1.5 tabular-nums">
+                                                        Paid {fmt(parseFloat(o.paid_amount || 0))}
+                                                        <span className="text-slate-400"> · Bal {fmt(Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.paid_amount || 0)))}</span>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-end gap-3 items-center">
@@ -384,12 +444,19 @@ export default function SupplierFinancialRegistry() {
                                                             </button>
                                                         </div>
                                                     )}
-                                                    <button 
-                                                        onClick={() => handleOpenView(o)} 
+                                                    <button
+                                                        onClick={() => handleOpenView(o)}
                                                         className={`p-2 rounded-lg transition-all ${isViewed ? 'text-slate-300' : 'text-[#F59E0B] hover:bg-amber-50'}`}
                                                         title="View Details"
                                                     >
                                                         <Eye size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteTarget(o)}
+                                                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition-all"
+                                                        title="Delete Transaction"
+                                                    >
+                                                        <Trash2 size={18} />
                                                     </button>
                                                 </div>
                                             </td>

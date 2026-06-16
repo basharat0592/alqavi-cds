@@ -246,6 +246,10 @@ export default function AddPurchasePage() {
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
     const [tempPayload, setTempPayload] = useState<any>(null);
+    // Prefill (supplier + product) coming from the dashboard low-stock alert links.
+    const [prefill, setPrefill] = useState<{ supplier: string; sku: string; product_name: string } | null>(null);
+    const supplierPrefillApplied = useRef(false);
+    const prefillApplied = useRef(false);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -291,6 +295,46 @@ export default function AddPurchasePage() {
         };
         fetchSupplierProducts();
     }, [form.supplier]);
+
+    // Read prefill (?supplier=&sku=&product_name=) from the dashboard low-stock links.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const sp = new URLSearchParams(window.location.search);
+        const supplier = sp.get('supplier') || '';
+        const sku = sp.get('sku') || '';
+        const product_name = sp.get('product_name') || '';
+        if (supplier || sku || product_name) setPrefill({ supplier, sku, product_name });
+    }, []);
+
+    // Apply the prefilled supplier once (after suppliers load) — never override a later manual change.
+    useEffect(() => {
+        if (!prefill?.supplier || supplierPrefillApplied.current || suppliers.length === 0) return;
+        supplierPrefillApplied.current = true;
+        const matched = suppliers.find(s => String(s.id) === String(prefill.supplier));
+        setForm(f => ({ ...f, supplier: prefill.supplier, supplier_name: matched?.name || f.supplier_name }));
+    }, [prefill, suppliers]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Apply the prefilled product once that supplier's products have loaded.
+    useEffect(() => {
+        if (!prefill || prefillApplied.current || products.length === 0) return;
+        const norm = (v: any) => String(v ?? '').trim().toLowerCase();
+        const match = products.find((p: any) =>
+            (prefill.sku && norm(p.sku) === norm(prefill.sku)) ||
+            (prefill.product_name && norm(p.name) === norm(prefill.product_name))
+        );
+        if (!match) return;
+        prefillApplied.current = true;
+        setItems(prev => {
+            const next = [...prev];
+            next[0] = {
+                ...next[0],
+                product: String(match.id),
+                product_name: match.name || '',
+                unit_price: match.retail_price ? parseFloat(match.retail_price) : next[0].unit_price,
+            };
+            return next;
+        });
+    }, [products, prefill]);
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
