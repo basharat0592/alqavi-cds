@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import {
     Search, ShoppingCart, Menu, X, MapPin, ChevronDown, User,
-    LogOut, Package, LayoutDashboard, ChevronRight,
+    LogOut, Package, LayoutDashboard, ChevronRight, ChevronLeft,
     Heart, Truck, HelpCircle, LogIn, UserPlus, Store,
     FileText, Map as MapIcon, Newspaper, Briefcase,
     RotateCcw, Cookie, ShieldCheck
@@ -45,6 +45,11 @@ export default function Navbar({ settings }: { settings?: any }) {
     const searchRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
     const mobileUserRef = useRef<HTMLDivElement>(null);
+    const navScrollRef = useRef<HTMLDivElement>(null);
+
+    const scrollNav = (dir: number) => {
+        navScrollRef.current?.scrollBy({ left: dir * 160, behavior: 'smooth' });
+    };
 
     // Official Amazon & Brand Colors
     const AMAZON_NAVY = "#131921";
@@ -640,33 +645,53 @@ export default function Navbar({ settings }: { settings?: any }) {
 
             {/* ── SUB HEADER (AMAZON LIGHT NAVY) ── */}
             {!pathname.startsWith('/customer/dashboard') && (
-                <div className="bg-[#232f3e] h-10 flex items-center px-4 overflow-x-auto no-scrollbar gap-4 text-white text-sm font-medium w-full max-w-full">
+                <div className="bg-[#232f3e] h-10 flex items-center px-2 md:px-4 gap-1 md:gap-2 text-white text-sm font-medium w-full max-w-full">
+                    {/* Mobile scroll-left arrow */}
                     <button
-                        onClick={() => setMobileOpen(true)}
-                        className="flex items-center gap-1 shrink-0 p-1 rounded-sm hover:text-slate-200 transition-colors"
+                        onClick={() => scrollNav(-1)}
+                        className="md:hidden shrink-0 p-0.5 -ml-1.5 text-[#4ad7f5] active:scale-90 transition"
+                        aria-label="Scroll menu left"
                     >
-                        <Menu size={20} />
-                        <span className="font-bold">All</span>
+                        <ChevronLeft size={20} className="stroke-[4]" />
                     </button>
-                    {(navbarPages.length > 0 ? navbarPages : DEFAULT_NAV_PAGES).map((p: any) => (
-                        <Link
-                            key={p.id ?? p.link}
-                            href={p.link || '#'}
-                            className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors"
-                            style={{ color: pathname === p.link ? '#EFB366' : 'white' }}
-                        >
-                            {p.name}
-                        </Link>
-                    ))}
 
-                    {/* Right-most Become a Seller Link */}
-                    <Link
-                        href="/register/supplier"
-                        className="ml-auto shrink-0 font-serif italic font-medium capitalize text-[14px] hover:underline hover:opacity-80 transition-all active:scale-95 flex items-center justify-center underline-offset-[4px] decoration-1"
-                        style={{ color: pathname === '/register/supplier' ? '#EFB366' : AMAZON_ORANGE }}
+                    <div ref={navScrollRef} className="flex items-center gap-4 overflow-x-auto no-scrollbar flex-1 min-w-0">
+                        <button
+                            onClick={() => setMobileOpen(true)}
+                            className="flex items-center gap-1 shrink-0 p-1 rounded-sm hover:text-slate-200 transition-colors"
+                        >
+                            <Menu size={20} />
+                            <span className="font-bold">All</span>
+                        </button>
+                        {(navbarPages.length > 0 ? navbarPages : DEFAULT_NAV_PAGES).map((p: any) => (
+                            <Link
+                                key={p.id ?? p.link}
+                                href={p.link || '#'}
+                                className="shrink-0 p-1 px-2 rounded-sm hover:text-slate-200 transition-colors"
+                                style={{ color: pathname === p.link ? '#EFB366' : 'white' }}
+                            >
+                                {p.name}
+                            </Link>
+                        ))}
+
+                        {/* Right-most Become a Seller Link */}
+                        <Link
+                            href="/register/supplier"
+                            className="ml-auto shrink-0 font-serif italic font-medium capitalize text-[14px] hover:underline hover:opacity-80 transition-all active:scale-95 flex items-center justify-center underline-offset-[4px] decoration-1"
+                            style={{ color: pathname === '/register/supplier' ? '#EFB366' : AMAZON_ORANGE }}
+                        >
+                            Become a Seller
+                        </Link>
+                    </div>
+
+                    {/* Mobile scroll-right arrow */}
+                    <button
+                        onClick={() => scrollNav(1)}
+                        className="md:hidden shrink-0 p-0.5 -mr-1.5 text-[#4ad7f5] active:scale-90 transition"
+                        aria-label="Scroll menu right"
                     >
-                        Become a Seller
-                    </Link>
+                        <ChevronRight size={20} className="stroke-[4]" />
+                    </button>
                 </div>
             )}
 

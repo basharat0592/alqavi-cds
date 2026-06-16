@@ -572,7 +572,7 @@ export default function Home() {
                                                                 {/* Mobile scroll-left arrow */}
                                                                 <button
                                                                     onClick={() => scrollCategories(-1)}
-                                                                    className="md:hidden shrink-0 p-1.5 -ml-2 bg-white rounded-full shadow-md text-[#13B0D1] active:scale-90 transition"
+                                                                    className="md:hidden shrink-0 p-0.5 -ml-3 text-[#13B0D1] active:scale-90 transition"
                                                                     aria-label="Scroll categories left"
                                                                 >
                                                                     <ChevronLeft size={22} className="stroke-[4]" />
@@ -609,7 +609,7 @@ export default function Home() {
                                                                 {/* Mobile scroll-right arrow */}
                                                                 <button
                                                                     onClick={() => scrollCategories(1)}
-                                                                    className="md:hidden shrink-0 p-1.5 -mr-2 bg-white rounded-full shadow-md text-[#13B0D1] active:scale-90 transition"
+                                                                    className="md:hidden shrink-0 p-0.5 -mr-3 text-[#13B0D1] active:scale-90 transition"
                                                                     aria-label="Scroll categories right"
                                                                 >
                                                                     <ChevronRight size={22} className="stroke-[4]" />
@@ -1387,7 +1387,7 @@ export default function Home() {
                                                             router.push('/customer/shop');
                                                         }
                                                     }}
-                                                    className="w-full sm:w-auto h-12 px-10 bg-[#131921] text-white rounded-[4px] font-bold uppercase tracking-widest text-[10px] transition-all hover:bg-[#119AB8] hover:shadow-xl hover:shadow-[#119AB8]/20 active:scale-95 group/btn flex items-center justify-center"
+                                                    className="w-full sm:w-auto h-12 px-10 bg-gradient-to-r from-[#0E8AA6] via-[#13B0D1] to-[#0E8AA6] text-white rounded-[4px] font-bold uppercase tracking-widest text-[10px] transition-all hover:shadow-xl hover:shadow-[#13B0D1]/30 active:scale-95 group/btn flex items-center justify-center"
                                                 >
                                                     {content.cta_text || "Avail Deal"}
                                                 </button>
@@ -1954,14 +1954,14 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
                     <button
                         onClick={() => scroll('left')}
                         aria-label="Scroll left"
-                        className="flex absolute left-0 md:left-1 top-[38%] -translate-x-1/2 md:translate-x-0 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white text-[#13B0D1] md:text-[#0f1111] shadow-md md:shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-100 md:opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
+                        className="flex absolute left-0 md:-left-4 top-[38%] -translate-x-1/2 md:translate-x-0 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white text-[#13B0D1] shadow-md md:shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-100 md:opacity-100 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
                     >
                         <ChevronLeft size={17} className="stroke-[3] md:stroke-[2.5] -ml-px" />
                     </button>
                     <button
                         onClick={() => scroll('right')}
                         aria-label="Scroll right"
-                        className="flex absolute right-0 md:right-1 top-[38%] translate-x-1/2 md:translate-x-0 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white text-[#13B0D1] md:text-[#0f1111] shadow-md md:shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-100 md:opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
+                        className="flex absolute right-0 md:-right-4 top-[38%] translate-x-1/2 md:translate-x-0 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white text-[#13B0D1] shadow-md md:shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-100 md:opacity-100 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
                     >
                         <ChevronRight size={17} className="stroke-[3] md:stroke-[2.5] ml-px" />
                     </button>
