@@ -99,7 +99,7 @@ export default function Hero({ slides }: { slides?: any[] }) {
 
     return (
         <section
-            className="relative h-[35vh] sm:h-[48vh] md:h-[60vh] lg:h-[72vh] overflow-hidden bg-[#0F172A]"
+            className="relative h-[33vh] sm:h-[48vh] md:h-[60vh] lg:h-[72vh] overflow-hidden bg-[#0F172A]"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >

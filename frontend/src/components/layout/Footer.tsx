@@ -35,7 +35,7 @@ export default function Footer({ settings }: { settings?: any }) {
         <footer className="bg-[#131921] text-white font-sans mt-auto border-t-4 border-[#119AB8]">
 
             {/* MAIN NAVIGATION GRID */}
-            <div className="max-w-[1240px] mx-auto px-6 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-12 lg:gap-16">
+            <div className="max-w-[1240px] mx-auto px-6 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-12 lg:gap-16">
 
                 {/* Column 1: Logo & Socials (Moved to main grid) */}
                 <div className="space-y-8 md:col-span-2">
@@ -76,6 +76,9 @@ export default function Footer({ settings }: { settings?: any }) {
                         <li><Link href="/customer/shop/cosmetics" className="hover:text-[#119AB8] hover:underline transition-colors">Cosmetics</Link></li>
                         <li><Link href="/customer/shop/skincare" className="hover:text-[#119AB8] hover:underline transition-colors">Skincare</Link></li>
                         <li><Link href="/customer/shop/perfume" className="hover:text-[#119AB8] hover:underline transition-colors">Fragrance</Link></li>
+                        <li><Link href="/customer/shop/makeup" className="hover:text-[#119AB8] hover:underline transition-colors">Makeup</Link></li>
+                        <li><Link href="/customer/shop/haircare" className="hover:text-[#119AB8] hover:underline transition-colors">Hair Care</Link></li>
+                        <li><Link href="/customer/shop" className="hover:text-[#119AB8] hover:underline transition-colors">All Products</Link></li>
                         <li><Link href="/customer/shop/deals" className="hover:text-[#119AB8] hover:underline transition-colors font-bold">Today's Deals</Link></li>
                     </ul>
                 </div>
@@ -85,13 +88,28 @@ export default function Footer({ settings }: { settings?: any }) {
                     <h4 className="text-[14px] font-black uppercase tracking-widest text-white">Logistics</h4>
                     <ul className="space-y-2.5 text-[14px] text-slate-400">
                         <li><Link href="/customer/tracking" className="hover:text-[#119AB8] hover:underline transition-colors">Track Parcel</Link></li>
+                        <li><Link href="/customer/dashboard/orders" className="hover:text-[#119AB8] hover:underline transition-colors">Order Status</Link></li>
                         <li><Link href="/shipping-policy" className="hover:text-[#119AB8] hover:underline transition-colors">Shipping Rates</Link></li>
-                        <li><Link href="/returns" className="hover:text-[#119AB8] hover:underline transition-colors">Return Policy</Link></li>
+                        <li><Link href="/returns" className="hover:text-[#119AB8] hover:underline transition-colors">Returns &amp; Refunds</Link></li>
+                        <li><Link href="/faq" className="hover:text-[#119AB8] hover:underline transition-colors">FAQs</Link></li>
                         <li><Link href="/customer/wishlist" className="hover:text-[#119AB8] hover:underline transition-colors">Wishlists</Link></li>
                     </ul>
                 </div>
 
-                {/* Column 4: Contact Info */}
+                {/* Column 4: Company */}
+                <div className="space-y-4">
+                    <h4 className="text-[14px] font-black uppercase tracking-widest text-white">Company</h4>
+                    <ul className="space-y-2.5 text-[14px] text-slate-400">
+                        <li><Link href="/about" className="hover:text-[#119AB8] hover:underline transition-colors">About Us</Link></li>
+                        <li><Link href="/contact" className="hover:text-[#119AB8] hover:underline transition-colors">Customer Service</Link></li>
+                        <li><Link href="/register/supplier" className="hover:text-[#119AB8] hover:underline transition-colors">Become a Seller</Link></li>
+                        <li><Link href="/gift-cards" className="hover:text-[#119AB8] hover:underline transition-colors">Gift Cards</Link></li>
+                        <li><Link href="/blog" className="hover:text-[#119AB8] hover:underline transition-colors">Beauty Blog</Link></li>
+                        <li><Link href="/careers" className="hover:text-[#119AB8] hover:underline transition-colors">Careers</Link></li>
+                    </ul>
+                </div>
+
+                {/* Column 5: Contact Info */}
                 <div className="space-y-4">
                     <h4 className="text-[14px] font-black uppercase tracking-widest text-white">Contact</h4>
                     <ul className="space-y-3 text-[14px] text-slate-400">
@@ -117,7 +135,9 @@ export default function Footer({ settings }: { settings?: any }) {
                     <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 md:gap-8">
                         <Link href="/terms" className="hover:text-white transition-colors">Conditions of Use</Link>
                         <Link href="/privacy" className="hover:text-white transition-colors">Privacy Notice</Link>
+                        <Link href="/cookies" className="hover:text-white transition-colors">Cookie Policy</Link>
                         <Link href="/contact" className="hover:text-white transition-colors">Help Center</Link>
+                        <Link href="/sitemap" className="hover:text-white transition-colors">Sitemap</Link>
                     </div>
                     <p className="italic">
                         © 2026 {siteName} HUB. All Rights Reserved.

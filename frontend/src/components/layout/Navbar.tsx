@@ -5,7 +5,9 @@ import { useState, useEffect, useRef } from 'react';
 import {
     Search, ShoppingCart, Menu, X, MapPin, ChevronDown, User,
     LogOut, Package, LayoutDashboard, ChevronRight,
-    Heart, Percent, Truck, Gift, HelpCircle, LogIn, UserPlus, Store
+    Heart, Truck, HelpCircle, LogIn, UserPlus, Store,
+    FileText, Map as MapIcon, Newspaper, Briefcase,
+    RotateCcw, Cookie, ShieldCheck
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCart } from "@/context/CartContext";
@@ -80,6 +82,24 @@ export default function Navbar({ settings }: { settings?: any }) {
             setAnnouncementVisible(false);
         }
     }, [siteSettings]);
+
+    // Fully lock the window behind the browse drawer and restore scroll position on close
+    useEffect(() => {
+        if (!mobileOpen) return;
+        const scrollY = window.scrollY;
+        const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        document.body.style.paddingRight = `${scrollBarWidth}px`;
+        return () => {
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.paddingRight = '';
+            window.scrollTo(0, scrollY);
+        };
+    }, [mobileOpen]);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -189,14 +209,6 @@ export default function Navbar({ settings }: { settings?: any }) {
                 {/* Row 1: Logo & mobile actions */}
                 <div className="flex items-center justify-between w-full md:w-auto shrink-0">
                     <div className="flex items-center gap-2">
-                        {/* Hamburger menu on mobile */}
-                        <button
-                            onClick={() => setMobileOpen(true)}
-                            className="flex md:hidden text-white p-1 rounded-sm hover:text-slate-200 transition-colors"
-                        >
-                            <Menu size={24} />
-                        </button>
-                        
                         {/* Logo */}
                         <Link href="/" className="flex items-center shrink-0 p-1 rounded-sm cursor-pointer">
                             <Logo size="sm" src={getImageUrl(settings?.logo)} />
@@ -658,56 +670,129 @@ export default function Navbar({ settings }: { settings?: any }) {
                 </div>
             )}
 
-            {/* Mobile Menu */}
+            {/* ── BROWSE MENU DRAWER (matches CartDrawer design) ── */}
             <AnimatePresence>
                 {mobileOpen && (
-                    <div className="fixed inset-0 z-[200]">
+                    <>
+                        {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/70"
                             onClick={() => setMobileOpen(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000]"
                         />
+
+                        {/* Drawer */}
                         <motion.div
                             initial={{ x: '-100%' }}
                             animate={{ x: 0 }}
                             exit={{ x: '-100%' }}
-                            transition={{ type: 'tween', duration: 0.3 }}
-                            className="absolute top-0 left-0 bottom-0 w-[300px] bg-white flex flex-col"
+                            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+                            className="fixed top-0 left-0 h-screen w-[300px] sm:w-[400px] bg-white z-[10001] shadow-2xl flex flex-col font-sans"
                         >
-                            <div className="bg-[#232f3e] p-4 text-white flex items-center gap-3">
-                                <User size={24} className="bg-slate-200 text-slate-500 rounded-full p-1" />
-                                <span className="font-bold text-lg">Hello, {user ? user.name.split(' ')[0] : 'Sign In'}</span>
-                                <button onClick={() => setMobileOpen(false)} className="ml-auto">
-                                    <X size={24} />
+                            {/* Header */}
+                            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-[15px] font-black text-slate-800 uppercase tracking-[0.2em]">Browse</h2>
+                                </div>
+                                <button
+                                    onClick={() => setMobileOpen(false)}
+                                    className="p-2 hover:bg-slate-50 text-slate-400 hover:text-slate-800 rounded-full transition-all duration-200 active:scale-95"
+                                >
+                                    <X size={18} />
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                                <div>
-                                    <h3 className="font-bold text-lg mb-2">Shop by Category</h3>
-                                    <div className="grid gap-4 text-slate-700 font-medium">
-                                        <Link href="/customer/shop" onClick={() => setMobileOpen(false)}>All Products</Link>
-                                        <Link href="/customer/shop?cat=Face" onClick={() => setMobileOpen(false)}>Face Care</Link>
-                                        <Link href="/customer/shop?cat=Hair" onClick={() => setMobileOpen(false)}>Hair Care</Link>
-                                    </div>
+
+                            {/* Account strip */}
+                            <Link
+                                href={user ? "/customer/dashboard" : "/login"}
+                                onClick={() => setMobileOpen(false)}
+                                className="px-6 py-4 bg-slate-50/60 border-b border-slate-100 flex items-center gap-3 hover:bg-slate-50 transition-colors group"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-[#119AB8]/10 border border-[#119AB8]/20 flex items-center justify-center text-[#119AB8] font-black uppercase shrink-0">
+                                    {user ? user.name.charAt(0) : <User size={18} />}
                                 </div>
-                                <div className="border-t pt-4">
-                                    <h3 className="font-bold text-lg mb-2">Help & Settings</h3>
-                                    <div className="grid gap-4 text-slate-700 font-medium">
-                                        <Link href="/customer/dashboard" onClick={() => setMobileOpen(false)}>Your Account</Link>
-                                        <Link href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
-                                        <Link href="/contact" onClick={() => setMobileOpen(false)}>Customer Service</Link>
-                                        {user ? (
-                                            <button onClick={handleLogout} className="text-left text-red-600 font-bold">Sign Out</button>
-                                        ) : (
-                                            <Link href="/login" onClick={() => setMobileOpen(false)} style={{ color: BRAND_ORANGE }} className="font-bold">Sign In</Link>
-                                        )}
-                                    </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{user ? 'Welcome' : 'Account'}</p>
+                                    <p className="text-[14px] font-bold text-slate-800 truncate group-hover:text-[#119AB8] transition-colors">
+                                        {user ? user.name : 'Sign in / Register'}
+                                    </p>
                                 </div>
+                                <ChevronRight size={16} className="text-slate-300 group-hover:text-[#119AB8] group-hover:translate-x-0.5 transition-all" />
+                            </Link>
+
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-5 space-y-7">
+                                {[
+                                    {
+                                        title: 'Your Account',
+                                        links: [
+                                            { name: 'Account Dashboard', href: '/customer/dashboard', Icon: LayoutDashboard },
+                                            { name: 'Your Orders', href: '/customer/dashboard/orders', Icon: Package },
+                                        ],
+                                    },
+                                    {
+                                        title: 'Company',
+                                        links: [
+                                            { name: 'Beauty Blog', href: '/blog', Icon: Newspaper },
+                                            { name: 'Careers', href: '/careers', Icon: Briefcase },
+                                        ],
+                                    },
+                                    {
+                                        title: 'Help & Policies',
+                                        links: [
+                                            { name: 'FAQs', href: '/faq', Icon: HelpCircle },
+                                            { name: 'Shipping Rates', href: '/shipping-policy', Icon: Truck },
+                                            { name: 'Returns & Refunds', href: '/returns', Icon: RotateCcw },
+                                            { name: 'Conditions of Use', href: '/terms', Icon: FileText },
+                                            { name: 'Privacy Notice', href: '/privacy', Icon: ShieldCheck },
+                                            { name: 'Cookie Policy', href: '/cookies', Icon: Cookie },
+                                            { name: 'Sitemap', href: '/sitemap', Icon: MapIcon },
+                                        ],
+                                    },
+                                ].map((section) => (
+                                    <div key={section.title}>
+                                        <h3 className="px-3 mb-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">{section.title}</h3>
+                                        <div className="space-y-0.5">
+                                            {section.links.map((link) => (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    onClick={() => setMobileOpen(false)}
+                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-[#119AB8] transition-all group"
+                                                >
+                                                    <link.Icon size={16} className="text-slate-400 group-hover:text-[#119AB8] transition-colors shrink-0" />
+                                                    <span className="flex-1">{link.name}</span>
+                                                    <ChevronRight size={13} className="text-slate-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 bg-slate-50/50 border-t border-slate-100">
+                                {user ? (
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full py-2.5 bg-white border border-slate-200 hover:border-rose-200 hover:bg-rose-50 text-rose-600 font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs uppercase tracking-wider active:scale-[0.99]"
+                                    >
+                                        <LogOut size={14} /> Sign Out
+                                    </button>
+                                ) : (
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setMobileOpen(false)}
+                                        className="group w-full py-2.5 bg-[#119AB8] hover:bg-[#13B0D1] active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#119AB8]/10 transition-all text-xs uppercase tracking-wider"
+                                    >
+                                        <LogIn size={14} /> Sign In
+                                    </Link>
+                                )}
                             </div>
                         </motion.div>
-                    </div>
+                    </>
                 )}
             </AnimatePresence>
         </header>

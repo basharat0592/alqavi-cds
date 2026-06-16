@@ -16,9 +16,11 @@ interface PolicyPageProps {
     title: string;
     intro?: string;
     sections: PolicySection[];
+    /** Use the clean light header (matches the Wishlist/Tracking pages) instead of the dark hero. */
+    light?: boolean;
 }
 
-export default function PolicyPage({ eyebrow, title, intro, sections }: PolicyPageProps) {
+export default function PolicyPage({ eyebrow, title, intro, sections, light }: PolicyPageProps) {
     const [settings, setSettings] = useState<SiteSettings | null>(null);
 
     useEffect(() => {
@@ -31,30 +33,41 @@ export default function PolicyPage({ eyebrow, title, intro, sections }: PolicyPa
         <div className="min-h-screen bg-white font-sans text-[#0f1111] w-full overflow-x-hidden flex flex-col">
             <Navbar settings={settings || undefined} />
 
-            {/* HERO */}
-            <section className="relative overflow-hidden bg-[#0d1117] text-white">
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[60%] bg-[#119AB8]/20 blur-[140px] rounded-full pointer-events-none" />
-                <div className="absolute -bottom-[20%] -right-[10%] w-[45%] h-[60%] bg-[#D4AF37]/10 blur-[140px] rounded-full pointer-events-none" />
-                <div className="relative z-10 max-w-4xl mx-auto px-6 md:px-12 py-20 md:py-28">
-                    <motion.div
-                        initial={{ opacity: 0, y: 24 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                    >
-                        <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#119AB8]/10 text-[#56C7DD] rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#119AB8]/20 mb-6">
-                            {eyebrow}
-                        </span>
-                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.05] tracking-tight mb-6">
-                            {title}
-                        </h1>
-                        {intro && (
-                            <p className="text-base md:text-lg text-slate-300 leading-relaxed max-w-2xl">
-                                {intro}
-                            </p>
-                        )}
-                    </motion.div>
+            {light ? (
+                /* LIGHT HEADER — same style as Wishlist / Tracking pages */
+                <div className="bg-white border-b border-[#D5D9D9] py-4">
+                    <div className="max-w-[1240px] mx-auto px-6">
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#119AB8] mb-1">{eyebrow}</p>
+                        <h1 className="text-[24px] font-bold tracking-tight">{title}</h1>
+                        {intro && <p className="text-[14px] text-[#565959] mt-1 max-w-2xl">{intro}</p>}
+                    </div>
                 </div>
-            </section>
+            ) : (
+                /* HERO */
+                <section className="relative overflow-hidden bg-[#0d1117] text-white">
+                    <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[60%] bg-[#119AB8]/20 blur-[140px] rounded-full pointer-events-none" />
+                    <div className="absolute -bottom-[20%] -right-[10%] w-[45%] h-[60%] bg-[#D4AF37]/10 blur-[140px] rounded-full pointer-events-none" />
+                    <div className="relative z-10 max-w-4xl mx-auto px-6 md:px-12 py-20 md:py-28">
+                        <motion.div
+                            initial={{ opacity: 0, y: 24 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                        >
+                            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#119AB8]/10 text-[#56C7DD] rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#119AB8]/20 mb-6">
+                                {eyebrow}
+                            </span>
+                            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.05] tracking-tight mb-6">
+                                {title}
+                            </h1>
+                            {intro && (
+                                <p className="text-base md:text-lg text-slate-300 leading-relaxed max-w-2xl">
+                                    {intro}
+                                </p>
+                            )}
+                        </motion.div>
+                    </div>
+                </section>
+            )}
 
             {/* CONTENT */}
             <section className="flex-1 max-w-4xl mx-auto w-full px-6 md:px-12 py-16 md:py-20">

@@ -42,6 +42,11 @@ export default function Home() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newsletterEmail, setNewsletterEmail] = useState("");
     const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
+    const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+    const scrollCategories = (dir: number) => {
+        categoryScrollRef.current?.scrollBy({ left: dir * 200, behavior: 'smooth' });
+    };
 
     const handleNewsletterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -557,43 +562,63 @@ export default function Home() {
                                                     <div className="mb-8 md:mb-12 space-y-2 md:space-y-3">
                                                         {/* Top Row: Title & Filters */}
                                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                            <div className="space-y-1 md:space-y-2 text-center md:text-left">
+                                                            <div className="hidden md:block space-y-1 md:space-y-2 text-center md:text-left">
                                                                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2D4059] tracking-tight leading-tight">
                                                                     {content.title || (activeCategory === 'All' ? "Full Collection" : activeCategory)}
                                                                 </h2>
                                                             </div>
 
-                                                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full md:w-auto md:justify-end max-w-full min-w-0">
+                                                            <div className="flex items-center justify-between gap-1.5 w-full md:w-auto md:justify-end">
+                                                                {/* Mobile scroll-left arrow */}
                                                                 <button
-                                                                    onClick={() => setActiveCategory('All')}
-                                                                    className={cn(
-                                                                        "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
-                                                                        activeCategory === 'All'
-                                                                            ? "bg-[#111] border-[#111] text-white shadow-lg"
-                                                                            : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                                                                    )}
+                                                                    onClick={() => scrollCategories(-1)}
+                                                                    className="md:hidden shrink-0 p-1.5 -ml-2 bg-white rounded-full shadow-md text-[#13B0D1] active:scale-90 transition"
+                                                                    aria-label="Scroll categories left"
                                                                 >
-                                                                    All Items
+                                                                    <ChevronLeft size={22} className="stroke-[4]" />
                                                                 </button>
-                                                                {categories.map((cat) => (
+
+                                                                <div ref={categoryScrollRef} className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full md:w-auto md:justify-end max-w-full min-w-0">
                                                                     <button
-                                                                        key={cat.id}
-                                                                        onClick={() => setActiveCategory(cat.name)}
+                                                                        onClick={() => setActiveCategory('All')}
                                                                         className={cn(
                                                                             "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
-                                                                            activeCategory === cat.name
+                                                                            activeCategory === 'All'
                                                                                 ? "bg-[#111] border-[#111] text-white shadow-lg"
                                                                                 : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                                                                         )}
                                                                     >
-                                                                        {cat.name}
+                                                                        All Items
                                                                     </button>
-                                                                ))}
+                                                                    {categories.map((cat) => (
+                                                                        <button
+                                                                            key={cat.id}
+                                                                            onClick={() => setActiveCategory(cat.name)}
+                                                                            className={cn(
+                                                                                "px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                                                                                activeCategory === cat.name
+                                                                                    ? "bg-[#111] border-[#111] text-white shadow-lg"
+                                                                                    : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                                            )}
+                                                                        >
+                                                                            {cat.name}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+
+                                                                {/* Mobile scroll-right arrow */}
+                                                                <button
+                                                                    onClick={() => scrollCategories(1)}
+                                                                    className="md:hidden shrink-0 p-1.5 -mr-2 bg-white rounded-full shadow-md text-[#13B0D1] active:scale-90 transition"
+                                                                    aria-label="Scroll categories right"
+                                                                >
+                                                                    <ChevronRight size={22} className="stroke-[4]" />
+                                                                </button>
                                                             </div>
                                                         </div>
 
                                                         {/* Bottom Row: Filters & Stats */}
-                                                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                                                        <div className="hidden md:flex flex-col md:flex-row items-center justify-between gap-4">
                                                             <p className="text-[11px] md:text-[13px] text-slate-400 font-bold uppercase tracking-widest">
                                                                 Showing <span className="text-[#111]">{filtered.length}</span> of premium products
                                                             </p>
@@ -1061,7 +1086,7 @@ export default function Home() {
 
                             return (
                                 <section key={section.id} className={cn(
-                                    "w-full px-4 md:px-12 xl:px-20 pb-8 md:pb-16 pt-2 md:pt-4 -mt-16 md:-mt-10 relative z-10 overflow-hidden",
+                                    "w-full px-4 md:px-12 xl:px-20 pb-4 md:pb-16 pt-2 md:pt-4 -mt-16 md:-mt-10 relative z-10 overflow-hidden",
                                     // Hidden on desktop because it is shown as an overlay on the hero instead
                                     heroPromoProduct && heroPromoSection && section.id === heroPromoSection.id && "lg:hidden"
                                 )}>
@@ -1070,7 +1095,7 @@ export default function Home() {
 
                                         whileInView={{ opacity: 1 }}
                                         viewport={{ once: true }}
-                                        className="grid md:grid-cols-2 overflow-hidden group min-h-[220px] md:min-h-[340px]"
+                                        className="relative grid md:grid-cols-2 overflow-hidden group min-h-[200px] md:min-h-[340px]"
                                     >
                                         <div className="relative overflow-hidden bg-white flex items-center justify-center p-4 min-h-[200px] md:min-h-auto">
                                             <div className="absolute inset-0 opacity-[0.02] flex items-center justify-center pointer-events-none">
@@ -1121,7 +1146,7 @@ export default function Home() {
 
                                                     {/* Mobile view permanent overlay at the bottom of the image */}
                                                     {promoProduct && promoProducts.length === 1 && (
-                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent p-5 pt-12 flex flex-col gap-1 z-10 md:hidden text-left">
+                                                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent p-5 pt-12 hidden flex-col gap-1 z-10 text-left">
                                                             <h3 className="text-white text-lg font-black tracking-tight drop-shadow-md">
                                                                 {promoProduct.product_name}
                                                             </h3>
@@ -1165,8 +1190,8 @@ export default function Home() {
                                             <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
                                         </div>
 
-                                        <div className="pt-0 -mt-9 px-6 pb-6 md:mt-0 md:p-12 lg:p-16 flex flex-col justify-center space-y-4 md:space-y-6 relative bg-white md:bg-transparent">
-                                            <div className="absolute top-10 md:top-4 right-10 md:right-24 z-40 flex flex-col items-center min-h-[150px] md:min-h-[200px] scale-[0.78] md:scale-100 origin-top-right">
+                                        <div className="absolute md:relative inset-x-0 bottom-0 z-30 px-5 pb-4 pt-12 md:mt-0 md:p-12 lg:p-16 flex flex-col justify-end md:justify-center space-y-2 md:space-y-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent md:bg-none md:bg-transparent">
+                                            <div className="absolute top-10 md:top-4 right-10 md:right-24 z-40 hidden md:flex flex-col items-center min-h-[150px] md:min-h-[200px] scale-[0.78] md:scale-100 origin-top-right">
                                                 <motion.div
                                                     initial={{ y: -100, rotate: -40 }}
                                                     whileInView={{ y: 0 }}
@@ -1212,12 +1237,17 @@ export default function Home() {
                                                     </span>
                                                 </div>
 
-                                                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#2D4059] leading-tight tracking-tight">
+                                                <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white md:text-[#2D4059] leading-tight tracking-tight drop-shadow-lg md:drop-shadow-none">
                                                     {content.title || (promoProducts.length > 1 ? "Premium Series" : promoProduct?.product_name) || "Special Offer"}
                                                 </h2>
 
-                                                <p className="text-[14px] md:text-[15px] text-[#565959] leading-relaxed border-l-4 border-[#119AB8]/20 pl-4 font-medium">
-                                                    {content.subtitle || (promoProducts.length > 1 ? "A curated collection of our most requested professional products." : promoProduct?.description) || "Experience professional-grade quality with our curated collection."}
+                                                <p className="text-[13px] md:text-[15px] text-white/85 md:text-[#565959] leading-relaxed border-l-4 border-[#119AB8]/60 md:border-[#119AB8]/20 pl-4 font-medium">
+                                                    {promoProducts.length === 1 && promoProduct
+                                                        ? [
+                                                            (promoProduct.product_name || promoProduct.name || '').replace(/\s*\(.*?\)\s*$/, '').trim(),
+                                                            promoProduct.weight || promoProduct.size || promoProduct.type
+                                                          ].filter(Boolean).join(' • ')
+                                                        : (content.subtitle || "A curated collection of our most requested professional products.")}
                                                 </p>
 
                                                 {/* Write a Review Modal */}
@@ -1924,16 +1954,16 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
                     <button
                         onClick={() => scroll('left')}
                         aria-label="Scroll left"
-                        className="hidden md:flex absolute left-1 top-[38%] -translate-y-1/2 w-10 h-10 rounded-full bg-white text-[#0f1111] shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
+                        className="flex absolute left-0 md:left-1 top-[38%] -translate-x-1/2 md:translate-x-0 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white text-[#13B0D1] md:text-[#0f1111] shadow-md md:shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-100 md:opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
                     >
-                        <ChevronLeft size={18} className="stroke-[2.5] -ml-px" />
+                        <ChevronLeft size={17} className="stroke-[3] md:stroke-[2.5] -ml-px" />
                     </button>
                     <button
                         onClick={() => scroll('right')}
                         aria-label="Scroll right"
-                        className="hidden md:flex absolute right-1 top-[38%] -translate-y-1/2 w-10 h-10 rounded-full bg-white text-[#0f1111] shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
+                        className="flex absolute right-0 md:right-1 top-[38%] translate-x-1/2 md:translate-x-0 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white text-[#13B0D1] md:text-[#0f1111] shadow-md md:shadow-[0_10px_30px_-8px_rgba(15,23,42,0.35)] border border-[#D5D9D9] items-center justify-center opacity-100 md:opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:bg-[#119AB8] hover:text-white hover:border-[#119AB8] hover:scale-110 active:scale-95 z-30"
                     >
-                        <ChevronRight size={18} className="stroke-[2.5] ml-px" />
+                        <ChevronRight size={17} className="stroke-[3] md:stroke-[2.5] ml-px" />
                     </button>
                 </>
             )}
