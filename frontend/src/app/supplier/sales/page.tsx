@@ -59,7 +59,7 @@ const Badge = ({ children, variant = 'default' }: any) => {
 };
 
 // ── DETAIL MODAL ──
-const OrderDetailModal = ({ order, onClose }: { order: any, onClose: () => void }) => {
+const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isUpdating }: { order: any, onClose: () => void, onAccept?: () => void, onReject?: () => void, showActions?: boolean, isUpdating?: boolean }) => {
     if (!order) return null;
     const { date, time } = formatDateTime(order.created_at);
 
@@ -93,7 +93,11 @@ const OrderDetailModal = ({ order, onClose }: { order: any, onClose: () => void 
                         <div className="space-y-4 text-right">
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</label>
-                                <Badge variant={order.payment_status?.toLowerCase() || 'paid'}>{order.payment_status || 'PAID'}</Badge>
+                                {showActions ? (
+                                    <Badge variant="pending">Payment Request</Badge>
+                                ) : (
+                                    <Badge variant={order.payment_status?.toLowerCase() || 'paid'}>{order.payment_status || 'PAID'}</Badge>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Processed At</label>
@@ -153,11 +157,29 @@ const OrderDetailModal = ({ order, onClose }: { order: any, onClose: () => void 
                     </div>
                 </div>
 
-                <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-6 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all">Close</button>
-                    <button onClick={() => window.print()} className="px-6 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/20">
-                        <Printer size={16} /> Print Receipt
-                    </button>
+                <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-3">
+                    {/* Verify / Reject — shown only for pending payment requests */}
+                    <div className="flex items-center gap-4">
+                        {showActions && (
+                            <>
+                                <button
+                                    onClick={onReject}
+                                    disabled={isUpdating}
+                                    className="text-sm font-bold text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                                >
+                                    <XIcon size={16} /> Reject
+                                </button>
+                                <button
+                                    onClick={onAccept}
+                                    disabled={isUpdating}
+                                    className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                                >
+                                    {isUpdating ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Accept Payment
+                                </button>
+                            </>
+                        )}
+                    </div>
+                    <button onClick={onClose} className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors">Close</button>
                 </div>
             </div>
         </div>
@@ -175,6 +197,8 @@ export default function SupplierFinancialRegistry() {
     const [lastSync, setLastSync] = useState<Date | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 10;
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -253,10 +277,33 @@ export default function SupplierFinancialRegistry() {
         }
     };
 
+    // A "payment request" is a distributor payment submitted but not yet verified.
+    const isPaymentRequest = (o: any) => o.is_wholesale && o.payment_status !== 'UNPAID' && !o.payment_confirmed;
+
     const filteredOrders = orders.filter(o => {
         if (filter === 'all') return true;
+        if (filter === 'requests') return isPaymentRequest(o);
         return o.payment_status?.toLowerCase() === filter.toLowerCase();
     });
+
+    const requestCount = orders.filter(isPaymentRequest).length;
+    const paidCount = orders.filter(o => o.payment_status?.toLowerCase() === 'paid').length;
+    const unpaidCount = orders.filter(o => o.payment_status?.toLowerCase() === 'unpaid').length;
+
+    const TABS = [
+        { key: 'all', label: 'All Ledger', count: orders.length },
+        { key: 'requests', label: 'Payment Requests', count: requestCount },
+        { key: 'unpaid', label: 'Pending Settlements', count: unpaidCount },
+        { key: 'paid', label: 'Settled Entries', count: paidCount },
+    ];
+
+    // Pagination — 10 per page
+    const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const paginatedOrders = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+    // Reset to the first page whenever the filter or search changes.
+    useEffect(() => { setPage(1); }, [filter, search]);
 
     const totalVolume = orders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
     const totalPaid = orders.reduce((sum, o) => sum + parseFloat(o.paid_amount || (o.payment_status === 'PAID' ? o.total_amount : 0) || 0), 0);
@@ -264,7 +311,16 @@ export default function SupplierFinancialRegistry() {
 
     return (
         <div className="max-w-[1200px] mx-auto animate-in fade-in duration-500 font-sans p-6 text-left">
-            {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
+            {selectedOrder && (
+                <OrderDetailModal
+                    order={selectedOrder}
+                    onClose={() => setSelectedOrder(null)}
+                    showActions={isPaymentRequest(selectedOrder)}
+                    isUpdating={isUpdating}
+                    onAccept={async () => { await handleAcceptPayment(selectedOrder.id); setSelectedOrder(null); }}
+                    onReject={async () => { await handleRejectPayment(selectedOrder.id); setSelectedOrder(null); }}
+                />
+            )}
 
             {/* Delete Confirmation Modal */}
             {deleteTarget && (
@@ -345,28 +401,53 @@ export default function SupplierFinancialRegistry() {
                     />
                 </div>
 
-                {/* Filter Tabs (Same as Orders Page) */}
-                <div className="flex gap-6 border-b border-gray-200">
-                    {['all', 'unpaid', 'paid'].map(t => (
-                        <button
-                            key={t}
-                            onClick={() => { setFilter(t); }}
-                            className={`pb-3 text-sm font-bold capitalize transition-all border-b-2 ${filter === t ? 'border-[#F59E0B] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
-                        >
-                            {t === 'all' ? 'All Ledger' :
-                             t === 'unpaid' ? 'Pending Settlements' : 
-                             t === 'paid' ? 'Settled Entries' : t}
-                        </button>
-                    ))}
+                {/* Filter Tabs */}
+                <div className="flex gap-1 sm:gap-2 border-b border-gray-200 overflow-x-auto no-scrollbar">
+                    {TABS.map(t => {
+                        const active = filter === t.key;
+                        const isRequest = t.key === 'requests';
+                        return (
+                            <button
+                                key={t.key}
+                                onClick={() => { setFilter(t.key); }}
+                                className={`relative flex items-center gap-2 px-3 pb-3 pt-1 text-sm font-bold whitespace-nowrap transition-all border-b-2 ${active ? 'border-[#F59E0B] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+                            >
+                                {t.label}
+                                {t.count > 0 && (
+                                    <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-extrabold tabular-nums transition-colors ${
+                                        isRequest
+                                            ? (active ? 'bg-[#F59E0B] text-white' : 'bg-amber-100 text-amber-700')
+                                            : (active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500')
+                                    }`}>
+                                        {t.count}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
             {/* ── Table (Matching Orders Style) ── */}
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                {/* Table toolbar: result count + active context */}
+                <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-100 bg-slate-50/40">
+                    <div className="flex items-center gap-2 text-[13px] font-bold text-slate-700">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-900 text-white text-[11px] tabular-nums">
+                            {filteredOrders.length}
+                        </span>
+                        <span>{TABS.find(t => t.key === filter)?.label || 'Transactions'}</span>
+                    </div>
+                    {filter === 'requests' && requestCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                            <Clock size={12} /> {requestCount} awaiting verification
+                        </span>
+                    )}
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                            <tr className="bg-slate-50 border-b border-gray-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                 <th className="px-6 py-4">Transaction</th>
                                 <th className="px-6 py-4">Source</th>
                                 <th className="px-6 py-4 text-right">Value</th>
@@ -393,70 +474,74 @@ export default function SupplierFinancialRegistry() {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredOrders.map(o => {
+                                paginatedOrders.map(o => {
                                     const isWaiting = o.is_wholesale && o.payment_status !== 'UNPAID' && !o.payment_confirmed;
-                                    const isViewed = viewedOrderIds.has(String(o.id));
                                     const { date } = formatDateTime(o.created_at || o.order_date);
                                     
                                     return (
-                                        <tr key={o.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <tr key={o.id} className={`hover:bg-slate-50/70 transition-colors group ${isWaiting ? 'bg-amber-50/30' : ''}`}>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-900">#{o.order_number || o.tracking_id}</span>
-                                                    <span className="text-[11px] text-slate-400 font-bold mt-0.5">{date}</span>
+                                                <div className={`flex items-center gap-3 ${isWaiting ? 'border-l-2 border-[#F59E0B] -ml-6 pl-6' : ''}`}>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[12px] font-bold text-slate-900">#{o.order_number || o.tracking_id}</span>
+                                                        <span className="text-[10px] text-slate-400 font-bold mt-0.5">{date}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-medium text-slate-700">{o.customer_name || 'Retail Point of Sale'}</span>
-                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{o.is_wholesale ? 'Distributor' : 'Point of Sale'}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${o.is_wholesale ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                                        {o.is_wholesale ? <CreditCard size={16} /> : <Receipt size={16} />}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[12px] font-medium text-slate-700">{o.customer_name || 'Retail Point of Sale'}</span>
+                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{o.is_wholesale ? 'Distributor' : 'Point of Sale'}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <span className="text-sm font-black text-slate-900">{fmt(parseFloat(o.total_amount))}</span>
+                                                <span className="text-[12px] font-black text-slate-900">{fmt(parseFloat(o.total_amount))}</span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <Badge variant={o.payment_status?.toLowerCase() || 'paid'}>{o.payment_status || 'PAID'}</Badge>
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    {isWaiting ? (
+                                                        // Pending distributor request — not yet accepted, so do NOT show "Paid".
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                                                            <Clock size={10} /> Payment Request
+                                                        </span>
+                                                    ) : (
+                                                        <Badge variant={o.payment_status?.toLowerCase() || 'paid'}>{o.payment_status || 'PAID'}</Badge>
+                                                    )}
+                                                </div>
                                                 {isWaiting && (
                                                     <div className="text-[10px] text-slate-500 font-semibold mt-1.5 tabular-nums">
-                                                        Paid {fmt(parseFloat(o.paid_amount || 0))}
+                                                        Requested {fmt(parseFloat(o.paid_amount || o.total_amount || 0))}
                                                         <span className="text-slate-400"> · Bal {fmt(Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.paid_amount || 0)))}</span>
                                                     </div>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex justify-end gap-3 items-center">
-                                                    {isWaiting && (
-                                                        <div className="flex gap-2">
-                                                            <button 
-                                                                onClick={() => handleAcceptPayment(o.id)} 
-                                                                disabled={!isViewed || isUpdating} 
-                                                                className={`px-3 py-1 text-[11px] font-bold rounded transition-all ${!isViewed ? 'text-slate-300 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-50'}`}
-                                                            >
-                                                                Verify
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleRejectPayment(o.id)} 
-                                                                disabled={!isViewed || isUpdating} 
-                                                                className={`px-3 py-1 text-[11px] font-bold rounded transition-all ${!isViewed ? 'text-slate-300 cursor-not-allowed' : 'text-rose-600 hover:bg-rose-50'}`}
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                <div className="flex justify-end gap-1 items-center">
                                                     <button
                                                         onClick={() => handleOpenView(o)}
-                                                        className={`p-2 rounded-lg transition-all ${isViewed ? 'text-slate-300' : 'text-[#F59E0B] hover:bg-amber-50'}`}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-slate-600 hover:text-[#F59E0B] rounded-md transition-colors"
                                                         title="View Details"
                                                     >
-                                                        <Eye size={18} />
+                                                        <Eye size={13} /> View
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { window.location.href = `/supplier/sales/${o.id}/invoice`; }}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 rounded-md transition-colors"
+                                                        title="Print Invoice"
+                                                    >
+                                                        <Printer size={13} /> Print
                                                     </button>
                                                     <button
                                                         onClick={() => setDeleteTarget(o)}
-                                                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 transition-all"
+                                                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-slate-600 hover:text-rose-600 rounded-md transition-colors"
                                                         title="Delete Transaction"
                                                     >
-                                                        <Trash2 size={18} />
+                                                        <Trash2 size={13} /> Delete
                                                     </button>
                                                 </div>
                                             </td>
@@ -467,6 +552,35 @@ export default function SupplierFinancialRegistry() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination footer — only when more than one page */}
+                {!loading && filteredOrders.length > PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-6 py-3.5 border-t border-gray-100 bg-slate-50/40">
+                        <span className="text-[12px] font-medium text-slate-500 tabular-nums">
+                            Showing <span className="font-bold text-slate-700">{(currentPage - 1) * PAGE_SIZE + 1}</span>
+                            –<span className="font-bold text-slate-700">{Math.min(currentPage * PAGE_SIZE, filteredOrders.length)}</span> of <span className="font-bold text-slate-700">{filteredOrders.length}</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage <= 1}
+                                className="px-3 py-1.5 text-[12px] font-bold rounded border border-gray-300 bg-white text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
+                            <span className="text-[12px] font-bold text-slate-700 tabular-nums px-1">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage >= totalPages}
+                                className="px-3 py-1.5 text-[12px] font-bold rounded border border-gray-300 bg-white text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

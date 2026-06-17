@@ -185,7 +185,7 @@ export default function ProductCard({
                 )}>
                     {/* Product Info */}
                     <div className="mb-3">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-2">
+                        <div className="flex flex-row items-start justify-between gap-2">
                             <Link href={`/customer/product/${id}`} className="flex-1">
                                 <h3 className={cn(
                                     "font-black text-[#1E1B4B] leading-tight line-clamp-2 sm:line-clamp-1 uppercase tracking-tight group-hover:text-[#0891B2] transition-colors",

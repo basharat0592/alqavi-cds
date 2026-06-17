@@ -706,7 +706,7 @@ export default function Home() {
                                                             // Mobile: list items are full width; others are fixed carousel cards
                                                             content.layout_type === 'list' 
                                                                 ? "w-full" 
-                                                                : (isFullCollection ? "w-[185px] sm:w-[210px] flex-shrink-0" : "w-[160px] flex-shrink-0"),
+                                                                : (isFullCollection ? "w-[200px] sm:w-[230px] flex-shrink-0" : "w-[160px] flex-shrink-0"),
                                                             // Desktop: layout-specific width overrides
                                                             content.layout_type === 'carousel' ? "md:w-[240px]" : "md:w-auto",
                                                             content.layout_type === 'list' && "md:w-full",
@@ -1884,6 +1884,8 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = useState(0);
     const [showBar, setShowBar] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
 
     const handleScroll = () => {
         const el = containerRef.current;
@@ -1914,6 +1916,39 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
         };
     }, [children]);
 
+    // Track whether the carousel is on-screen, so auto-scroll never moves the page
+    // while the user is looking at another section (e.g. the location/map section).
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || !isFullCollection) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => setIsVisible(entry.isIntersecting),
+            { threshold: 0.2 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [isFullCollection]);
+
+    // Continuously auto-scroll the carousel every 2 seconds; loops back to start at the end.
+    // Only the Full Collection carousel auto-scrolls, only while visible, and pauses on hover/touch.
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || isPaused || !isVisible || layoutType === 'list' || !isFullCollection) return;
+        const interval = setInterval(() => {
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            if (maxScroll <= 0) return;
+            const firstCard = el.firstElementChild as HTMLElement | null;
+            // Advance by exactly one card width (+ gap) so cards land cleanly in view.
+            const amount = firstCard ? firstCard.offsetWidth + 12 : el.clientWidth * 0.75;
+            if (el.scrollLeft >= maxScroll - 5) {
+                el.scrollTo({ left: 0, behavior: 'smooth' });
+            } else {
+                el.scrollBy({ left: amount, behavior: 'smooth' });
+            }
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [children, isPaused, isVisible, layoutType, isFullCollection]);
+
     const scroll = (direction: 'left' | 'right') => {
         const el = containerRef.current;
         if (!el) return;
@@ -1929,7 +1964,12 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
     }
 
     return (
-        <div className="w-full relative group/carousel">
+        <div
+            className="w-full relative group/carousel"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+        >
             {/* Scrollable Container */}
             <div
                 ref={containerRef}

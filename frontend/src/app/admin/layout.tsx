@@ -166,6 +166,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
+    const mobileProfileRef = useRef<HTMLDivElement>(null);
+    const mobileNotifRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const user = authService.getUser();
@@ -208,9 +210,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         };
 
         const handleClickOutside = (e: MouseEvent) => {
-            if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
-            if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
-            if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearchDropdown(false);
+            const target = e.target as Node;
+            if (notifRef.current && !notifRef.current.contains(target) && (!mobileNotifRef.current || !mobileNotifRef.current.contains(target))) setNotifOpen(false);
+            if (profileRef.current && !profileRef.current.contains(target) && (!mobileProfileRef.current || !mobileProfileRef.current.contains(target))) setProfileOpen(false);
+            if (searchRef.current && !searchRef.current.contains(target)) setShowSearchDropdown(false);
         };
 
         window.addEventListener('profileUpdated', handleUpdate);
@@ -344,7 +347,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {/* ═══ MOBILE NOTIFICATIONS PANEL ═══ */}
                     {notifOpen && (
                         <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setNotifOpen(false)}>
-                            <div className="absolute top-[52px] right-2 w-[calc(100vw-16px)] max-w-sm" onClick={e => e.stopPropagation()}>
+                            <div ref={mobileNotifRef} className="absolute top-[52px] right-2 w-[calc(100vw-16px)] max-w-sm" onClick={e => e.stopPropagation()}>
                                 <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />
                             </div>
                         </div>
@@ -352,11 +355,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                     {/* ═══ MOBILE PROFILE PANEL ═══ */}
                     {profileOpen && (
-                        <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setProfileOpen(false)}>
-                            <div className="absolute top-[52px] right-2 w-64" onClick={e => e.stopPropagation()}>
-                                <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />
+                        <>
+                            <div className="fixed inset-0 z-[200] md:hidden" onClick={() => setProfileOpen(false)} />
+                            <div ref={mobileProfileRef} className="fixed top-[56px] right-2 z-[210] w-72 max-w-[calc(100vw-16px)] md:hidden">
+                                <ProfileDropdown positionClassName="relative w-full" user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {/* ═══ NAVBAR (takes remaining width) ═══ */}

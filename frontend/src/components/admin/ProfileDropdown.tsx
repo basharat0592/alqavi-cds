@@ -2,23 +2,24 @@
 
 import Link from 'next/link';
 import { X, User, Settings, LogOut, ChevronRight, Shield, Globe, ShoppingBag } from 'lucide-react';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, cn } from '@/lib/utils';
 
 /* ═══════════════════════════════════════════════
    PURE AMAZON PROFILE DROPDOWN
    ═══════════════════════════════════════════════ */
 export default function ProfileDropdown({
-    user, onClose, onLogout, 
+    user, onClose, onLogout, positionClassName = 'absolute top-full right-0 mt-3 w-72',
 }: {
     user: { name: string; email: string; role: string; id?: string; avatar?: string };
     onClose: () => void;
     onLogout: () => void;
     onUpdated: (name: string, email: string, avatar?: string) => void;
+    positionClassName?: string;
 }) {
     const initials = (user.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
     return (
-        <div className="absolute top-full right-0 mt-3 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-white/5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[100] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden text-slate-800 dark:text-slate-100 font-sans">
+        <div className={cn(positionClassName, "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-white/5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[100] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden text-slate-800 dark:text-slate-100 font-sans")}>
             
             {/* Header / Identity */}
             <div className="p-4 bg-slate-50/55 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
