@@ -1170,7 +1170,7 @@ export default function Home() {
                                                     {/* Price badge — inside group/promo, same as working bottom overlay */}
                                                     {promoProduct && promoProducts.length === 1 && (
                                                         <div className="absolute top-3 right-0 z-50">
-                                                            <div className="px-4 py-2 bg-[#13B0D1] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20 font-black tracking-widest text-sm">
+                                                            <div className="px-2.5 py-1 md:px-4 md:py-2 bg-[#13B0D1] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20 font-black tracking-widest text-[11px] md:text-sm">
                                                                 Rs. {parseFloat(promoProduct.selling_price || promoProduct.price || 0).toLocaleString()}
                                                             </div>
                                                         </div>
@@ -1178,8 +1178,8 @@ export default function Home() {
 
                                                     {/* Discount badge */}
                                                     {content.discount_percent && (
-                                                        <div className="absolute top-14 right-0 z-50">
-                                                            <div className="px-4 py-1.5 bg-[#e77600] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20 font-black text-[10px] uppercase tracking-widest">
+                                                        <div className="absolute top-11 md:top-14 right-0 z-50">
+                                                            <div className="px-2.5 py-1 md:px-4 md:py-1.5 bg-[#e77600] text-white rounded-l-xl shadow-2xl border-y border-l border-white/20 font-black text-[8px] md:text-[10px] uppercase tracking-widest">
                                                                 {content.discount_percent}% OFF
                                                             </div>
                                                         </div>
@@ -1245,7 +1245,8 @@ export default function Home() {
                                                     {promoProducts.length === 1 && promoProduct
                                                         ? [
                                                             (promoProduct.product_name || promoProduct.name || '').replace(/\s*\(.*?\)\s*$/, '').trim(),
-                                                            promoProduct.weight || promoProduct.size || promoProduct.type
+                                                            promoProduct.weight,
+                                                            promoProduct.size || promoProduct.type
                                                           ].filter(Boolean).join(' • ')
                                                         : (content.subtitle || "A curated collection of our most requested professional products.")}
                                                 </p>
@@ -1387,7 +1388,7 @@ export default function Home() {
                                                             router.push('/customer/shop');
                                                         }
                                                     }}
-                                                    className="w-full sm:w-auto h-12 px-10 bg-gradient-to-r from-[#0E8AA6] via-[#13B0D1] to-[#0E8AA6] text-white rounded-[4px] font-bold uppercase tracking-widest text-[10px] transition-all hover:shadow-xl hover:shadow-[#13B0D1]/30 active:scale-95 group/btn flex items-center justify-center"
+                                                    className="w-full sm:w-auto h-8 md:h-12 px-6 md:px-10 bg-gradient-to-r from-[#0E8AA6] via-[#13B0D1] to-[#0E8AA6] text-white rounded-[4px] font-bold uppercase tracking-widest text-[11px] md:text-[10px] transition-all hover:shadow-xl hover:shadow-[#13B0D1]/30 active:scale-95 group/btn flex items-center justify-center"
                                                 >
                                                     {content.cta_text || "Avail Deal"}
                                                 </button>
