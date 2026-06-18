@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { useAdminDashboard } from '@/hooks';
-import { purchaseService } from '@/lib/api';
+import { purchaseService, paymentService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
@@ -70,7 +70,8 @@ export default function AccountingReportPage() {
 
     const { stats, recentOrders, loading: statsLoading, refetch } = useAdminDashboard(dashboardFilters);
     const [initialLoading, setInitialLoading] = useState(true);
-    const [purchases, setPurchases] = useState<any[]>([]);
+    const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
+    const [ledgerStats, setLedgerStats] = useState({ total_inbound: 0, total_outbound: 0, total_expenses: 0, net_balance: 0 });
 
     useEffect(() => {
         if (!statsLoading) {
@@ -78,47 +79,45 @@ export default function AccountingReportPage() {
         }
     }, [statsLoading]);
 
-    useEffect(() => {
-        purchaseService.getAll({ no_pagination: 'true' } as any)
-            .then((res: any) => setPurchases(Array.isArray(res) ? res : res?.results || []))
-            .catch(() => setPurchases([]));
-    }, []);
+    // Pull the real ledger: sales (income), accepted purchase payments (expense),
+    // and accepted sale/purchase returns — all posted by the backend payment system.
+    const loadLedger = () => {
+        paymentService.getAll({ no_pagination: 'true' } as any)
+            .then((res: any) => setLedgerEntries(Array.isArray(res) ? res : res?.results || []))
+            .catch(() => setLedgerEntries([]));
+        paymentService.getStats()
+            .then((s: any) => s && setLedgerStats(s))
+            .catch(() => { });
+    };
+    useEffect(() => { loadLedger(); }, []);
 
-    // Build a real general ledger from sales (income) and purchase orders (expense).
+    const refreshAll = () => { refetch(); loadLedger(); };
+
+    // Map ledger entries to debit (money in) / credit (money out), honouring the date filter.
     const ledger = useMemo(() => {
         const inRange = (d: string) => !filterDate || String(d || '').slice(0, 10) === filterDate;
-
-        const sales = (recentOrders || [])
-            .filter((o: any) => inRange(o.created_at))
-            .filter((o: any) => paymentMethod === 'ALL' || String(o.payment_method || '').toUpperCase() === paymentMethod)
-            .map((o: any) => ({
-                id: o.order_number || o.tracking_id || String(o.id || '').slice(0, 8),
-                type: 'Income',
-                desc: `Sale Order #${o.order_number || o.tracking_id || ''} - ${o.customer_display_name || o.customer_name || 'Customer'}`,
-                debit: Number(o.total_amount || 0),
-                credit: 0,
-                date: o.created_at,
-            }));
-
-        // Purchases are expenses; hide them when filtering by a sales payment channel.
-        const buys = paymentMethod !== 'ALL' ? [] : (purchases || [])
-            .filter((p: any) => inRange(p.order_date))
-            .map((p: any) => ({
-                id: p.purchase_number || p.order_number || String(p.id || '').slice(0, 8),
-                type: 'Expense',
-                desc: `Supplier PO #${p.purchase_number || p.order_number || ''} - ${p.supplier_name || 'Supplier'}`,
-                debit: 0,
-                credit: Number(p.total_amount || 0),
-                date: p.order_date,
-            }));
-
-        return [...sales, ...buys].sort(
-            (a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()
-        );
-    }, [recentOrders, purchases, filterDate, paymentMethod]);
+        const labels: Record<string, string> = {
+            sale: 'Sale', purchase: 'Purchase Payment',
+            sale_return: 'Sale Return', purchase_return: 'Purchase Return', manual: 'Manual',
+        };
+        return (ledgerEntries || [])
+            .filter((p: any) => inRange(p.date))
+            .map((p: any) => {
+                const income = p.payment_type === 'inbound';
+                return {
+                    id: p.reference_number || String(p.id),
+                    type: income ? 'Income' : 'Expense',
+                    desc: p.description || `${labels[p.source] || 'Entry'} — ${p.payer_payee || ''}`.trim(),
+                    debit: income ? Number(p.amount || 0) : 0,
+                    credit: income ? 0 : Number(p.amount || 0),
+                    date: p.date,
+                };
+            })
+            .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    }, [ledgerEntries, filterDate]);
 
     const netMargin = stats.totalRevenue ? ((stats.totalProfit || 0) / stats.totalRevenue) * 100 : 0;
-    const totalExpense = (purchases || []).reduce((s: number, p: any) => s + Number(p.total_amount || 0), 0);
+    const totalExpense = Number(ledgerStats.total_outbound || 0);
     const avgOrderValue = (stats as any).deliveredOrders ? (stats.totalRevenue || 0) / (stats as any).deliveredOrders : 0;
 
     if (initialLoading) return <PageLoader />;
@@ -148,7 +147,7 @@ export default function AccountingReportPage() {
                                 <option value="SHOP">Shop POS</option>
                             </select>
                         </div>
-                        <Button variant="outline" onClick={refetch}>
+                        <Button variant="outline" onClick={refreshAll}>
                             <RefreshCw size={14} className={statsLoading ? 'animate-spin' : ''} /> Refresh
                         </Button>
                         <Button variant="secondary" onClick={() => window.print()}>
@@ -169,11 +168,12 @@ export default function AccountingReportPage() {
             {/* Stats Metric Cards (Filtered) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <MetricCard
-                    label="Total Money"
-                    value={formatK(stats.totalRevenue || 0)}
-                    subtext="All history sales"
+                    label="Net Balance"
+                    value={formatK(ledgerStats.net_balance || 0)}
+                    subtext="Money in − money out"
                     icon={DollarSign}
                     color="sky"
+                    alert={(ledgerStats.net_balance || 0) < 0}
                 />
                 <MetricCard
                     label="Net Profit"
@@ -261,7 +261,7 @@ export default function AccountingReportPage() {
                     {/* Note */}
                     <Card className="bg-indigo-50 border-indigo-100 p-4 flex gap-3 animate-in fade-in duration-1000 no-print">
                         <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
-                        <p className="text-[12px] text-slate-600 leading-relaxed font-medium">Account balances are adjusted for current period depreciation and fiscal adjustments.</p>
+                        <p className="text-[12px] text-slate-600 leading-relaxed font-medium">Sales add money when delivered; supplier-accepted purchase payments and customer refunds subtract it. Purchase returns add the refund back.</p>
                     </Card>
                 </div>
             </div>

@@ -8,7 +8,8 @@ import {
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
     Truck, Book, AlertTriangle, Globe,
-    ScanLine, Receipt, Landmark, ClipboardList, PackagePlus, Warehouse, Building2
+    ScanLine, Receipt, Landmark, ClipboardList, PackagePlus,
+    ArrowDownLeft, ArrowUpRight
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 
@@ -66,20 +67,6 @@ export default function AdminDashboard() {
             keywords: ['draft', 'buy', 'stock order', 'procurement', 'purchase']
         },
         {
-            name: 'Purchase Returns',
-            desc: 'Return to supplier',
-            href: '/admin/purchases/returns',
-            icon: RefreshCcw,
-            theme: {
-                border: 'hover:border-lime-500',
-                iconBg: 'bg-lime-50 border-lime-100 text-lime-700 group-hover:bg-lime-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(101,163,13,0.2)]',
-                leftBar: 'bg-lime-600',
-                chevron: 'text-lime-500 group-hover:text-lime-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(101,163,13,0.06)]'
-            },
-            keywords: ['refunds', 'damaged', 'shipback', 'purchase returns']
-        },
-        {
             name: 'Invoices',
             desc: 'Billing & receipts',
             href: '/admin/invoices',
@@ -108,18 +95,60 @@ export default function AdminDashboard() {
             keywords: ['hub', 'audits', 'graphs', 'reports']
         },
         {
-            name: 'Accounting & Finance',
-            desc: 'Ledgers & cashflow',
-            href: '/admin/reports/accounting',
-            icon: Landmark,
+            name: 'Income',
+            desc: 'Money coming in',
+            href: '/admin/income',
+            icon: ArrowDownLeft,
             theme: {
-                border: 'hover:border-sky-500',
-                iconBg: 'bg-sky-50 border-sky-100 text-sky-600 group-hover:bg-sky-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(14,165,233,0.2)]',
-                leftBar: 'bg-sky-600',
-                chevron: 'text-sky-400 group-hover:text-sky-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(14,165,233,0.06)]'
+                border: 'hover:border-emerald-500',
+                iconBg: 'bg-emerald-50 border-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)]',
+                leftBar: 'bg-emerald-600',
+                chevron: 'text-emerald-400 group-hover:text-emerald-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(16,185,129,0.06)]'
             },
-            keywords: ['p&l', 'cashflow', 'tax', 'finance', 'ledger']
+            keywords: ['income', 'money in', 'revenue', 'earnings', 'inbound']
+        },
+        {
+            name: 'Expense',
+            desc: 'Money going out',
+            href: '/admin/expense',
+            icon: ArrowUpRight,
+            theme: {
+                border: 'hover:border-rose-500',
+                iconBg: 'bg-rose-50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
+                leftBar: 'bg-rose-600',
+                chevron: 'text-rose-400 group-hover:text-rose-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
+            },
+            keywords: ['expense', 'money out', 'spending', 'costs', 'outbound']
+        },
+        {
+            name: 'Sales History',
+            desc: 'Past sales & revenue',
+            href: '/admin/sales',
+            icon: TrendingUp,
+            theme: {
+                border: 'hover:border-teal-500',
+                iconBg: 'bg-teal-50 border-teal-100 text-teal-600 group-hover:bg-teal-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(20,184,166,0.2)]',
+                leftBar: 'bg-teal-600',
+                chevron: 'text-teal-400 group-hover:text-teal-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(20,184,166,0.06)]'
+            },
+            keywords: ['sales list', 'transactions', 'revenue ledger', 'sales history']
+        },
+        {
+            name: 'Purchase History',
+            desc: 'Past supplier orders',
+            href: '/admin/purchases',
+            icon: History,
+            theme: {
+                border: 'hover:border-amber-500',
+                iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
+                leftBar: 'bg-amber-600',
+                chevron: 'text-amber-400 group-hover:text-amber-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
+            },
+            keywords: ['expenses', 'vendor orders', 'invoices', 'purchase history']
         },
         {
             name: 'Order List',
@@ -134,20 +163,6 @@ export default function AdminDashboard() {
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
             },
             keywords: ['orders', 'shipping', 'list']
-        },
-        {
-            name: 'Sale Returns',
-            desc: 'Customer refunds',
-            href: '/admin/sale-returns',
-            icon: RotateCcw,
-            theme: {
-                border: 'hover:border-fuchsia-500',
-                iconBg: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(192,38,211,0.2)]',
-                leftBar: 'bg-fuchsia-600',
-                chevron: 'text-fuchsia-400 group-hover:text-fuchsia-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(192,38,211,0.06)]'
-            },
-            keywords: ['returns', 'refunds', 'customer returns', 'sale returns']
         },
         {
             name: 'Product List',
@@ -190,76 +205,6 @@ export default function AdminDashboard() {
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(234,88,12,0.06)]'
             },
             keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory']
-        },
-        {
-            name: 'Warehouses',
-            desc: 'Storage locations',
-            href: '/admin/inventory/warehouses',
-            icon: Warehouse,
-            theme: {
-                border: 'hover:border-stone-500',
-                iconBg: 'bg-stone-100 border-stone-200 text-stone-600 group-hover:bg-stone-700 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(87,83,78,0.2)]',
-                leftBar: 'bg-stone-700',
-                chevron: 'text-stone-400 group-hover:text-stone-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(87,83,78,0.06)]'
-            },
-            keywords: ['storage', 'depots', 'distribution', 'warehouse']
-        },
-        {
-            name: 'Order Tracking',
-            desc: 'Delivery & dispatch',
-            href: '/admin/tracking',
-            icon: Truck,
-            theme: {
-                border: 'hover:border-blue-500',
-                iconBg: 'bg-blue-50 border-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]',
-                leftBar: 'bg-blue-600',
-                chevron: 'text-blue-400 group-hover:text-blue-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(37,99,235,0.06)]'
-            },
-            keywords: ['delivery', 'courier', 'dispatch', 'tracking']
-        },
-        {
-            name: 'Supplier Registry',
-            desc: 'Vendors & contacts',
-            href: '/admin/company/suppliers',
-            icon: Building2,
-            theme: {
-                border: 'hover:border-purple-500',
-                iconBg: 'bg-purple-50 border-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(147,51,234,0.2)]',
-                leftBar: 'bg-purple-600',
-                chevron: 'text-purple-400 group-hover:text-purple-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(147,51,234,0.06)]'
-            },
-            keywords: ['vendors', 'manufacturers', 'contacts', 'supplier']
-        },
-        {
-            name: 'Customer Registry',
-            desc: 'Clients & profiles',
-            href: '/admin/company/customers',
-            icon: Users,
-            theme: {
-                border: 'hover:border-pink-500',
-                iconBg: 'bg-pink-50 border-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(219,39,119,0.2)]',
-                leftBar: 'bg-pink-600',
-                chevron: 'text-pink-400 group-hover:text-pink-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(219,39,119,0.06)]'
-            },
-            keywords: ['clients', 'profiles', 'ledger', 'customer']
-        },
-        {
-            name: 'System Alerts',
-            desc: 'Errors & warnings',
-            href: '/admin/alerts',
-            icon: AlertTriangle,
-            theme: {
-                border: 'hover:border-red-500',
-                iconBg: 'bg-red-50 border-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(220,38,38,0.2)]',
-                leftBar: 'bg-red-600',
-                chevron: 'text-red-400 group-hover:text-red-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(220,38,38,0.06)]'
-            },
-            keywords: ['errors', 'warnings', 'alarms', 'alerts']
         },
         {
             name: 'Website CMS',
@@ -333,6 +278,7 @@ export default function AdminDashboard() {
         {
             title: 'Detailed Reports',
             items: [
+                { name: 'Accounting & Finance', href: '/admin/reports/accounting', icon: Landmark, keywords: ['p&l', 'cashflow', 'tax', 'finance', 'ledger'] },
                 { name: 'Sales Reports', href: '/admin/reports/sales', icon: TrendingUp, keywords: ['revenue', 'growth', 'metrics'] },
                 { name: 'Purchase Reports', href: '/admin/reports/purchases', icon: ShoppingCart, keywords: ['costs', 'purchases value'] },
                 { name: 'Inventory Reports', href: '/admin/reports/inventory', icon: Boxes, keywords: ['valuation', 'stock level reports'] },

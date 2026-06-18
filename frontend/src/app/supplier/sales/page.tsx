@@ -69,7 +69,7 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                 {/* Modal Header */}
                 <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
                     <div>
-                        <h3 className="text-xl font-bold text-slate-800">Transaction Details</h3>
+                        <h3 className="text-xl font-bold text-slate-800">Order Details</h3>
                         <p className="text-xs text-slate-400 mt-0.5 font-medium">#{order.order_number || order.tracking_id} · {date}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
@@ -82,12 +82,12 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                     <div className="grid grid-cols-2 gap-8 mb-8 pb-8 border-b border-slate-50">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Source / Entity</label>
-                                <p className="text-sm font-bold text-slate-800">{order.customer_name || 'Retail Point of Sale'}</p>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">From</label>
+                                <p className="text-sm font-bold text-slate-800">{order.customer_name || 'Shop Sale'}</p>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Type</label>
-                                <Badge variant={order.is_wholesale ? 'wholesale' : 'retail'}>{order.is_wholesale ? 'Distributor' : 'Direct Retail'}</Badge>
+                                <Badge variant={order.is_wholesale ? 'wholesale' : 'retail'}>{order.is_wholesale ? 'Distributor' : 'Shop Sale'}</Badge>
                             </div>
                         </div>
                         <div className="space-y-4 text-right">
@@ -100,7 +100,7 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                                 )}
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Processed At</label>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date & Time</label>
                                 <p className="text-sm font-bold text-slate-800">{date}, {time}</p>
                             </div>
                         </div>
@@ -108,14 +108,14 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
 
                     {/* Items Table */}
                     <div className="mb-8">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Settlement Items</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Items</label>
                         <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 border-b border-slate-100 font-bold text-slate-600">
                                     <tr>
                                         <th className="p-4">Item Name</th>
-                                        <th className="p-4 text-center">Units</th>
-                                        <th className="p-4 text-right">Value</th>
+                                        <th className="p-4 text-center">Qty</th>
+                                        <th className="p-4 text-right">Price</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50 text-slate-800 font-medium">
@@ -134,7 +134,7 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                     {/* Receipt Image */}
                     {order.payment_slip && (
                         <div className="mb-8">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Evidence (Receipt)</label>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Receipt</label>
                             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                                 <img src={order.payment_slip} alt="Receipt" className="max-h-[300px] rounded-lg mx-auto block shadow-md" />
                             </div>
@@ -151,7 +151,7 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                            )}
                         </div>
                         <div className="text-right">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Settlement</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
                             <p className="text-3xl font-black text-[#b12704] mt-1">{fmt(parseFloat(order.total_amount))}</p>
                         </div>
                     </div>
@@ -216,9 +216,9 @@ export default function SupplierFinancialRegistry() {
             
             setOrders(combined);
             setLastSync(new Date());
-        } catch (error) { 
-            toast.error("Sync error"); 
-        } finally { 
+        } catch (error) {
+            toast.error("Could not load data");
+        } finally {
             setLoading(false); 
         }
     }, [search]);
@@ -234,26 +234,26 @@ export default function SupplierFinancialRegistry() {
         setIsUpdating(true);
         try {
             await purchaseService.acceptPayment(id);
-            toast.success("Payment verified successfully!");
+            toast.success("Payment accepted!");
             fetchOrders();
-        } catch { 
-            toast.error("Acceptance failed"); 
-        } finally { 
+        } catch {
+            toast.error("Could not accept payment");
+        } finally {
             setIsUpdating(false); 
         }
     };
 
     const handleRejectPayment = async (id: string) => {
-        const reason = prompt("Enter rejection reason:");
+        const reason = prompt("Why are you rejecting this payment?");
         if (!reason) return;
         setIsUpdating(true);
         try {
             await purchaseService.rejectPayment(id, reason);
             toast.success("Payment rejected");
             fetchOrders();
-        } catch { 
-            toast.error("Rejection failed"); 
-        } finally { 
+        } catch {
+            toast.error("Could not reject payment");
+        } finally {
             setIsUpdating(false); 
         }
     };
@@ -267,11 +267,11 @@ export default function SupplierFinancialRegistry() {
             } else {
                 await api.delete(`/v1/sales/orders/${deleteTarget.id}/`);
             }
-            toast.success(`Transaction #${deleteTarget.order_number || deleteTarget.tracking_id} deleted`);
+            toast.success(`Order #${deleteTarget.order_number || deleteTarget.tracking_id} deleted`);
             setDeleteTarget(null);
             fetchOrders();
         } catch {
-            toast.error('Delete failed');
+            toast.error('Could not delete order');
         } finally {
             setIsDeleting(false);
         }
@@ -291,10 +291,10 @@ export default function SupplierFinancialRegistry() {
     const unpaidCount = orders.filter(o => o.payment_status?.toLowerCase() === 'unpaid').length;
 
     const TABS = [
-        { key: 'all', label: 'All Ledger', count: orders.length },
+        { key: 'all', label: 'All', count: orders.length },
         { key: 'requests', label: 'Payment Requests', count: requestCount },
-        { key: 'unpaid', label: 'Pending Settlements', count: unpaidCount },
-        { key: 'paid', label: 'Settled Entries', count: paidCount },
+        { key: 'unpaid', label: 'Unpaid', count: unpaidCount },
+        { key: 'paid', label: 'Paid', count: paidCount },
     ];
 
     // Pagination — 10 per page
@@ -330,9 +330,9 @@ export default function SupplierFinancialRegistry() {
                             <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 border border-rose-100">
                                 <AlertTriangle size={24} />
                             </div>
-                            <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">Delete Transaction?</h3>
+                            <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">Delete this order?</h3>
                             <p className="text-[13px] text-slate-500 font-medium mt-2 leading-relaxed">
-                                Permanently delete transaction <span className="font-bold text-slate-700">#{deleteTarget.order_number || deleteTarget.tracking_id}</span> ({fmt(parseFloat(deleteTarget.total_amount || 0))})? This cannot be undone.
+                                Delete order <span className="font-bold text-slate-700">#{deleteTarget.order_number || deleteTarget.tracking_id}</span> ({fmt(parseFloat(deleteTarget.total_amount || 0))})? You can't undo this.
                             </p>
                         </div>
                         <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
@@ -359,8 +359,8 @@ export default function SupplierFinancialRegistry() {
             <div className="mb-6">
                 <div className="flex items-end justify-between mb-1">
                     <div>
-                        <h1 className="text-3xl font-medium text-slate-900 leading-tight">Settlements & Ledger</h1>
-                        <p className="text-[13px] text-slate-500 mt-1 font-medium">View financial history, settled funds, and pending payments.</p>
+                        <h1 className="text-3xl font-medium text-slate-900 leading-tight">Sales & Payments</h1>
+                        <p className="text-[13px] text-slate-500 mt-1 font-medium">See your sales, money received, and money still due.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
@@ -368,7 +368,7 @@ export default function SupplierFinancialRegistry() {
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#F59E0B] border border-gray-300 bg-white rounded hover:bg-gray-50 transition-all"
                         >
                             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            Sync Data
+                            Refresh
                         </button>
                         <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 border border-gray-300 bg-white rounded hover:bg-gray-50 transition-all">
                             <Download className="h-3.5 w-3.5" />
@@ -378,15 +378,15 @@ export default function SupplierFinancialRegistry() {
                 </div>
                 {lastSync && (
                     <p className="text-[11px] text-gray-400 mb-6 font-medium">
-                        Last reconciled: {lastSync.toLocaleTimeString()}
+                        Last updated: {lastSync.toLocaleTimeString()}
                     </p>
                 )}
 
                 {/* KPI Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <KPICard label="Settled Funds" value={fmt(totalPaid)} icon={CheckCircle2} colorClass="text-emerald-600" />
-                    <KPICard label="Unsettled Balance" value={fmt(totalRemaining)} icon={Clock} colorClass="text-rose-600" />
-                    <KPICard label="Total Registry" value={fmt(totalVolume)} icon={History} colorClass="text-slate-900" />
+                    <KPICard label="Money Received" value={fmt(totalPaid)} icon={CheckCircle2} colorClass="text-emerald-600" />
+                    <KPICard label="Money Due" value={fmt(totalRemaining)} icon={Clock} colorClass="text-rose-600" />
+                    <KPICard label="Total Sales" value={fmt(totalVolume)} icon={History} colorClass="text-slate-900" />
                 </div>
 
                 {/* Search Bar (Same as Orders Page) */}
@@ -440,7 +440,7 @@ export default function SupplierFinancialRegistry() {
                     </div>
                     {filter === 'requests' && requestCount > 0 && (
                         <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                            <Clock size={12} /> {requestCount} awaiting verification
+                            <Clock size={12} /> {requestCount} waiting for approval
                         </span>
                     )}
                 </div>
@@ -448,9 +448,9 @@ export default function SupplierFinancialRegistry() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 border-b border-gray-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                <th className="px-6 py-4">Transaction</th>
-                                <th className="px-6 py-4">Source</th>
-                                <th className="px-6 py-4 text-right">Value</th>
+                                <th className="px-6 py-4">Order</th>
+                                <th className="px-6 py-4">From</th>
+                                <th className="px-6 py-4 text-right">Amount</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -460,7 +460,7 @@ export default function SupplierFinancialRegistry() {
                                 <tr>
                                     <td colSpan={5} className="py-20 text-center">
                                         <Loader2 className="h-8 w-8 animate-spin text-slate-300 mx-auto mb-2" />
-                                        <p className="text-sm text-slate-400 font-medium">Syncing financial records...</p>
+                                        <p className="text-sm text-slate-400 font-medium">Loading...</p>
                                     </td>
                                 </tr>
                             ) : filteredOrders.length === 0 ? (
@@ -469,8 +469,8 @@ export default function SupplierFinancialRegistry() {
                                         <div className="p-4 bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 text-slate-300">
                                             <FileText size={32} />
                                         </div>
-                                        <p className="text-sm text-slate-500 font-bold">No transactions found</p>
-                                        <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or search terms.</p>
+                                        <p className="text-sm text-slate-500 font-bold">Nothing here yet</p>
+                                        <p className="text-xs text-slate-400 mt-1">Try a different tab or search.</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -494,8 +494,8 @@ export default function SupplierFinancialRegistry() {
                                                         {o.is_wholesale ? <CreditCard size={16} /> : <Receipt size={16} />}
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[12px] font-medium text-slate-700">{o.customer_name || 'Retail Point of Sale'}</span>
-                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{o.is_wholesale ? 'Distributor' : 'Point of Sale'}</span>
+                                                        <span className="text-[12px] font-medium text-slate-700">{o.customer_name || 'Shop Sale'}</span>
+                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{o.is_wholesale ? 'Distributor' : 'Shop Sale'}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -515,8 +515,8 @@ export default function SupplierFinancialRegistry() {
                                                 </div>
                                                 {isWaiting && (
                                                     <div className="text-[10px] text-slate-500 font-semibold mt-1.5 tabular-nums">
-                                                        Requested {fmt(parseFloat(o.paid_amount || o.total_amount || 0))}
-                                                        <span className="text-slate-400"> · Bal {fmt(Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.paid_amount || 0)))}</span>
+                                                        Paying {fmt(parseFloat(o.paid_amount || o.total_amount || 0))}
+                                                        <span className="text-slate-400"> · Left {fmt(Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.paid_amount || 0)))}</span>
                                                     </div>
                                                 )}
                                             </td>

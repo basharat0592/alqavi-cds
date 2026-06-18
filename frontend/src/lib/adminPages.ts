@@ -16,6 +16,8 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Invoices', href: '/admin/invoices', keywords: ['billing', 'receipts', 'print', 'invoice', 'sales invoices'] },
     { name: 'Reports Center', href: '/admin/reports', keywords: ['hub', 'audits', 'graphs', 'reports'] },
     { name: 'Accounting & Finance', href: '/admin/reports/accounting', keywords: ['p&l', 'cashflow', 'tax', 'finance', 'ledger'] },
+    { name: 'Income', href: '/admin/income', keywords: ['income', 'money in', 'revenue', 'earnings', 'sales income', 'inbound'] },
+    { name: 'Expense', href: '/admin/expense', keywords: ['expense', 'money out', 'spending', 'costs', 'outbound', 'payments out'] },
     { name: 'Order List', href: '/admin/orders', keywords: ['orders', 'shipping', 'list'] },
     { name: 'Product List', href: '/admin/products', keywords: ['items', 'catalog', 'skus', 'edit', 'products'] },
     { name: 'Add Product', href: '/admin/products/add', keywords: ['create', 'new item', 'upload', 'add product'] },

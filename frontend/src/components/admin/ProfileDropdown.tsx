@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { X, User, Settings, LogOut, ChevronRight, Shield, Globe, ShoppingBag } from 'lucide-react';
+import { X, User, Settings, LogOut, ChevronRight, Shield, Globe, Users, Building2 } from 'lucide-react';
 import { getImageUrl, cn } from '@/lib/utils';
 
 /* ═══════════════════════════════════════════════
@@ -70,9 +70,13 @@ export default function ProfileDropdown({
                 <div className="px-4 py-1">
                     <p className="text-[10px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Shortcuts</p>
                     <div className="space-y-0.5">
-                        <Link href="/admin/sales" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <ShoppingBag size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Manage Sales</span>
+                        <Link href="/admin/company/customers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                            <Users size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
+                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Customer</span>
+                        </Link>
+                        <Link href="/admin/company/suppliers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                            <Building2 size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
+                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Supplier</span>
                         </Link>
                         <Link href="/" target="_blank" className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                             <Globe size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />

@@ -525,6 +525,14 @@ class SaleReturnViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 print(f"Inventory Restock Error: {str(e)}")
 
+            # Ledger: refund paid to customer → record as expense (money out).
+            try:
+                from modules.payments import services
+                instance.refresh_from_db()
+                services.record_sale_return(instance)
+            except Exception as e:
+                print(f"Ledger error (sale_return): {e}")
+
         return response
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -767,6 +775,14 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             # Cash-on-confirm with no recorded amount → treat as settled (legacy behaviour).
             purchase.payment_status = 'PAID'
         purchase.save()
+
+        # Ledger: supplier accepted the payment → record it as an expense (money out).
+        try:
+            from modules.payments import services
+            services.record_purchase_payment(purchase)
+        except Exception as e:
+            print(f"Ledger error (accept_payment): {e}")
+
         return Response({"message": "Payment verified and accepted", "status": purchase.payment_status})
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -782,6 +798,14 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         purchase.payment_confirmed = False
         purchase.payment_notes = (purchase.payment_notes or "") + f"\n[SUPPLIER REJECTION]: {reason}"
         purchase.save()
+
+        # Ledger: payment was rejected → reverse any expense entry recorded for it.
+        try:
+            from modules.payments import services
+            services.remove_purchase_payment(purchase)
+        except Exception as e:
+            print(f"Ledger error (reject_payment): {e}")
+
         return Response({"message": "Payment rejected", "payment_confirmed": False})
 
     @action(detail=False, methods=['post'], url_path='create')
@@ -1083,11 +1107,18 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
                     sp.save()
                 
                 ret.status = 'ACCEPTED'
-                
+
                 ret.save()
-                
+
+                # Ledger: refund received from supplier → record as income (money in).
+                try:
+                    from modules.payments import services
+                    services.record_purchase_return(ret)
+                except Exception as e:
+                    print(f"Ledger error (accept_return): {e}")
+
                 from modules.users.models import UserActivityLog
-                
+
                 # Check for shadow user (suppliers usually don't exist in User table)
                 log_user = request.user
                 if getattr(log_user, 'is_supplier', False):

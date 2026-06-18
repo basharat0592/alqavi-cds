@@ -8,7 +8,7 @@ import {
     Boxes, Settings, UserCheck, ShoppingBag,
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    Truck, Book, FileText, AlertTriangle, X
+    Truck, Book, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { authService } from '@/lib/auth';
@@ -86,6 +86,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'Point of Sale', href: '/admin/sale', icon: Monitor },
                 { name: 'Invoices', href: '/admin/invoices', icon: FileText },
                 { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
+                { name: 'Income', href: '/admin/income', icon: ArrowDownLeft },
+                { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight },
                 { name: 'Company Categories', href: '/admin/company/categories', icon: Tag },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
