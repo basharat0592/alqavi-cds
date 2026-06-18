@@ -60,7 +60,7 @@ class Payment(models.Model):
     reference_number = models.CharField(max_length=100, blank=True, default='')
     payer_payee = models.CharField(max_length=255, blank=True, default='')
     description = models.TextField(blank=True, default='')
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments'
     )
