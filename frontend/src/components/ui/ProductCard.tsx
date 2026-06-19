@@ -48,7 +48,7 @@ export default function ProductCard({
     onWishlist,
     layout = 'vertical',
     variant = 'default',
-}: ProductCardProps & { variant?: 'default' | 'minimal' | 'overlay' | 'luxury' }) {
+}: ProductCardProps & { variant?: 'default' | 'minimal' | 'overlay' | 'luxury' | 'showcase' }) {
     const { items, addToCart, updateQuantity } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
@@ -112,19 +112,21 @@ export default function ProductCard({
     const isMinimal = variant === 'minimal';
     const isOverlay = variant === 'overlay';
     const isLuxury = variant === 'luxury';
+    const isShowcase = variant === 'showcase';
 
     return (
         <div className={cn(
             "group relative bg-white rounded-[8px] shadow-sm hover:shadow-md transition-all duration-300 flex border border-[#D5D9D9] overflow-hidden",
             isHorizontal ? "flex-row h-[180px] md:h-[220px]" : "flex-col",
             isOverlay && "aspect-square",
-            isLuxury && "border-0 shadow-xl rounded-[16px] ring-1 ring-slate-100"
+            isLuxury && "border-0 shadow-xl rounded-[16px] ring-1 ring-slate-100",
+            isShowcase && "border-0 shadow-sm hover:shadow-lg rounded-[12px]"
         )}>
 
             {/* 1. IMAGE PORTAL - ZERO PADDING */}
             <div className={cn(
                 "relative bg-[#F0F7FF] flex items-center justify-center overflow-hidden group/img",
-                isHorizontal ? "w-1/3 aspect-square" : "aspect-[4/3] w-full",
+                isHorizontal ? "w-1/3 aspect-square" : (isShowcase ? "aspect-square w-full" : "aspect-[4/3] w-full"),
                 isOverlay && "w-full h-full aspect-square absolute inset-0"
             )}>
                 {/* Badges Stack - Top Left */}
@@ -175,6 +177,16 @@ export default function ProductCard({
                         <p className="text-[#13B0D1] font-black text-base">Rs.{price.toLocaleString()}</p>
                     </div>
                 )}
+
+                {/* Showcase hover overlay: product name (white) + type, revealed on hover */}
+                {isShowcase && (
+                    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/40 to-transparent p-3 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300">
+                        <h3 className="text-white text-sm font-black uppercase tracking-tight leading-tight line-clamp-2">{title}</h3>
+                        {(size || category) && (
+                            <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest mt-0.5">{size || category}</p>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* 2. CONTENT AREA - WITH PADDING */}
@@ -183,7 +195,8 @@ export default function ProductCard({
                     "p-2.5 md:p-3 flex flex-col flex-1",
                     isHorizontal && "justify-center"
                 )}>
-                    {/* Product Info */}
+                    {/* Product Info (hidden for showcase — name/type shown as hover overlay instead) */}
+                    {!isShowcase && (
                     <div className="mb-3">
                         <div className="flex flex-row items-start justify-between gap-2">
                             <Link href={`/customer/product/${id}`} className="flex-1">
@@ -234,6 +247,7 @@ export default function ProductCard({
                             </div>
                         )}
                     </div>
+                    )}
 
                     {/* 3. ACTION ROW */}
                     <div className={cn(

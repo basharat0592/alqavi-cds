@@ -1342,6 +1342,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             <option value="list">List View</option>
                                             <option value="minimal">Minimal Grid</option>
                                             <option value="modern_animatic">Modern Animatic</option>
+                                            <option value="showcase">Image Showcase (Hover)</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">

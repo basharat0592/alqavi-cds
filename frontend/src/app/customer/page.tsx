@@ -19,6 +19,7 @@ import { getImageUrl, cn } from "@/lib/utils";
 import { productService, categoryService } from "@/lib/api";
 import cmsService from "@/services/cms.service";
 import ProductCard from "@/components/ui/ProductCard";
+import ShowcaseCarousel from "@/components/ui/ShowcaseCarousel";
 import Hero from "@/components/ui/Hero";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from 'react-hot-toast';
@@ -678,6 +679,25 @@ export default function Home() {
                                                 <p className="text-sm text-slate-500 mt-2">Could not connect to the product database.</p>
                                             </div>
                                         ) : (content.product_ids && content.product_ids.length > 0) || filtered.length > 0 ? (
+                                            content.layout_type === 'showcase' ? (
+                                                <ShowcaseCarousel products={(() => {
+                                                    const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
+                                                        ? allProducts
+                                                        : allProducts.filter(p => {
+                                                            const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
+                                                            return searchIds.some((sid: string | number) => String(sid) === String(p.id));
+                                                        });
+                                                    const categoryFiltered = activeCategory === 'All'
+                                                        ? baseList
+                                                        : baseList.filter(p => {
+                                                            const target = activeCategory.toLowerCase().trim();
+                                                            const name1 = (p.category_name || '').toLowerCase().trim();
+                                                            const name2 = (p.category?.name || '').toLowerCase().trim();
+                                                            return name1 === target || name2 === target;
+                                                        });
+                                                    return categoryFiltered.slice(0, maxItems);
+                                                })()} />
+                                            ) : (
                                             <CarouselContainer layoutType={content.layout_type || 'grid'} isFullCollection={isFullCollection}>
                                                 {(() => {
                                                     const baseList = (!content.title || content.title === 'Full Collection' || !content.product_ids || content.product_ids.length === 0)
@@ -728,12 +748,13 @@ export default function Home() {
                                                                 size={p.size || p.type}
                                                                 onAddToCart={(qty) => handleAdd(p, qty)}
                                                                 layout={content.layout_type === 'list' ? 'horizontal' : (isBillboardFirst || (content.layout_type === 'highlight' && i === 0) ? 'vertical' : 'vertical')}
-                                                                variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : 'default')}
+                                                                variant={content.layout_type === 'minimal' ? 'minimal' : (content.layout_type === 'luxury' ? 'luxury' : (content.layout_type === 'showcase' ? 'showcase' : 'default'))}
                                                             />
                                                         </div>
                                                     );
                                                 })}
                                             </CarouselContainer>
+                                            )
                                         ) : (
                                             <div className="py-20 md:py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100">
                                                 <Package size={48} className="mx-auto text-slate-200 mb-4" />
@@ -1981,7 +2002,7 @@ function CarouselContainer({ children, layoutType, isFullCollection }: { childre
                     layoutType === 'luxury' && "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-8",
                     layoutType === 'masonry' && "md:block md:columns-4 lg:columns-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-4 md:space-y-4",
                     layoutType === 'highlight' && "md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6",
-                    layoutType === 'grid' && (isFullCollection
+                    (layoutType === 'grid' || layoutType === 'showcase') && (isFullCollection
                         ? "md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6"
                         : "md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:gap-6")
                 )}
