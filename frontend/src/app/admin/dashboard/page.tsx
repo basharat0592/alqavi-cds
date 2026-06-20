@@ -137,6 +137,20 @@ export default function AdminDashboard() {
             keywords: ['sales list', 'transactions', 'revenue ledger', 'sales history']
         },
         {
+            name: 'Sale Returns',
+            desc: 'Customer returns & refunds',
+            href: '/admin/sale-returns',
+            icon: RotateCcw,
+            theme: {
+                border: 'hover:border-rose-500',
+                iconBg: 'bg-rose-50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
+                leftBar: 'bg-rose-600',
+                chevron: 'text-rose-400 group-hover:text-rose-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
+            },
+            keywords: ['returns', 'refunds', 'customer returns', 'sale returns']
+        },
+        {
             name: 'Purchase History',
             desc: 'Past supplier orders',
             href: '/admin/purchases',
@@ -151,6 +165,20 @@ export default function AdminDashboard() {
             keywords: ['expenses', 'vendor orders', 'invoices', 'purchase history']
         },
         {
+            name: 'Purchase Returns',
+            desc: 'Return goods to suppliers',
+            href: '/admin/purchases/returns',
+            icon: RefreshCcw,
+            theme: {
+                border: 'hover:border-amber-500',
+                iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
+                leftBar: 'bg-amber-600',
+                chevron: 'text-amber-400 group-hover:text-amber-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
+            },
+            keywords: ['refunds', 'damaged', 'shipback', 'purchase returns', 'supplier returns']
+        },
+        {
             name: 'Order List',
             desc: 'Manage online orders',
             href: '/admin/orders',
@@ -163,6 +191,34 @@ export default function AdminDashboard() {
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
             },
             keywords: ['orders', 'shipping', 'list']
+        },
+        {
+            name: 'Order Tracking',
+            desc: 'Delivery & dispatch status',
+            href: '/admin/tracking',
+            icon: Truck,
+            theme: {
+                border: 'hover:border-sky-500',
+                iconBg: 'bg-sky-50 border-sky-100 text-sky-600 group-hover:bg-sky-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(2,132,199,0.2)]',
+                leftBar: 'bg-sky-600',
+                chevron: 'text-sky-400 group-hover:text-sky-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(2,132,199,0.06)]'
+            },
+            keywords: ['delivery', 'courier', 'dispatch', 'order tracking']
+        },
+        {
+            name: 'Internal Users',
+            desc: 'Staff logins & accounts',
+            href: '/admin/users',
+            icon: User,
+            theme: {
+                border: 'hover:border-violet-500',
+                iconBg: 'bg-violet-50 border-violet-100 text-violet-600 group-hover:bg-violet-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)]',
+                leftBar: 'bg-violet-600',
+                chevron: 'text-violet-400 group-hover:text-violet-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(139,92,246,0.06)]'
+            },
+            keywords: ['staff', 'logins', 'accounts', 'internal users']
         },
         {
             name: 'Product List',
