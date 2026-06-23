@@ -61,46 +61,52 @@ SKIP_EXT = {
 if not INCLUDE_MEDIA:
     SKIP_DIRS.add('media')
 
-def upload_dir(sftp, ssh, local_path, remote_path):
-    try:
-        sftp.stat(remote_path)
-    except FileNotFoundError:
-        ssh.exec_command(f'mkdir -p {remote_path}')
-        import time; time.sleep(0.2)
-        try:
-            sftp.stat(remote_path)
-        except:
-            sftp.mkdir(remote_path)
-    for item in sorted(os.listdir(local_path)):
-        if item in SKIP_DIRS or item in SKIP_FILES:
-            continue
-        local_item = os.path.join(local_path, item)
-        remote_item = f'{remote_path}/{item}'
-        if os.path.isdir(local_item):
-            upload_dir(sftp, ssh, local_item, remote_item)
-        else:
-            ext = os.path.splitext(item)[1].lower()
-            if ext in SKIP_EXT:
+import io, tarfile
+
+def included(path):
+    rel = os.path.relpath(path, LOCAL_DIR).replace('\\', '/')
+    if any(p in SKIP_DIRS for p in rel.split('/')):
+        return False
+    base = os.path.basename(path)
+    if base in SKIP_FILES:
+        return False
+    if os.path.splitext(base)[1].lower() in SKIP_EXT:
+        return False
+    return True
+
+# Pack the project into an in-memory tar.gz (SFTP is broken on this server, so
+# we stream the archive over the SSH exec channel and extract it remotely).
+buf = io.BytesIO(); count = 0
+with tarfile.open(fileobj=buf, mode='w:gz') as tar:
+    for root, dirs, files in os.walk(LOCAL_DIR):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        for f in files:
+            full = os.path.join(root, f)
+            if not included(full):
                 continue
-            size = os.path.getsize(local_item)
-            if size > 50*1024*1024:
+            if os.path.getsize(full) > 50*1024*1024:
                 continue
-            sys.stdout.buffer.write(f'  -> {remote_item}\n'.encode('utf-8','replace'))
-            sys.stdout.buffer.flush()
-            sftp.put(local_item, remote_item)
+            arc = os.path.relpath(full, LOCAL_DIR).replace('\\', '/')
+            tar.add(full, arcname=arc); count += 1
+    env_bytes = open(os.path.join(LOCAL_DIR, '.env.production'), 'rb').read()
+    ti = tarfile.TarInfo('.env'); ti.size = len(env_bytes)
+    tar.addfile(ti, io.BytesIO(env_bytes))
+data = buf.getvalue()
+sys.stdout.buffer.write(f'  packed {count} files, {len(data)/1024/1024:.1f} MB\n'.encode())
+sys.stdout.buffer.flush()
 
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(HOST, username=USER, password=PASSWORD, timeout=30)
-sftp = ssh.open_sftp()
-
-env_content = open(os.path.join(LOCAL_DIR, '.env.production')).read()
-with sftp.open(f'{REMOTE_DIR}/.env', 'w') as f:
-    f.write(env_content)
-
-upload_dir(sftp, ssh, LOCAL_DIR, REMOTE_DIR)
-sftp.close()
+stdin, stdout, stderr = ssh.exec_command(f'mkdir -p {REMOTE_DIR} && tar xzf - -C {REMOTE_DIR} && echo TAR_OK', timeout=600)
+stdin.write(data); stdin.flush(); stdin.channel.shutdown_write()
+out = stdout.read().decode('utf-8','replace'); err = stderr.read().decode('utf-8','replace')
+sys.stdout.buffer.write(out.encode('utf-8','replace'))
+if err.strip(): sys.stdout.buffer.write(('STDERR: '+err+'\n').encode('utf-8','replace'))
+sys.stdout.buffer.flush()
 ssh.close()
+if 'TAR_OK' not in out:
+    sys.exit(1)
 print('Upload complete.')
 "@
 
@@ -132,33 +138,72 @@ $buildCmd += " && docker compose --env-file .env up -d && docker compose --env-f
 
 python -c @"
 import paramiko, sys, time
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect('$SERVER', username='$USER', password='$PASSWORD', timeout=30)
 
-cmd = '$buildCmd'
-print(f'> {cmd}')
-stdin, stdout, stderr = ssh.exec_command(cmd, timeout=600)
-out = stdout.read().decode('utf-8', errors='replace')
-err = stderr.read().decode('utf-8', errors='replace')
-sys.stdout.buffer.write(out.encode('utf-8', errors='replace'))
-sys.stdout.buffer.write(err.encode('utf-8', errors='replace'))
-sys.stdout.buffer.flush()
+def conn():
+    last = None
+    for _ in range(6):
+        try:
+            s = paramiko.SSHClient(); s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            s.connect('$SERVER', username='$USER', password='$PASSWORD', timeout=30)
+            return s
+        except Exception as ex:
+            last = ex; time.sleep(5)
+    raise last
 
-time.sleep(10)
+LOG = '$REMOTE_DIR/deploy.log'
+# Run build + restart + migrate detached on the server, logging to a file, with a
+# DEPLOY_OK/DEPLOY_FAIL marker at the end. We then poll the log over short-lived
+# connections, so no single SSH read has to survive the whole (long) build.
+_be = 'docker compose --env-file .env exec -T backend python manage.py'
+chain = ('$buildCmd'
+         + ' && ' + _be + ' migrate --noinput'
+         + ' && ' + _be + ' seed_roles'
+         + ' && ' + _be + ' seed_permissions'
+         + ' && ' + _be + ' seed_areas')
+script = '#!/bin/bash\n( ' + chain + ' ) && echo DEPLOY_OK || echo DEPLOY_FAIL\n'
+SH = '$REMOTE_DIR/_deploy_run.sh'
+# Retry the launch until it punches through (server resets new sessions intermittently).
+launched = False
+for attempt in range(10):
+    try:
+        ssh = conn()
+        # Write the run-script via stdin to avoid all shell-quoting issues.
+        i, o, e = ssh.exec_command('cat > ' + SH, timeout=30)
+        i.write(script); i.flush(); i.channel.shutdown_write(); o.read(); e.read()
+        ssh.exec_command('chmod +x ' + SH, timeout=15)[1].read()
+        # Launch detached so the build survives our disconnect; output goes to LOG.
+        ssh.exec_command('rm -f ' + LOG + '; nohup ' + SH + ' > ' + LOG + ' 2>&1 < /dev/null &', timeout=15)[1].read()
+        ssh.close()
+        launched = True; print('LAUNCHED'); break
+    except Exception as ex:
+        print('  launch attempt ' + str(attempt + 1) + ' reset; retrying...'); time.sleep(6)
+if not launched:
+    print('Could not launch build (server kept resetting connections).'); sys.exit(1)
+time.sleep(2)
 
-print('\nRunning migrations...')
-stdin, stdout, stderr = ssh.exec_command('cd $REMOTE_DIR && docker compose exec -T backend python manage.py migrate --noinput', timeout=120)
-sys.stdout.buffer.write(stdout.read())
-sys.stdout.buffer.write(stderr.read())
-sys.stdout.buffer.flush()
+print('Building on server (detached); polling log every 15s...')
+seen = 0; status = None; deadline = time.time() + 1800
+while time.time() < deadline:
+    time.sleep(15)
+    try:
+        s = conn()
+        i, o, e = s.exec_command(f'cat {LOG} 2>/dev/null', timeout=30)
+        data = o.read().decode('utf-8', 'replace'); s.close()
+    except Exception as ex:
+        print('  (poll retry)'); continue
+    if len(data) > seen:
+        sys.stdout.buffer.write(data[seen:].encode('utf-8', 'replace')); sys.stdout.buffer.flush()
+        seen = len(data)
+    if 'DEPLOY_OK' in data: status = 'OK'; break
+    if 'DEPLOY_FAIL' in data: status = 'FAIL'; break
 
-print('\nContainer status:')
-stdin, stdout, stderr = ssh.exec_command('cd $REMOTE_DIR && docker compose ps')
-sys.stdout.buffer.write(stdout.read())
-sys.stdout.buffer.flush()
-
-ssh.close()
+print(f'\n--- build status: {status} ---')
+try:
+    s = conn(); i, o, e = s.exec_command('cd $REMOTE_DIR && docker compose ps', timeout=60)
+    sys.stdout.buffer.write(o.read()); sys.stdout.buffer.flush(); s.close()
+except Exception: pass
+if status != 'OK':
+    sys.exit(1)
 "@
 
 # Step 3: Health check

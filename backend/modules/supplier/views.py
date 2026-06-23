@@ -6,6 +6,7 @@ from django.db import transaction
 from .models import Supplier
 from .serializers import SupplierSerializer
 from modules.users.models import Role
+from core.permissions import HasModulePermission
 
 User = get_user_model()
 
@@ -13,7 +14,8 @@ class SupplierViewSet(viewsets.ModelViewSet):
     """ViewSet for Supplier CRUD operations"""
     queryset = Supplier.objects.all().order_by('-created_at')
     serializer_class = SupplierSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny, HasModulePermission]
+    perm_module = 'suppliers'
 
     def get_permissions(self):
         if self.action == 'create':

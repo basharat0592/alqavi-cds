@@ -10,10 +10,10 @@ import {
     Package, TrendingUp, AlertCircle
 } from 'lucide-react';
 import { orderService, purchaseService, salesService } from '@/lib/api';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime, exportToCSV } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, type TableSelection } from '@/components/admin/ui';
 
 type BadgeTone = 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue';
 
@@ -47,7 +47,7 @@ const StatCard = ({ label, value, icon: Icon, color }: any) => (
 );
 
 /* ── INVOICE TABLE ── */
-const InvoiceTable = ({ rows, onView, onPrint, onDelete, type }: { rows: any[]; onView: (id: any) => void; onPrint: (id: any) => void; onDelete: (inv: any) => void; type: string }) => {
+const InvoiceTable = ({ rows, onView, onPrint, onDelete, type, sel }: { rows: any[]; onView: (id: any) => void; onPrint: (id: any) => void; onDelete: (inv: any) => void; type: string; sel: TableSelection }) => {
     if (rows.length === 0) return (
         <div className="py-16 text-center text-[13px] text-slate-400">No {type} invoices found.</div>
     );
@@ -55,6 +55,7 @@ const InvoiceTable = ({ rows, onView, onPrint, onDelete, type }: { rows: any[]; 
         <table className="w-full text-left text-[13px]">
             <thead>
                 <tr className="bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <SelectAllTh sel={sel} />
                     <th className="px-5 py-3">Invoice #</th>
                     <th className="px-5 py-3">{type === 'purchase' ? 'Supplier' : 'Customer'}</th>
                     <th className="px-5 py-3">Date</th>
@@ -66,6 +67,7 @@ const InvoiceTable = ({ rows, onView, onPrint, onDelete, type }: { rows: any[]; 
             <tbody>
                 {rows.map((inv) => (
                     <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group">
+                        <RowCheckboxTd sel={sel} id={inv.id} />
                         <td className="px-5 py-3.5">
                             <span
                                 className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
@@ -193,6 +195,20 @@ export default function InvoicesPage() {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+    const sel = useTableSelection(paginated);
+
+    const bulkDelete = async (ids: string[]) => {
+        const deleteOne = (id: any) => {
+            if (activeTab === 'sale') return orderService.delete(id);
+            if (activeTab === 'purchase') return purchaseService.delete(id);
+            if (activeTab === 'sale-return') return salesService.deleteReturn(id);
+            return purchaseService.deleteReturn(id);
+        };
+        await Promise.allSettled(ids.map((id) => deleteOne(id)));
+        toast.success(`${ids.length} invoice(s) deleted`);
+        loadAll();
+    };
+
     const totalValue = saleInvoices.reduce((s, i) => s + Number(i.total_amount || 0), 0)
         + purchaseInvoices.reduce((s, i) => s + Number(i.total_amount || i.total || 0), 0);
 
@@ -281,6 +297,7 @@ export default function InvoicesPage() {
                             </div>
                         ) : (
                             <InvoiceTable
+                                sel={sel}
                                 rows={paginated}
                                 type={activeTab.includes('purchase') ? 'purchase' : 'sale'}
                                 onView={(id) => {
@@ -328,6 +345,23 @@ export default function InvoicesPage() {
                         </div>
                     )}
                 </Card>
+
+                <BulkBar
+                    sel={sel}
+                    entity="invoices"
+                    onDelete={bulkDelete}
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((inv: any) => ({
+                            invoice: inv.order_number || inv.invoice_number || inv.id,
+                            party: inv.customer_name || inv.supplier_name || inv.guest_name || 'Walk-in',
+                            payment_method: inv.payment_method || '',
+                            date: formatDateTime(inv.created_at || inv.date),
+                            amount: inv.total_amount || inv.total || 0,
+                            status: inv.status || '',
+                        })),
+                        `${activeTab}_invoices.csv`,
+                    )}
+                />
 
                 <Modal
                     open={!!deleteTarget}

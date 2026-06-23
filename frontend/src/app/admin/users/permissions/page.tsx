@@ -5,9 +5,10 @@ import {
     Search, RefreshCw, Key, ShieldCheck
 } from 'lucide-react';
 import { permissionService } from '@/lib/api';
+import { exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function PermissionsPage() {
     const [permissions, setPermissions] = useState<any[]>([]);
@@ -29,13 +30,21 @@ export default function PermissionsPage() {
 
     useEffect(() => { loadData(); }, []);
 
-    if (loading && permissions.length === 0) return <PageLoader />;
-
-    const filtered = permissions.filter(p => 
-        p.name?.toLowerCase().includes(search.toLowerCase()) || 
+    const filtered = permissions.filter(p =>
+        p.name?.toLowerCase().includes(search.toLowerCase()) ||
         p.code?.toLowerCase().includes(search.toLowerCase()) ||
         p.category?.toLowerCase().includes(search.toLowerCase())
     );
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: (string | number)[]) => {
+        await Promise.allSettled(ids.map(id => permissionService.delete(id)));
+        setPermissions(prev => prev.filter(p => !ids.map(String).includes(String(p.id))));
+        toast.success(`${ids.length} permission(s) deleted`);
+    };
+
+    if (loading && permissions.length === 0) return <PageLoader />;
 
     return (
         <div className="text-left">
@@ -77,6 +86,7 @@ export default function PermissionsPage() {
                     <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Access Segment</th>
                                 <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">System Code</th>
                                 <th className="hidden sm:table-cell px-6 py-3 whitespace-nowrap">Classification</th>
@@ -86,14 +96,14 @@ export default function PermissionsPage() {
                             {loading && filtered.length === 0 ? (
                                 Array(6).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse border-b border-slate-100">
-                                        <td colSpan={3} className="px-2.5 sm:px-6 py-6">
+                                        <td colSpan={4} className="px-2.5 sm:px-6 py-6">
                                             <div className="h-4 bg-slate-100 rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={3} className="px-10 py-24 text-center text-slate-600">
+                                    <td colSpan={4} className="px-10 py-24 text-center text-slate-600">
                                         <Key className="h-10 w-10 text-slate-200 mx-auto mb-3" />
                                         <p className="text-[13px]">No protocol entries discovered.</p>
                                     </td>
@@ -101,6 +111,7 @@ export default function PermissionsPage() {
                             ) : (
                                 filtered.map(p => (
                                     <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <RowCheckboxTd sel={sel} id={p.id} />
                                         <td className="px-2.5 sm:px-6 py-3.5">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-8 w-8 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-black text-[10px] text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
@@ -132,6 +143,21 @@ export default function PermissionsPage() {
                     </table>
                 </div>
             </Card>
+
+            <BulkBar
+                sel={sel}
+                entity="permissions"
+                onDelete={bulkDelete}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        name: p.name || '',
+                        code: p.code || '',
+                        category: p.category || '',
+                        description: p.description || '',
+                    })),
+                    'permissions.csv',
+                )}
+            />
         </div>
     );
 }

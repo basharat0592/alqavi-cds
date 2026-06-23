@@ -5,12 +5,14 @@ from django.db.models import Sum, Q
 
 from .models import Payment, PaymentCategory
 from .serializers import PaymentSerializer, PaymentCategorySerializer
+from core.permissions import HasModulePermission
 
 
 class PaymentCategoryViewSet(viewsets.ModelViewSet):
     queryset = PaymentCategory.objects.all()
     serializer_class = PaymentCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    perm_module = 'payments'
 
     def paginate_queryset(self, queryset):
         return None  # categories are a small fixed list — never paginate
@@ -18,7 +20,8 @@ class PaymentCategoryViewSet(viewsets.ModelViewSet):
 
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    perm_module = 'payments'
 
     def get_queryset(self):
         qs = Payment.objects.select_related('category', 'user').all()

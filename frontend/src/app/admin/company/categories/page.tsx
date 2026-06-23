@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { companyCategoryService, CompanyCategory } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { exportToCSV } from '@/lib/utils';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - COMPANY CATEGORIES
@@ -218,6 +219,20 @@ export default function CompanyCategoriesPage() {
         (c.code || '').toLowerCase().includes(search.toLowerCase())
     );
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: (string | number)[]) => {
+        await Promise.allSettled(ids.map(id => companyCategoryService.delete(id)));
+        setCategories(prev => prev.filter(c => !ids.map(String).includes(String(c.id))));
+        toast.success(`${ids.length} categor${ids.length === 1 ? 'y' : 'ies'} deleted`);
+    };
+
+    const bulkStatus = async (ids: (string | number)[], is_active: boolean) => {
+        await Promise.allSettled(ids.map(id => companyCategoryService.update(id, { is_active })));
+        toast.success(`Marked ${ids.length} ${is_active ? 'active' : 'inactive'}`);
+        await load();
+    };
+
     if (view === 'form') {
         return <CategoryForm editCat={editCat} onCancel={() => { setView('list'); setEditCat(null); }} onSaved={handleSaved} />;
     }
@@ -269,6 +284,7 @@ export default function CompanyCategoriesPage() {
                         <table className="w-full text-left border-collapse text-[13px]">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Category Name</th>
                                     <th className="hidden sm:table-cell px-6 py-3 whitespace-nowrap">Protocol Code</th>
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Provenance</th>
@@ -280,14 +296,14 @@ export default function CompanyCategoriesPage() {
                                 {loading && filtered.length === 0 ? (
                                     Array(6).fill(0).map((_, i) => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={5} className="px-2.5 sm:px-6 py-4">
+                                            <td colSpan={6} className="px-2.5 sm:px-6 py-4">
                                                 <div className="h-4 bg-slate-100 rounded w-full" />
                                             </td>
                                         </tr>
                                     ))
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-2.5 sm:px-6 py-20 text-center text-slate-600">
+                                        <td colSpan={6} className="px-2.5 sm:px-6 py-20 text-center text-slate-600">
                                             <Tag className="h-10 w-10 text-slate-200 mx-auto mb-3" />
                                             <p className="text-[13px]">No categories identified.</p>
                                         </td>
@@ -295,6 +311,7 @@ export default function CompanyCategoriesPage() {
                                 ) : (
                                     filtered.map((cat) => (
                                         <tr key={cat.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <RowCheckboxTd sel={sel} id={cat.id} />
                                             <td className="px-2.5 sm:px-6 py-3.5">
                                                 <div onClick={() => handleEdit(cat)} className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer whitespace-nowrap">{cat.name}</div>
                                                 <div className="block sm:hidden text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Code: {cat.code || '--'}</div>
@@ -331,6 +348,27 @@ export default function CompanyCategoriesPage() {
                     </div>
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="categories"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkStatus(ids, true) },
+                    { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, false) },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((c: any) => ({
+                        name: c.name,
+                        code: c.code || '',
+                        type: c.type || '',
+                        country: c.country || '',
+                        status: c.is_active ? 'active' : 'inactive',
+                        description: c.description || '',
+                    })),
+                    'company-categories.csv',
+                )}
+            />
 
             {/* Delete Modal */}
             <Modal

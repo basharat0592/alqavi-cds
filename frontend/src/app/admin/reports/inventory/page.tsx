@@ -7,10 +7,11 @@ import {
     Info, DollarSign,
 } from 'lucide-react';
 import { productService } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, exportToCSV } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
 export default function StockReportsPage() {
     const [loading, setLoading] = useState(true);
@@ -42,13 +43,19 @@ export default function StockReportsPage() {
 
     const totalValuation = useMemo(() => products.reduce((s, p) => s + (Number(p.price || 0) * Number(p.stock || 0)), 0), [products]);
 
+    const sel = useTableSelection(filtered, (p) => p.id ?? String(filtered.indexOf(p)));
+
     if (loading && products.length === 0) return <PageLoader />;
 
     return (
         <div className="pb-20">
             <div className="max-w-[1440px] mx-auto text-left">
 
-                <div className="no-print">
+                <div className="hidden print:block mb-4">
+                    <InvoiceHeader docTitle="Inventory Report" />
+                </div>
+
+                <div className="no-print print:hidden">
                     <PageHeader
                         title="Inventory Reports"
                         breadcrumbs={[
@@ -102,7 +109,7 @@ export default function StockReportsPage() {
                 </div>
 
                 {/* Control Matrix */}
-                <Card className="p-5 mb-6 flex flex-wrap items-center gap-5 no-print animate-in fade-in slide-in-from-top-2 duration-500">
+                <Card className="p-5 mb-6 flex flex-wrap items-center gap-5 no-print print:hidden animate-in fade-in slide-in-from-top-2 duration-500">
                     <div className="relative flex-1 min-w-[300px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
@@ -130,6 +137,7 @@ export default function StockReportsPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3">Asset Details</th>
                                 <th className="px-6 py-3 text-center">Unit Price</th>
                                 <th className="px-6 py-3 text-center">Warehouse Level</th>
@@ -138,12 +146,13 @@ export default function StockReportsPage() {
                         </thead>
                         <tbody>
                             {filtered.length === 0 ? (
-                                <tr><td colSpan={4} className="py-24 text-center text-slate-400 italic">No inventory matches found.</td></tr>
+                                <tr><td colSpan={5} className="py-24 text-center text-slate-400 italic">No inventory matches found.</td></tr>
                             ) : (
                                 filtered.map(p => {
                                     const stock = parseInt(p.stock || p.stock_quantity || 0);
                                     return (
                                         <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <RowCheckboxTd sel={sel} id={p.id} />
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-slate-500 text-[14px] border border-slate-200">
@@ -181,16 +190,40 @@ export default function StockReportsPage() {
                     </table>
                 </Card>
 
+                <div className="print:hidden">
+                    <BulkBar
+                        sel={sel}
+                        entity="items"
+                        onExport={() => exportToCSV(
+                            sel.selectedItems.map((p: any) => {
+                                const stock = parseInt(p.stock || p.stock_quantity || 0);
+                                return {
+                                    sku: String(p.id).slice(0, 8),
+                                    name: p.name,
+                                    unit_price: p.price ?? 0,
+                                    stock_units: stock,
+                                    status: stock <= 0 ? 'Out of Stock' : stock < 10 ? 'Low Stock' : 'In Stock',
+                                };
+                            }),
+                            'inventory.csv',
+                        )}
+                    />
+                </div>
+
                 {/* Summary Note */}
-                <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000 no-print">
+                <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000 no-print print:hidden">
                     <Info className="text-indigo-600 shrink-0 mt-0.5" size={18} />
                     <div>
                         <p className="text-[13px] font-bold text-slate-900">Inventory Audit Note</p>
                         <p className="text-[12px] text-slate-600 leading-relaxed">Levels are synced with active POS and Warehouse logs. 'Critical Purge' items should be prioritized for reordering to maintain operational continuity.</p>
                     </div>
                 </div>
+
+                <div className="hidden print:block">
+                    <InvoiceFooter pinned={false} />
+                </div>
+                <style jsx global>{invoiceStyles}</style>
             </div>
         </div>
     );
 }
-

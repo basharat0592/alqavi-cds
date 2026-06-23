@@ -4,14 +4,10 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Printer, Share2, Check, ChevronRight, Hash, Calendar, Phone, Mail } from 'lucide-react';
+import { Printer, Share2, Check, ChevronRight } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
-import Logo from '@/components/ui/Logo';
 import toast from 'react-hot-toast';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - PUBLIC INVOICE (Complete Synchronization)
-   ───────────────────────────────────────────────────────────────────────────── */
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
@@ -61,13 +57,13 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
 
     const c = order.customer as any;
     const customerName = (order as any).customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || 'Guest');
-    const customerCell = c?.phone || c?.phone_number || 'N/A';
-    const items = order.items || [];
+    const customerCell = c?.phone || c?.phone_number || '';
+    const items: any[] = order.items || [];
     const totalAmount = parseFloat(order.total_amount || '0');
 
     return (
-        <div className="min-h-screen bg-white pb-20 font-sans text-[#111] selection:bg-amber-100 text-left">
-            
+        <div className="min-h-screen bg-white pb-20 font-sans text-slate-900 selection:bg-amber-100 text-left">
+
             {/* Integrated Action Bar (Transparent Style) */}
             <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
                 <div className="flex items-center justify-between py-4 border-b border-[#eee]">
@@ -94,146 +90,78 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Paper Container */}
-            <div className="max-w-[850px] mx-auto bg-white p-12 print:border-none print:shadow-none print:p-0 overflow-hidden">
-                
-                {/* 1. Header Section: Corporate Identity */}
-                <div className="flex justify-between items-end mb-16 pb-8 border-b-2 border-black">
-                    <div className="w-1/3">
-                        <Logo size="lg" className="!items-start" />
-                    </div>
+            <div className="max-w-[850px] mx-auto bg-white p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:p-0">
 
-                    <div className="w-1/3 text-center">
-                        <h1 className="text-[38px] font-black leading-tight text-black urdu-text">
-                            القوی ٹریڈرز
-                        </h1>
-                        <p className="text-[12px] font-black text-[#565959] uppercase tracking-[0.2em] urdu-text">
-                            Cosmetics Dealer | Gilgit-Baltistan
-                        </p>
-                    </div>
+                <InvoiceHeader
+                    docTitle="Invoice"
+                    metaLines={['Gilgit-Baltistan Distribution']}
+                    refLabel="Doc No"
+                    refValue={order.order_number || String(order.id).split('-')[0]}
+                    date={formatDate(order.created_at)}
+                />
 
-                    <div className="w-1/3 text-right">
-                        <h2 className="text-[28px] font-serif italic text-black leading-none mb-2">Invoice</h2>
-                        <p className="text-[14px] font-black text-black">Doc No: {order.order_number}</p>
-                        <p className="text-[12px] text-gray-500 font-bold">{formatDate(order.created_at)}</p>
-                    </div>
-                </div>
-
-                {/* 2. Information Grid */}
-                <div className="grid grid-cols-4 gap-8 mb-16">
+                {/* Customer & Metadata Grid — compact */}
+                <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
                     <div className="col-span-2">
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Billing Details</h3>
-                        <p className="text-[18px] font-black text-black leading-none">{customerName}</p>
-                        <p className="text-[13px] font-medium text-black mt-2">{customerCell}</p>
-                        <p className="text-[11px] text-gray-400 mt-2 w-64 leading-relaxed italic">{order.shipping_address || 'Gilgit-Baltistan Distribution Network'}</p>
-                    </div>
-                    <div>
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Financials</h3>
-                        <div className="space-y-2">
-                            <p className="text-[11px] text-[#565959] font-bold">Payment Method</p>
-                            <p className="text-[13px] font-black uppercase text-black">{order.payment_method || 'Cash on Delivery'}</p>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bill To</p>
+                        <p className="text-[15px] font-black text-slate-900 leading-tight">{customerName}</p>
+                        {customerCell && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{customerCell}</p>}
                     </div>
                     <div className="text-right">
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Verification</h3>
-                        <div className="space-y-2">
-                            <p className="text-[11px] text-[#565959] font-bold">Document Status</p>
-                            <div className="inline-block px-3 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-full">
-                                Official Valid Copy
-                            </div>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment</p>
+                        <p className="text-[12px] font-black uppercase text-slate-900">{order.payment_method || 'Cash on Delivery'}</p>
                     </div>
                 </div>
 
-                {/* 3. Items Table */}
-                <div className="mb-12">
-                    <table className="w-full text-left border-collapse">
+                {/* Items Table */}
+                <div className="mb-6">
+                    <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
                         <thead>
-                            <tr className="border-b-2 border-black text-[12px] font-black uppercase tracking-wider text-black bg-gray-50/50">
-                                <th className="py-4 px-2 w-12 text-center opacity-40">#</th>
-                                <th className="py-4 px-3">Description of Goods</th>
-                                <th className="py-4 px-3 text-center w-28">Quantity</th>
-                                <th className="py-4 px-3 text-right w-32">Unit Price</th>
-                                <th className="py-4 px-3 text-right w-32">Total Amount</th>
+                            <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                                <th className="py-1.5 px-2 w-12 text-center">#</th>
+                                <th className="py-1.5 px-3">Description of Goods</th>
+                                <th className="py-1.5 px-3 text-center w-28">Quantity</th>
+                                <th className="py-1.5 px-3 text-right w-32">Unit Price</th>
+                                <th className="py-1.5 px-3 text-right w-32">Total</th>
                             </tr>
                         </thead>
-                        <tbody className="text-[14px] divide-y divide-[#eee]">
+                        <tbody className="text-[13px]">
                             {items.map((item: any, i: number) => {
                                 const price = parseFloat(item.price || item.unit_price || 0);
                                 const qty = item.quantity || 1;
                                 const amt = price * qty;
                                 return (
-                                    <tr key={i}>
-                                        <td className="py-4 px-1 text-center text-gray-400">{i + 1}</td>
-                                        <td className="py-4 px-2 font-bold text-[#111]">{(item.product_name || item.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</td>
-                                        <td className="py-4 px-2 text-center">{qty}</td>
-                                        <td className="py-4 px-2 text-right text-gray-600">{formatCurrency(price)}</td>
-                                        <td className="py-4 px-1 text-right font-black text-[#111]">{formatCurrency(amt)}</td>
+                                    <tr key={i} className="hover:bg-slate-50">
+                                        <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
+                                        <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">{(item.product_name || item.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</td>
+                                        <td className="py-1.5 px-3 text-center tabular-nums">{qty}</td>
+                                        <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(amt)}</td>
                                     </tr>
                                 );
                             })}
-                            <tr className="border-t-2 border-black font-black text-[#111] bg-gray-50/30">
-                                <td colSpan={4} className="py-4 px-3 text-right text-[14px] uppercase tracking-wider">Grand Total Amount</td>
-                                <td className="py-4 px-3 text-right text-[18px] text-[#B12704]">{formatCurrency(totalAmount)}</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                {/* 4. Note Area */}
-                <div className="mt-8">
-                    <p className="text-[11px] leading-[2.1] text-justify text-[#444] urdu-text" dir="rtl">
-                        <span className="font-black border-b-2 ml-3 text-[14px]">نوٹ:-</span>
-                         تمام دکاندار حضرات اس بات کو نوٹ کر لیں جتنی بھی چیزیں القوی ٹریڈرز گلگت سے خریدی ہیں انکو ایکسپائری سے تین مہینے پہلے تبدیل کرنا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کا ذمہ وار نہیں ہوگا۔ نیز امپورٹڈ چیزیں سمیت پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں سامان اور بل میں کمی بیشی ہونے کی صورت میں فورا رابطہ کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کا ذمہ دار نہیں ہوگا۔ آپ کے تعاون کا شکریہ
-                    </p>
-                </div>
-
-                {/* 5. Formal Signatures Area */}
-                <div className="mt-16 pt-12 border-t-2 border-dashed border-black">
-                    <div className="flex justify-between items-start gap-32">
-                        <div className="flex-1 space-y-3">
-                            <p className="text-[12px] font-bold text-gray-500">Authorized Distribution Signature</p>
-                            <div className="w-full border-b border-black pt-8"></div>
-                            <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Manager Signature</p>
-                        </div>
-                        <div className="flex-1 space-y-3 text-right">
-                            <p className="text-[12px] font-bold text-gray-500">Receiver's Confirmation Stamp</p>
-                            <div className="w-full border-b border-black pt-8"></div>
-                            <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Authorized Dealer</p>
+                {/* Summary: notes (left) + totals (right) */}
+                <div className="flex justify-between items-start gap-6 mb-6">
+                    <div className="flex-1 pt-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                        <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{(order as any).notes || 'Thank you for your business.'}</p>
+                    </div>
+                    <div className="w-[280px] text-[12px] space-y-2">
+                        <div className="flex justify-between items-center pt-1 border-t-2 border-slate-300">
+                            <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
+                            <span className="font-black text-indigo-600 text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
                         </div>
                     </div>
-
-                    <div className="mt-16 text-center border-t border-slate-100 pt-6">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">
-                            System Generated Professional Copy • Al-Qavi Traders Gilgit
-                        </p>
-                    </div>
                 </div>
+
+                <InvoiceFooter />
             </div>
 
-            <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@1,400;1,700&display=swap');
-                
-                @media print {
-                    .print\\:hidden { display: none !important; }
-                    body { padding: 0 !important; margin: 0 !important; background-color: white !important; }
-                    .max-w-[850px] { max-width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-                    @page { margin: 1cm; }
-                }
-
-                body {
-                    font-family: 'Inter', sans-serif;
-                }
-
-                .urdu-text {
-                    font-family: 'Noto Nastaliq Urdu', serif;
-                    font-weight: 700;
-                    line-height: 2.2;
-                }
-                
-                .font-serif {
-                    font-family: 'Playfair Display', serif;
-                }
-            `}</style>
+            <style jsx global>{invoiceStyles}</style>
         </div>
     );
 }

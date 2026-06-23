@@ -8,7 +8,7 @@ import {
     Boxes, Settings, UserCheck, ShoppingBag,
     Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    Truck, Book, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight
+    Truck, Book, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { authService } from '@/lib/auth';
@@ -40,7 +40,9 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         const user = authService.getUser();
         if (!user) { setUserPagePerms(null); return; }
         const role = (user.role as string)?.toLowerCase() || '';
-        if (FULL_ACCESS_ROLES.includes(role) || user.is_staff || user.is_superuser) {
+        // Full access by ROLE (Admin/Super Admin) or superuser only — NOT is_staff,
+        // since every internal staff role is is_staff but stays page-restricted.
+        if (FULL_ACCESS_ROLES.includes(role) || user.is_superuser) {
             setUserPagePerms(null); // null = no restriction
         } else {
             const perms = (user as any).page_permissions;
@@ -97,6 +99,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             items: [
                 { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
+                { name: 'Areas', href: '/admin/company/areas', icon: MapPin },
                 { name: 'Internal Users', href: '/admin/users', icon: User },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
                 { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },

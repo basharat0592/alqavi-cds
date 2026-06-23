@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { orderService, Order } from '@/lib/api';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime, exportToCSV } from '@/lib/utils';
 import {
     ShoppingBag, Search, RefreshCw,
     Plus, Loader2, User, CreditCard, Trash2, AlertTriangle, Clock, Warehouse
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 const STATUS_FILTERS = ['All', 'Delivered', 'Cancelled'];
 
@@ -80,6 +80,14 @@ export default function SalesPage() {
         if (s === 'delivered') return 'green';
         if (s === 'cancelled') return 'red';
         return 'neutral';
+    };
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => orderService.delete(id)));
+        setOrders(prev => prev.filter(o => !ids.includes(o.id.toString())));
+        toast.success(`${ids.length} sale record(s) deleted`);
     };
 
     if (loading && orders.length === 0) return <PageLoader />;
@@ -196,6 +204,7 @@ export default function SalesPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3">Order Details</th>
                                 <th className="px-6 py-3">Customer</th>
                                 <th className="px-6 py-3">Payment</th>
@@ -207,13 +216,14 @@ export default function SalesPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {filtered.length === 0 ? (
-                                <tr><td colSpan={7} className="py-24 text-center">
+                                <tr><td colSpan={8} className="py-24 text-center">
                                     <div className="text-slate-200 mb-4"><ShoppingBag size={60} className="mx-auto" /></div>
                                     <p className="text-[14px] text-slate-500 font-medium">No sales found matching your criteria.</p>
                                 </td></tr>
                             ) : (
                                 filtered.map(o => (
                                     <tr key={o.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <RowCheckboxTd sel={sel} id={o.id} />
                                         <td className="px-6 py-4">
                                             <div className="text-[14px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer" onClick={() => router.push(`/admin/sales/${o.id}`)}>
                                                 #{o.order_number || o.id}
@@ -275,6 +285,24 @@ export default function SalesPage() {
                         </tbody>
                     </table>
                 </Card>
+
+                <BulkBar
+                    sel={sel}
+                    entity="sales"
+                    onDelete={bulkDelete}
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((o: any) => ({
+                            order_number: o.order_number || o.id,
+                            customer_name: o.customer_name || 'Counter Guest',
+                            payment_method: o.payment_method || 'Cash',
+                            status: o.status || '',
+                            total_amount: o.total_amount ?? 0,
+                            warehouse: o.warehouse_name || '',
+                            date: formatDateTime(o.created_at),
+                        })),
+                        'sales.csv',
+                    )}
+                />
 
                 {/* Summary Note */}
                 <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">

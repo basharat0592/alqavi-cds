@@ -112,10 +112,10 @@ export function checkIsVideo(url: string | null | undefined): boolean {
            cleanUrl.includes('/video');
 }
 
-// Module-level cache buster, evaluated once per page load/import
-const CACHE_BUSTER = typeof window !== 'undefined' 
-    ? ((window as any).__CACHE_BUSTER || ((window as any).__CACHE_BUSTER = Date.now())) 
-    : Date.now();
+// NOTE: No cache-buster is appended to media URLs. Uploaded files already get
+// unique, collision-suffixed filenames from Django storage, so a stable URL is
+// safe to cache forever (paired with long-lived Cache-Control headers in nginx).
+// This lets the browser reuse images across visits instead of re-downloading them.
 
 /**
  * Handle media URLs, prepending the API base URL if relative.
@@ -159,9 +159,9 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
             // backend (:8000) with no /media proxy, so keep the absolute backend URL.
             if (typeof window !== 'undefined' && window.location.origin !== domain &&
                 (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-                return `${domain}${relPath}?v=${CACHE_BUSTER}`;
+                return `${domain}${relPath}`;
             }
-            return `${relPath}?v=${CACHE_BUSTER}`;
+            return `${relPath}`;
         }
         // External absolute URL (CDN, social, etc.) — leave untouched
         return url;
@@ -182,7 +182,7 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
     }
 
     // Join and return
-    return `${domain}/${cleanPath}?v=${CACHE_BUSTER}`;
+    return `${domain}/${cleanPath}`;
 }
 
 /**

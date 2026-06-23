@@ -251,8 +251,15 @@ export default function AddPurchasePage() {
     const supplierPrefillApplied = useRef(false);
     const prefillApplied = useRef(false);
 
+    // Edit mode: /admin/purchases/add?id=<purchaseOrderId> loads an existing PO.
+    // Read on the client (this is SSR'd, so a lazy useState initializer would see no window).
+    const [editId, setEditId] = useState<string | null>(null);
+    const editPrefillApplied = useRef(false);
+
     const loadData = useCallback(async () => {
         setLoading(true);
+        const urlId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null;
+        if (urlId) setEditId(urlId);
         try {
             const [usersRes, suppRes] = await Promise.allSettled([
                 userService.getAll(),
@@ -278,7 +285,9 @@ export default function AddPurchasePage() {
                 console.error("Failed to fetch warehouses", e);
             }
 
-            setForm(prev => ({ ...prev, purchase_number: `PO-${Date.now().toString().slice(-6)}` }));
+            if (!urlId) {
+                setForm(prev => ({ ...prev, purchase_number: `PO-${Date.now().toString().slice(-6)}` }));
+            }
         } catch { toast.error('Failed to load data'); } finally { setLoading(false); }
     }, []);
 
@@ -336,9 +345,64 @@ export default function AddPurchasePage() {
         });
     }, [products, prefill]);
 
+    // Load an existing purchase order into the form when editing (?id=...).
+    useEffect(() => {
+        if (!editId || editPrefillApplied.current) return;
+        editPrefillApplied.current = true;
+        (async () => {
+            try {
+                const po = await purchaseService.getById(editId);
+                setForm({
+                    purchase_number: po.purchase_number || '',
+                    supplier: String(po.supplier || ''),
+                    supplier_name: po.supplier_name || '',
+                    order_date: (po.order_date || po.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+                    status: po.status || 'PENDING',
+                    payment_method: po.payment_method || 'CASH',
+                    notes: po.notes || '',
+                    shipping_cost: parseFloat(po.shipping_cost || 0) || 0,
+                    tax_rate: 0,
+                    warehouse: String(po.warehouse || ''),
+                });
+                const loaded = (po.items || []).map((it: any) => ({
+                    product: String(it.product || ''),
+                    product_name: it.product_name || '',
+                    packaging_type: (it.packaging_type || 'SINGLE') as 'SINGLE' | 'CARTON',
+                    items_per_carton: it.items_per_carton || 1,
+                    quantity: it.quantity || 1,
+                    unit_price: parseFloat(it.price || 0) || 0,
+                }));
+                if (loaded.length) setItems(loaded);
+            } catch {
+                toast.error('Failed to load purchase order for editing');
+                router.push('/admin/purchases');
+            }
+        })();
+    }, [editId, router]);
+
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
         if (!form.supplier || items.some(i => !i.product)) return toast.error('Please fill all required fields');
+
+        // Tax is entered as a rate (%); the backend stores an absolute tax_amount and
+        // folds shipping + tax into the grand total, so compute it here.
+        const taxAmount = (totalAmount * ((form as any).tax_rate || 0)) / 100;
+
+        // Edit mode: update the existing order (full header + items recompute).
+        if (editId) {
+            setSaving(true);
+            try {
+                await purchaseService.updateFull(editId, { ...form, items, tax_amount: taxAmount });
+                toast.success('Purchase order updated!');
+                router.push('/admin/purchases');
+            } catch (err: any) {
+                const msg = err.response?.data?.error || err.response?.data?.message || 'Failed to update purchase';
+                toast.error(msg);
+            } finally {
+                setSaving(false);
+            }
+            return;
+        }
 
         if (form.status === 'RECEIVED' && !warehouseId && !form.warehouse) {
             setTempPayload({ ...form, items });
@@ -359,7 +423,7 @@ export default function AddPurchasePage() {
 
         setSaving(true);
         try {
-            const payload: any = { ...form, items };
+            const payload: any = { ...form, items, tax_amount: taxAmount };
             if (finalWarehouseId) payload.warehouse = finalWarehouseId;
             const data = await purchaseService.create(payload);
             setSuccessOrder(data);
@@ -393,16 +457,21 @@ export default function AddPurchasePage() {
         }));
     };
 
-    const calculateSubtotal = (item: LineItem) => (item.quantity || 0) * (item.unit_price || 0);
+    const calculateSubtotal = (item: LineItem) => {
+        const units = item.packaging_type === 'CARTON'
+            ? (item.quantity || 0) * (item.items_per_carton || 0)
+            : (item.quantity || 0);
+        return units * (item.unit_price || 0);
+    };
     const totalAmount = items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
 
     return (
         <div className="pb-20">
             <div className="max-w-[1100px] mx-auto">
                 <PageHeader
-                    title="New Purchase"
-                    subtitle="Create a purchase order with supplier, items, and totals."
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: 'New Purchase' }]}
+                    title={editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
+                    subtitle={editId ? 'Update this purchase order — supplier, items, and totals.' : 'Create a purchase order with supplier, items, and totals.'}
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: editId ? 'Edit Purchase' : 'New Purchase' }]}
                 />
 
                 {loading ? (
@@ -558,7 +627,7 @@ export default function AddPurchasePage() {
                                         {formatCurrency(totalAmount + ((form as any).shipping_cost || 0) + (totalAmount * ((form as any).tax_rate || 0)) / 100)}
                                     </span>
                                 </div>
-                                <Btn className="w-full justify-center" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>Place Order</Btn>
+                                <Btn className="w-full justify-center" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>{editId ? 'Update Order' : 'Place Order'}</Btn>
                             </Card>
                         </div>
                     </div>

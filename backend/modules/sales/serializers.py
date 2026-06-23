@@ -255,7 +255,9 @@ class PurchaseOrderItemSerializer(serializers.ModelSerializer):
         return None
 
     def get_subtotal(self, obj):
-        return float(obj.quantity * obj.price)
+        # total_units already accounts for carton packaging (qty × pcs-per-carton);
+        # price is per-piece, so subtotal = total_units × price.
+        return float(obj.total_units * obj.price)
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
@@ -266,6 +268,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.SerializerMethodField()
     order_number = serializers.CharField(source='purchase_number', read_only=True)
     remaining_amount = serializers.ReadOnlyField()
+    created_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrder
@@ -273,12 +276,24 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             'id', 'order_number', 'purchase_number', 'supplier', 'supplier_name', 'reference_number',
             'warehouse', 'warehouse_name', 'total_amount', 'shipping_cost', 'tax_amount',
             'status', 'payment_status', 'payment_method', 'order_date', 'expected_delivery_date', 'notes', 'items',
-            'supplier_phone', 'supplier_email', 'paid_amount', 'remaining_amount', 'payment_date', 
-            'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed'
+            'supplier_phone', 'supplier_email', 'paid_amount', 'remaining_amount', 'payment_date',
+            'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed',
+            'created_by', 'created_by_name'
         ]
 
+    def get_created_by_name(self, obj):
+        u = getattr(obj, 'created_by', None)
+        if not u:
+            return None
+        full_name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        return full_name or u.username
+
     def get_supplier_name(self, obj):
-        return obj.supplier.username if obj.supplier else 'Internal'
+        if not obj.supplier:
+            return 'Internal'
+        s = obj.supplier
+        full_name = f"{s.first_name or ''} {s.last_name or ''}".strip()
+        return s.name or s.company or full_name or s.username
 
     def get_warehouse_name(self, obj):
         return obj.warehouse.name if obj.warehouse else 'Default Warehouse'
@@ -317,7 +332,11 @@ class PurchaseReturnSerializer(serializers.ModelSerializer):
         ]
 
     def get_supplier_name(self, obj):
-        return obj.supplier.username if obj.supplier else 'Unknown'
+        if not obj.supplier:
+            return 'Unknown'
+        s = obj.supplier
+        full_name = f"{s.first_name or ''} {s.last_name or ''}".strip()
+        return s.name or s.company or full_name or s.username
 
 class CustomerBoughtProductSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.product_name')

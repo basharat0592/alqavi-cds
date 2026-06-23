@@ -7,11 +7,11 @@ import {
     RefreshCw, AlertTriangle, XCircle,
     User, Clock, Loader2, CheckCircle2, Trash2
 } from 'lucide-react';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, exportToCSV } from '@/lib/utils';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 const STATUS_FILTERS = ['All', 'Pending', 'Accepted', 'Rejected'];
 
@@ -181,6 +181,20 @@ export default function SaleReturnsPage() {
         return matchesSearch && matchesStatus;
     });
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => api.delete(`v1/sales/returns/${id}/`)));
+        toast.success(`${ids.length} return record(s) deleted`);
+        loadReturns();
+    };
+
+    const bulkStatus = async (ids: string[], status: string) => {
+        await Promise.allSettled(ids.map(id => api.patch(`v1/sales/returns/${id}/`, { status })));
+        toast.success(`${ids.length} return(s) ${status.toLowerCase()}`);
+        loadReturns();
+    };
+
     if (loading && returns.length === 0) return <PageLoader />;
 
     return (
@@ -226,6 +240,7 @@ export default function SaleReturnsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Return ID</th>
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Source Order</th>
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Customer</th>
@@ -236,13 +251,14 @@ export default function SaleReturnsPage() {
                             </thead>
                             <tbody>
                                 {filtered.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-24 text-center">
+                                    <tr><td colSpan={7} className="py-24 text-center">
                                         <div className="text-slate-200 mb-4"><Package size={60} className="mx-auto" /></div>
                                         <p className="text-[14px] text-slate-400 font-medium italic">No return requests found matching your criteria.</p>
                                     </td></tr>
                                 ) : (
                                     filtered.map(r => (
                                         <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <RowCheckboxTd sel={sel} id={r.id} />
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                                                 <div className="text-[14px] font-bold text-indigo-600 group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
                                                     #{r.return_number}
@@ -297,6 +313,28 @@ export default function SaleReturnsPage() {
                         </table>
                     </div>
                 </Card>
+
+                <BulkBar
+                    sel={sel}
+                    entity="returns"
+                    onDelete={bulkDelete}
+                    statusActions={[
+                        { label: 'Accept & Restock', apply: (ids) => bulkStatus(ids, 'ACCEPTED') },
+                        { label: 'Reject', apply: (ids) => bulkStatus(ids, 'REJECTED') },
+                    ]}
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((r: any) => ({
+                            return_number: r.return_number,
+                            order_tracking_id: r.order_tracking_id || '',
+                            customer_name: r.customer_name || '',
+                            status: r.status || '',
+                            refund_value: r.items?.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0) || 0,
+                            items: r.items?.length || 0,
+                            date: formatDateTime(r.created_at),
+                        })),
+                        'sale-returns.csv',
+                    )}
+                />
 
                 {/* Summary Note */}
                 <div className="mt-8 bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">

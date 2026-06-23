@@ -18,6 +18,11 @@ export const purchaseService = {
         const { data } = await api.patch(`v1/sales/purchases/${id}/`, payload);
         return data;
     },
+    // Full edit of header + line items (recomputes totals). Blocked once received.
+    updateFull: async (id: string, payload: any): Promise<any> => {
+        const { data } = await api.patch(`v1/sales/purchases/${id}/edit-full/`, payload);
+        return data;
+    },
     delete: async (id: string): Promise<void> => {
         await api.delete(`v1/sales/purchases/${id}/`);
     },

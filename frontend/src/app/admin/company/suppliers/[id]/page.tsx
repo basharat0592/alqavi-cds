@@ -8,9 +8,9 @@ import {
 import { userService, AppUser, productService } from '@/lib/api';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, exportToCSV } from '@/lib/utils';
 import { Product } from '@/types';
-import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -43,6 +43,8 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
         };
         loadData();
     }, [id]);
+
+    const sel = useTableSelection(products);
 
     if (loading) return <PageLoader />;
     if (!supplier) return <div className="text-center p-20 text-slate-500">Supplier not found.</div>;
@@ -122,6 +124,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/60 border-b border-slate-200">
+                                        <SelectAllTh sel={sel} />
                                         <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider">Asset Details</th>
                                         <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-center">Acquisition Price</th>
                                         <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-center">Availability</th>
@@ -131,7 +134,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                                 <tbody className="divide-y divide-slate-100">
                                     {products.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-16 text-center text-slate-400">
+                                            <td colSpan={5} className="px-6 py-16 text-center text-slate-400">
                                                 <Archive className="h-12 w-12 mx-auto opacity-20 mb-3" />
                                                 <p className="text-xs font-semibold uppercase tracking-wider">No assets associated</p>
                                             </td>
@@ -139,6 +142,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                                     ) : (
                                         products.map(p => (
                                             <tr key={p.id} className="hover:bg-slate-50">
+                                                <RowCheckboxTd sel={sel} id={p.id} />
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden shrink-0">
@@ -174,6 +178,21 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                     </Card>
                 </div>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="products"
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        name: p.name || '',
+                        sku: p.sku || '',
+                        cost_price: Number(p.cost_price || p.cost || 0),
+                        quantity_in_stock: p.quantity_in_stock || 0,
+                        visibility: p.is_supplier_only ? 'Isolated' : 'Public',
+                    })),
+                    'supplier-products.csv',
+                )}
+            />
         </div>
     );
 }

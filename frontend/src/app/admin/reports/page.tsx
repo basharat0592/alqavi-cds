@@ -8,7 +8,6 @@ import {
     User, CreditCard, ShoppingBag, Package, Boxes, TrendingUp, RotateCcw,
     Truck, Building2, Tag, DollarSign
 } from 'lucide-react';
-import Logo from '@/components/ui/Logo';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
     productService, orderService,
@@ -19,7 +18,8 @@ import { companyService } from '@/services/company.service';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - MANUAL REPORT GENERATOR
@@ -333,11 +333,17 @@ function ReportsEngineInner() {
         setHasGenerated(false);
     };
 
+    const sel = useTableSelection(reportResult, (r) => String(reportResult.indexOf(r)));
+
     if (loading) return <PageLoader />;
 
     return (
         <div className="pb-20">
             <div className="max-w-[1440px] mx-auto">
+
+                <div className="hidden print:block mb-4">
+                    <InvoiceHeader docTitle="Reports" date={formatDate(new Date().toISOString())} />
+                </div>
 
                 <div className="no-print">
                     <PageHeader
@@ -532,6 +538,7 @@ function ReportsEngineInner() {
                              <table className="w-full text-left border-collapse">
                                  <thead>
                                      <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                         <SelectAllTh sel={sel} />
                                          <th className="px-4 py-2.5 w-16">ID</th>
                                          <th className="px-4 py-2.5 w-28">Date</th>
                                          <th className="px-4 py-2.5">Details / Description</th>
@@ -542,6 +549,7 @@ function ReportsEngineInner() {
                                  <tbody className="divide-y divide-slate-100">
                                      {reportResult.map((row, idx) => (
                                          <tr key={idx} className="hover:bg-slate-50 transition-colors group text-[10px]">
+                                             <RowCheckboxTd sel={sel} id={String(idx)} />
                                              <td className="px-4 py-2 font-bold text-indigo-600 tabular-nums">
                                                  #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
                                              </td>
@@ -571,34 +579,27 @@ function ReportsEngineInner() {
                              </table>
                          </Card>
 
+                        <div className="no-print">
+                            <BulkBar
+                                sel={sel}
+                                entity="rows"
+                                onExport={() => exportToCSV(
+                                    sel.selectedItems.map((row: any) => ({
+                                        id: row.return_number || row.order_number || (row.id != null ? String(row.id).slice(0, 8) : ''),
+                                        date: formatDate(rowDateVal(row)),
+                                        details: rowTitle(row),
+                                        description: rowSubtitle(row, filters.category),
+                                        status: row.status || (row.is_active ? 'Active' : 'Pending'),
+                                        amount: rowAmount(row),
+                                        quantity: rowQty(row),
+                                    })),
+                                    'report-selection.csv',
+                                )}
+                            />
+                        </div>
+
                         {/* ── PRINT ONLY INVOICE STYLE REPORT ── */}
                         <div className="hidden print:block bg-white p-2">
-                            {/* Visual Header */}
-                            <div className="flex justify-between items-start mb-10">
-                                <div className="w-1/3">
-                                    <Logo size="lg" className="!items-start" />
-                                </div>
-
-                                <div className="w-1/3 text-center">
-                                    <h1 className="text-[32px] font-bold leading-[1.8] mb-1 text-[#111] urdu-text">
-                                        القوی ٹریڈرز
-                                    </h1>
-                                    <p className="text-[11px] font-bold text-[#565959] uppercase tracking-widest urdu-text">
-                                        کاسمیٹکس ڈیلر گلگت بلتستان
-                                    </p>
-                                </div>
-
-                                <div className="w-1/3 text-right">
-                                    <h2 className="text-[20px] font-black uppercase tracking-tighter text-[#111]">Report Console</h2>
-                                    <div className="text-[11px] text-gray-500 mt-2 space-y-0.5 font-medium">
-                                        <p>Syed Sakhawat & Associates</p>
-                                        <p>0313-8692190 | 0335-1240190</p>
-                                    </div>
-                                    <p className="text-[13px] text-[#111] font-bold mt-4 tracking-tight uppercase">Category: {filters.category}</p>
-                                    <p className="text-[11px] text-[#565959] font-medium">Generated: {formatDate(new Date().toISOString())}</p>
-                                </div>
-                            </div>
-
                             {/* Metadata */}
                             <div className="grid grid-cols-4 gap-8 mb-10 border-y-2 border-black py-6">
                                 <div className="col-span-2">
@@ -668,37 +669,11 @@ function ReportsEngineInner() {
                                 </table>
                             </div>
 
-                            {/* Urdu Footer Note */}
-                            <div className="mb-12 px-1">
-                                <p className="text-[10px] leading-[2.1] text-justify text-[#444] urdu-text" dir="rtl">
-                                    <span className="font-black border-b-2 ml-3 text-[14px]">نوٹ:-</span>
-                                    یہ رپورٹ القوی ٹریڈرز کے آفیشل ڈیٹا بیس سے تیار کی گئی ہے۔ تمام دکاندار اور سپلائرز حضرات بل یا رپورٹ میں کسی بھی قسم کی کمی بیشی کی صورت میں فوری طور پر ہیڈ آفس سے رابطہ کریں۔ بغیر دستخط اور مہر کے یہ رپورٹ قانونی طور پر قابلِ قبول نہیں ہوگی۔ القوی ٹریڈرز گلگت کے ساتھ تعاون کا شکریہ--
-                                </p>
-                            </div>
-
-                            {/* Signatures */}
-                            <div className="mt-20 pt-12 border-t-2 border-dashed border-black">
-                                <div className="flex justify-between items-start gap-32">
-                                    <div className="flex-1 space-y-3">
-                                        <p className="text-[12px] font-bold text-gray-500">Authorized Distribution Signature</p>
-                                        <div className="w-full border-b border-black pt-8"></div>
-                                        <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Reports In-charge</p>
-                                    </div>
-                                    <div className="flex-1 space-y-3 text-right">
-                                        <p className="text-[12px] font-bold text-gray-500">Managing Director Stamp</p>
-                                        <div className="w-full border-b border-black pt-8"></div>
-                                        <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Verification Area</p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-16 text-center border-t border-slate-100 pt-6">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">
-                                        System Generated Official Report • Al-Qavi Traders Gilgit
-                                    </p>
-                                </div>
-                            </div>
+                            {/* Branded stationery footer */}
+                            <InvoiceFooter pinned={false} />
                         </div>
 
+                        <style jsx global>{invoiceStyles}</style>
                         <style jsx global>{`
                             @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
                             

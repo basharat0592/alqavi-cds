@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { userService, roleService, AppRole } from '@/lib/api';
 import {
-    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck
+    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck, MapPin
 } from 'lucide-react';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
+import { getRolePreset } from '@/lib/rolePresets';
+import { areaService, Area } from '@/services/area.service';
 
 const INPUT = (err?: boolean) =>
     `${ui.inputBase} ${err ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/10' : ''}`;
@@ -70,6 +72,7 @@ const PAGE_GROUPS = [
         items: [
             { name: 'Supplier Registry', href: '/admin/company/suppliers' },
             { name: 'Customer Registry', href: '/admin/company/customers' },
+            { name: 'Areas', href: '/admin/company/areas' },
             { name: 'Internal Users', href: '/admin/users' },
             { name: 'Staff Roles', href: '/admin/users/roles' },
             { name: 'Permissions', href: '/admin/users/permissions' },
@@ -121,39 +124,77 @@ export default function AddUserPage() {
     });
 
     const [selectedPages, setSelectedPages] = useState<string[]>([]);
+    const [selectedEditPages, setSelectedEditPages] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    const [areas, setAreas] = useState<Area[]>([]);
+    const [selectedAreas, setSelectedAreas] = useState<number[]>([]);
+
     useEffect(() => {
         roleService.getAll().then(setRoles).catch(() => setRoles([]));
+        areaService.getActive().then(setAreas).catch(() => setAreas([]));
     }, []);
 
     const selectedRoleName = roles.find(r => String(r.id) === String(form.role))?.name?.toLowerCase() || '';
     const isFullAccess = FULL_ACCESS_ROLES.includes(selectedRoleName);
+    const isAreaManager = selectedRoleName === 'area manager';
+
+    const toggleArea = (id: number) => {
+        setSelectedAreas(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+    };
 
     const handle = (k: string, v: any) => {
         setForm(p => ({ ...p, [k]: v }));
         if (errors[k]) setErrors(p => ({ ...p, [k]: '' }));
     };
 
-    const togglePage = (href: string) => {
-        setSelectedPages(prev =>
-            prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href]
-        );
+    // View toggle: removing view also removes edit (can't edit a page you can't view).
+    const toggleView = (href: string) => {
+        setSelectedPages(prev => {
+            if (prev.includes(href)) {
+                setSelectedEditPages(e => e.filter(h => h !== href));
+                return prev.filter(h => h !== href);
+            }
+            return [...prev, href];
+        });
+    };
+
+    // Edit toggle: adding edit implies view.
+    const toggleEdit = (href: string) => {
+        setSelectedEditPages(prev => {
+            if (prev.includes(href)) {
+                return prev.filter(h => h !== href);
+            }
+            setSelectedPages(p => (p.includes(href) ? p : [...p, href]));
+            return [...prev, href];
+        });
     };
 
     const toggleGroup = (hrefs: string[]) => {
         const allSelected = hrefs.every(h => selectedPages.includes(h));
         if (allSelected) {
             setSelectedPages(prev => prev.filter(h => !hrefs.includes(h)));
+            setSelectedEditPages(prev => prev.filter(h => !hrefs.includes(h)));
         } else {
             setSelectedPages(prev => [...new Set([...prev, ...hrefs])]);
         }
     };
 
     const selectAll = () => setSelectedPages([...ALL_HREFS]);
-    const clearAll = () => setSelectedPages([]);
+    const clearAll = () => { setSelectedPages([]); setSelectedEditPages([]); };
+
+    // Selecting a role auto-fills its recommended page access (still editable).
+    const handleRoleChange = (roleId: string) => {
+        handle('role', roleId);
+        const roleName = roles.find(r => String(r.id) === String(roleId))?.name;
+        const preset = getRolePreset(roleName);
+        if (preset) {
+            setSelectedPages([...preset]);
+            setSelectedEditPages([...preset]);
+        }
+    };
 
     const validate = () => {
         const e: Record<string, string> = {};
@@ -182,6 +223,8 @@ export default function AddUserPage() {
             if (!payload.business_name) delete payload.business_name;
             // Full-access roles don't need page_permissions stored
             payload.page_permissions = isFullAccess ? [] : selectedPages;
+            payload.page_edit_permissions = isFullAccess ? [] : selectedEditPages;
+            payload.areas = isAreaManager ? selectedAreas : [];
             await userService.create(payload);
             showToast('User created successfully.');
             setTimeout(() => router.push('/admin/users'), 1000);
@@ -226,10 +269,13 @@ export default function AddUserPage() {
                             </div>
                             <div>
                                 <label className={LABEL}>User Role <span className="text-rose-600">*</span></label>
-                                <select value={form.role} onChange={e => handle('role', e.target.value)} className={INPUT(!!errors.role)}>
+                                <select value={form.role} onChange={e => handleRoleChange(e.target.value)} className={INPUT(!!errors.role)}>
                                     <option value="">Select Role</option>
                                     {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                 </select>
+                                {getRolePreset(selectedRoleName) && (
+                                    <p className="text-[11px] text-indigo-600 font-medium mt-1.5">Page access pre-filled for this role — adjust below if needed.</p>
+                                )}
                             </div>
                             {form.role === sellerRoleId?.toString() && (
                                 <div>
@@ -325,15 +371,30 @@ export default function AddUserPage() {
                                                 {/* Individual items */}
                                                 <div className="divide-y divide-slate-100">
                                                     {group.items.map(item => (
-                                                        <label key={item.href} className="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-slate-50 transition-colors">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedPages.includes(item.href)}
-                                                                onChange={() => togglePage(item.href)}
-                                                                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                            />
+                                                        <div key={item.href} className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-slate-50 transition-colors">
                                                             <span className="text-[12px] text-slate-700">{item.name}</span>
-                                                        </label>
+                                                            <div className="flex items-center gap-4">
+                                                                <label className="flex items-center gap-1 cursor-pointer select-none">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedPages.includes(item.href)}
+                                                                        onChange={() => toggleView(item.href)}
+                                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                                    />
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
+                                                                </label>
+                                                                <label className={`flex items-center gap-1 select-none ${selectedPages.includes(item.href) ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedEditPages.includes(item.href)}
+                                                                        disabled={!selectedPages.includes(item.href)}
+                                                                        onChange={() => toggleEdit(item.href)}
+                                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
+                                                                    />
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             </div>
@@ -359,6 +420,38 @@ export default function AddUserPage() {
                                 </p>
                             </div>
                         </div>
+                    )}
+
+                    {/* Area Assignment — only for Area Manager role */}
+                    {isAreaManager && (
+                        <>
+                            <SectionHeader title="Assigned Areas" icon={MapPin} />
+                            <div className="p-6 space-y-4">
+                                <p className="text-xs text-slate-500">Select the territories this area manager is responsible for.</p>
+                                {areas.length === 0 ? (
+                                    <p className="text-[12px] text-slate-400 italic">No active areas available. Create areas first.</p>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                        {areas.map(area => (
+                                            <label key={area.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedAreas.includes(area.id)}
+                                                    onChange={() => toggleArea(area.id)}
+                                                    className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                <span className="text-[12px] font-medium text-slate-700">{area.name}{area.code ? ` (${area.code})` : ''}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                                {selectedAreas.length > 0 && (
+                                    <p className="text-[11px] text-indigo-600 font-medium">
+                                        {selectedAreas.length} area{selectedAreas.length !== 1 ? 's' : ''} selected
+                                    </p>
+                                )}
+                            </div>
+                        </>
                     )}
 
                     <div className="bg-slate-50/60 px-8 py-4 flex justify-end gap-3 border-t border-slate-100">

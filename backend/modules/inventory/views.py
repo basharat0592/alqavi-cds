@@ -6,18 +6,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
+from core.permissions import HasModulePermission
 
 
 class WarehouseViewSet(viewsets.ModelViewSet):
     queryset = Warehouse.objects.all().order_by('name')
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModulePermission]
+    perm_module = 'inventory'
 
 
 class StockViewSet(viewsets.ModelViewSet):
     queryset = Stock.objects.all()
     serializer_class = StockSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModulePermission]
+    perm_module = 'inventory'
 
     def perform_create(self, serializer):
         stock = serializer.save()

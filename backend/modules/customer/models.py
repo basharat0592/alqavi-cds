@@ -14,6 +14,10 @@ class Customer(models.Model):
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
+    # Geographic area this customer belongs to (used for Area Manager scoping).
+    area = models.ForeignKey(
+        'company.Area', on_delete=models.SET_NULL, null=True, blank=True, related_name='customers'
+    )
     avatar = models.ImageField(upload_to='customers/avatars/', null=True, blank=True)
     
     status = models.CharField(max_length=20, default='active')

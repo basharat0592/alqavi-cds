@@ -687,7 +687,7 @@ export default function Home() {
                                                             const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
                                                             return searchIds.some((sid: string | number) => String(sid) === String(p.id));
                                                         });
-                                                    const categoryFiltered = activeCategory === 'All'
+                                                    const categoryFiltered = (!isFullCollection || activeCategory === 'All')
                                                         ? baseList
                                                         : baseList.filter(p => {
                                                             const target = activeCategory.toLowerCase().trim();
@@ -707,7 +707,7 @@ export default function Home() {
                                                             return searchIds.some((sid: string | number) => String(sid) === String(p.id));
                                                         });
 
-                                                    const categoryFiltered = activeCategory === 'All'
+                                                    const categoryFiltered = (!isFullCollection || activeCategory === 'All')
                                                         ? baseList
                                                         : baseList.filter(p => {
                                                             const target = activeCategory.toLowerCase().trim();

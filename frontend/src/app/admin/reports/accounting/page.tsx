@@ -9,8 +9,9 @@ import {
 import PageLoader from '@/components/ui/PageLoader';
 import { useAdminDashboard } from '@/hooks';
 import { purchaseService, paymentService } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
-import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
+import { formatCurrency, exportToCSV } from '@/lib/utils';
+import { PageHeader, Card, Button, Badge, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
 const formatK = (num: number) => {
     if (num >= 1000) {
@@ -116,6 +117,9 @@ export default function AccountingReportPage() {
             .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
     }, [ledgerEntries, filterDate]);
 
+    const ledgerRows = useMemo(() => ledger.slice(0, 12).map((tr, i) => ({ ...tr, _rowId: `${tr.id}-${i}` })), [ledger]);
+    const sel = useTableSelection(ledgerRows, (r) => r._rowId);
+
     const netMargin = stats.totalRevenue ? ((stats.totalProfit || 0) / stats.totalRevenue) * 100 : 0;
     const totalExpense = Number(ledgerStats.total_outbound || 0);
     const avgOrderValue = (stats as any).deliveredOrders ? (stats.totalRevenue || 0) / (stats as any).deliveredOrders : 0;
@@ -124,6 +128,11 @@ export default function AccountingReportPage() {
 
     return (
         <div className="pb-20 text-left">
+            <div className="hidden print:block mb-4">
+                <InvoiceHeader docTitle="Accounting Report" date={filterDate || undefined} />
+            </div>
+
+            <div className="print:hidden">
             <PageHeader
                 title="Accounting"
                 subtitle="General Ledger & Financial Health"
@@ -163,6 +172,7 @@ export default function AccountingReportPage() {
             <div className="flex items-center gap-2 mb-6 no-print">
                 <span className="text-[13px] text-slate-500">Filter:</span>
                 <Badge tone="indigo">{paymentMethod === 'ALL' ? 'All Payments' : paymentMethod}</Badge>
+            </div>
             </div>
 
             {/* Stats Metric Cards (Filtered) */}
@@ -211,6 +221,7 @@ export default function AccountingReportPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/60">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3">Ref ID</th>
                                 <th className="px-6 py-3">Description</th>
                                 <th className="px-6 py-3 text-right">Debit</th>
@@ -218,14 +229,15 @@ export default function AccountingReportPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {ledger.length === 0 ? (
+                            {ledgerRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-[13px] text-slate-400 font-medium">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-[13px] text-slate-400 font-medium">
                                         No ledger entries for this selection.
                                     </td>
                                 </tr>
-                            ) : ledger.slice(0, 12).map((tr, i) => (
-                                <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                            ) : ledgerRows.map((tr) => (
+                                <tr key={tr._rowId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                    <RowCheckboxTd sel={sel} id={tr._rowId} />
                                     <td className="px-6 py-4 font-bold text-indigo-600">#{tr.id}</td>
                                     <td className="px-6 py-4">
                                         <div className="text-slate-900 font-medium">{tr.desc}</div>
@@ -238,6 +250,24 @@ export default function AccountingReportPage() {
                         </tbody>
                     </table>
                 </Card>
+
+                <div className="print:hidden">
+                    <BulkBar
+                        sel={sel}
+                        entity="entries"
+                        onExport={() => exportToCSV(
+                            sel.selectedItems.map((r: any) => ({
+                                ref_id: r.id,
+                                type: r.type,
+                                description: r.desc,
+                                debit: r.debit || 0,
+                                credit: r.credit || 0,
+                                date: r.date || '',
+                            })),
+                            'ledger.csv',
+                        )}
+                    />
+                </div>
 
                 <div className="space-y-6">
                     {/* Summary Pill */}
@@ -259,12 +289,17 @@ export default function AccountingReportPage() {
                     </Card>
 
                     {/* Note */}
-                    <Card className="bg-indigo-50 border-indigo-100 p-4 flex gap-3 animate-in fade-in duration-1000 no-print">
+                    <Card className="bg-indigo-50 border-indigo-100 p-4 flex gap-3 animate-in fade-in duration-1000 no-print print:hidden">
                         <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
                         <p className="text-[12px] text-slate-600 leading-relaxed font-medium">Sales add money when delivered; supplier-accepted purchase payments and customer refunds subtract it. Purchase returns add the refund back.</p>
                     </Card>
                 </div>
             </div>
+
+            <div className="hidden print:block">
+                <InvoiceFooter pinned={false} />
+            </div>
+            <style jsx global>{invoiceStyles}</style>
         </div>
     );
 }

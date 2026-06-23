@@ -8,7 +8,8 @@ import {
 import { categoryService, ProductCategory } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { exportToCSV } from '@/lib/utils';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - CATEGORY HUB
@@ -125,6 +126,20 @@ export default function ProductCategoriesPage() {
         c.name?.toLowerCase().includes(search.toLowerCase())
     );
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: (string | number)[]) => {
+        await Promise.allSettled(ids.map(id => categoryService.delete(id)));
+        setCategories(prev => prev.filter(c => !ids.map(String).includes(String(c.id))));
+        toast.success(`${ids.length} category(ies) deleted`);
+    };
+
+    const bulkStatus = async (ids: (string | number)[], status: 'ACTIVE' | 'INACTIVE') => {
+        await Promise.allSettled(ids.map(id => categoryService.update(id, { status } as any)));
+        toast.success(`Marked ${ids.length} category(ies) ${status === 'ACTIVE' ? 'Active' : 'Inactive'}`);
+        load();
+    };
+
     return (
         <div className="max-w-[1100px] mx-auto pb-20">
 
@@ -173,6 +188,7 @@ export default function ProductCategoriesPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                            <SelectAllTh sel={sel} />
                                             <th className="px-2 md:px-6 py-2.5 md:py-3 w-1/4 sm:w-auto">Category Name</th>
                                             <th className="px-2 md:px-6 py-2.5 md:py-3">Description</th>
                                             <th className="px-2 md:px-6 py-2.5 md:py-3 text-center w-16 md:w-28">Status</th>
@@ -181,12 +197,13 @@ export default function ProductCategoriesPage() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                     {loading && filtered.length === 0 ? (
-                                        <tr><td colSpan={4} className="py-20 text-center text-[13px] text-slate-500">Synchronizing registry...</td></tr>
+                                        <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">Synchronizing registry...</td></tr>
                                     ) : filtered.length === 0 ? (
-                                        <tr><td colSpan={4} className="py-20 text-center text-[13px] text-slate-500">No categories found.</td></tr>
+                                        <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">No categories found.</td></tr>
                                     ) : (
                                         filtered.map(cat => (
                                             <tr key={cat.id} className="hover:bg-slate-50 transition-colors group">
+                                                <RowCheckboxTd sel={sel} id={cat.id} />
                                                 <td className="px-2 md:px-6 py-2 md:py-4">
                                                     <div className="text-[13px] md:text-[14px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer truncate max-w-[90px] sm:max-w-none" onClick={() => handleEdit(cat)} title={cat.name}>
                                                         {cat.name}
@@ -215,6 +232,25 @@ export default function ProductCategoriesPage() {
                             </table>
                             </div>
                         </Card>
+
+                        <BulkBar
+                            sel={sel}
+                            entity="categories"
+                            onDelete={bulkDelete}
+                            statusActions={[
+                                { label: 'Mark Active', apply: (ids) => bulkStatus(ids, 'ACTIVE') },
+                                { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, 'INACTIVE') },
+                            ]}
+                            onExport={() => exportToCSV(
+                                sel.selectedItems.map((c: any) => ({
+                                    name: c.name,
+                                    slug: c.slug || '',
+                                    description: c.description || '',
+                                    status: c.status || 'ACTIVE',
+                                })),
+                                'categories.csv',
+                            )}
+                        />
                     </div>
                 ) : (
                     /* Entry Form */

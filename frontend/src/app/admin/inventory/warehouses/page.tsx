@@ -13,7 +13,8 @@ import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { categoryService } from '@/services/category.service';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { exportToCSV } from '@/lib/utils';
+import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - WAREHOUSES
@@ -313,6 +314,19 @@ export default function WarehousesPage() {
         return Array.from(groups.values());
     }, [whInventory, prodSearch, prodSupplier]);
 
+    const sel = useTableSelection(groupedWhInventory);
+
+    const bulkRemoveStocks = async (ids: string[]) => {
+        // Each grouped row may span several underlying stock records.
+        const stockIds = groupedWhInventory
+            .filter((item: any) => ids.includes(String(item.id)))
+            .flatMap((item: any) => (item.items || [item]).map((i: any) => i.id));
+        await Promise.allSettled(stockIds.map((id: any) => inventoryService.deleteInventory(id)));
+        toast.success(`${ids.length} product(s) removed`);
+        handleViewProducts(selectedWh);
+        load();
+    };
+
     return (
         <div className="pb-20 text-left text-slate-800">
             <div className="max-w-[1100px] mx-auto">
@@ -462,6 +476,7 @@ export default function WarehousesPage() {
                                     <table className="w-full text-left text-[13px] border-collapse">
                                         <thead>
                                             <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                                <SelectAllTh sel={sel} />
                                                 <th className="px-2.5 sm:px-6 py-2.5 sm:py-3">Product Name</th>
                                                 <th className="px-2.5 sm:px-6 py-2.5 sm:py-3">Supplier</th>
                                                 <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Quantity</th>
@@ -473,6 +488,7 @@ export default function WarehousesPage() {
                                         <tbody className="divide-y divide-slate-100">
                                             {groupedWhInventory.map((item: any) => (
                                                 <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                                                    <RowCheckboxTd sel={sel} id={item.id} />
                                                     <td className="px-2.5 sm:px-6 py-3 sm:py-4">
                                                         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                                                             <div className="font-bold text-indigo-600">{item.product_name}</div>
@@ -534,6 +550,25 @@ export default function WarehousesPage() {
                                 )}
                             </div>
                         </Card>
+
+                        <BulkBar
+                            sel={sel}
+                            entity="products"
+                            onDelete={bulkRemoveStocks}
+                            onExport={() => exportToCSV(
+                                sel.selectedItems.map((item: any) => ({
+                                    product: item.product_name,
+                                    sku: item.sku || '',
+                                    category: item.category_name || '',
+                                    supplier: item.supplier_name || '',
+                                    quantity: item.total_quantity ?? item.current_stock ?? 0,
+                                    unit_price: item.price_per_item ?? item.unit_price ?? item.price ?? 0,
+                                    received: item.date || '',
+                                })),
+                                `warehouse_${selectedWh?.name || ''}_products.csv`,
+                            )}
+                        />
+
                         <div className="flex justify-end">
                             <button onClick={() => setView('list')} className="text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline font-bold">
                                 Close & Return to Warehouses

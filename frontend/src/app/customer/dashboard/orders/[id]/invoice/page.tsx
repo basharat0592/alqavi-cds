@@ -3,16 +3,12 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
-import { formatDate } from '@/lib/utils';
-import { Printer, ArrowLeft, Share2, Check, ChevronRight, Hash, Calendar, Phone, MapPin, Package, CheckCircle2 } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { Printer, ArrowLeft, Share2, Check, ChevronRight } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
-import Logo from '@/components/ui/Logo';
 import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - CUSTOMER ORDER INVOICE
-   ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
         primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm',
@@ -70,7 +66,7 @@ export default function CustomerOrderInvoice({ params }: { params: Promise<{ id:
     const totalAmount = parseFloat(order.total_amount || '0');
 
     return (
-        <div className="min-h-screen bg-white pb-20 font-sans text-[#111] selection:bg-amber-100 text-left">
+        <div className="min-h-screen bg-white pb-20 font-sans text-slate-900 selection:bg-amber-100 text-left">
 
             {/* Integrated Action Bar */}
             <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
@@ -98,150 +94,78 @@ export default function CustomerOrderInvoice({ params }: { params: Promise<{ id:
             </div>
 
             {/* Paper Container */}
-            <div className="max-w-[850px] mx-auto bg-white p-8 print:border-none print:shadow-none print:p-0">
+            <div className="max-w-[850px] mx-auto bg-white p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:p-0">
 
-                {/* Visual Header */}
-                <div className="flex justify-between items-start mb-12">
-                    <div className="w-1/3">
-                        <Logo size="lg" className="!items-start" />
-                    </div>
+                <InvoiceHeader
+                    docTitle="Invoice"
+                    metaLines={['Gilgit-Baltistan Distribution']}
+                    refLabel="Order No"
+                    refValue={order.order_number || String(order.id).split('-')[0]}
+                    date={formatDate(order.created_at)}
+                />
 
-                    <div className="w-1/3 text-center">
-                        <h1 className="text-[34px] font-bold leading-[1.8] mb-1 text-[#111] urdu-text">
-                            القوی ٹریڈرز
-                        </h1>
-                        <p className="text-[12px] font-bold text-[#565959] uppercase tracking-widest urdu-text">
-                            کسٹمر انوائس ریکارڈ
-                        </p>
-                    </div>
-
-                    <div className="w-1/3 text-right">
-                        <h2 className="text-[24px] font-black uppercase tracking-tighter text-[#111]">Invoice</h2>
-                        <p className="text-[14px] text-[#111] font-bold mt-4 tracking-tight">Order #: {order.order_number}</p>
-                        <p className="text-[12px] text-[#565959] font-medium">Date: {formatDate(order.created_at)}</p>
-                    </div>
-                </div>
-
-                {/* 2. Customer & Status Grid */}
-                <div className="grid grid-cols-3 gap-8 mb-16 px-1">
+                {/* Customer & Metadata Grid — compact */}
+                <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
                     <div className="col-span-2">
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Customer & Delivery</h3>
-                        <p className="text-[18px] font-black text-black leading-none">{order.customer_name}</p>
-                        <div className="flex items-start gap-2 mt-4">
-                            <MapPin size={14} className="text-gray-400 mt-0.5" />
-                            <p className="text-[13px] text-[#565959] font-medium leading-relaxed italic">{order.shipping_address || order.notes || 'No address provided'}</p>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2 font-bold text-[13px]">
-                            <Phone size={14} className="text-gray-400" />
-                            <span>{order.phone_number || 'N/A'}</span>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bill To</p>
+                        <p className="text-[15px] font-black text-slate-900 leading-tight">{order.customer_name}</p>
+                        {order.phone_number && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{order.phone_number}</p>}
                     </div>
-                    
                     <div className="text-right">
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Order Status</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-[9px] text-[#565959] font-bold uppercase tracking-widest mb-1">State</p>
-                                <span className={cn(
-                                    "inline-block px-3 py-1 text-white text-[10px] font-black uppercase tracking-widest rounded-sm",
-                                    order.status === 'DELIVERED' ? 'bg-emerald-600' : 
-                                    order.status === 'CANCELLED' ? 'bg-rose-600' : 'bg-[#FFD814] text-black'
-                                )}>
-                                    {order.status_display || order.status}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-[#565959] font-bold uppercase tracking-widest mb-1">Payment</p>
-                                <p className="text-[12px] font-black text-black uppercase tracking-widest">{order.payment_method || 'Cash on Delivery'}</p>
-                            </div>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment</p>
+                        <p className="text-[12px] font-black uppercase text-slate-900">{order.payment_method || 'Cash on Delivery'}</p>
                     </div>
                 </div>
 
-                {/* 3. Items Table */}
-                <div className="mb-12">
-                    <table className="w-full text-left border-collapse">
+                {/* Items Table */}
+                <div className="mb-6">
+                    <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
                         <thead>
-                            <tr className="border-b-2 border-black text-[12px] font-black uppercase tracking-wider text-black bg-gray-50/50">
-                                <th className="py-4 px-2 w-12 text-center opacity-40">#</th>
-                                <th className="py-4 px-3">Product Description</th>
-                                <th className="py-4 px-3 text-center w-28">Quantity</th>
-                                <th className="py-4 px-3 text-right w-32">Unit Price</th>
-                                <th className="py-4 px-3 text-right w-32">Total</th>
+                            <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                                <th className="py-1.5 px-2 w-12 text-center">#</th>
+                                <th className="py-1.5 px-3">Product Description</th>
+                                <th className="py-1.5 px-3 text-center w-28">Quantity</th>
+                                <th className="py-1.5 px-3 text-right w-32">Unit Price</th>
+                                <th className="py-1.5 px-3 text-right w-32">Total</th>
                             </tr>
                         </thead>
-                        <tbody className="text-[14px]">
+                        <tbody className="text-[13px]">
                             {items.map((item: any, i: number) => {
                                 const price = parseFloat(item.price || 0);
                                 const qty = item.quantity || 1;
                                 const amt = price * qty;
                                 return (
-                                    <tr key={i} className="hover:bg-gray-50/50 border-b border-[#eee]">
-                                        <td className="py-4 px-1 text-center text-gray-400">{i + 1}</td>
-                                        <td className="py-4 px-3 font-bold text-[#111]">
-                                            {item.product_name}
-                                        </td>
-                                        <td className="py-4 px-3 text-center font-bold text-slate-700">{qty}</td>
-                                        <td className="py-4 px-3 text-right text-gray-600">Rs. {price.toLocaleString()}</td>
-                                        <td className="py-4 px-3 text-right font-black text-[#111]">Rs. {amt.toLocaleString()}</td>
+                                    <tr key={i} className="hover:bg-slate-50">
+                                        <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
+                                        <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">{item.product_name}</td>
+                                        <td className="py-1.5 px-3 text-center tabular-nums">{qty}</td>
+                                        <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(amt)}</td>
                                     </tr>
                                 );
                             })}
-                            
-                            {/* Calculation Area */}
-                            <tr className="border-t-2 border-black">
-                                <td colSpan={3} className="pt-8"></td>
-                                <td className="py-2 text-right text-[12px] font-bold text-gray-500 uppercase">Subtotal</td>
-                                <td className="py-2 text-right font-black text-[#111]">Rs. {totalAmount.toLocaleString()}</td>
-                            </tr>
-                            <tr className="bg-gray-50/50">
-                                <td colSpan={3} className="py-4 px-3 italic text-[11px] text-gray-400">
-                                    Notes: {order.notes || 'Thank you for shopping with Al-Qavi Traders!'}
-                                </td>
-                                <td className="py-4 px-3 text-right text-[14px] font-black uppercase tracking-wider text-black">Grand Total</td>
-                                <td className="py-4 px-3 text-right text-[22px] font-black text-[#B12704]">Rs. {totalAmount.toLocaleString()}</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                {/* Signature Block */}
-                <div className="mt-24 pt-12 border-t-2 border-dashed border-black">
-                    <div className="flex justify-between items-start gap-32">
-                        <div className="flex-1 space-y-3 text-center">
-                            <p className="text-[11px] font-bold text-gray-400 uppercase">Received By</p>
-                            <div className="w-full border-b border-black pt-10"></div>
-                            <p className="text-[12px] font-black uppercase tracking-widest text-black pt-2">{order.customer_name}</p>
-                        </div>
-                        <div className="flex-1 space-y-3 text-center">
-                            <p className="text-[11px] font-bold text-gray-400 uppercase">Authorized Signature</p>
-                            <div className="w-full border-b border-black pt-10"></div>
-                            <p className="text-[12px] font-black uppercase tracking-widest text-black pt-2">Gilgit Distribution Desk</p>
-                        </div>
+                {/* Summary: notes (left) + totals (right) */}
+                <div className="flex justify-between items-start gap-6 mb-6">
+                    <div className="flex-1 pt-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                        <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{order.notes || 'Thank you for shopping with Alqavi Traders.'}</p>
                     </div>
-
-                    <div className="mt-20 text-center border-t border-slate-100 pt-6">
-                        <p className="text-[9px] text-gray-300 font-bold uppercase tracking-[0.5em]">
-                            This is a computer generated invoice • Al-Qavi Traders Gilgit
-                        </p>
+                    <div className="w-[280px] text-[12px] space-y-2">
+                        <div className="flex justify-between items-center pt-1 border-t-2 border-slate-300">
+                            <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
+                            <span className="font-black text-indigo-600 text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        </div>
                     </div>
                 </div>
+
+                <InvoiceFooter />
             </div>
 
-            <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-                
-                @media print {
-                    .print\\:hidden { display: none !important; }
-                    body { padding: 0 !important; margin: 0 !important; background-color: white !important; }
-                    .max-w-[850px] { max-width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-                    @page { margin: 1cm; }
-                }
-
-                body { font-family: 'Inter', sans-serif; }
-                .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; font-weight: 700; line-height: 2.1; }
-            `}</style>
+            <style jsx global>{invoiceStyles}</style>
         </div>
     );
 }

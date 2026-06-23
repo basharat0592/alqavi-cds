@@ -168,6 +168,12 @@ class PurchaseOrder(models.Model):
     expected_delivery_date = models.DateField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
 
+    # The admin/user who created this purchase order (shown to the supplier as "From").
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='created_purchase_orders'
+    )
+
     # Payment Details
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_date = models.DateField(null=True, blank=True)

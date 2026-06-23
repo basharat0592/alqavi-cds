@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { supplierProductService } from '@/services/supplierProduct.service';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import { Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { PageHeader, Card, Button } from '@/components/admin/ui';
+import toast from 'react-hot-toast';
+import { PageHeader, Card, Button, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function SupplierProductsPage() {
     const [items, setItems] = useState<any[]>([]);
@@ -24,6 +25,14 @@ export default function SupplierProductsPage() {
     };
 
     useEffect(() => { load(); }, []);
+
+    const sel = useTableSelection(items);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => supplierProductService.delete(id)));
+        setItems(prev => prev.filter(it => !ids.map(String).includes(String(it.id))));
+        toast.success(`${ids.length} mapping(s) deleted`);
+    };
 
     return (
         <div>
@@ -46,6 +55,7 @@ export default function SupplierProductsPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Supplier</th>
                                 <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
                                 <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Supplier SKU</th>
@@ -57,17 +67,18 @@ export default function SupplierProductsPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="p-6 text-center text-slate-500">
+                                    <td colSpan={7} className="p-6 text-center text-slate-500">
                                         <span className="inline-flex items-center gap-2">
                                             <Loader2 className="h-4 w-4 animate-spin text-indigo-600" /> Loading...
                                         </span>
                                     </td>
                                 </tr>
                             ) : items.length === 0 ? (
-                                <tr><td colSpan={6} className="p-6 text-center text-slate-400">No mappings found.</td></tr>
+                                <tr><td colSpan={7} className="p-6 text-center text-slate-400">No mappings found.</td></tr>
                             ) : (
                                 items.map((it: any) => (
                                     <tr key={it.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                        <RowCheckboxTd sel={sel} id={it.id} />
                                         <td className="px-4 py-3 text-slate-900">{it.supplier_name}</td>
                                         <td className="px-4 py-3 text-slate-600">{(it.product_name || '—').replace(/\s*\(.*?\)\s*$/, '')}</td>
                                         <td className="px-4 py-3 text-slate-600">{it.supplier_sku || '—'}</td>
@@ -92,6 +103,22 @@ export default function SupplierProductsPage() {
                     </table>
                 </div>
             </Card>
+
+            <BulkBar
+                sel={sel}
+                entity="supplier products"
+                onDelete={bulkDelete}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((it: any) => ({
+                        supplier: it.supplier_name || '',
+                        product: it.product_name || '',
+                        supplier_sku: it.supplier_sku || '',
+                        price: it.price ?? '',
+                        lead_time_days: it.lead_time_days ?? '',
+                    })),
+                    'supplier-products.csv',
+                )}
+            />
         </div>
     );
 }

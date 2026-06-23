@@ -5,29 +5,33 @@ from rest_framework.response import Response
 from django.db.models import F, ExpressionWrapper, DecimalField, Q
 from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage
 from .serializers import (
-    ProductSerializer, WishlistSerializer, CategorySerializer, 
+    ProductSerializer, WishlistSerializer, CategorySerializer,
     SupplierProductSerializer, MainCategorySerializer
 )
+from core.permissions import HasModulePermission
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, HasModulePermission]
+    perm_module = 'products'
     pagination_class = None
 
 
 class MainCategoryViewSet(viewsets.ModelViewSet):
     queryset = MainCategory.objects.all().order_by('name')
     serializer_class = MainCategorySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, HasModulePermission]
+    perm_module = 'products'
     pagination_class = None
 
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.exclude(status='ARCHIVED').order_by('-created_at')
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, HasModulePermission]
+    perm_module = 'products'
 
     def perform_create(self, serializer):
         """Handle professional deduplication and merging with existing products"""
@@ -198,7 +202,8 @@ class WishlistViewSet(viewsets.ModelViewSet):
 class SupplierProductViewSet(viewsets.ModelViewSet):
     """ViewSet for products uploaded by suppliers for review"""
     serializer_class = SupplierProductSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    perm_module = 'purchases'
 
     def get_queryset(self):
         user = self.request.user

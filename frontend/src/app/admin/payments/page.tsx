@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { paymentService, paymentCategoryService } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import {
     DollarSign, Search, RefreshCw, Plus, ArrowUpRight, ArrowDownLeft,
     X, Loader2, CheckCircle2, LayoutGrid, AlertTriangle
 } from 'lucide-react';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 interface Payment {
     id: number;
@@ -68,6 +68,14 @@ export default function PaymentsPage() {
         const matchesType = typeFilter === 'all' || p.payment_type === typeFilter;
         return matchesSearch && matchesType;
     });
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map((id) => paymentService.delete(id)));
+        showToast(`${ids.length} payment(s) deleted`);
+        loadData();
+    };
 
     return (
         <div className="pb-20 text-left">
@@ -133,6 +141,7 @@ export default function PaymentsPage() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                            <SelectAllTh sel={sel} />
                                             <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Voucher #</th>
                                             <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Payment Mode</th>
                                             <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Person / Company</th>
@@ -143,12 +152,13 @@ export default function PaymentsPage() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {loading ? (
-                                            <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 text-slate-300 animate-spin mx-auto" /></td></tr>
+                                            <tr><td colSpan={7} className="py-20 text-center"><Loader2 className="h-8 w-8 text-slate-300 animate-spin mx-auto" /></td></tr>
                                         ) : filtered.length === 0 ? (
-                                            <tr><td colSpan={6} className="py-24 text-center text-[13px] text-slate-500">No payments found.</td></tr>
+                                            <tr><td colSpan={7} className="py-24 text-center text-[13px] text-slate-500">No payments found.</td></tr>
                                         ) : (
                                             filtered.map((payment) => (
                                                 <tr key={payment.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                                    <RowCheckboxTd sel={sel} id={payment.id} />
                                                     <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                                                         <div className="font-bold text-slate-900">#{payment.id}</div>
                                                         <div className="text-[11px] text-slate-400 mt-1">{formatDate(payment.date)}</div>
@@ -182,6 +192,26 @@ export default function PaymentsPage() {
                                 </table>
                             </div>
                         </Card>
+
+                        <BulkBar
+                            sel={sel}
+                            entity="payments"
+                            onDelete={bulkDelete}
+                            onExport={() => exportToCSV(
+                                sel.selectedItems.map((p: any) => ({
+                                    voucher: p.id,
+                                    date: formatDate(p.date),
+                                    type: p.payment_type === 'inbound' ? 'Income' : 'Expense',
+                                    method: (p.method || '').replace('_', ' '),
+                                    party: p.payer_payee || 'Internal',
+                                    category: p.category_name || '',
+                                    reference: p.reference_number || '',
+                                    amount: p.amount ?? 0,
+                                    recorded_by: p.user_name || '',
+                                })),
+                                'payments.csv',
+                            )}
+                        />
                     </>
                 )}
 

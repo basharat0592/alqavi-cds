@@ -5,12 +5,23 @@ from django.db import transaction
 from django.contrib.auth.hashers import make_password
 from .models import Customer
 from .serializers import CustomerSerializer, CustomerCreateSerializer
+from core.permissions import HasModulePermission
 
 class CustomerViewSet(viewsets.ModelViewSet):
     """ViewSet for Customer CRUD operations"""
     queryset = Customer.objects.all().order_by('-created_at')
     serializer_class = CustomerSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny, HasModulePermission]
+    perm_module = 'customers'
+
+    def get_queryset(self):
+        qs = Customer.objects.all().order_by('-created_at')
+        # Area Manager scoping: only customers in their assigned area(s).
+        from core.scoping import user_area_ids
+        area_ids = user_area_ids(self.request.user)
+        if area_ids is not None:
+            qs = qs.filter(area_id__in=area_ids)
+        return qs
 
     def get_serializer_class(self):
         if self.action == 'create':

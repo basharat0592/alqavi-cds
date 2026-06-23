@@ -10,7 +10,8 @@ import {
 import { sectionService, productService } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { exportToCSV } from '@/lib/utils';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PROFESSIONAL AMAZON RETAIL DESIGN SYSTEM (SYNCED)
@@ -192,6 +193,20 @@ export default function SectionsPage() {
         const q = prodSearch.toLowerCase();
         return name.includes(q) || sku.includes(q);
     });
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => sectionService.delete(id)));
+        setCategories(prev => prev.filter(c => !ids.includes(String(c.id))));
+        toast.success(`${ids.length} section(s) deleted`);
+    };
+
+    const bulkStatus = async (ids: string[], status: 'active' | 'inactive') => {
+        await Promise.allSettled(ids.map(id => sectionService.update(id, { status })));
+        toast.success(`Marked ${ids.length} section(s) ${status}`);
+        await loadData();
+    };
 
     if (view === 'form') {
         return (
@@ -398,6 +413,7 @@ export default function SectionsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order</th>
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Group Name</th>
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Products</th>
@@ -408,12 +424,13 @@ export default function SectionsPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading && filtered.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-400 italic">Reading layout...</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-400 italic">Reading layout...</td></tr>
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-400 font-medium">No sections defined yet.</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-400 font-medium">No sections defined yet.</td></tr>
                                 ) : (
                                     filtered.map((cat) => (
                                         <tr key={cat.id} className="hover:bg-slate-50 transition-all group">
+                                            <RowCheckboxTd sel={sel} id={cat.id} />
                                             <td className="px-6 py-4 text-[13px] font-bold text-slate-400 tabular-nums">
                                                 {String(cat.position || 0).padStart(2, '0')}
                                             </td>
@@ -452,6 +469,27 @@ export default function SectionsPage() {
                     </div>
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="sections"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkStatus(ids, 'active') },
+                    { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, 'inactive') },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((c: any) => ({
+                        name: c.name,
+                        description: c.description || '',
+                        position: c.position ?? 0,
+                        visible: c.is_visible !== false ? 'Yes' : 'No',
+                        status: c.status || 'active',
+                        products: c.products?.length || c.product_details?.length || 0,
+                    })),
+                    'sections.csv',
+                )}
+            />
 
             {/* --- Delete Confirmation --- */}
             <Modal

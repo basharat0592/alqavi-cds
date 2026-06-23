@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Save, X, Loader2, Check, AlertCircle } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import toast from 'react-hot-toast';
+import { exportToCSV } from '@/lib/utils';
+import { useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 interface NavbarPage {
     id?: number;
@@ -184,6 +186,20 @@ export default function NavbarPagesTab() {
         }
     };
 
+    const sel = useTableSelection(pages, (p) => p.id ?? -1);
+
+    const bulkDelete = async (ids: (string | number)[]) => {
+        await Promise.allSettled(ids.map(id => cmsService.deleteNavbarPage(Number(id))));
+        setPages(prev => prev.filter(p => !ids.map(String).includes(String(p.id))));
+        toast.success(`${ids.length} page(s) deleted`);
+    };
+
+    const bulkSetVisible = async (ids: (string | number)[], visible: boolean) => {
+        await Promise.allSettled(ids.map(id => cmsService.updateNavbarPage(Number(id), { is_visible: visible })));
+        setPages(prev => prev.map(p => ids.map(String).includes(String(p.id)) ? { ...p, is_visible: visible } : p));
+        toast.success(`${visible ? 'Showed' : 'Hid'} ${ids.length} page(s)`);
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-[400px]">
             <Loader2 className="h-8 w-8 animate-spin text-[#c45500]" />
@@ -242,6 +258,7 @@ export default function NavbarPagesTab() {
                         <table className="w-full text-[13px]">
                             <thead>
                                 <tr className="border-b border-[#eee] bg-[#fafbfc]">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">ID</th>
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">Name</th>
                                     <th className="px-6 py-3 text-left font-bold text-[#111]">Link</th>
@@ -255,6 +272,7 @@ export default function NavbarPagesTab() {
                             <tbody>
                                 {pages.map((page, idx) => (
                                     <tr key={page.id ?? idx} className="border-b border-[#eee] hover:bg-[#fafbfc] transition-colors group">
+                                        <RowCheckboxTd sel={sel} id={page.id ?? -1} />
                                         <td className="px-6 py-3 text-[13px] text-[#444]">{page.id ?? '-'}</td>
                                         <td className="px-6 py-3">
                                             <div className="font-medium text-[#111]">{page.name}</div>
@@ -296,6 +314,28 @@ export default function NavbarPagesTab() {
                     </div>
                 )}
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="pages"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Show', apply: (ids) => bulkSetVisible(ids, true) },
+                    { label: 'Hide', apply: (ids) => bulkSetVisible(ids, false) },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        id: p.id ?? '',
+                        name: p.name || '',
+                        link: p.link || '',
+                        slug: p.slug || '',
+                        categories: categoriesCounts[p.id || 0] || 0,
+                        order: p.order ?? 0,
+                        status: p.is_visible ? 'Active' : 'Hidden',
+                    })),
+                    'navbar-pages.csv',
+                )}
+            />
 
             {/* Info Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-[4px] p-4">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { orderService } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
     Search, RefreshCw, Printer, Plus,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PrintSlip } from '@/components/admin/PrintSlip';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM — RECENT ORDERS
@@ -108,6 +108,20 @@ export default function RecentOrdersPage() {
             (o.tracking_id || '').toLowerCase().includes(q);
     });
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => orderService.delete(id)));
+        toast.success(`${ids.length} order(s) deleted`);
+        loadData();
+    };
+
+    const bulkStatus = async (ids: string[], status: string) => {
+        await Promise.allSettled(ids.map(id => orderService.update(id, { status })));
+        toast.success(`Marked ${ids.length} order(s) ${status}`);
+        loadData();
+    };
+
     return (
         <div className="pb-20 text-left">
 
@@ -170,6 +184,7 @@ export default function RecentOrdersPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Order Info</th>
                                     <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Customer</th>
                                     <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Total</th>
@@ -179,12 +194,13 @@ export default function RecentOrdersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
+                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">No orders found.</td></tr>
+                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">No orders found.</td></tr>
                                 ) : (
                                     filtered.map((o) => (
                                         <tr key={o.id} className="hover:bg-slate-50 transition-colors group text-[13px]" onClick={() => setSelectedOrder(o)}>
+                                            <RowCheckboxTd sel={sel} id={o.id} />
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
                                                 <div className="font-bold text-indigo-600 group-hover:underline cursor-pointer tabular-nums">#{o.order_number}</div>
                                                 <div className="text-[11px] text-slate-400 mt-0.5">{formatDate(o.created_at)}</div>
@@ -218,6 +234,32 @@ export default function RecentOrdersPage() {
                         </table>
                     </div>
                 </Card>
+
+                <BulkBar
+                    sel={sel}
+                    entity="orders"
+                    onDelete={bulkDelete}
+                    statusActions={[
+                        { label: 'Mark Confirmed', apply: (ids) => bulkStatus(ids, 'CONFIRMED') },
+                        { label: 'Mark Processing', apply: (ids) => bulkStatus(ids, 'PROCESSING') },
+                        { label: 'Mark Shipped', apply: (ids) => bulkStatus(ids, 'SHIPPED') },
+                        { label: 'Mark Delivered', apply: (ids) => bulkStatus(ids, 'DELIVERED') },
+                        { label: 'Mark Cancelled', apply: (ids) => bulkStatus(ids, 'CANCELLED') },
+                    ]}
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((o: any) => ({
+                            order_number: o.order_number || o.id,
+                            tracking_id: o.tracking_id || '',
+                            customer_name: o.customer_name || 'Walk-in',
+                            phone_number: o.phone_number || '',
+                            status: o.status || '',
+                            total_amount: o.total_amount ?? 0,
+                            items: o.items?.length || 0,
+                            date: formatDate(o.created_at),
+                        })),
+                        'recent-orders.csv',
+                    )}
+                />
             </div>
 
             {/* Order Detail Modal */}

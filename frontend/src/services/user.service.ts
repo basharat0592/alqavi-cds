@@ -32,8 +32,8 @@ export const userService = {
         const { data } = await api.get(`v1/users/${id}/`);
         return data;
     },
-    create: async (userData: Partial<AppUser> & { password?: string, password_confirm?: string }): Promise<AppUser> => {
-        const payload = {
+    create: async (userData: Partial<AppUser> & { password?: string, password_confirm?: string, areas?: number[], page_permissions?: string[], page_edit_permissions?: string[] }): Promise<AppUser> => {
+        const payload: any = {
             username: userData.email,
             email: userData.email,
             first_name: userData.first_name || '',
@@ -43,6 +43,9 @@ export const userService = {
             password: userData.password,
             password_confirm: userData.password_confirm || userData.password,
         };
+        if (userData.page_permissions !== undefined) payload.page_permissions = userData.page_permissions;
+        if (userData.page_edit_permissions !== undefined) payload.page_edit_permissions = userData.page_edit_permissions;
+        if (userData.areas !== undefined) payload.areas = userData.areas;
         const { data } = await api.post('v1/users/create/', payload);
         return data.user || data;
     },

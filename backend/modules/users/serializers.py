@@ -3,6 +3,7 @@ User management serializers.
 """
 from rest_framework import serializers
 from .models import User, Role, Permission, UserActivityLog, UserSettings
+from modules.company.models import Area
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -47,16 +48,21 @@ class UserDetailSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
     permissions = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    
+    areas = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'phone',
             'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'permissions', 'page_permissions',
-            'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
+            'status', 'status_display', 'is_active', 'is_staff', 'permissions',
+            'page_permissions', 'page_edit_permissions',
+            'areas', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at']
+
+    def get_areas(self, obj):
+        return [{'id': a.id, 'name': a.name, 'code': a.code} for a in obj.areas.all()]
     
     def get_permissions(self, obj):
         """Get user's permissions through their role."""
@@ -83,38 +89,50 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new users."""
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, required=True)
-    
+    areas = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Area.objects.all()
+    )
+
     class Meta:
         model = User
         fields = [
             'username', 'email', 'password', 'password_confirm', 'first_name',
             'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role',
-            'page_permissions'
+            'page_permissions', 'page_edit_permissions', 'areas'
         ]
-    
+
     def validate(self, data):
         """Validate passwords match."""
         if data['password'] != data.pop('password_confirm'):
             raise serializers.ValidationError('Passwords do not match.')
         return data
-    
+
     def create(self, validated_data):
         """Create user with hashed password and store plain version."""
         password = validated_data.pop('password')
+        areas = validated_data.pop('areas', None)
         user = User.objects.create_user(password=password, **validated_data)
         user.plain_password = password
+        # Internal users created here are staff so they can reach the admin panel;
+        # page_permissions + area scoping handle what they can actually see.
+        user.is_staff = True
         user.save()
+        if areas is not None:
+            user.areas.set(areas)
         return user
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user information."""
-    
+    areas = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Area.objects.all()
+    )
+
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'email', 'phone', 'avatar', 'address',
-            'city', 'country', 'postal_code', 'role', 'page_permissions'
+            'city', 'country', 'postal_code', 'role', 'page_permissions', 'page_edit_permissions', 'areas'
         ]
 
 
@@ -179,11 +197,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 data = super().validate(auth_attrs)
                 user = self.user
                 
+                # Prefer the user's actual role name so restricted staff roles
+                # (Sales Manager, Area Manager, …) keep their page/area scoping.
+                # Only fall back to 'admin' for staff with no explicit role.
                 role = 'customer'
-                if user.is_superuser or user.is_staff:
-                    role = 'admin'
-                elif user.role:
+                if user.role:
                     role = user.role.name.lower()
+                elif user.is_superuser or user.is_staff:
+                    role = 'admin'
 
                 data['user'] = {
                     'id': str(user.id),
@@ -194,6 +215,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'is_staff': user.is_staff,
                     'is_superuser': user.is_superuser,
                     'page_permissions': user.page_permissions or [],
+                    'page_edit_permissions': user.page_edit_permissions or [],
+                    'areas': [{'id': a.id, 'name': a.name, 'code': a.code} for a in user.areas.all()],
                 }
                 return data
             except Exception:

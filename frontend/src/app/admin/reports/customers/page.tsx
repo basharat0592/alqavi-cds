@@ -6,10 +6,11 @@ import {
     ShoppingBag, CheckCircle, Info
 } from 'lucide-react';
 import { userService, orderService } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, exportToCSV } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
 export default function CustomerReportsPage() {
     const [loading, setLoading] = useState(true);
@@ -43,31 +44,39 @@ export default function CustomerReportsPage() {
         return Object.values(stats).sort((a: any, b: any) => b.spent - a.spent).slice(0, 10);
     }, [orders]);
 
+    const sel = useTableSelection<any>(topBuyers as any[], (b) => b?.name ?? String((topBuyers as any[]).indexOf(b)));
+
     if (loading && users.length === 0) return <PageLoader />;
 
     return (
         <div className="pb-20">
             <div className="max-w-[1440px] mx-auto text-left">
 
-                <PageHeader
-                    title="Customer Reports"
-                    subtitle="Customer behavioral analytics"
-                    breadcrumbs={[
-                        { label: 'Console', href: '/admin/dashboard' },
-                        { label: 'Reports Center', href: '/admin/reports' },
-                        { label: 'Customer Reports' },
-                    ]}
-                    actions={
-                        <div className="flex gap-2 no-print">
-                            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => window.print()}>
-                                <Printer size={14} /> Print
-                            </Button>
-                        </div>
-                    }
-                />
+                <div className="hidden print:block mb-4">
+                    <InvoiceHeader docTitle="Customers Report" />
+                </div>
+
+                <div className="print:hidden">
+                    <PageHeader
+                        title="Customer Reports"
+                        subtitle="Customer behavioral analytics"
+                        breadcrumbs={[
+                            { label: 'Console', href: '/admin/dashboard' },
+                            { label: 'Reports Center', href: '/admin/reports' },
+                            { label: 'Customer Reports' },
+                        ]}
+                        actions={
+                            <div className="flex gap-2 no-print">
+                                <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+                                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                                    <Printer size={14} /> Print
+                                </Button>
+                            </div>
+                        }
+                    />
+                </div>
 
                 {/* Tactical Sensors */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -109,6 +118,7 @@ export default function CustomerReportsPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/60">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3">Client Identification</th>
                                 <th className="px-6 py-3 text-center">Engagement Tier</th>
                                 <th className="px-6 py-3 text-center">Frequency</th>
@@ -117,10 +127,11 @@ export default function CustomerReportsPage() {
                         </thead>
                         <tbody>
                             {topBuyers.length === 0 ? (
-                                <tr><td colSpan={4} className="py-24 text-center text-slate-400 italic">No customer data available.</td></tr>
+                                <tr><td colSpan={5} className="py-24 text-center text-slate-400 italic">No customer data available.</td></tr>
                             ) : (
                                 topBuyers.map((b: any, i) => (
                                     <tr key={i} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <RowCheckboxTd sel={sel} id={b?.name ?? String(i)} />
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center font-bold text-indigo-600 text-[14px] border border-indigo-100">
@@ -146,11 +157,31 @@ export default function CustomerReportsPage() {
                     </table>
                 </Card>
 
+                <div className="print:hidden">
+                    <BulkBar
+                        sel={sel}
+                        entity="customers"
+                        onExport={() => exportToCSV(
+                            sel.selectedItems.map((b: any) => ({
+                                customer: b.name,
+                                purchases: b.orders ?? 0,
+                                lifetime_spent: b.spent ?? 0,
+                            })),
+                            'top-customers.csv',
+                        )}
+                    />
+                </div>
+
                 {/* Footnote */}
-                <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-3 no-print">
+                <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-3 no-print print:hidden">
                     <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
                     <p className="text-[12px] text-slate-600 leading-relaxed font-medium">Lifetime contribution values are calculated based on verified delivered orders only. Guest checkouts are aggregated under &apos;Walk-in&apos; identities.</p>
                 </div>
+
+                <div className="hidden print:block">
+                    <InvoiceFooter pinned={false} />
+                </div>
+                <style jsx global>{invoiceStyles}</style>
             </div>
         </div>
     );

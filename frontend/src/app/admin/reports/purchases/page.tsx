@@ -6,9 +6,10 @@ import {
     Printer, Building2, Info
 } from 'lucide-react';
 import { purchaseService, productService } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 import toast from 'react-hot-toast';
 
 export default function PurchaseReportsPage() {
@@ -36,30 +37,38 @@ export default function PurchaseReportsPage() {
         return { totalExpenditure, pending, unpaid };
     }, [purchases]);
 
+    const sel = useTableSelection(purchases, (p) => p.id ?? p.purchase_number ?? String(purchases.indexOf(p)));
+
     if (loading && purchases.length === 0) return <PageLoader />;
 
     return (
         <div className="pb-20">
 
-            <PageHeader
-                title="Purchase Reports"
-                subtitle="Purchase & Procurement Audit"
-                breadcrumbs={[
-                    { label: 'Console', href: '/admin/dashboard' },
-                    { label: 'Reports Center', href: '/admin/reports' },
-                    { label: 'Purchase Reports' },
-                ]}
-                actions={
-                    <>
-                        <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={() => window.print()}>
-                            <Printer size={14} /> Print
-                        </Button>
-                    </>
-                }
-            />
+            <div className="hidden print:block mb-4">
+                <InvoiceHeader docTitle="Purchase Report" />
+            </div>
+
+            <div className="print:hidden">
+                <PageHeader
+                    title="Purchase Reports"
+                    subtitle="Purchase & Procurement Audit"
+                    breadcrumbs={[
+                        { label: 'Console', href: '/admin/dashboard' },
+                        { label: 'Reports Center', href: '/admin/reports' },
+                        { label: 'Purchase Reports' },
+                    ]}
+                    actions={
+                        <>
+                            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => window.print()}>
+                                <Printer size={14} /> Print
+                            </Button>
+                        </>
+                    }
+                />
+            </div>
 
             {/* Tactical Sensors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -98,6 +107,7 @@ export default function PurchaseReportsPage() {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            <SelectAllTh sel={sel} />
                             <th className="px-6 py-3">PO Identifier</th>
                             <th className="px-6 py-3">Supplier Entity</th>
                             <th className="px-6 py-3 text-center">Fulfillment</th>
@@ -107,10 +117,11 @@ export default function PurchaseReportsPage() {
                     </thead>
                     <tbody>
                         {purchases.length === 0 ? (
-                            <tr><td colSpan={5} className="py-24 text-center text-slate-400 italic">No procurement records found.</td></tr>
+                            <tr><td colSpan={6} className="py-24 text-center text-slate-400 italic">No procurement records found.</td></tr>
                         ) : (
                             purchases.map((p, i) => (
                                 <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                    <RowCheckboxTd sel={sel} id={p.id ?? p.purchase_number ?? String(i)} />
                                     <td className="px-6 py-4 font-bold text-indigo-600 group-hover:underline cursor-pointer">
                                         #{p.purchase_number || (p.id ? p.id.slice(0, 8) : i)}
                                     </td>
@@ -136,14 +147,36 @@ export default function PurchaseReportsPage() {
                 </table>
             </Card>
 
+            <div className="print:hidden">
+                <BulkBar
+                    sel={sel}
+                    entity="orders"
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((p: any) => ({
+                            po_number: p.purchase_number || (p.id ? String(p.id).slice(0, 8) : ''),
+                            supplier: p.supplier_name || 'Generic Vendor',
+                            fulfillment: p.status || '',
+                            payment: p.payment_status || '',
+                            gross_outlay: p.total_amount ?? 0,
+                        })),
+                        'purchases.csv',
+                    )}
+                />
+            </div>
+
             {/* Summary Note */}
-            <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4 items-start no-print">
+            <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4 items-start no-print print:hidden">
                 <Info className="text-indigo-600 shrink-0 mt-0.5" size={18} />
                 <div>
                     <p className="text-[13px] font-bold text-slate-900">Procurement Audit Note</p>
                     <p className="text-[12px] text-slate-600 leading-relaxed">Financial outlay reflects gross amounts before tax and landed costs. Unsettled balances should be reconciled with the Supplier Ledger to avoid credit disruption.</p>
                 </div>
             </div>
+
+            <div className="hidden print:block">
+                <InvoiceFooter pinned={false} />
+            </div>
+            <style jsx global>{invoiceStyles}</style>
         </div>
     );
 }

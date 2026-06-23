@@ -9,9 +9,9 @@ import {
     ChevronLeft, ChevronRight, Truck, MapPin, TrendingUp
 } from 'lucide-react';
 import { productService, categoryService, supplierService, inventoryService } from '@/lib/api';
-import { formatCurrency, getImageUrl } from '@/lib/utils';
+import { formatCurrency, getImageUrl, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -128,6 +128,20 @@ export default function ProductsPage() {
 
     const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
+    const sel = useTableSelection(groupedProducts);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => productService.delete(id)));
+        toast.success(`${ids.length} product(s) deleted`);
+        loadData();
+    };
+
+    const bulkStatus = async (ids: string[], status: 'ACTIVE' | 'INACTIVE') => {
+        await Promise.allSettled(ids.map(id => productService.update(id, { status })));
+        toast.success(`Marked ${ids.length} product(s) ${status === 'ACTIVE' ? 'Active' : 'Inactive'}`);
+        loadData();
+    };
+
     return (
         <div className="pb-20">
             <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5 text-left">
@@ -176,6 +190,7 @@ export default function ProductsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Price</th>
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">Status</th>
@@ -185,13 +200,14 @@ export default function ProductsPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && products.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
+                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
                                 ) : products.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
+                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
                                 ) : (
                                     groupedProducts.map(prod => {
                                         return (
                                             <tr key={prod.id} className="hover:bg-slate-50 transition-colors group">
+                                                <RowCheckboxTd sel={sel} id={prod.id} />
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
                                                     <div className="flex items-center gap-2 sm:gap-4">
                                                         <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-slate-200 rounded-lg flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
@@ -280,6 +296,29 @@ export default function ProductsPage() {
                     )}
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="products"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkStatus(ids, 'ACTIVE') },
+                    { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, 'INACTIVE') },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        name: p.product_name || '',
+                        sku: p.sku || '',
+                        selling_price: p.selling_price ?? '',
+                        profit_margin: p.profit_margin ?? '',
+                        status: p.status || '',
+                        supplier: p.supplier_name || '',
+                        warehouse: p.warehouse_name || '',
+                        quantity: p.total_quantity ?? 0,
+                    })),
+                    'products.csv',
+                )}
+            />
 
             {/* Delete Modal */}
             <Modal open={!!deleteProd} onClose={() => setDeleteProd(null)} size="sm">

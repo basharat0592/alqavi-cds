@@ -7,9 +7,9 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PURCHASE RETURNS LIST
@@ -91,6 +91,26 @@ export default function PurchaseReturnsPage() {
         (r.supplier_name?.toLowerCase() || '').includes(search.toLowerCase())
     );
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => purchaseService.deleteReturn(id)));
+        toast.success(`${ids.length} return(s) deleted`);
+        load(true);
+    };
+
+    const bulkAccept = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => purchaseService.acceptReturn(id)));
+        toast.success(`Accepted ${ids.length} return(s)`);
+        load(true);
+    };
+
+    const bulkReject = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => purchaseService.rejectReturn(id)));
+        toast.success(`Rejected ${ids.length} return(s)`);
+        load(true);
+    };
+
     return (
         <div className="pb-20">
             <div className="max-w-[1250px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
@@ -138,6 +158,7 @@ export default function PurchaseReturnsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider whitespace-nowrap">Return #</th>
                                     <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Details</th>
                                     <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider whitespace-nowrap">Date</th>
@@ -150,12 +171,12 @@ export default function PurchaseReturnsPage() {
                                 {loading && filtered.length === 0 ? (
                                     Array(5).fill(0).map((_, i) => (
                                         <tr key={i} className="animate-pulse border-b border-slate-100">
-                                            <td colSpan={6} className="px-2.5 sm:px-4 py-4 h-14 bg-slate-50/50" />
+                                            <td colSpan={7} className="px-2.5 sm:px-4 py-4 h-14 bg-slate-50/50" />
                                         </tr>
                                     ))
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-2.5 sm:px-4 py-20 text-center">
+                                        <td colSpan={7} className="px-2.5 sm:px-4 py-20 text-center">
                                             <div className="flex flex-col items-center text-slate-400">
                                                 <RotateCcw size={40} className="mb-2 text-slate-300" />
                                                 <p className="text-[14px]">No return records found</p>
@@ -165,6 +186,7 @@ export default function PurchaseReturnsPage() {
                                 ) : (
                                     filtered.map(row => (
                                         <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50 transition-all group">
+                                            <RowCheckboxTd sel={sel} id={row.id} />
                                             <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
                                                 <span className="text-[13px] font-bold text-indigo-600 group-hover:text-indigo-700 hover:underline cursor-pointer">
                                                     #{row.return_number}
@@ -210,6 +232,27 @@ export default function PurchaseReturnsPage() {
                     </div>
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="purchase returns"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Accept', apply: bulkAccept },
+                    { label: 'Reject', apply: bulkReject },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((r: any) => ({
+                        return_number: r.return_number,
+                        supplier: r.supplier_name || '',
+                        purchase_number: r.purchase_number || '',
+                        return_date: r.return_date || '',
+                        status: r.status || '',
+                        total_refund_amount: r.total_refund_amount ?? 0,
+                    })),
+                    'purchase-returns.csv',
+                )}
+            />
 
             {/* View Modal */}
             <Modal

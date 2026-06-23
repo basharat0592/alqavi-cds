@@ -10,10 +10,10 @@ import {
     Lock, MoreHorizontal, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 import { userService, roleService, AppUser, AppRole } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    INTERNAL USERS — ADMIN DESIGN SYSTEM (INDIGO / SLATE)
@@ -91,6 +91,20 @@ export default function UsersPage() {
         return matchesRole && matchesSearch && matchesStatus;
     });
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: (string | number)[]) => {
+        await Promise.allSettled(ids.map(id => userService.delete(Number(id))));
+        setUsers(prev => prev.filter(u => !ids.map(String).includes(String(u.id))));
+        toast.success(`${ids.length} user(s) deleted`);
+    };
+
+    const bulkSetActive = async (ids: (string | number)[], active: boolean) => {
+        await Promise.allSettled(ids.map(id => active ? userService.activate(Number(id)) : userService.deactivate(Number(id))));
+        setUsers(prev => prev.map(u => ids.map(String).includes(String(u.id)) ? { ...u, is_active: active } : u));
+        toast.success(`Marked ${ids.length} user(s) ${active ? 'active' : 'inactive'}`);
+    };
+
     if (loading && users.length === 0) return <PageLoader />;
 
     return (
@@ -158,6 +172,7 @@ export default function UsersPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">User</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Role</th>
                                     <th className="hidden sm:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Joined</th>
@@ -167,10 +182,11 @@ export default function UsersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-24 text-center text-[14px] text-slate-500 font-medium">No users found.</td></tr>
+                                    <tr><td colSpan={6} className="py-24 text-center text-[14px] text-slate-500 font-medium">No users found.</td></tr>
                                 ) : (
                                     filtered.map(user => (
                                         <tr key={user.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <RowCheckboxTd sel={sel} id={user.id} />
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
                                                     <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
@@ -221,6 +237,28 @@ export default function UsersPage() {
                     </div>
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="users"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkSetActive(ids, true) },
+                    { label: 'Mark Inactive', apply: (ids) => bulkSetActive(ids, false) },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((u: any) => ({
+                        username: u.username || '',
+                        email: u.email || '',
+                        first_name: u.first_name || '',
+                        last_name: u.last_name || '',
+                        role: u.role_name || '',
+                        phone: u.phone || '',
+                        status: u.is_active ? 'active' : 'inactive',
+                    })),
+                    'users.csv',
+                )}
+            />
 
             {/* Delete Modal */}
             <Modal open={!!deleteUser} onClose={() => setDeleteUser(null)} size="sm">

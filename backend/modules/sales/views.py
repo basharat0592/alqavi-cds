@@ -8,6 +8,7 @@ from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, Purchase
 from .serializers import OrderSerializer, CreateOrderSerializer, PurchaseOrderSerializer, PurchaseReturnSerializer, OrderStatsSerializer, CustomerBoughtProductSerializer, SaleReturnSerializer
 from modules.products.models import SupplierProduct
 from modules.inventory.models import StockMovement
+from core.permissions import HasModulePermission
 
 
 @api_view(['GET'])
@@ -32,7 +33,9 @@ def track_order_by_id(request, tracking_id):
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
-    
+    permission_classes = [HasModulePermission]
+    perm_module = 'sales'
+
     def get_serializer_class(self):
         if self.action == 'create':
             return CreateOrderSerializer
@@ -85,6 +88,12 @@ class OrderViewSet(viewsets.ModelViewSet):
                     queryset = Order.objects.none()
             else:
                 queryset = Order.objects.filter(user=user)
+
+        # Area Manager scoping: only orders whose customer is in their area(s).
+        from core.scoping import user_area_ids
+        area_ids = user_area_ids(user)
+        if area_ids is not None:
+            queryset = queryset.filter(customer__area_id__in=area_ids)
 
         status_filter = self.request.query_params.get('status')
         date_filter = self.request.query_params.get('date')
@@ -427,11 +436,12 @@ class OrderViewSet(viewsets.ModelViewSet):
 class SaleReturnViewSet(viewsets.ModelViewSet):
     queryset = SaleReturn.objects.all()
     serializer_class = SaleReturnSerializer
-    
+    perm_module = 'sales'
+
     def get_permissions(self):
         if self.action in ['update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
-        return [permissions.IsAuthenticated()]
+            return [permissions.IsAdminUser(), HasModulePermission()]
+        return [permissions.IsAuthenticated(), HasModulePermission()]
 
     def get_queryset(self):
         user = self.request.user
@@ -598,7 +608,8 @@ class SaleReturnViewSet(viewsets.ModelViewSet):
 class PurchaseViewSet(viewsets.ModelViewSet):
     """ViewSet for wholesale purchase orders from distributor to supplier"""
     serializer_class = PurchaseOrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    perm_module = 'purchases'
 
     def get_queryset(self):
         user = self.request.user
@@ -881,6 +892,10 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             ]
             final_data = {k: v for k, v in data.items() if k in allowed_fields}
 
+            # Record which admin/user created this PO (shown to the supplier as "From").
+            if getattr(request, 'user', None) and request.user.is_authenticated:
+                final_data['created_by'] = request.user
+
             # 4. Atomic Creation
             with transaction.atomic():
                 # Check for purchase_number collision
@@ -918,11 +933,15 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                             size=size,
                             selling_price=Decimal('0.00')
                         )
-                        calculated_total += (Decimal(str(qty)) * price)
+                        # Carton purchases cost (cartons × pcs-per-carton × per-piece price);
+                        # single purchases cost (qty × price). price is always per-piece.
+                        total_units = qty * items_per if item.get('packaging_type', 'SINGLE') == 'CARTON' else qty
+                        calculated_total += (Decimal(str(total_units)) * price)
                     except (ValueError, TypeError):
                         continue
-                    
-                purchase.total_amount = calculated_total
+
+                # Grand total = items + shipping + tax (so the stored total matches the order summary).
+                purchase.total_amount = calculated_total + (purchase.shipping_cost or Decimal('0.00')) + (purchase.tax_amount or Decimal('0.00'))
                 purchase.save()
 
                 if str(purchase.status).upper() == 'RECEIVED':
@@ -932,6 +951,132 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             
             return Response(PurchaseOrderSerializer(purchase).data, status=status.HTTP_201_CREATED)
             
+        except IntegrityError as e:
+            return Response({"error": f"Database error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['patch', 'put'], url_path='edit-full')
+    def edit_full(self, request, pk=None):
+        """Full edit of a purchase order header + line items, recomputing the total.
+
+        Mirrors create_purchase but updates an existing order. Editing is blocked
+        once the order has been RECEIVED (stock already synced to inventory).
+        """
+        from decimal import Decimal
+        from django.db import IntegrityError, transaction
+        from modules.products.models import SupplierProduct
+
+        purchase = self.get_object()
+
+        if str(purchase.status).upper() == 'RECEIVED' or purchase.is_inventory_synced:
+            return Response(
+                {"error": "Received purchase orders can no longer be edited."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            data = request.data.copy()
+            items_data = data.pop('items', None)
+
+            supplier_id = data.get('supplier') or data.get('supplier_id')
+            if not supplier_id:
+                return Response({"error": "Supplier is required"}, status=400)
+            if items_data is not None and len(items_data) == 0:
+                return Response({"error": "At least one item is required"}, status=400)
+
+            # Header normalization (mirror create_purchase)
+            for helper_field in ['supplier_name', 'order_date', 'purchase_number']:
+                data.pop(helper_field, None)  # never reassign the human-facing PO number
+
+            if data.get('status'):
+                s = str(data['status']).upper()
+                if s == 'ORDERED':
+                    s = 'PENDING'
+                if s == 'RECEIVED':
+                    # Receiving must go through the dedicated status/warehouse flow.
+                    return Response(
+                        {"error": "Use the Receive action to mark an order received."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                data['status'] = s
+
+            if data.get('payment_status'):
+                data['payment_status'] = str(data['payment_status']).upper()
+            if data.get('payment_method'):
+                data['payment_method'] = str(data['payment_method']).upper()
+
+            warehouse_id = data.get('warehouse') or data.get('warehouse_id')
+
+            for date_field in ['expected_delivery_date', 'payment_date']:
+                if date_field in data:
+                    val = str(data[date_field]).strip()
+                    data[date_field] = val if val else None
+
+            for num_field in ['paid_amount', 'shipping_cost', 'tax_amount']:
+                if num_field in data:
+                    try:
+                        val = str(data[num_field]).strip()
+                        data[num_field] = Decimal(val) if val else Decimal('0.00')
+                    except (ValueError, TypeError, Exception):
+                        data[num_field] = Decimal('0.00')
+
+            header_fields = [
+                'reference_number', 'shipping_cost', 'tax_amount', 'status',
+                'payment_status', 'payment_method', 'expected_delivery_date', 'notes',
+            ]
+
+            with transaction.atomic():
+                # Update header
+                purchase.supplier_id = supplier_id
+                if warehouse_id and str(warehouse_id).strip():
+                    purchase.warehouse_id = warehouse_id
+                for k in header_fields:
+                    if k in data:
+                        setattr(purchase, k, data[k])
+
+                # Replace items + recompute total (only when items were supplied)
+                if items_data is not None:
+                    purchase.items.all().delete()
+                    calculated_total = Decimal('0.00')
+                    for item in items_data:
+                        p_id = item.get('product')
+                        if not p_id:
+                            continue
+                        try:
+                            price = Decimal(str(item.get('unit_price', '0')))
+                            qty = int(item.get('quantity', 1))
+                            items_per = int(item.get('items_per_carton', 1))
+                            packaging = item.get('packaging_type', 'SINGLE')
+
+                            sp_obj = SupplierProduct.objects.filter(id=p_id).first()
+                            weight = item.get('weight') or (sp_obj.weight if sp_obj else '')
+                            size = item.get('size') or (sp_obj.size if sp_obj else '')
+
+                            PurchaseOrderItem.objects.create(
+                                purchase_order=purchase,
+                                product_id=p_id,
+                                packaging_type=packaging,
+                                items_per_carton=items_per,
+                                quantity=qty,
+                                price=price,
+                                weight=weight,
+                                size=size,
+                                selling_price=Decimal('0.00'),
+                            )
+                            total_units = qty * items_per if packaging == 'CARTON' else qty
+                            calculated_total += (Decimal(str(total_units)) * price)
+                        except (ValueError, TypeError):
+                            continue
+                    # Grand total = items + shipping + tax (header values already applied above).
+                    purchase.total_amount = calculated_total + (purchase.shipping_cost or Decimal('0.00')) + (purchase.tax_amount or Decimal('0.00'))
+
+                purchase.save()
+
+            return Response(PurchaseOrderSerializer(purchase).data)
+
         except IntegrityError as e:
             return Response({"error": f"Database error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -974,7 +1119,8 @@ class SupplierDashboardViewSet(viewsets.ViewSet):
 class PurchaseReturnViewSet(viewsets.ModelViewSet):
     """ViewSet for purchase returns with supplier response workflow"""
     serializer_class = PurchaseReturnSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    perm_module = 'purchases'
 
     def get_queryset(self):
         user = self.request.user

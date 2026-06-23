@@ -116,8 +116,13 @@ class User(AbstractUser, StatusMixin):
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
     plain_password = models.CharField(max_length=255, blank=True, null=True)
+    # Pages the user may VIEW (open). Page hrefs, e.g. "/admin/orders".
     page_permissions = models.JSONField(default=list, blank=True)
-    
+    # Subset of those pages the user may also EDIT (perform writes on).
+    page_edit_permissions = models.JSONField(default=list, blank=True)
+    # Areas an Area Manager is responsible for (empty for non-area roles).
+    areas = models.ManyToManyField('company.Area', blank=True, related_name='managers')
+
     class Meta:
         ordering = ['-date_joined']
         indexes = [

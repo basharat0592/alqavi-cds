@@ -27,7 +27,17 @@ export default function AddRolePage() {
             await roleService.create(formData);
             router.push('/admin/users/roles');
         } catch (err: any) {
-            setError(err.message || 'Failed to create role.');
+            const data = err?.response?.data;
+            let msg = 'Failed to create role.';
+            if (data) {
+                if (typeof data === 'string') msg = data;
+                else if (data.name) msg = Array.isArray(data.name) ? data.name[0] : String(data.name);
+                else if (data.detail) msg = data.detail;
+                else { const v = Object.values(data).flat(); if (v.length) msg = String(v[0]); }
+            }
+            // Friendlier wording for the common duplicate-name case.
+            if (/already exists/i.test(msg)) msg = `A role named "${formData.name}" already exists.`;
+            setError(msg);
             setLoading(false);
         }
     };

@@ -61,7 +61,7 @@ const Badge = ({ children, variant = 'default' }: any) => {
 // ── DETAIL MODAL ──
 const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isUpdating }: { order: any, onClose: () => void, onAccept?: () => void, onReject?: () => void, showActions?: boolean, isUpdating?: boolean }) => {
     if (!order) return null;
-    const { date, time } = formatDateTime(order.created_at);
+    const { date, time } = formatDateTime(order.created_at || order.order_date);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
@@ -122,7 +122,14 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                                     {(order.items || []).map((item: any, idx: number) => (
                                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="p-4">{item.product_name || item.name || 'Product'}</td>
-                                            <td className="p-4 text-center font-bold">{item.quantity || item.total_units}</td>
+                                            <td className="p-4 text-center font-bold">
+                                                {item.packaging_type === 'CARTON' ? (
+                                                    <div className="flex flex-col leading-tight">
+                                                        <span>{item.total_units ?? (item.quantity * (item.items_per_carton || 1))} pcs</span>
+                                                        <span className="text-[10px] text-slate-400 font-medium">{item.quantity} ctn × {item.items_per_carton || 1}</span>
+                                                    </div>
+                                                ) : (item.total_units || item.quantity)}
+                                            </td>
                                             <td className="p-4 text-right font-bold text-slate-900">{fmt(parseFloat(item.price || item.unit_price || 0))}</td>
                                         </tr>
                                     ))}
@@ -140,6 +147,50 @@ const OrderDetailModal = ({ order, onClose, onAccept, onReject, showActions, isU
                             </div>
                         </div>
                     )}
+
+                    {/* Payment Breakdown — shows partial payment details (paid / due / date / method) */}
+                    {(() => {
+                        const total = parseFloat(order.total_amount || 0);
+                        const paid = parseFloat(order.paid_amount || (order.payment_status === 'PAID' ? order.total_amount : 0) || 0);
+                        const due = Math.max(0, total - paid);
+                        const payDate = order.payment_date
+                            ? new Date(order.payment_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : '—';
+                        const method = (order.payment_method || '—').toString().replace('_', ' ');
+                        return (
+                            <div className="mb-8">
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Payment Summary</label>
+                                <div className="bg-slate-50 rounded-xl border border-slate-100 p-5 space-y-2.5">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 font-medium">Total Amount</span>
+                                        <span className="font-bold tabular-nums text-slate-900">{fmt(total)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 font-medium">Paid Amount</span>
+                                        <span className="font-bold tabular-nums text-emerald-600">{fmt(paid)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm pt-2.5 border-t border-slate-200">
+                                        <span className="text-slate-500 font-medium">Remaining / Due</span>
+                                        <span className={`font-bold tabular-nums ${due > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{fmt(due)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 font-medium">Payment Date</span>
+                                        <span className="font-bold text-slate-700">{payDate}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500 font-medium">Method</span>
+                                        <span className="font-bold text-slate-700 capitalize">{method}</span>
+                                    </div>
+                                    {order.transaction_id && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-500 font-medium">Transaction / Ref</span>
+                                            <span className="font-bold text-slate-700 font-mono">{order.transaction_id}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     <div className="flex justify-between items-end pt-6 border-t border-slate-50">
                         <div>
@@ -211,7 +262,7 @@ export default function SupplierFinancialRegistry() {
             const purchase = Array.isArray(purchasesRes.data) ? purchasesRes.data : purchasesRes.data.results || [];
             const combined = [
                 ...retail.map((r: any) => ({ ...r, is_wholesale: false })),
-                ...purchase.map((p: any) => ({ ...p, is_wholesale: true, order_number: p.purchase_number, customer_name: 'Distributor Purchase' }))
+                ...purchase.map((p: any) => ({ ...p, is_wholesale: true, order_number: p.purchase_number, customer_name: p.created_by_name || 'Distributor Purchase' }))
             ].sort((a, b) => new Date(b.created_at || b.order_date).getTime() - new Date(a.created_at || a.order_date).getTime());
             
             setOrders(combined);
@@ -289,10 +340,12 @@ export default function SupplierFinancialRegistry() {
     const requestCount = orders.filter(isPaymentRequest).length;
     const paidCount = orders.filter(o => o.payment_status?.toLowerCase() === 'paid').length;
     const unpaidCount = orders.filter(o => o.payment_status?.toLowerCase() === 'unpaid').length;
+    const partialCount = orders.filter(o => o.payment_status?.toLowerCase() === 'partial').length;
 
     const TABS = [
         { key: 'all', label: 'All', count: orders.length },
         { key: 'requests', label: 'Payment Requests', count: requestCount },
+        { key: 'partial', label: 'Partial', count: partialCount },
         { key: 'unpaid', label: 'Unpaid', count: unpaidCount },
         { key: 'paid', label: 'Paid', count: paidCount },
     ];
@@ -501,6 +554,16 @@ export default function SupplierFinancialRegistry() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <span className="text-[12px] font-black text-slate-900">{fmt(parseFloat(o.total_amount))}</span>
+                                                {(() => {
+                                                    const total = parseFloat(o.total_amount || 0);
+                                                    const paid = parseFloat(o.paid_amount || (o.payment_status === 'PAID' ? o.total_amount : 0) || 0);
+                                                    const due = Math.max(0, total - paid);
+                                                    return o.payment_status?.toLowerCase() === 'partial' && due > 0 ? (
+                                                        <div className="text-[10px] font-bold text-rose-600 tabular-nums mt-0.5">
+                                                            Due {fmt(due)}
+                                                        </div>
+                                                    ) : null;
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex flex-col items-center gap-1.5">

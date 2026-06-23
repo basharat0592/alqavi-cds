@@ -19,7 +19,7 @@ import { inventoryService } from '@/services/inventory.service';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - PURCHASES (indigo accent, slate neutrals)
@@ -284,6 +284,20 @@ export default function PurchasesPage() {
     const purchasesList: any[] = Array.isArray(purchases) ? purchases : (purchases as any)?.results ? (purchases as any).results : [];
     const filtered = purchasesList;
 
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => purchaseService.delete(id)));
+        toast.success(`${ids.length} purchase(s) deleted`);
+        load(true);
+    };
+
+    const bulkStatus = async (ids: string[], status: string) => {
+        await Promise.allSettled(ids.map(id => purchaseService.update(id, { status })));
+        toast.success(`Marked ${ids.length} order(s) ${STATUS_CONFIG[status]?.label || status}`);
+        load(true);
+    };
+
     return (
         <div className="pb-20 text-slate-800">
             <PageHeader
@@ -481,6 +495,15 @@ export default function PurchasesPage() {
                                     </button>
                                     <span className="text-slate-300">|</span>
                                     <button
+                                        onClick={() => p.status !== 'RECEIVED' && router.push(`/admin/purchases/add?id=${p.id}`)}
+                                        disabled={p.status === 'RECEIVED'}
+                                        title={p.status === 'RECEIVED' ? 'Received orders cannot be edited' : 'Edit purchase order'}
+                                        className={`text-[12px] font-bold ${p.status === 'RECEIVED' ? 'text-slate-300 cursor-not-allowed' : 'text-indigo-600 hover:underline'}`}
+                                    >
+                                        Edit
+                                    </button>
+                                    <span className="text-slate-300">|</span>
+                                    <button
                                         onClick={() => setDeleteRow(p)}
                                         className="text-[12px] font-bold text-[#c40000] hover:underline"
                                     >
@@ -497,6 +520,7 @@ export default function PurchasesPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3 w-[80px]">Item</th>
                                 <th className="px-6 py-3">Order #</th>
                                 <th className="px-6 py-3">Order Status</th>
@@ -506,11 +530,12 @@ export default function PurchasesPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {loading && filtered.length === 0 ? <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">Loading purchases...</td></tr> : filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
+                            {loading && filtered.length === 0 ? <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">Loading purchases...</td></tr> : filtered.length === 0 ? (
+                                <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
                             ) : (
                                 filtered.map((p: any) => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <RowCheckboxTd sel={sel} id={p.id} />
                                         <td className="px-6 py-4">
                                             <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
                                                 {(() => {
@@ -601,6 +626,13 @@ export default function PurchasesPage() {
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => handleViewDetails(p.id)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                 <span className="text-slate-300">|</span>
+                                                <button
+                                                    onClick={() => p.status !== 'RECEIVED' && router.push(`/admin/purchases/add?id=${p.id}`)}
+                                                    disabled={p.status === 'RECEIVED'}
+                                                    title={p.status === 'RECEIVED' ? 'Received orders cannot be edited' : 'Edit purchase order'}
+                                                    className={`text-[12px] font-bold ${p.status === 'RECEIVED' ? 'text-slate-300 cursor-not-allowed' : 'text-indigo-600 hover:underline'}`}
+                                                >Edit</button>
+                                                <span className="text-slate-300">|</span>
                                                 <button onClick={() => setDeleteRow(p)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
@@ -611,6 +643,32 @@ export default function PurchasesPage() {
                     </table>
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="purchase orders"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Processing', apply: (ids) => bulkStatus(ids, 'PROCESSING') },
+                    { label: 'Mark Shipped', apply: (ids) => bulkStatus(ids, 'SHIPPED') },
+                    { label: 'Mark Delivered', apply: (ids) => bulkStatus(ids, 'DELIVERED') },
+                    { label: 'Mark Cancelled', apply: (ids) => bulkStatus(ids, 'CANCELLED') },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        purchase_number: p.purchase_number,
+                        supplier: p.supplier_name || '',
+                        status: p.status || '',
+                        payment_status: p.payment_status || 'UNPAID',
+                        payment_method: p.payment_method || '',
+                        total_amount: p.total_amount ?? 0,
+                        paid_amount: p.paid_amount ?? 0,
+                        remaining_amount: p.remaining_amount ?? 0,
+                        date: formatDateTime(p.created_at || p.order_date || p.date),
+                    })),
+                    'purchases.csv',
+                )}
+            />
 
             {/* View Details Modal */}
             {viewRow && (
@@ -642,10 +700,15 @@ export default function PurchasesPage() {
                                 <Card className="p-6">
                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">Products</p>
                                     <table className="w-full text-[13px]">
-                                        <thead><tr className="text-left text-slate-500"><th className="pb-3 px-2">Name</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
+                                        <thead><tr className="text-left text-slate-500"><th className="pb-3 px-2">Name</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Unit Cost</th><th className="pb-3 text-right">Total</th></tr></thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {viewRow.items?.map((item: any) => {
                                                 const img = item.product_image;
+                                                const price = parseFloat(item.price || 0);
+                                                const qty = item.quantity || 0;
+                                                const isCarton = item.packaging_type === 'CARTON';
+                                                const units = item.total_units ?? (isCarton ? qty * (item.items_per_carton || 1) : qty);
+                                                const subtotal = item.subtotal ?? (price * units);
                                                 return (
                                                     <tr key={item.id}>
                                                         <td className="py-3 px-2 font-bold text-slate-900">
@@ -656,8 +719,18 @@ export default function PurchasesPage() {
                                                                 <span>{item.product_name}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 text-center tabular-nums">{item.quantity}</td>
-                                                        <td className="py-3 text-right font-bold text-indigo-600 tabular-nums">{formatCurrency(item.subtotal)}</td>
+                                                        <td className="py-3 text-center tabular-nums">
+                                                            {isCarton ? (
+                                                                <div className="flex flex-col leading-tight">
+                                                                    <span className="font-bold text-slate-900">{units} pcs</span>
+                                                                    <span className="text-[10px] text-slate-400">{qty} ctn × {item.items_per_carton || 1}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span>{qty}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                                        <td className="py-3 text-right font-bold text-indigo-600 tabular-nums">{formatCurrency(subtotal)}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -689,8 +762,30 @@ export default function PurchasesPage() {
                                         <div className="flex justify-between text-slate-600"><span>Tax</span><span className="tabular-nums">{formatCurrency(viewRow.tax_amount || 0)}</span></div>
                                         <div className="flex justify-between font-bold text-slate-900 pt-3 border-t border-slate-100 mt-3 text-[18px]"><span>Total</span><span className="text-indigo-600 tabular-nums">{formatCurrency(viewRow.total_amount || 0)}</span></div>
                                     </div>
+                                    {(() => {
+                                        const total = Number(viewRow.total_amount || 0);
+                                        const paid = Number(viewRow.paid_amount || (viewRow.payment_status === 'PAID' ? viewRow.total_amount : 0) || 0);
+                                        const due = Math.max(0, total - paid);
+                                        const payDate = viewRow.payment_date
+                                            ? formatDateTime(viewRow.payment_date)
+                                            : '—';
+                                        return (
+                                            <div className="space-y-3 text-[13px] mt-4 pt-4 border-t border-slate-100">
+                                                <div className="flex justify-between text-slate-600"><span>Paid Amount</span><span className="tabular-nums font-bold text-emerald-600">{formatCurrency(paid)}</span></div>
+                                                <div className="flex justify-between text-slate-600"><span>Remaining / Due</span><span className={`tabular-nums font-bold ${due > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(due)}</span></div>
+                                                <div className="flex justify-between text-slate-600"><span>Payment Date</span><span className="font-bold text-slate-700">{payDate}</span></div>
+                                                <div className="flex justify-between text-slate-600"><span>Method</span><span className="font-bold text-slate-700 capitalize">{(viewRow.payment_method || '—').toString().replace('_', ' ').toLowerCase()}</span></div>
+                                                {viewRow.transaction_id && (
+                                                    <div className="flex justify-between text-slate-600"><span>Transaction / Ref</span><span className="font-bold text-slate-700 font-mono">{viewRow.transaction_id}</span></div>
+                                                )}
+                                                {viewRow.payment_confirmed && (
+                                                    <div className="flex items-center justify-end gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-tighter"><CheckCircle2 size={12} /> Supplier Verified</div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </Card>
-                                <Button className="w-full" onClick={() => window.print()}><Printer size={16} /> Print Invoice</Button>
+                                <Button className="w-full" onClick={() => router.push(`/admin/purchases/${viewRow.id}/invoice`)}><Printer size={16} /> View Invoice</Button>
                             </aside>
                         </div>
                     </div>

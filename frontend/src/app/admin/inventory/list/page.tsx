@@ -15,9 +15,9 @@ import { productService } from '@/services/product.service';
 import { userService } from '@/services/user.service';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { formatCurrency, getImageUrl } from '@/lib/utils';
+import { formatCurrency, getImageUrl, exportToCSV } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card } from '@/components/admin/ui';
+import { PageHeader, Card, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - CURRENT STOCK
@@ -416,6 +416,18 @@ export default function InventoryListPage() {
 
     const totalPages = Math.ceil(filtered.length / pageSize);
 
+    const sel = useTableSelection(paginatedData);
+
+    const bulkDeleteStocks = async (ids: string[]) => {
+        // Each selected row is a grouped batch; expand to its underlying stock record ids.
+        const stockIds = paginatedData
+            .filter((s: any) => ids.includes(String(s.id)))
+            .flatMap((s: any) => (s.items || [s]).map((i: any) => i.id));
+        await Promise.allSettled(stockIds.map((id: any) => inventoryService.deleteInventory(id)));
+        toast.success(`${ids.length} stock item(s) deleted`);
+        loadData();
+    };
+
     return (
         <div className="pb-20 text-left text-slate-800">
             <div className="max-w-[1440px] mx-auto">
@@ -611,6 +623,7 @@ export default function InventoryListPage() {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/60 border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                        <SelectAllTh sel={sel} />
                                         <th className="px-6 py-3 w-[80px]">Image</th>
                                         <th className="px-6 py-3">Item Detail</th>
                                         <th className="px-6 py-3 text-right">Stock Level</th>
@@ -622,18 +635,19 @@ export default function InventoryListPage() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading && stocks.length === 0 ? (
-                                        <tr><td colSpan={7} className="py-24 text-center">
+                                        <tr><td colSpan={8} className="py-24 text-center">
                                             <Loader2 size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
                                             <p className="text-[13px] text-slate-500 font-medium italic">Syncing Current Stock...</p>
                                         </td></tr>
                                     ) : paginatedData.length === 0 ? (
-                                        <tr><td colSpan={7} className="py-24 text-center">
+                                        <tr><td colSpan={8} className="py-24 text-center">
                                             <div className="mb-4 text-slate-200"><Box size={60} className="mx-auto" /></div>
                                             <p className="text-[14px] text-slate-500 font-medium">No stock records match your search.</p>
                                         </td></tr>
                                     ) : (
                                         paginatedData.map(s => (
                                             <tr key={s.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                                <RowCheckboxTd sel={sel} id={s.id} />
                                                 <td className="px-6 py-4">
                                                     <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
                                                         {s.product_image ? (
@@ -726,6 +740,26 @@ export default function InventoryListPage() {
                                 </tbody>
                             </table>
                         </Card>
+
+                        <BulkBar
+                            sel={sel}
+                            entity="stock items"
+                            onDelete={bulkDeleteStocks}
+                            onExport={() => exportToCSV(
+                                sel.selectedItems.map((s: any) => ({
+                                    product: s.product_name,
+                                    category: s.category_name || '',
+                                    supplier: getSupplierName(s.supplier, s.supplier_name),
+                                    warehouse: s.warehouse_name || '',
+                                    quantity: s.total_quantity ?? 0,
+                                    unit_price: s.price_per_item ?? 0,
+                                    valuation: (s.total_quantity || 0) * (s.price_per_item || 0),
+                                    purchase_type: s.purchase_type || '',
+                                    date: s.date || '',
+                                })),
+                                'inventory.csv',
+                            )}
+                        />
 
                         {/* ── Pagination Controls ── */}
                         <div className="px-4 py-4 sm:px-6 bg-slate-50/60 border border-slate-200/70 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">

@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { salesService, orderService, inventoryService } from '@/lib/api';
 import PageLoader from '@/components/ui/PageLoader';
 import { Modal } from '@/components/ui/Modal';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
-import { formatDate, formatCurrency } from '@/lib/utils';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -303,6 +303,20 @@ export default function AdminOrdersPage() {
     const totalPages = Math.ceil(filtered.length / pageSize);
     const paginatedData = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+    const sel = useTableSelection(paginatedData);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => orderService.delete(id)));
+        toast.success(`${ids.length} order(s) deleted`);
+        loadOrders();
+    };
+
+    const bulkStatus = async (ids: string[], status: string) => {
+        await Promise.allSettled(ids.map(id => salesService.updateOrderStatus(id, status)));
+        toast.success(`Marked ${ids.length} order(s) ${status}`);
+        loadOrders();
+    };
+
     if (loading && orders.length === 0) return <PageLoader />;
 
     return (
@@ -499,6 +513,7 @@ export default function AdminOrdersPage() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-5 py-3 w-[280px]">Customer & Tracking</th>
                                 <th className="px-5 py-3">Shipping Logistics</th>
                                 <th className="px-5 py-3 w-36">Value</th>
@@ -508,12 +523,13 @@ export default function AdminOrdersPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginatedData.length === 0 ? (
-                                <tr><td colSpan={5} className="py-24 text-center text-[12px] text-slate-400 font-medium italic">No active orders found in this pipeline.</td></tr>
+                                <tr><td colSpan={6} className="py-24 text-center text-[12px] text-slate-400 font-medium italic">No active orders found in this pipeline.</td></tr>
                             ) : (
                                 paginatedData.map((order) => {
                                     const st = STATUS_OPTIONS.find(s => s.value === order.status);
                                     return (
                                         <tr key={order.id} className="hover:bg-slate-50 transition-colors group text-[11px]">
+                                            <RowCheckboxTd sel={sel} id={order.id} />
                                             <td className="px-2.5 sm:px-5 py-3 sm:py-4">
                                                 <div className="flex items-center gap-2 sm:gap-3">
                                                     <div className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 group-hover:border-slate-300 group-hover:text-slate-700 transition-all flex-shrink-0">
@@ -612,6 +628,31 @@ export default function AdminOrdersPage() {
                     </div>
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="orders"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Confirmed', apply: (ids) => bulkStatus(ids, 'CONFIRMED') },
+                    { label: 'Mark Processing', apply: (ids) => bulkStatus(ids, 'PROCESSING') },
+                    { label: 'Mark Shipped', apply: (ids) => bulkStatus(ids, 'SHIPPED') },
+                    { label: 'Mark Cancelled', apply: (ids) => bulkStatus(ids, 'CANCELLED') },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((o: any) => ({
+                        tracking_id: o.tracking_id || o.id,
+                        customer_name: o.customer_name || '',
+                        phone_number: o.phone_number || '',
+                        shipping_address: o.shipping_address || '',
+                        status: o.status || '',
+                        total_amount: o.total_amount ?? 0,
+                        items: o.items?.length || 0,
+                        date: formatDate(o.created_at),
+                    })),
+                    'orders.csv',
+                )}
+            />
 
             {/* Order Details Modal */}
             <Modal
