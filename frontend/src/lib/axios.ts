@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/$/, '') + '/';
 
@@ -7,8 +8,33 @@ const api = axios.create({
     timeout: 30000, // 30s — more robust for local dev while backend optimizes queries
 });
 
+// ── View-only enforcement ────────────────────────────────────────────────────
+// The admin shell flips this on when the current page is view-only for the
+// signed-in staff user (no per-page "edit" grant). While on, mutating requests
+// are blocked client-side so the UI matches the backend's edit enforcement.
+let readOnlyMode = false;
+export function setReadOnlyMode(v: boolean) { readOnlyMode = v; }
+
+// Requests that must work even on view-only pages (auth, self profile/settings,
+// reading + dismissing notifications). Matched as substrings of the URL.
+const READ_ONLY_WHITELIST = [
+    'users/token', 'users/profile', 'users/settings', 'activity-logs',
+    'mark-read', 'mark-all-read',
+];
+const MUTATING = ['post', 'put', 'patch', 'delete'];
+
+function isWhitelisted(url?: string) {
+    if (!url) return false;
+    return READ_ONLY_WHITELIST.some(p => url.includes(p));
+}
+
 api.interceptors.request.use(
     (config) => {
+        const method = (config.method || 'get').toLowerCase();
+        if (readOnlyMode && MUTATING.includes(method) && !isWhitelisted(config.url)) {
+            toast.error('View-only access — you don’t have edit permission for this page.', { id: 'view-only' });
+            return Promise.reject(new axios.Cancel('view-only'));
+        }
         const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
@@ -23,6 +49,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
+        // View-only blocks (and any cancellations) are intentional — pass through.
+        if (axios.isCancel(error)) {
+            return Promise.reject(error);
+        }
         const originalRequest = error.config;
 
         // Custom handling for Network Error (likely backend down)

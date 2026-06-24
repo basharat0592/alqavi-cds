@@ -26,6 +26,7 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Order Tracking', href: '/admin/tracking', keywords: ['delivery', 'courier', 'dispatch', 'tracking'] },
     { name: 'Supplier Registry', href: '/admin/company/suppliers', keywords: ['vendors', 'manufacturers', 'contacts', 'supplier'] },
     { name: 'Customer Registry', href: '/admin/company/customers', keywords: ['clients', 'profiles', 'ledger', 'customer'] },
+    { name: 'Delivery Persons', href: '/admin/delivery', keywords: ['rider', 'riders', 'courier', 'dispatch', 'delivery boy', 'delivery person', 'driver'] },
     { name: 'System Alerts', href: '/admin/alerts', keywords: ['errors', 'warnings', 'alarms', 'alerts'] },
     { name: 'Website CMS', href: '/admin/website-settings', keywords: ['slider', 'banners', 'content', 'seo', 'footer', 'cms', 'website', 'storefront', 'landing'] },
     { name: 'System Settings', href: '/admin/settings', keywords: ['config', 'sidebar', 'site details', 'settings', 'configure'] },

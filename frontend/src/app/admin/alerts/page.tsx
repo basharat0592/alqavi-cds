@@ -3,31 +3,52 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { productService, orderService, userService } from '@/lib/api';
 import { purchaseService } from '@/services/purchase.service';
+import { paymentsDueService } from '@/services/payment.service';
 import {
     AlertTriangle, ShoppingBag, CheckCircle2, Clock,
     RefreshCw, Plus, Activity, ClipboardList,
-    ShoppingCart, UserPlus, XCircle, ShieldCheck
+    ShoppingCart, UserPlus, XCircle, ShieldCheck,
+    Wallet, CalendarClock, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import PageLoader from '@/components/ui/PageLoader';
 import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
+const DUE_LINK: Record<string, string> = {
+    sale: '/admin/sales',
+    purchase: '/admin/purchases',
+    sale_return: '/admin/sale-returns',
+    purchase_return: '/admin/purchases/returns',
+};
+const DUE_TYPE_LABEL: Record<string, string> = {
+    sale: 'Sale', purchase: 'Purchase', sale_return: 'Sale Refund', purchase_return: 'Purchase Refund',
+};
+const money = (n: number) => `Rs ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
 export default function AlertsPage() {
     const [loading, setLoading] = useState(true);
     const [alerts, setAlerts] = useState<any[]>([]);
     const [activities, setActivities] = useState<any[]>([]);
+    const [due, setDue] = useState<any[]>([]);
+    const [dueSummary, setDueSummary] = useState<any>({ overdue: 0, due_soon: 0, upcoming: 0, total_outstanding: 0, overdue_amount: 0 });
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const pollingRef = useRef<any>(null);
 
     const fetchData = async (isSilent = false) => {
         if (!isSilent) setLoading(true);
         try {
-            const [pRes, oRes, uRes, purRes] = await Promise.allSettled([
+            const [pRes, oRes, uRes, purRes, dueRes] = await Promise.allSettled([
                 productService.getAll(),
                 orderService.getAll(),
                 userService.getAll(),
-                purchaseService.getAll()
+                purchaseService.getAll(),
+                paymentsDueService.get('all'),
             ]);
+
+            if (dueRes.status === 'fulfilled' && dueRes.value) {
+                setDue(Array.isArray(dueRes.value.results) ? dueRes.value.results : []);
+                setDueSummary(dueRes.value.summary || {});
+            }
 
             const newAlerts: any[] = [];
             const newActivities: any[] = [];
@@ -150,6 +171,68 @@ export default function AlertsPage() {
             />
 
             <div className="space-y-8">
+
+                {/* PAYMENTS DUE & OVERDUE */}
+                <section className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                <Wallet className="h-4 w-4 text-indigo-600" /> Payments Due
+                            </h2>
+                            <p className="text-[12px] text-slate-500 mt-0.5">Outstanding settlements across sales, purchases and refunds</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {dueSummary.overdue > 0 && <Badge tone="red">{dueSummary.overdue} Overdue · {money(dueSummary.overdue_amount)}</Badge>}
+                            {dueSummary.due_soon > 0 && <Badge tone="amber">{dueSummary.due_soon} Due Soon</Badge>}
+                            <Badge tone="neutral">{money(dueSummary.total_outstanding)} Outstanding</Badge>
+                        </div>
+                    </div>
+
+                    {due.length === 0 ? (
+                        <Card className="p-10 text-center">
+                            <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                                <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                            </div>
+                            <p className="text-[13px] font-semibold text-slate-500">No outstanding payments. Everything is settled.</p>
+                        </Card>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {due.slice(0, 12).map((d, i) => {
+                                const overdue = d.bucket === 'overdue';
+                                const soon = d.bucket === 'due_soon';
+                                const tone = overdue ? { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' }
+                                    : soon ? { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' }
+                                        : { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200' };
+                                return (
+                                    <Link key={`${d.type}-${d.ref}-${i}`} href={DUE_LINK[d.type] || '/admin/payments'}
+                                        className={`group block rounded-xl border bg-white p-3.5 hover:shadow-md transition-all ${tone.border}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${tone.text} ${tone.bg} ${tone.border}`}>
+                                                {DUE_TYPE_LABEL[d.type] || d.type}
+                                            </span>
+                                            <span className={`text-[10px] font-bold flex items-center gap-1 ${tone.text}`}>
+                                                {overdue ? <><AlertTriangle className="h-3 w-3" /> {d.days_overdue}d late</>
+                                                    : soon ? <><CalendarClock className="h-3 w-3" /> Due soon</>
+                                                        : d.due_date ? <><CalendarClock className="h-3 w-3" /> {d.due_date}</> : 'No due date'}
+                                            </span>
+                                        </div>
+                                        <p className="text-[13px] font-bold text-slate-900 truncate">{d.party}</p>
+                                        <p className="text-[10.5px] text-slate-400 font-medium mb-2">#{d.ref}</p>
+                                        <div className="flex items-end justify-between">
+                                            <div>
+                                                <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Remaining</p>
+                                                <p className={`text-[15px] font-bold tabular-nums ${tone.text}`}>{money(d.remaining)}</p>
+                                            </div>
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Settle <ArrowRight className="h-3 w-3" />
+                                            </span>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
 
                 {/* INVENTORY MESH MONITOR */}
                 <section className="space-y-4">

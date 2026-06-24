@@ -10,6 +10,7 @@ import { purchaseService } from '@/services/purchase.service';
 import { formatCurrency, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PURCHASE RETURNS LIST
@@ -51,6 +52,7 @@ export default function PurchaseReturnsPage() {
 
     const [viewRow, setViewRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
+    const [payRow, setPayRow] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
 
     const load = useCallback(async (silent = false) => {
@@ -206,9 +208,25 @@ export default function PurchaseReturnsPage() {
                                             </td>
                                             <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
                                                 <StatusPill status={row.status} />
+                                                {row.status?.toUpperCase() === 'ACCEPTED' && (
+                                                    <div className={`text-[9px] font-black uppercase tracking-tighter mt-1 ${row.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                        {row.refund_status === 'PAID' ? 'Refund received' : 'Awaiting refund'}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-2.5 sm:px-4 py-3 sm:py-4 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-2.5">
+                                                    {row.status?.toUpperCase() === 'ACCEPTED' && row.refund_status !== 'PAID' && Number(row.total_refund_amount || 0) > 0 && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => setPayRow(row)}
+                                                                className="text-[12px] font-bold text-indigo-600 hover:underline"
+                                                            >
+                                                                Settle
+                                                            </button>
+                                                            <span className="text-slate-300">|</span>
+                                                        </>
+                                                    )}
                                                     <button
                                                         onClick={() => setViewRow(row)}
                                                         className="text-[12px] font-bold text-slate-600 hover:underline"
@@ -253,6 +271,20 @@ export default function PurchaseReturnsPage() {
                     'purchase-returns.csv',
                 )}
             />
+
+            {/* Refund settlement modal — records the refund received from the supplier */}
+            {payRow && (
+                <PaymentModal
+                    open={!!payRow}
+                    onClose={() => setPayRow(null)}
+                    title={`Refund · Return #${payRow.return_number}`}
+                    sourceType="purchasereturn"
+                    sourceId={payRow.id}
+                    total={Number(payRow.total_refund_amount || 0)}
+                    direction="inbound"
+                    onChanged={() => load(true)}
+                />
+            )}
 
             {/* View Modal */}
             <Modal

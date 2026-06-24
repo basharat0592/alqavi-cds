@@ -8,6 +8,7 @@ import {
     Printer, Loader2, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
+import { installmentService } from '@/services/payment.service';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Modal } from '@/components/admin/ui';
@@ -257,6 +258,11 @@ export default function SaleEntryPage() {
 const [warehouseId, setWarehouseId] = useState<string>('');
     const [guestName, setGuestName] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
+    // Settlement mode: full = paid in full now; partial = pay some now, rest later;
+    // credit = nothing now, customer owes the balance by a due date.
+    const [payMode, setPayMode] = useState<'full' | 'partial' | 'credit'>('full');
+    const [amountPaidNow, setAmountPaidNow] = useState('');
+    const [dueDate, setDueDate] = useState('');
     const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
     
     const [stockError, setStockError] = useState<string | null>(null);
@@ -371,30 +377,66 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         return sum + (qty * price);
     }, 0);
 
+    // How much is collected at checkout, and the resulting settlement status.
+    const paidNow = payMode === 'full'
+        ? totalBill
+        : payMode === 'partial'
+            ? Math.min(Number(amountPaidNow) || 0, totalBill)
+            : 0;
+    const settlementStatus = paidNow >= totalBill ? 'PAID' : paidNow > 0 ? 'PARTIAL' : 'UNPAID';
+
     const handleSave = async () => {
+        // Guard rails for credit / partial sales.
+        if (payMode !== 'full') {
+            if (!customerId) { setShowConfirm(false); return toast.error('Select a registered customer for credit / partial sales.'); }
+            if (!dueDate) { setShowConfirm(false); return toast.error('Set a payment due date for the outstanding balance.'); }
+            if (payMode === 'partial' && (paidNow <= 0 || paidNow >= totalBill)) {
+                setShowConfirm(false);
+                return toast.error('Enter an amount paid now that is more than 0 and less than the total.');
+            }
+        }
         setShowConfirm(false);
         setSaving(true);
         try {
             const payload = {
                 customer: customerId || null,
-                customer_name: customerId 
-                    ? (users.find(u => String(u.id) === String(customerId))?.full_name || 'Registered Customer') 
+                customer_name: customerId
+                    ? (users.find(u => String(u.id) === String(customerId))?.full_name || 'Registered Customer')
                     : (guestName || 'Walk-in Customer'),
                 shipping_address: 'Walk-in Store Selection',
                 phone_number: 'N/A',
                 notes: `POS Gen: ${orderNumber}`,
                 status: 'DELIVERED',
                 payment_method: paymentMethod === 'cash' ? 'SHOP' : 'ONLINE',
+                payment_status: settlementStatus,
+                amount_paid: paidNow,
+                due_date: payMode !== 'full' && dueDate ? dueDate : null,
                 warehouse_id: warehouseId,
-                items: items.map(i => ({ 
-                    id: i.product, 
-                    quantity: i.quantity, 
-                    price: i.unit_price 
+                items: items.map(i => ({
+                    id: i.product,
+                    quantity: i.quantity,
+                    price: i.unit_price
                 }))
             };
             const data = await orderService.create(payload);
+            // Record the amount collected now as an installment so it shows in the
+            // payment history and the ledger (full sales already book via delivery).
+            if (payMode === 'partial' && paidNow > 0 && data?.id) {
+                try {
+                    await installmentService.create({
+                        source_type: 'order',
+                        source_id: String(data.id),
+                        amount: paidNow,
+                        method: paymentMethod === 'cash' ? 'cash' : 'online',
+                        status: 'confirmed',
+                        direction: 'inbound',
+                        paid_at: new Date().toISOString(),
+                        reference: orderNumber,
+                    });
+                } catch (e) { console.error('installment record failed', e); }
+            }
             setSuccessOrder(data);
-            toast.success('Sale finalized!');
+            toast.success(payMode === 'credit' ? 'Sale saved on credit!' : 'Sale finalized!');
         } catch (err: any) { 
             console.error(err);
             const data = err.response?.data;
@@ -429,7 +471,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </div>
                     <div className="flex gap-4">
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}><Printer size={18} /> View Invoice</Btn>
-                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); }}><Plus size={18} /> New Bill</Btn>
+                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); setPayMode('full'); setAmountPaidNow(''); setDueDate(''); }}><Plus size={18} /> New Bill</Btn>
                     </div>
                 </Card>
             </div>
@@ -613,26 +655,70 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     <h3 className="text-[14px] font-bold uppercase tracking-widest text-slate-900">Bill Summary</h3>
                                 </div>
                                 
-                                <div className="p-6 space-y-6">
+                                <div className="p-6 space-y-5">
                                     {/* Payment Method Selector */}
                                     <div>
-                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-3">Payment Mode</label>
-                                        <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Payment Mode</label>
+                                        <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => setPaymentMethod('cash')}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-[12px] font-bold transition-all ${paymentMethod === 'cash' ? 'bg-white text-slate-900 shadow-sm scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12.5px] font-bold transition-all ${paymentMethod === 'cash' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
                                             >
-                                                <Banknote size={16} className={paymentMethod === 'cash' ? 'text-emerald-600' : ''} />
+                                                <Banknote size={15} className={paymentMethod === 'cash' ? 'text-indigo-600' : 'text-slate-400'} />
                                                 Cash
                                             </button>
                                             <button
                                                 onClick={() => setPaymentMethod('card')}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-[12px] font-bold transition-all ${paymentMethod === 'card' ? 'bg-white text-slate-900 shadow-sm scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12.5px] font-bold transition-all ${paymentMethod === 'card' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
                                             >
-                                                <CreditCard size={16} className={paymentMethod === 'card' ? 'text-sky-600' : ''} />
+                                                <CreditCard size={15} className={paymentMethod === 'card' ? 'text-indigo-600' : 'text-slate-400'} />
                                                 Card
                                             </button>
                                         </div>
+                                    </div>
+
+                                    {/* Settlement: Full / Partial / Credit */}
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Settlement</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {([['full', 'Full'], ['partial', 'Partial'], ['credit', 'Credit']] as const).map(([m, label]) => (
+                                                <button
+                                                    key={m}
+                                                    onClick={() => setPayMode(m)}
+                                                    className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {payMode !== 'full' && (
+                                            <div className="mt-3 space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/40 p-3.5">
+                                                {payMode === 'partial' && (
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Amount Received Now</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
+                                                            <input
+                                                                type="number" min={0} max={totalBill} value={amountPaidNow}
+                                                                onChange={e => setAmountPaidNow(e.target.value)} placeholder="0.00"
+                                                                className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 tabular-nums bg-white"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Balance Due Date</label>
+                                                    <input
+                                                        type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                                                        className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
+                                                    />
+                                                </div>
+                                                <p className="flex items-start gap-1.5 text-[10.5px] text-amber-700 font-medium leading-snug">
+                                                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                                                    Requires a registered customer. The remaining balance is tracked as outstanding.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Financial Breakdown */}
@@ -654,6 +740,18 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 </p>
                                             </div>
                                         </div>
+                                        {payMode !== 'full' && (
+                                            <div className="flex justify-between items-center pt-1 text-[13px]">
+                                                <span className="font-semibold text-emerald-600">Paid Now</span>
+                                                <span className="font-bold text-emerald-700 tabular-nums">{formatCurrency(paidNow)}</span>
+                                            </div>
+                                        )}
+                                        {payMode !== 'full' && (
+                                            <div className="flex justify-between items-center text-[13px]">
+                                                <span className="font-semibold text-rose-600">Balance Due</span>
+                                                <span className="font-bold text-rose-700 tabular-nums">{formatCurrency(totalBill - paidNow)}</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Action Button */}

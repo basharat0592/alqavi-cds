@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { userService, roleService, AppRole } from '@/lib/api';
 import {
-    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck, MapPin
+    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck, MapPin, ChevronDown, Info
 } from 'lucide-react';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 import { getRolePreset } from '@/lib/rolePresets';
@@ -16,11 +16,13 @@ const INPUT = (err?: boolean) =>
 const LABEL = 'block text-xs font-bold text-slate-700 mb-1.5';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: any }) => (
-    <div className="bg-slate-50/60 px-5 py-3 border-b border-slate-100 flex items-center">
-        <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4 text-slate-400" />}
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{title}</span>
-        </div>
+    <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+        {Icon && (
+            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+                <Icon className="w-4 h-4" />
+            </span>
+        )}
+        <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">{title}</span>
     </div>
 );
 
@@ -240,7 +242,7 @@ export default function AddUserPage() {
     const sellerRoleId = roles.find(r => r.name.toLowerCase() === 'seller')?.id;
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
             <PageHeader
                 title="Add User"
                 breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Users', href: '/admin/users' }, { label: 'Add User' }]}
@@ -269,12 +271,18 @@ export default function AddUserPage() {
                             </div>
                             <div>
                                 <label className={LABEL}>User Role <span className="text-rose-600">*</span></label>
-                                <select value={form.role} onChange={e => handleRoleChange(e.target.value)} className={INPUT(!!errors.role)}>
-                                    <option value="">Select Role</option>
-                                    {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                                </select>
+                                <div className="relative">
+                                    <select value={form.role} onChange={e => handleRoleChange(e.target.value)} className={`${INPUT(!!errors.role)} appearance-none pr-10 cursor-pointer`}>
+                                        <option value="">Select Role</option>
+                                        {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
                                 {getRolePreset(selectedRoleName) && (
-                                    <p className="text-[11px] text-indigo-600 font-medium mt-1.5">Page access pre-filled for this role — adjust below if needed.</p>
+                                    <p className="flex items-center gap-1.5 text-[11px] text-indigo-600 font-medium mt-2 bg-indigo-50/60 border border-indigo-100 rounded-lg px-2.5 py-1.5">
+                                        <Info className="w-3.5 h-3.5 shrink-0" />
+                                        Page access pre-filled for this role — adjust below if needed.
+                                    </p>
                                 )}
                             </div>
                             {form.role === sellerRoleId?.toString() && (

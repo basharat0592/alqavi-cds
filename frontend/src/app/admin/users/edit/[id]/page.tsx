@@ -149,7 +149,8 @@ export default function EditUserPage() {
                     first_name: u.first_name || '',
                     last_name: u.last_name || '',
                     email: u.email || '',
-                    phone_number: u.phone_number || '',
+                    // API returns `phone`; the form/service use phone_number.
+                    phone_number: (u as any).phone || (u as any).phone_number || '',
                     role: u.role || '',
                     business_name: u.business_name || '',
                     is_active: u.is_active ?? true,

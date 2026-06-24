@@ -391,6 +391,18 @@ export default function AdminDashboard() {
             .slice(0, 60);
     }, [products]);
 
+    // ── Group the core button-cards into labeled sections (order = display order) ──
+    const CORE_GROUPS: { title: string; hrefs: string[] }[] = [
+        { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/invoices', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
+        { title: 'Purchasing & Inventory', hrefs: ['/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns', '/admin/products', '/admin/products/add', '/admin/inventory/list'] },
+        { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense'] },
+        { title: 'Administration', hrefs: ['/admin/users', '/admin/website-settings', '/admin/settings'] },
+    ];
+    const coreByHref = new Map(corePages.map((p) => [p.href, p]));
+    const groupedCore = CORE_GROUPS
+        .map((g) => ({ title: g.title, items: g.hrefs.map((h) => coreByHref.get(h)).filter(Boolean) as PageButton[] }))
+        .filter((g) => g.items.length > 0);
+
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
@@ -399,40 +411,63 @@ export default function AdminDashboard() {
                 {/* ── MAIN: DIRECTORY ── */}
                 <div className="flex-1 min-w-0 space-y-12 animate-in fade-in duration-300 text-left">
 
-                        {/* ── CORE OPERATIONS & KEY PAGES (PROMINENT ACCENT BUTTON-CARDS) ── */}
-                        <div className="space-y-5">
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
-                                {corePages.map((btn) => {
-                                    const Icon = btn.icon;
-                                    const isOrders = btn.href === '/admin/orders';
-                                    const theme = btn.theme;
-                                    return (
-                                        <Link
-                                            key={btn.href}
-                                            href={btn.href}
-                                            className="group relative flex items-center gap-2 sm:gap-3.5 overflow-hidden rounded-lg sm:rounded-xl border border-slate-200/80 bg-white px-2.5 sm:px-3.5 py-2 sm:py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-10px_rgba(15,23,42,0.18)] transition-all duration-200"
-                                        >
-                                            <div className={`w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-200 shrink-0 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
-                                                <Icon strokeWidth={1.75} className="w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-200 group-hover:scale-110" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="text-[11px] sm:text-[13px] font-semibold text-slate-900 tracking-tight leading-tight line-clamp-2">
-                                                    {btn.name}
-                                                </h3>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 shrink-0">
-                                                {isOrders && stats?.pendingOrders > 0 && (
-                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-sm shadow-rose-600/30 select-none tabular-nums">
-                                                        <span className="absolute inset-0 rounded-full bg-rose-500 opacity-40 motion-safe:animate-ping" style={{ animationDuration: '2.5s' }} />
-                                                        <span className="relative">{stats.pendingOrders}</span>
-                                                    </span>
-                                                )}
-                                                <ChevronRight className={`w-3.5 h-3.5 sm:w-[15px] sm:h-[15px] text-slate-300 group-hover:translate-x-0.5 transition-all ${theme?.chevron || 'group-hover:text-indigo-600'}`} />
-                                            </div>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
+                        {/* ── CORE OPERATIONS & KEY PAGES (GROUPED ACCENT BUTTON-CARDS) ── */}
+                        <div className="space-y-7">
+                            {groupedCore.map((grp) => (
+                                <div key={grp.title} className="space-y-3">
+                                    <div className="flex items-center gap-3 select-none">
+                                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">{grp.title}</h2>
+                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
+                                        <div className="h-px flex-1 bg-slate-200/70" />
+                                    </div>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+                                        {grp.items.map((btn) => {
+                                            const Icon = btn.icon;
+                                            const isOrders = btn.href === '/admin/orders';
+                                            const theme = btn.theme;
+                                            return (
+                                                <Link
+                                                    key={btn.href}
+                                                    href={btn.href}
+                                                    className={`group relative flex items-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border border-slate-200/70 bg-white px-3 sm:px-3.5 py-2 sm:py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 ${theme?.border || 'hover:border-indigo-500'} ${theme?.hoverGlow || 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'}`}
+                                                >
+                                                    {/* accent rail — slides in on hover */}
+                                                    <span className={`pointer-events-none absolute left-0 top-0 h-full w-[3px] origin-center scale-y-0 rounded-r-full transition-transform duration-300 ease-out group-hover:scale-y-100 ${theme?.leftBar || 'bg-indigo-600'}`} />
+                                                    {/* soft sheen wash on hover */}
+                                                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/0 via-white/0 to-slate-100/0 transition-colors duration-300 group-hover:to-slate-100/70" />
+                                                    {/* top edge highlight */}
+                                                    <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-70" />
+
+                                                    <div className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-300 ease-out shrink-0 group-hover:scale-105 group-hover:-rotate-3 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                                                        <Icon strokeWidth={1.75} className="w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-300 group-hover:scale-110" />
+                                                    </div>
+                                                    <div className="relative min-w-0 flex-1">
+                                                        <h3 className="text-[12px] sm:text-[13px] font-semibold text-slate-900 tracking-tight leading-tight truncate">
+                                                            {btn.name}
+                                                        </h3>
+                                                        {btn.desc && (
+                                                            <p className="hidden sm:block text-[10.5px] font-medium text-slate-400 leading-tight truncate mt-0.5 transition-colors duration-300 group-hover:text-slate-500">
+                                                                {btn.desc}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="relative flex items-center gap-1.5 shrink-0">
+                                                        {isOrders && stats?.pendingOrders > 0 && (
+                                                            <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-sm shadow-rose-600/30 select-none tabular-nums">
+                                                                <span className="absolute inset-0 rounded-full bg-rose-500 opacity-40 motion-safe:animate-ping" style={{ animationDuration: '2.5s' }} />
+                                                                <span className="relative">{stats.pendingOrders}</span>
+                                                            </span>
+                                                        )}
+                                                        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-50 transition-all duration-300 group-hover:bg-white group-hover:shadow-sm">
+                                                            <ChevronRight className={`w-3.5 h-3.5 sm:w-[15px] sm:h-[15px] text-slate-300 transition-all duration-300 group-hover:translate-x-0.5 ${theme?.chevron || 'group-hover:text-indigo-600'}`} />
+                                                        </span>
+                                                    </div>
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

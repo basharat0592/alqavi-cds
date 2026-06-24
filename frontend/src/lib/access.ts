@@ -42,3 +42,35 @@ export function firstAllowedPath(pagePerms: string[] | null): string {
     if (pagePerms === null || pagePerms.length === 0) return '/admin/dashboard';
     return pagePerms[0];
 }
+
+/**
+ * Returns the user's editable page list, or `null` when the user is
+ * unrestricted for editing (full-access role / superuser / unconfigured legacy).
+ * A user is "page-restricted" once the admin has set any view OR edit list;
+ * from then on their EDIT list is authoritative.
+ */
+export function getUserEditPerms(user: any): string[] | null {
+    if (!user) return null;
+    const role = String(user.role_name || user.role || '').toLowerCase();
+    if (FULL_ACCESS_ROLES.includes(role) || user.is_superuser) {
+        return null; // unrestricted
+    }
+    const view = user.page_permissions;
+    const edit = user.page_edit_permissions;
+    const hasViewList = Array.isArray(view) && view.length > 0;
+    const hasEditList = Array.isArray(edit) && edit.length > 0;
+    if (hasViewList || hasEditList) {
+        return Array.isArray(edit) ? edit : [];
+    }
+    return null; // unconfigured -> treat as unrestricted (legacy)
+}
+
+/** Always-editable self pages (profile/dashboard never need edit grants). */
+const EDIT_ALWAYS_ALLOWED = ['/admin', '/admin/dashboard', '/admin/profile'];
+
+/** May the user edit (mutate) on `pathname`? */
+export function isEditAllowed(editPerms: string[] | null, pathname: string): boolean {
+    if (editPerms === null) return true; // unrestricted
+    if (EDIT_ALWAYS_ALLOWED.includes(pathname)) return true;
+    return editPerms.some(href => pathname === href || pathname.startsWith(href + '/'));
+}

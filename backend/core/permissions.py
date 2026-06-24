@@ -76,16 +76,22 @@ class HasModulePermission(permissions.BasePermission):
         try:
             codes = set(role.permissions.values_list('code', flat=True))
         except Exception:
-            return True
+            codes = set()
         from core.page_modules import editable_modules
         edit_perms = getattr(user, 'page_edit_permissions', None) or []
-        if not codes and not edit_perms:
-            return True  # fully unconfigured -> do not block (legacy users)
-        # Allow if the role can manage the module OR the user was granted
-        # per-page "edit" on a page that writes to this module.
-        if f'manage_{module}' in codes:
-            return True
-        return module in editable_modules(edit_perms)
+        view_perms = getattr(user, 'page_permissions', None) or []
+
+        # A user the admin has explicitly page-restricted (a view or edit list is
+        # configured) is governed by their per-page EDIT grants. The role's
+        # blanket manage_* must NOT silently re-grant edit on a page the admin
+        # deliberately marked view-only.
+        if view_perms or edit_perms:
+            return module in editable_modules(edit_perms)
+
+        # Unconfigured (legacy) users fall back to role-level module permissions.
+        if not codes:
+            return True  # fully unconfigured -> do not block
+        return f'manage_{module}' in codes
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)

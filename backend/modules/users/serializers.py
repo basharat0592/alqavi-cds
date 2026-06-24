@@ -132,8 +132,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'first_name', 'last_name', 'email', 'phone', 'avatar', 'address',
-            'city', 'country', 'postal_code', 'role', 'page_permissions', 'page_edit_permissions', 'areas'
+            'city', 'country', 'postal_code', 'role', 'page_permissions',
+            'page_edit_permissions', 'areas', 'is_active', 'status'
         ]
+
+    def update(self, instance, validated_data):
+        # Keep the textual status in sync with the Active toggle so the list
+        # filters and the status badge agree.
+        if 'is_active' in validated_data and 'status' not in validated_data:
+            validated_data['status'] = 'active' if validated_data['is_active'] else 'inactive'
+        return super().update(instance, validated_data)
 
 
 class UserPasswordChangeSerializer(serializers.Serializer):
@@ -277,6 +285,34 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 }
             }
 
-        # 4. If all fail, raise standard error
+        # 4. Attempt Direct Delivery Rider Login
+        from modules.delivery.models import DeliveryPerson
+        rider = None
+        if '@' in username:
+            rider = DeliveryPerson.objects.filter(email=username, is_active=True).first()
+        else:
+            rider = DeliveryPerson.objects.filter(username=username, is_active=True).first()
+
+        if rider and check_password(password, rider.password):
+            rider.last_login = timezone.now()
+            rider.save()
+            refresh = RefreshToken()
+            refresh['user_id'] = f"del_{rider.id}"
+            refresh['role'] = 'delivery'
+            return {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': {
+                    'id': rider.id,
+                    'name': rider.name,
+                    'email': rider.email,
+                    'avatar': rider.avatar.url if rider.avatar else None,
+                    'role': 'delivery',
+                    'is_staff': False,
+                    'is_superuser': False,
+                }
+            }
+
+        # 5. If all fail, raise standard error
         raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})
         raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})

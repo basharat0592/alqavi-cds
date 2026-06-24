@@ -5,11 +5,13 @@ import AuthGuard from '@/components/auth/AuthGuard';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import NotificationPanel, { type ActivityItem } from '@/components/admin/NotificationPanel';
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
+import ReadOnlyController from '@/components/admin/ReadOnlyController';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
-    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft
+    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Wallet
 } from 'lucide-react';
+import { paymentsDueService } from '@/services/payment.service';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
@@ -162,6 +164,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Notifications
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
+    const [dueOverdue, setDueOverdue] = useState(0);
+    const [dueSoon, setDueSoon] = useState(0);
 
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
@@ -201,9 +205,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             } catch { }
         };
 
+        const fetchDue = async () => {
+            try {
+                const d = await paymentsDueService.get('all');
+                setDueOverdue(d?.summary?.overdue || 0);
+                setDueSoon(d?.summary?.due_soon || 0);
+            } catch { }
+        };
+
         loadSettings();
         loadProfile();
         fetchActivity();
+        fetchDue();
+        const dueInterval = setInterval(fetchDue, 60000); // payments due: refresh each minute
 
         const handleUpdate = () => {
             loadProfile();
@@ -224,6 +238,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         return () => {
             clearInterval(pollInterval);
+            clearInterval(dueInterval);
             window.removeEventListener('profileUpdated', handleUpdate);
             window.removeEventListener('settingsUpdated', loadSettings);
             document.removeEventListener('mousedown', handleClickOutside);
@@ -450,6 +465,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <Link href="/" className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
                                 <ExternalLink className="h-3.5 w-3.5 opacity-80" /> View Store
                             </Link>
+                            {(dueOverdue > 0 || dueSoon > 0) && (
+                                <Link
+                                    href="/admin/alerts"
+                                    title={`${dueOverdue} overdue · ${dueSoon} due soon`}
+                                    className={`hidden lg:flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-xl border shadow-sm hover:shadow-md transition-all ${dueOverdue > 0 ? 'text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100'}`}
+                                >
+                                    <Wallet className="h-3.5 w-3.5" />
+                                    {dueOverdue > 0 ? `${dueOverdue} Overdue` : `${dueSoon} Due Soon`}
+                                    {dueOverdue > 0 && dueSoon > 0 && (
+                                        <span className="text-[10px] font-semibold opacity-70">+{dueSoon}</span>
+                                    )}
+                                </Link>
+                            )}
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
@@ -490,6 +518,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {/* ═══ MAIN CONTENT ═══ */}
                     <main className="flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white">
                         {isNavigating && <PageLoader />}
+                        <ReadOnlyController />
                         {children}
                     </main>
                 </div>

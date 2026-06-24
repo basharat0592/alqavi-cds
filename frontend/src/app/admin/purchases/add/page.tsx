@@ -44,6 +44,9 @@ const EMPTY_FORM = {
     shipping_cost: 0,
     tax_rate: 0,
     warehouse: '',
+    // Optional initial settlement at creation.
+    paid_amount: 0,
+    due_date: '',
 };
 
 type LineItem = {
@@ -363,6 +366,8 @@ export default function AddPurchasePage() {
                     shipping_cost: parseFloat(po.shipping_cost || 0) || 0,
                     tax_rate: 0,
                     warehouse: String(po.warehouse || ''),
+                    paid_amount: parseFloat(po.paid_amount || 0) || 0,
+                    due_date: (po.due_date || '') as string,
                 });
                 const loaded = (po.items || []).map((it: any) => ({
                     product: String(it.product || ''),
@@ -423,7 +428,11 @@ export default function AddPurchasePage() {
 
         setSaving(true);
         try {
-            const payload: any = { ...form, items, tax_amount: taxAmount };
+            // Derive the settlement status from any advance paid at creation.
+            const grandTotal = totalAmount + ((form as any).shipping_cost || 0) + taxAmount;
+            const paidNow = Number((form as any).paid_amount) || 0;
+            const payment_status = paidNow <= 0 ? 'UNPAID' : paidNow >= grandTotal ? 'PAID' : 'PARTIAL';
+            const payload: any = { ...form, items, tax_amount: taxAmount, payment_status };
             if (finalWarehouseId) payload.warehouse = finalWarehouseId;
             const data = await purchaseService.create(payload);
             setSuccessOrder(data);
@@ -529,6 +538,26 @@ export default function AddPurchasePage() {
                                                 placeholder="0"
                                             />
                                         </div>
+                                    </Field>
+                                    <Field label="Paid Now (Advance)">
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                            <input
+                                                className={inputCls + " pl-9"}
+                                                type="number"
+                                                value={(form as any).paid_amount || ''}
+                                                onChange={e => setForm(f => ({ ...f, paid_amount: parseFloat(e.target.value) || 0 }))}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </Field>
+                                    <Field label="Balance Due Date">
+                                        <input
+                                            className={inputCls}
+                                            type="date"
+                                            value={(form as any).due_date || ''}
+                                            onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                                        />
                                     </Field>
                                 </div>
                             </Card>

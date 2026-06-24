@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Payment, PaymentCategory
+from .models import Payment, PaymentCategory, TransactionPayment
 
 
 class PaymentCategorySerializer(serializers.ModelSerializer):
@@ -26,3 +26,29 @@ class PaymentSerializer(serializers.ModelSerializer):
         if obj.user:
             return obj.user.get_full_name() or obj.user.username
         return 'System' if obj.is_auto else 'Admin'
+
+
+class TransactionPaymentSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+    slip_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TransactionPayment
+        fields = [
+            'id', 'source_type', 'source_id', 'amount', 'method', 'paid_at',
+            'reference', 'slip', 'slip_url', 'note', 'status', 'direction',
+            'created_by', 'created_by_name', 'created_at',
+        ]
+        read_only_fields = ['created_by', 'created_at']
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return 'System'
+
+    def get_slip_url(self, obj):
+        if not obj.slip:
+            return None
+        request = self.context.get('request')
+        url = obj.slip.url
+        return request.build_absolute_uri(url) if request else url

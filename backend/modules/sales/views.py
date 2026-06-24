@@ -58,6 +58,28 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": f"Deletion failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['patch'])
+    def set_due_date(self, request, pk=None):
+        """Set/clear the payment due date for a sale.
+
+        Allowed even on DELIVERED orders (which are otherwise locked) because the
+        balance can still be outstanding and need a deadline.
+        """
+        order = self.get_object()
+        due = request.data.get('due_date')
+        order.due_date = due or None
+        order.save(update_fields=['due_date'])
+        return Response({'id': str(order.id), 'due_date': order.due_date})
+
+    @action(detail=True, methods=['patch'])
+    def assign_delivery(self, request, pk=None):
+        """Assign (or clear) the delivery rider for an order."""
+        order = self.get_object()
+        rider_id = request.data.get('delivery_person')
+        order.delivery_person_id = rider_id or None
+        order.save(update_fields=['delivery_person'])
+        return Response(OrderSerializer(order, context={'request': request}).data)
+
     def get_queryset(self):
         user = self.request.user
 
@@ -868,7 +890,7 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                 data.pop('warehouse', None)
 
             # Date Sanitization
-            for date_field in ['expected_delivery_date', 'payment_date']:
+            for date_field in ['expected_delivery_date', 'payment_date', 'due_date']:
                 if date_field in data:
                     val = str(data[date_field]).strip()
                     data[date_field] = val if val else None
@@ -885,9 +907,9 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             # 3. Field Filtering
             allowed_fields = [
                 'purchase_number', 'supplier_id', 'reference_number', 'warehouse_id',
-                'total_amount', 'shipping_cost', 'tax_amount', 'status', 
-                'payment_status', 'payment_method', 'expected_delivery_date', 'notes',
-                'paid_amount', 'payment_date', 'payment_notes', 'transaction_id', 
+                'total_amount', 'shipping_cost', 'tax_amount', 'status',
+                'payment_status', 'payment_method', 'expected_delivery_date', 'due_date', 'notes',
+                'paid_amount', 'payment_date', 'payment_notes', 'transaction_id',
                 'payment_confirmed', 'is_inventory_synced'
             ]
             final_data = {k: v for k, v in data.items() if k in allowed_fields}

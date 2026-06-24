@@ -619,6 +619,11 @@ export default function PurchasesPage() {
                                                     )}
                                                 </div>
                                             )}
+                                            {p.remaining_amount > 0 && p.due_date && (
+                                                <div className={`text-[9.5px] font-bold mt-0.5 tabular-nums ${p.is_overdue ? 'text-rose-600' : 'text-slate-400'}`}>
+                                                    {p.is_overdue ? `${p.days_overdue}d overdue` : `Due ${p.due_date}`}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2.5 transition-opacity">
@@ -842,6 +847,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
     const [paymentMethod, setPaymentMethod] = useState<string>('CASH');
     const [paymentSlip, setPaymentSlip] = useState<File | null>(null);
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+    const [dueDate, setDueDate] = useState('');
     const [transactionId, setTransactionId] = useState('');
     const [thisPayment, setThisPayment] = useState(0); // amount paid in THIS transaction
     const [paymentNotes, setPaymentNotes] = useState('');
@@ -855,6 +861,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
             setPaymentStatus('');
             setPaymentMethod(purchase.payment_method?.toUpperCase() || 'CASH');
             setPaymentDate(new Date().toISOString().slice(0, 10));
+            setDueDate(purchase.due_date || '');
             setTransactionId('');
             setThisPayment(0);
             setPaymentNotes(purchase.payment_notes || '');
@@ -877,6 +884,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
         formData.append('payment_method', paymentMethod);
         formData.append('paid_amount', newPaidTotal.toString());
         formData.append('payment_date', paymentDate);
+        if (dueDate) formData.append('due_date', dueDate);
         formData.append('payment_notes', paymentNotes);
         if (transactionId) formData.append('transaction_id', transactionId);
         if (paymentSlip) formData.append('payment_slip', paymentSlip);
@@ -970,6 +978,13 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                     <label className="text-[13px] font-bold text-slate-900">Payment Date</label>
                                     <input type="date" className={inputCls} value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
                                 </div>
+
+                                {newBalance > 0 && (
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[13px] font-bold text-slate-900">Balance Due Date <span className="text-slate-400 font-medium">— when the remaining {formatCurrency(newBalance)} must be cleared</span></label>
+                                        <input type="date" className={inputCls} value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                                    </div>
+                                )}
 
                                 <div className="col-span-2 space-y-1.5">
                                     <label className="text-[13px] font-bold text-slate-900">

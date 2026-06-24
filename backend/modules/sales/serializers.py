@@ -31,16 +31,25 @@ class OrderSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     order_number = serializers.CharField(source='tracking_id', read_only=True)
     customer_display_name = serializers.SerializerMethodField()
+    remaining_amount = serializers.ReadOnlyField()
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
+    delivery_person_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
+            'amount_paid', 'payment_status', 'due_date', 'remaining_amount', 'is_overdue', 'days_overdue',
             'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'notes',
+            'delivery_person', 'delivery_person_name',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
         ]
         read_only_fields = ['id', 'tracking_id', 'order_number', 'created_at', 'updated_at']
+
+    def get_delivery_person_name(self, obj):
+        return obj.delivery_person.name if obj.delivery_person_id else None
 
     def get_customer_display_name(self, obj):
         """Resolve the real customer name: prefer the linked account, then the
@@ -62,7 +71,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id']
+        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date']
 
     def create(self, validated_data):
         from django.db import transaction, IntegrityError
@@ -118,9 +127,14 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     'whatsapp_number': validated_data.get('whatsapp_number', ''),
                     'notes': validated_data.get('notes', ''),
                     'payment_method': validated_data.get('payment_method', 'COD'),
-                    'status': validated_data.get('status', 'PENDING')
+                    'status': validated_data.get('status', 'PENDING'),
+                    # Settlement (partial / on-credit POS sales). Defaults keep
+                    # ordinary fully-paid sales unchanged.
+                    'payment_status': validated_data.get('payment_status', 'PAID'),
+                    'amount_paid': validated_data.get('amount_paid', 0) or 0,
+                    'due_date': validated_data.get('due_date'),
                 }
-                
+
                 if customer_obj:
                     params['customer'] = customer_obj
                     # We EXCLUDE 'user' to bypass the failing FK constraint
@@ -268,6 +282,8 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.SerializerMethodField()
     order_number = serializers.CharField(source='purchase_number', read_only=True)
     remaining_amount = serializers.ReadOnlyField()
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
     created_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -275,7 +291,8 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'order_number', 'purchase_number', 'supplier', 'supplier_name', 'reference_number',
             'warehouse', 'warehouse_name', 'total_amount', 'shipping_cost', 'tax_amount',
-            'status', 'payment_status', 'payment_method', 'order_date', 'expected_delivery_date', 'notes', 'items',
+            'status', 'payment_status', 'payment_method', 'order_date', 'expected_delivery_date',
+            'due_date', 'is_overdue', 'days_overdue', 'notes', 'items',
             'supplier_phone', 'supplier_email', 'paid_amount', 'remaining_amount', 'payment_date',
             'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed',
             'created_by', 'created_by_name'
@@ -323,12 +340,15 @@ class PurchaseReturnSerializer(serializers.ModelSerializer):
     items = PurchaseReturnItemSerializer(many=True, read_only=True)
     supplier_name = serializers.SerializerMethodField()
     purchase_number = serializers.ReadOnlyField(source='purchase_order.purchase_number')
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
 
     class Meta:
         model = PurchaseReturn
         fields = [
             'id', 'return_number', 'supplier', 'supplier_name', 'purchase_order', 'purchase_number',
-            'status', 'reason', 'return_date', 'total_refund_amount', 'items', 'created_at'
+            'status', 'reason', 'return_date', 'total_refund_amount', 'items', 'created_at',
+            'refund_status', 'refund_method', 'due_date', 'settled_at', 'is_overdue', 'days_overdue',
         ]
 
     def get_supplier_name(self, obj):
@@ -371,14 +391,24 @@ class SaleReturnSerializer(serializers.ModelSerializer):
     items = SaleReturnItemSerializer(many=True, read_only=True)
     customer_name = serializers.SerializerMethodField()
     order_tracking_id = serializers.ReadOnlyField(source='order.tracking_id')
+    refund_total = serializers.SerializerMethodField()
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
 
     class Meta:
         model = SaleReturn
         fields = [
             'id', 'return_number', 'order', 'order_tracking_id', 'customer', 'customer_name',
-            'status', 'reason', 'notes', 'items', 'created_at', 'updated_at'
+            'status', 'reason', 'notes', 'items', 'created_at', 'updated_at',
+            'refund_amount', 'refund_total', 'refund_status', 'refund_method', 'due_date',
+            'settled_at', 'is_overdue', 'days_overdue',
         ]
         read_only_fields = ['id', 'return_number', 'created_at', 'updated_at']
+
+    def get_refund_total(self, obj):
+        # Prefer the stored refund amount; fall back to the line-item total.
+        amt = float(obj.refund_amount or 0)
+        return amt if amt > 0 else float(obj.items_total or 0)
 
     def get_customer_name(self, obj):
         if obj.customer: return obj.customer.name

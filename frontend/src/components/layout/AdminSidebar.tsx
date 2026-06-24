@@ -99,6 +99,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             items: [
                 { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
+                { name: 'Delivery Persons', href: '/admin/delivery', icon: Truck },
                 { name: 'Areas', href: '/admin/company/areas', icon: MapPin },
                 { name: 'Internal Users', href: '/admin/users', icon: User },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },

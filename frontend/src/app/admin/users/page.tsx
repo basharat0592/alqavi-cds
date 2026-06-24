@@ -221,7 +221,7 @@ export default function UsersPage() {
                                                 </select>
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-end gap-2.5 opacity-100 transition-opacity">
                                                     <button onClick={() => setSelectedUserForView(user)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>

@@ -11,8 +11,31 @@ import {
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 const STATUS_FILTERS = ['All', 'Delivered', 'Cancelled'];
+
+/** Small payment-status chip used in the sales registry. */
+function PayStatusCell({ o }: { o: any }) {
+    const status = (o.payment_status || 'PAID').toUpperCase();
+    const remaining = Number(o.remaining_amount ?? 0);
+    if (status === 'PAID' || remaining <= 0) {
+        return <div className="text-[10px] text-emerald-600 font-black uppercase mt-1 tracking-tighter">Paid in full</div>;
+    }
+    const overdue = o.is_overdue;
+    return (
+        <div className="mt-1 space-y-0.5">
+            <div className={`text-[10px] font-black uppercase tracking-tighter ${status === 'PARTIAL' ? 'text-amber-600' : 'text-rose-600'}`}>
+                {status === 'PARTIAL' ? 'Partially paid' : 'Unpaid'} · {formatCurrency(remaining)} due
+            </div>
+            {o.due_date && (
+                <div className={`text-[9.5px] font-bold ${overdue ? 'text-rose-600' : 'text-slate-400'}`}>
+                    {overdue ? `${o.days_overdue}d overdue` : `Due ${o.due_date}`}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function SalesPage() {
     const router = useRouter();
@@ -22,6 +45,7 @@ export default function SalesPage() {
     const [statusFilter, setStatusFilter] = useState('All');
     const [updatingRow, setUpdatingRow] = useState<string | null>(null);
     const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+    const [payOrder, setPayOrder] = useState<any | null>(null);
 
     const handleQuickStatusUpdate = async (orderId: string, newStatus: string) => {
         setUpdatingRow(orderId);
@@ -249,7 +273,7 @@ export default function SalesPage() {
                                             <div className="flex items-center gap-2 text-slate-900 font-bold">
                                                 <CreditCard size={14} className="text-slate-400" /> {o.payment_method || 'Cash'}
                                             </div>
-                                            <div className="text-[10px] text-emerald-600 font-black uppercase mt-1 tracking-tighter">Verified Paid</div>
+                                            <PayStatusCell o={o} />
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-[12px] text-slate-900 font-bold tabular-nums">
@@ -272,6 +296,12 @@ export default function SalesPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                {Number((o as any).remaining_amount ?? 0) > 0 && (
+                                                    <>
+                                                        <button onClick={() => setPayOrder(o)} className="text-[12px] font-bold text-indigo-600 hover:underline">Collect</button>
+                                                        <span className="text-slate-300">|</span>
+                                                    </>
+                                                )}
                                                 <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
@@ -343,6 +373,22 @@ export default function SalesPage() {
                         </div>
                     )}
                 </Modal>
+
+                {/* Collect-balance modal for credit / partial sales */}
+                {payOrder && (
+                    <PaymentModal
+                        open={!!payOrder}
+                        onClose={() => setPayOrder(null)}
+                        title={`Payments · Sale #${payOrder.order_number || payOrder.id}`}
+                        sourceType="order"
+                        sourceId={payOrder.id}
+                        total={Number(payOrder.total_amount || 0)}
+                        direction="inbound"
+                        dueDate={payOrder.due_date || ''}
+                        onDueDateChange={async (d) => { try { await orderService.setDueDate(String(payOrder.id), d); } catch { } }}
+                        onChanged={() => loadOrders(true)}
+                    />
+                )}
             </div>
         </div>
     );

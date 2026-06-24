@@ -7,13 +7,18 @@ import {
     RefreshCw, AlertTriangle, XCircle,
     User, Clock, Loader2, CheckCircle2, Trash2
 } from 'lucide-react';
-import { formatDateTime, exportToCSV } from '@/lib/utils';
+import { formatDateTime, exportToCSV, formatCurrency } from '@/lib/utils';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 const STATUS_FILTERS = ['All', 'Pending', 'Accepted', 'Rejected'];
+
+const refundTotal = (r: any) =>
+    Number(r.refund_total ?? r.refund_amount ?? 0) ||
+    (r.items?.reduce((s: number, i: any) => s + (i.price * i.quantity), 0) || 0);
 
 // ── Status badge tone ──────────────────────────────────────────────────────────
 const getStatusTone = (status: string): 'amber' | 'green' | 'red' | 'neutral' => {
@@ -131,6 +136,7 @@ export default function SaleReturnsPage() {
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedReturn, setSelectedReturn] = useState<any>(null);
     const [returnToDelete, setReturnToDelete] = useState<any>(null);
+    const [payReturn, setPayReturn] = useState<any>(null);
     const [deleting, setDeleting] = useState(false);
 
     const loadReturns = useCallback(async (silent = false) => {
@@ -295,10 +301,21 @@ export default function SaleReturnsPage() {
                                                     <span className="hidden sm:inline-block">
                                                         <Badge tone={getStatusTone(r.status)}>{r.status}</Badge>
                                                     </span>
+                                                    {r.status?.toUpperCase() === 'ACCEPTED' && (
+                                                        <span className={`text-[9px] font-black uppercase tracking-tighter ${r.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                            {r.refund_status === 'PAID' ? 'Refunded' : 'Refund pending'}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                    {r.status?.toUpperCase() === 'ACCEPTED' && r.refund_status !== 'PAID' && (
+                                                        <>
+                                                            <button onClick={() => setPayReturn(r)} className="text-[12px] font-bold text-indigo-600 hover:underline">Settle</button>
+                                                            <span className="text-slate-300">|</span>
+                                                        </>
+                                                    )}
                                                     <button onClick={() => setSelectedReturn(r)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
@@ -347,6 +364,20 @@ export default function SaleReturnsPage() {
             </div>
 
             {selectedReturn && <ReturnDetailModal returnData={selectedReturn} onClose={() => setSelectedReturn(null)} onUpdate={loadReturns} />}
+
+            {/* Refund settlement modal — records the refund paid back to the customer */}
+            {payReturn && (
+                <PaymentModal
+                    open={!!payReturn}
+                    onClose={() => setPayReturn(null)}
+                    title={`Refund · Return #${payReturn.return_number}`}
+                    sourceType="salereturn"
+                    sourceId={payReturn.id}
+                    total={refundTotal(payReturn)}
+                    direction="outbound"
+                    onChanged={() => loadReturns(true)}
+                />
+            )}
 
             {/* Delete Confirmation Modal */}
             <Modal

@@ -100,6 +100,7 @@ const rowSubtitle = (r: any, category: string) =>
 
 function ReportsEngineInner() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [hasGenerated, setHasGenerated] = useState(false);
@@ -360,6 +361,29 @@ function ReportsEngineInner() {
                             </>
                         }
                     />
+                </div>
+
+                {/* Quick analytics reports (real grouped data) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6 no-print">
+                    {[
+                        { href: '/admin/reports/by-area', label: 'Area-wise', icon: Building2, tint: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
+                        { href: '/admin/reports/by-user', label: 'Staff-wise', icon: User, tint: 'text-violet-600 bg-violet-50 border-violet-100' },
+                        { href: '/admin/reports/sales', label: 'Statements', icon: FileStack, tint: 'text-sky-600 bg-sky-50 border-sky-100' },
+                        { href: '/admin/reports/receivables', label: 'Receivables', icon: TrendingUp, tint: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+                        { href: '/admin/reports/payables', label: 'Payables', icon: CreditCard, tint: 'text-rose-600 bg-rose-50 border-rose-100' },
+                        { href: '/admin/reports/sales-returns', label: 'Returns', icon: RotateCcw, tint: 'text-amber-600 bg-amber-50 border-amber-100' },
+                    ].map(c => (
+                        <button
+                            key={c.href}
+                            onClick={() => router.push(c.href)}
+                            className="group flex flex-col items-start gap-2 rounded-xl border border-slate-200/70 bg-white p-3.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+                        >
+                            <span className={`flex items-center justify-center w-9 h-9 rounded-lg border ${c.tint}`}>
+                                <c.icon size={17} />
+                            </span>
+                            <span className="text-[12.5px] font-bold text-slate-800 group-hover:text-indigo-600">{c.label}</span>
+                        </button>
+                    ))}
                 </div>
 
                 <Card className="p-6 mb-6 no-print">

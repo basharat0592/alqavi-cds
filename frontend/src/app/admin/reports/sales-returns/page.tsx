@@ -1,33 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-    RotateCcw, TrendingUp, Download,
-    Printer, ShoppingCart,
-    RefreshCw, Info
+    RotateCcw, TrendingUp, Download, Printer, RefreshCw, Info, Loader2, PackageX
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
-import toast from 'react-hot-toast';
-import { exportToCSV } from '@/lib/utils';
-import { PageHeader, Card, Button, Badge, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { exportToCSV, formatCurrency } from '@/lib/utils';
+import { reportService } from '@/services/report.service';
+import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
 import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
-const RETURNS = [
-    { id: 'RET-2291', o: 'SO-8172', name: 'Al-Noor Cosmetics', s: 'Reconciled', date: '2026-04-02', v: 'Rs. 12,500' },
-    { id: 'RET-2290', o: 'SO-8152', name: 'The Glow Mart', s: 'Pending', date: '2026-04-01', v: 'Rs. 4,200' },
-    { id: 'RET-2289', o: 'SO-8022', name: 'Walk-in Retail', s: 'Reconciled', date: '2026-03-31', v: 'Rs. 1,500' },
-];
+const BARS = ['bg-rose-500', 'bg-amber-500', 'bg-indigo-600', 'bg-sky-500', 'bg-emerald-500', 'bg-slate-400'];
 
 export default function SaleReturnsReportPage() {
     const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<any>({ totals: {}, status_counts: {}, reasons: [] });
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
-    const sel = useTableSelection(RETURNS, (r) => r.id);
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const d = await reportService.returnsSummary({ date_from: dateFrom || undefined, date_to: dateTo || undefined });
+            setData(d || { totals: {}, status_counts: {}, reasons: [] });
+        } finally { setLoading(false); }
+    }, [dateFrom, dateTo]);
 
-    useEffect(() => {
-        setTimeout(() => setLoading(false), 800);
-    }, []);
+    useEffect(() => { load(); }, [load]);
 
-    if (loading) return <PageLoader />;
+    if (loading && !data.totals?.total_count && (data.reasons || []).length === 0) return <PageLoader />;
+
+    const t = data.totals || {};
+    const sc = data.status_counts || {};
+    const reasons = data.reasons || [];
+
+    const STATS = [
+        { label: 'Total Returns', value: String(t.total_count || 0), icon: RotateCcw },
+        { label: 'Accepted Value', value: formatCurrency(t.accepted_value || 0), icon: TrendingUp, color: 'text-rose-600' },
+        { label: 'Return Rate', value: `${t.return_rate || 0}%`, icon: RefreshCw },
+        { label: 'Delivered Orders', value: String(t.delivered_orders || 0), icon: PackageX },
+    ];
 
     return (
         <div className="pb-10">
@@ -46,8 +58,10 @@ export default function SaleReturnsReportPage() {
                     ]}
                     actions={
                         <div className="flex gap-2 no-print">
-                            <Button variant="outline" size="sm" onClick={() => toast.success('Manifest Exported')}>
-                                <Download size={14} /> Export Manifest
+                            <Button variant="outline" size="sm" onClick={() => exportToCSV(
+                                reasons.map((r: any) => ({ reason: r.reason, count: r.count, value: r.value, pct: r.pct })),
+                                'returns-reasons.csv')}>
+                                <Download size={14} /> Export
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => window.print()}>
                                 <Printer size={14} /> Print
@@ -57,106 +71,77 @@ export default function SaleReturnsReportPage() {
                 />
             </div>
 
-            {/* Tactical Sensors */}
+            {/* Date filter */}
+            <Card className="p-4 mb-6 flex flex-wrap items-center gap-3 no-print print:hidden">
+                <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Period</span>
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={ui.inputBase + ' w-auto'} />
+                <span className="text-slate-400 text-[12px]">to</span>
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={ui.inputBase + ' w-auto'} />
+                {(dateFrom || dateTo) && <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</Button>}
+                {loading && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
+            </Card>
+
+            {/* KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {[
-                    { label: 'Gross Sales', value: 'Rs. 5.1M', icon: ShoppingCart, trend: '+12.4%' },
-                    { label: 'Net Returns', value: 'Rs. 420,500', icon: RotateCcw, trend: '-2.1%' },
-                    { label: 'Return Frequency', value: '4.2%', icon: RefreshCw, trend: '+0.5%' },
-                    { label: 'Realized Revenue', value: 'Rs. 4.68M', icon: TrendingUp, trend: '+14.1%' },
-                ].map((stat, i) => (
+                {STATS.map((stat, i) => (
                     <Card key={i} className="p-5">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <stat.icon size={14} className="text-slate-400" />
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                            </div>
-                            <span className={`text-[10px] font-black ${stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'}`}>{stat.trend}</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <stat.icon size={14} className="text-slate-400" />
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
                         </div>
-                        <p className="text-[20px] font-bold text-slate-900 tracking-tight tabular-nums">{stat.value}</p>
+                        <p className={`text-[20px] font-bold text-slate-900 tracking-tight tabular-nums ${stat.color || ''}`}>{stat.value}</p>
                     </Card>
                 ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                {/* Recent Returns Table */}
-                <Card className="lg:col-span-2 overflow-hidden">
-                    <div className="px-5 py-3 bg-slate-50/60 border-b border-slate-100">
-                        <h3 className="text-[14px] font-bold text-slate-900 tracking-tight">Recent Returns Registry</h3>
-                    </div>
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/60">
-                                <SelectAllTh sel={sel} />
-                                <th className="px-6 py-3">Return ID</th>
-                                <th className="px-6 py-3">Orig. Order</th>
-                                <th className="px-6 py-3">Customer Identity</th>
-                                <th className="px-6 py-3 text-right">Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {RETURNS.map((ret, i) => (
-                                <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
-                                    <RowCheckboxTd sel={sel} id={ret.id} />
-                                    <td className="px-6 py-4 font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer">{ret.id}</td>
-                                    <td className="px-6 py-4 text-slate-600 font-medium">{ret.o}</td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-slate-900 font-bold uppercase mb-1">{ret.name}</div>
-                                        <Badge tone={ret.s === 'Reconciled' ? 'green' : 'amber'}>{ret.s}</Badge>
-                                    </td>
-                                    <td className="px-6 py-4 text-right text-rose-600 font-bold tabular-nums">{ret.v}</td>
-                                </tr>
+                {/* Reason Analysis (real) */}
+                <Card className="lg:col-span-2 p-6">
+                    <h3 className="text-[14px] font-bold text-slate-900 tracking-tight mb-5 pb-2 border-b border-slate-100">Return Reason Breakdown</h3>
+                    {reasons.length === 0 ? (
+                        <p className="text-[13px] text-slate-400 py-8 text-center">No returns recorded for this period.</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {reasons.slice(0, 8).map((h: any, i: number) => (
+                                <div key={i}>
+                                    <div className="flex justify-between text-[12px] font-medium text-slate-700 mb-1">
+                                        <span className="truncate pr-3">{h.reason}</span>
+                                        <span className="tabular-nums shrink-0">{formatCurrency(h.value)} · {h.pct}%</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className={`h-full ${BARS[i % BARS.length]}`} style={{ width: `${h.pct}%` }} />
+                                    </div>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    )}
                 </Card>
 
-                <div className="print:hidden">
-                    <BulkBar
-                        sel={sel}
-                        entity="returns"
-                        onExport={() => exportToCSV(
-                            sel.selectedItems.map((ret: any) => ({
-                                return_id: ret.id,
-                                original_order: ret.o,
-                                customer: ret.name,
-                                status: ret.s,
-                                date: ret.date,
-                                value: ret.v,
-                            })),
-                            'sales-returns.csv',
-                        )}
-                    />
-                </div>
-
-                {/* Reason Analysis */}
+                {/* Status breakdown */}
                 <Card className="p-6">
-                    <h3 className="text-[14px] font-bold text-slate-900 tracking-tight mb-5 pb-2 border-b border-slate-100">Return Reason Matrix</h3>
-                    <div className="space-y-4">
+                    <h3 className="text-[14px] font-bold text-slate-900 tracking-tight mb-5 pb-2 border-b border-slate-100">By Status</h3>
+                    <div className="space-y-3">
                         {[
-                            { l: 'Quality Issue', v: '45%', p: 45, c: 'bg-rose-500' },
-                            { l: 'Freight Damage', v: '28%', p: 28, c: 'bg-amber-500' },
-                            { l: 'Wrong Product', v: '15%', p: 15, c: 'bg-indigo-600' },
-                            { l: 'Others', v: '12%', p: 12, c: 'bg-slate-400' },
-                        ].map((h, i) => (
-                            <div key={i}>
-                                <div className="flex justify-between text-[12px] font-medium text-slate-700 mb-1">
-                                    <span>{h.l}</span>
-                                    <span className="tabular-nums">{h.v}</span>
-                                </div>
-                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <div className={`h-full ${h.c}`} style={{ width: `${h.p}%` }} />
-                                </div>
+                            { k: 'PENDING', tone: 'amber' as const },
+                            { k: 'ACCEPTED', tone: 'green' as const },
+                            { k: 'REJECTED', tone: 'red' as const },
+                        ].map(s => (
+                            <div key={s.k} className="flex items-center justify-between">
+                                <Badge tone={s.tone}>{s.k}</Badge>
+                                <span className="text-[16px] font-bold text-slate-900 tabular-nums">{sc[s.k] || 0}</span>
                             </div>
                         ))}
+                        <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Total Value</span>
+                            <span className="text-[16px] font-bold text-rose-600 tabular-nums">{formatCurrency(t.total_value || 0)}</span>
+                        </div>
                     </div>
                 </Card>
             </div>
 
-            {/* Footnote */}
             <Card className="mt-8 bg-amber-50 border-amber-100 p-4 flex gap-3 no-print print:hidden">
                 <Info className="text-amber-600 shrink-0 mt-0.5" size={16} />
-                <p className="text-[12px] text-slate-600 leading-relaxed font-medium">Realized revenue accounts for all returns processed. 'Quality Issues' above 20% should be escalated to the Procurement and QC department immediately.</p>
+                <p className="text-[12px] text-slate-600 leading-relaxed font-medium">Return rate is accepted returns vs delivered orders in this period and scope. Reasons are grouped from the actual return records.</p>
             </Card>
 
             <div className="hidden print:block">

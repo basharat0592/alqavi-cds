@@ -25,6 +25,7 @@ PAGE_MODULE = {
     '/admin/expense': 'payments',
     '/admin/company/categories': 'payments',
     '/admin/company/areas': 'areas',
+    '/admin/delivery': 'delivery',
     '/admin/users': 'users',
     '/admin/users/roles': 'users',
     '/admin/users/permissions': 'users',

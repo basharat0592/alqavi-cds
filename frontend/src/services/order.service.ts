@@ -33,6 +33,11 @@ export const orderService = {
         const response = await api.patch(`v1/sales/orders/${id}/`, data);
         return response.data;
     },
+    // Dedicated settlement-date update (works even on locked/delivered orders).
+    setDueDate: async (id: string, due_date: string) => {
+        const response = await api.patch(`v1/sales/orders/${id}/set_due_date/`, { due_date });
+        return response.data;
+    },
     delete: async (id: string) => {
         await api.delete(`v1/sales/orders/${id}/`);
     },

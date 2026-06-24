@@ -37,6 +37,8 @@ export default function LoginPage() {
                 router.push('/admin/dashboard');
             } else if (role === 'supplier') {
                 router.push('/supplier/dashboard');
+            } else if (role === 'delivery') {
+                router.push('/delivery/dashboard');
             } else {
                 router.push('/customer/dashboard');
             }
@@ -66,6 +68,8 @@ export default function LoginPage() {
                 router.push('/admin/dashboard');
             } else if (role === 'supplier') {
                 router.push('/supplier/dashboard');
+            } else if (role === 'delivery') {
+                router.push('/delivery/dashboard');
             } else {
                 router.push('/customer/dashboard');
             }

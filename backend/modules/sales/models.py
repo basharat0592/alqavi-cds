@@ -1,9 +1,30 @@
 import uuid
 import random
 import string
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from modules.products.models import Product
+
+
+def _settlement_alert(due_date, remaining):
+    """Shared due-date logic used by all settleable transactions.
+
+    Returns (is_overdue, days_overdue, is_due_soon). A transaction is only
+    flagged when money is still outstanding (remaining > 0).
+    """
+    try:
+        rem = Decimal(str(remaining or 0))
+    except Exception:
+        rem = Decimal('0')
+    if not due_date or rem <= 0:
+        return False, 0, False
+    today = timezone.localdate()
+    if due_date < today:
+        return True, (today - due_date).days, False
+    return False, 0, (0 <= (due_date - today).days <= 3)
+
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -37,11 +58,31 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    # Rider assigned to deliver this order (managed by admin; drives the rider dashboard).
+    delivery_person = models.ForeignKey(
+        'delivery.DeliveryPerson',
+        on_delete=models.SET_NULL,
+        related_name='deliveries',
+        null=True,
+        blank=True
+    )
     tracking_id = models.CharField(max_length=20, unique=True, db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
+
+    # Settlement — supports partial / on-credit sales. amount_paid is the sum of
+    # confirmed installments (see payments.TransactionPayment); kept in sync by
+    # payments.services.recompute_parent. Existing rows default to fully paid.
+    PAYMENT_STATUS_CHOICES = [
+        ('UNPAID', 'Unpaid'),
+        ('PARTIAL', 'Partially Paid'),
+        ('PAID', 'Paid'),
+    ]
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='PAID')
+    due_date = models.DateField(null=True, blank=True)
+
     # Shipping info
     shipping_address = models.TextField()
     phone_number = models.CharField(max_length=20)
@@ -63,6 +104,24 @@ class Order(models.Model):
         ('FAILED', 'Failed')
     ])
     whatsapp_sent_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def remaining_amount(self):
+        # total_amount may be a float (POS accumulator) while amount_paid is a
+        # Decimal — coerce both so the subtraction never raises.
+        return Decimal(str(self.total_amount or 0)) - Decimal(str(self.amount_paid or 0))
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[2]
 
     def save(self, *args, **kwargs):
         if not self.tracking_id:
@@ -166,6 +225,8 @@ class PurchaseOrder(models.Model):
     
     order_date = models.DateTimeField(auto_now_add=True)
     expected_delivery_date = models.DateField(null=True, blank=True)
+    # Payment deadline for settling this purchase with the supplier.
+    due_date = models.DateField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
 
     # The admin/user who created this purchase order (shown to the supplier as "From").
@@ -186,7 +247,19 @@ class PurchaseOrder(models.Model):
 
     @property
     def remaining_amount(self):
-        return self.total_amount - self.paid_amount
+        return Decimal(str(self.total_amount or 0)) - Decimal(str(self.paid_amount or 0))
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[2]
 
     def save(self, *args, **kwargs):
         if not self.purchase_number:
@@ -249,11 +322,47 @@ class PurchaseReturn(models.Model):
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='WAITING_FOR_SUPPLIER')
     reason = models.TextField(null=True, blank=True)
     return_date = models.DateField()
-    
+
     total_refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
+
+    # Refund settlement — supplier owes this money back. refund_status is kept in
+    # sync from confirmed installments by payments.services.recompute_parent.
+    REFUND_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Settled'),
+    ]
+    REFUND_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online'),
+        ('wallet', 'Mobile Wallet'),
+        ('credit_note', 'Credit Note'),
+        ('other', 'Other'),
+    ]
+    refund_status = models.CharField(max_length=10, choices=REFUND_STATUS_CHOICES, default='PENDING')
+    refund_method = models.CharField(max_length=20, choices=REFUND_METHOD_CHOICES, blank=True, default='')
+    due_date = models.DateField(null=True, blank=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def refund_remaining(self):
+        return 0 if self.refund_status == 'PAID' else (self.total_refund_amount or 0)
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[2]
 
     def save(self, *args, **kwargs):
         if not self.return_number:
@@ -304,9 +413,55 @@ class SaleReturn(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     reason = models.TextField()
     notes = models.TextField(null=True, blank=True)
-    
+
+    # Refund settlement — money we owe the customer back. refund_status is kept
+    # in sync from confirmed installments by payments.services.recompute_parent.
+    REFUND_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Refunded'),
+    ]
+    REFUND_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online'),
+        ('wallet', 'Mobile Wallet'),
+        ('credit_note', 'Store Credit'),
+        ('other', 'Other'),
+    ]
+    refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    refund_status = models.CharField(max_length=10, choices=REFUND_STATUS_CHOICES, default='PENDING')
+    refund_method = models.CharField(max_length=20, choices=REFUND_METHOD_CHOICES, blank=True, default='')
+    due_date = models.DateField(null=True, blank=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def items_total(self):
+        return sum(
+            (Decimal(str(i.price or 0)) * Decimal(str(i.quantity or 0)))
+            for i in self.items.all()
+        )
+
+    @property
+    def refund_remaining(self):
+        if self.refund_status == 'PAID':
+            return 0
+        return (self.refund_amount or 0) or self.items_total
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[2]
 
     def save(self, *args, **kwargs):
         if not self.return_number:
