@@ -246,7 +246,7 @@ def create_user(request):
         }, status=status.HTTP_201_CREATED)
 
     # Standard User creation
-    serializer = UserCreateSerializer(data=request.data)
+    serializer = UserCreateSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         user = serializer.save()
         
@@ -317,7 +317,7 @@ def update_user(request, user_id):
         return Response({'message': 'Customer profile updated'})
     user, err = get_or_404_response(User, id=user_id)
     if err: return err
-    serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+    serializer = UserUpdateSerializer(user, data=request.data, partial=True, context={'request': request})
     if serializer.is_valid():
         user = serializer.save()
         return Response(UserDetailSerializer(user).data)
@@ -544,7 +544,14 @@ def user_activity_log(request, user_id):
 @permission_classes([AllowAny])
 def all_activity_logs(request):
     """Get all activity logs (admin only)."""
+    from core.scoping import user_warehouse_ids
     logs = UserActivityLog.objects.all()
+
+    # Branch admins only see activity by staff who share at least one of their
+    # branch(es); super admins / unscoped see everything.
+    wh_ids = user_warehouse_ids(getattr(request, 'user', None))
+    if wh_ids is not None:
+        logs = logs.filter(user__warehouses__id__in=wh_ids).distinct() if wh_ids else logs.none()
 
     user_id = request.query_params.get('user_id')
     if user_id:
@@ -644,32 +651,22 @@ def list_permissions(request):
 # ==================== USER SETTINGS ====================
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_user_settings(request):
-    """Get settings for the currently authenticated user."""
-    user = request.user
-    if not user.is_authenticated:
-        user = User.objects.filter(is_superuser=True).first() or User.objects.first()
-        
-    if not user:
-        return Response({'detail': 'No users found'}, status=404)
-        
-    settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+    """Get settings for the currently authenticated user — strictly per-user.
+
+    No super-admin fallback: each admin only ever reads their own settings, so one
+    admin's preferences can never leak into another's.
+    """
+    settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
     return Response(UserSettingsSerializer(settings_obj).data)
 
 
 @api_view(['PATCH'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def update_user_settings(request):
-    """Update settings for the currently authenticated user."""
-    user = request.user
-    if not user.is_authenticated:
-        user = User.objects.filter(is_superuser=True).first() or User.objects.first()
-        
-    if not user:
-        return Response({'detail': 'No users found'}, status=404)
-        
-    settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+    """Update settings for the currently authenticated user — strictly per-user."""
+    settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
     serializer = UserSettingsSerializer(settings_obj, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()

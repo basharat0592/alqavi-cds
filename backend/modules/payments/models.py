@@ -64,6 +64,12 @@ class Payment(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments'
     )
+    # Branch (warehouse) this ledger entry belongs to. Auto entries copy it from
+    # the source transaction; manual entries default to the creator's branch.
+    # Drives multi-branch financial isolation.
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True, related_name='payments'
+    )
 
     # Audit / auto-generation tracking
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual')
@@ -136,6 +142,11 @@ class TransactionPayment(models.Model):
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='transaction_payments'
+    )
+    # Branch (warehouse) this installment belongs to; copied from its parent
+    # transaction so installments stay branch-scoped like their ledger rows.
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True, related_name='transaction_payments'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

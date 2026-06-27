@@ -122,6 +122,10 @@ class User(AbstractUser, StatusMixin):
     page_edit_permissions = models.JSONField(default=list, blank=True)
     # Areas an Area Manager is responsible for (empty for non-area roles).
     areas = models.ManyToManyField('company.Area', blank=True, related_name='managers')
+    # Branches (warehouses) this admin manages. Drives multi-branch data
+    # isolation: a non-super-admin only ever sees data for these warehouses.
+    # Empty + not super admin == sees nothing (fail closed).
+    warehouses = models.ManyToManyField('inventory.Warehouse', blank=True, related_name='admins')
 
     class Meta:
         ordering = ['-date_joined']

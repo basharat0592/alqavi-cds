@@ -7,23 +7,33 @@ from rest_framework.response import Response
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
 from core.permissions import HasModulePermission
+from core.scoping import BranchScopedQuerysetMixin
 
 
-class WarehouseViewSet(viewsets.ModelViewSet):
+class WarehouseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Warehouse.objects.all().order_by('name')
     serializer_class = WarehouseSerializer
     permission_classes = [IsAuthenticated, HasModulePermission]
     perm_module = 'inventory'
+    # The model *is* the branch, so scope by its own id.
+    branch_field = 'id'
 
 
-class StockViewSet(viewsets.ModelViewSet):
+class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Stock.objects.all()
     serializer_class = StockSerializer
     permission_classes = [IsAuthenticated, HasModulePermission]
     perm_module = 'inventory'
+    # Stock is shared branch inventory: show ALL products in the user's
+    # warehouse(s), no matter who brought them in (branch-scoped, not per-creator).
+    branch_field = 'warehouse'
 
     def perform_create(self, serializer):
-        stock = serializer.save()
+        actor = self.request.user
+        real = actor if (getattr(actor, 'pk', None) and actor.__class__.__name__ == 'User'
+                         and not getattr(actor, 'is_supplier', False)
+                         and not getattr(actor, 'is_customer', False)) else None
+        stock = serializer.save(created_by=real)
         # Record initial purchase movement
         StockMovement.objects.create(
             stock=stock,
@@ -200,7 +210,8 @@ class StockViewSet(viewsets.ModelViewSet):
                         price_per_carton=stock.price_per_carton,
                         weight=stock.weight,
                         size=stock.size,
-                        date=transfer_date
+                        date=transfer_date,
+                        created_by=stock.created_by,  # preserve the original owner
                     )
                     
                     StockMovement.objects.create(

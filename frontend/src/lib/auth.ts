@@ -17,6 +17,10 @@ export interface User {
     is_staff?: boolean;
     is_superuser?: boolean;
     page_permissions?: string[];
+    // Multi-branch: global admins see every branch; branch admins are scoped to
+    // these warehouses.
+    is_super_admin?: boolean;
+    warehouses?: { id: string; name: string; area: string | null }[];
 }
 
 const STORAGE_KEY_USER = 'cosmetic_distro_user';
@@ -148,6 +152,17 @@ export const authService = {
         return !!sessionStorage.getItem('accessToken');
     },
 
+    // Robust super-admin check. Prefers the new `is_super_admin` flag but falls
+    // back to `is_superuser` / role name so it still works for sessions saved
+    // before that flag existed (no re-login required).
+    isSuperAdmin: (): boolean => {
+        const u = authService.getUser() as any;
+        if (!u) return false;
+        if (u.is_super_admin === true || u.is_superuser === true) return true;
+        const role = String(u.role || u.role_name || '').toLowerCase();
+        return role === 'super admin' || role === 'superadmin';
+    },
+
     getToken: () => {
         if (typeof window === 'undefined') return null;
         return sessionStorage.getItem('accessToken');
@@ -170,4 +185,13 @@ export const authService = {
         );
         return updatedUser;
     }
+};
+
+/**
+ * Per-user localStorage key for sidebar-visibility prefs, so each admin's settings
+ * are independent (changing them affects only that admin, not everyone).
+ */
+export const sidebarVisibilityKey = (): string => {
+    const u = authService.getUser();
+    return u?.id ? `sidebar_visibility_${u.id}` : 'sidebar_visibility';
 };

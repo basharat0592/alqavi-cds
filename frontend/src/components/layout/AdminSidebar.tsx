@@ -11,7 +11,8 @@ import {
     Truck, Book, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
-import { authService } from '@/lib/auth';
+import { authService, sidebarVisibilityKey } from '@/lib/auth';
+import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
 
 interface NavItem {
     name: string;
@@ -26,6 +27,9 @@ interface NavGroup {
 
 const FULL_ACCESS_ROLES = ['admin', 'superadmin', 'super admin'];
 
+// Pages only a Super Admin may see (hidden from branch admins' sidebar).
+const SUPER_ONLY_HREFS: string[] = ['/admin/users', '/admin/website-settings'];
+
 export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate }: { isCollapsed?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
     const pathname = usePathname();
 
@@ -35,9 +39,11 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
     // Resolve current user's page_permissions from session
     const [userPagePerms, setUserPagePerms] = useState<string[] | null>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     useEffect(() => {
         const user = authService.getUser();
+        setIsSuperAdmin(authService.isSuperAdmin());
         if (!user) { setUserPagePerms(null); return; }
         const role = (user.role as string)?.toLowerCase() || '';
         // Full access by ROLE (Admin/Super Admin) or superuser only — NOT is_staff,
@@ -126,7 +132,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
     useEffect(() => {
         const loadVisibility = () => {
-            const stored = localStorage.getItem('sidebar_visibility');
+            const stored = localStorage.getItem(sidebarVisibilityKey());
             if (stored) {
                 setVisibility(JSON.parse(stored));
             } else {
@@ -155,6 +161,10 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     };
 
     const isPageAllowed = (href: string) => {
+        // Operational floor pages are hidden from the Super Admin entirely.
+        if (isSuperAdmin && SUPER_ADMIN_HIDDEN_HREFS.includes(href)) return false;
+        // Super-Admin-only pages are hidden from branch admins.
+        if (!isSuperAdmin && SUPER_ONLY_HREFS.includes(href)) return false;
         if (visibility[href] === false) return false;
         if (userPagePerms === null) return true; // no restriction
         return userPagePerms.includes(href);

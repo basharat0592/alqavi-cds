@@ -1,7 +1,12 @@
 import api from '@/lib/axios';
 
-/** Date range params shared by the grouped analytics endpoints. */
-export type ReportRange = { date_from?: string; date_to?: string };
+/** Date range (+ optional super-admin drill-down) shared by the analytics endpoints. */
+export type ReportRange = {
+    date_from?: string;
+    date_to?: string;
+    created_by?: string | number;  // super admin: focus one admin
+    warehouse?: string;            // super admin: focus one branch
+};
 
 /** Grouped sales analytics (area-scoped on the backend). */
 export const reportService = {

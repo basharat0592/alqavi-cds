@@ -284,6 +284,11 @@ export default function AddPurchasePage() {
             try {
                 const whRes = await inventoryService.getWarehouses();
                 setWarehouses(whRes || []);
+                // Auto-select the branch when there's only one (scoped admins): no
+                // point making them pick. Multi-branch users choose below.
+                if ((whRes || []).length === 1) {
+                    setForm(prev => ({ ...prev, warehouse: prev.warehouse || String(whRes[0].id) }));
+                }
             } catch (e) {
                 console.error("Failed to fetch warehouses", e);
             }
@@ -515,6 +520,16 @@ export default function AddPurchasePage() {
                                             <option value="CREDIT">Credit</option>
                                         </select>
                                     </Field>
+                                    {warehouses.length > 1 && (
+                                        <Field label="Branch / Warehouse" required>
+                                            <select className={selectCls} value={form.warehouse} onChange={e => setForm(f => ({ ...f, warehouse: e.target.value }))}>
+                                                <option value="">Select branch</option>
+                                                {warehouses.map(w => (
+                                                    <option key={w.id} value={w.id}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
+                                                ))}
+                                            </select>
+                                        </Field>
+                                    )}
                                     <Field label="Shipping Cost">
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>

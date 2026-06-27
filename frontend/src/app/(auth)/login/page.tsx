@@ -46,6 +46,11 @@ export default function LoginPage() {
 
         const saved = localStorage.getItem('rememberedUsername');
         if (saved) setFormData(p => ({ ...p, username: saved, rememberMe: true }));
+
+        // A shared "login link" (e.g. ?email=admin@site.com) pre-fills the username
+        // so an invited admin only has to type their password.
+        const emailParam = params.get('email') || params.get('username');
+        if (emailParam) setFormData(p => ({ ...p, username: emailParam }));
     }, [router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

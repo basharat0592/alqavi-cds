@@ -4,6 +4,23 @@ User management serializers.
 from rest_framework import serializers
 from .models import User, Role, Permission, UserActivityLog, UserSettings
 from modules.company.models import Area
+from modules.inventory.models import Warehouse
+
+
+def _warehouse_brief(obj):
+    """Compact branch list for a user: id + name + city/area label."""
+    return [
+        {'id': str(w.id), 'name': w.name, 'area': (w.area.name if w.area_id else None)}
+        for w in obj.warehouses.all()
+    ]
+
+
+def _is_super_admin(user):
+    return bool(
+        getattr(user, 'is_superuser', False)
+        or (getattr(user, 'role', None)
+            and (user.role.name or '').strip().lower() in {'super admin', 'superadmin'})
+    )
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -49,6 +66,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
     permissions = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     areas = serializers.SerializerMethodField()
+    warehouses = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -57,12 +76,19 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
             'status', 'status_display', 'is_active', 'is_staff', 'permissions',
             'page_permissions', 'page_edit_permissions',
-            'areas', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
+            'areas', 'warehouses', 'is_super_admin',
+            'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at']
 
     def get_areas(self, obj):
         return [{'id': a.id, 'name': a.name, 'code': a.code} for a in obj.areas.all()]
+
+    def get_warehouses(self, obj):
+        return _warehouse_brief(obj)
+
+    def get_is_super_admin(self, obj):
+        return _is_super_admin(obj)
     
     def get_permissions(self, obj):
         """Get user's permissions through their role."""
@@ -75,14 +101,23 @@ class UserListSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     full_name = serializers.CharField(source='get_full_name', read_only=True)
-    
+    warehouses = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'full_name', 'phone', 'avatar', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'date_joined', 'last_login', 'plain_password'
+            'status', 'status_display', 'is_active', 'date_joined', 'last_login', 'plain_password',
+            'warehouses', 'is_super_admin'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login']
+
+    def get_warehouses(self, obj):
+        return _warehouse_brief(obj)
+
+    def get_is_super_admin(self, obj):
+        return _is_super_admin(obj)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -92,13 +127,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
     areas = serializers.PrimaryKeyRelatedField(
         many=True, required=False, queryset=Area.objects.all()
     )
+    warehouses = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Warehouse.objects.all()
+    )
 
     class Meta:
         model = User
         fields = [
             'username', 'email', 'password', 'password_confirm', 'first_name',
             'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role',
-            'page_permissions', 'page_edit_permissions', 'areas'
+            'page_permissions', 'page_edit_permissions', 'areas', 'warehouses'
         ]
 
     def validate(self, data):
@@ -111,14 +149,21 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """Create user with hashed password and store plain version."""
         password = validated_data.pop('password')
         areas = validated_data.pop('areas', None)
+        warehouses = validated_data.pop('warehouses', None)
+        # Only a global Super Admin may assign branches.
+        request = self.context.get('request')
+        if warehouses is not None and not _is_super_admin(getattr(request, 'user', None) if request else None):
+            warehouses = None
         user = User.objects.create_user(password=password, **validated_data)
         user.plain_password = password
         # Internal users created here are staff so they can reach the admin panel;
-        # page_permissions + area scoping handle what they can actually see.
+        # page_permissions + area/branch scoping handle what they can actually see.
         user.is_staff = True
         user.save()
         if areas is not None:
             user.areas.set(areas)
+        if warehouses is not None:
+            user.warehouses.set(warehouses)
         return user
 
 
@@ -127,13 +172,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     areas = serializers.PrimaryKeyRelatedField(
         many=True, required=False, queryset=Area.objects.all()
     )
+    warehouses = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Warehouse.objects.all()
+    )
 
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'email', 'phone', 'avatar', 'address',
             'city', 'country', 'postal_code', 'role', 'page_permissions',
-            'page_edit_permissions', 'areas', 'is_active', 'status'
+            'page_edit_permissions', 'areas', 'warehouses', 'is_active', 'status'
         ]
 
     def update(self, instance, validated_data):
@@ -141,6 +189,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         # filters and the status badge agree.
         if 'is_active' in validated_data and 'status' not in validated_data:
             validated_data['status'] = 'active' if validated_data['is_active'] else 'inactive'
+        # Only a global Super Admin may (re)assign branches.
+        request = self.context.get('request')
+        if not _is_super_admin(getattr(request, 'user', None) if request else None):
+            validated_data.pop('warehouses', None)
         return super().update(instance, validated_data)
 
 
@@ -225,6 +277,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'page_permissions': user.page_permissions or [],
                     'page_edit_permissions': user.page_edit_permissions or [],
                     'areas': [{'id': a.id, 'name': a.name, 'code': a.code} for a in user.areas.all()],
+                    'warehouses': _warehouse_brief(user),
+                    'is_super_admin': _is_super_admin(user),
                 }
                 return data
             except Exception:

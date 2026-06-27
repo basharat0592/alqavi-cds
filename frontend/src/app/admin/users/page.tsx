@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Users, User, Shield, Search,
@@ -10,6 +10,7 @@ import {
     Lock, MoreHorizontal, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 import { userService, roleService, AppUser, AppRole } from '@/lib/api';
+import { authService } from '@/lib/auth';
 import { formatDate, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
@@ -41,6 +42,11 @@ export default function UsersPage() {
     const [search, setSearch] = useState('');
     const [activeRole, setActiveRole] = useState<string>('all');
     const [activeStatus, setActiveStatus] = useState<'all' | 'active' | 'inactive'>('all');
+    const [branchFilter, setBranchFilter] = useState<string>('all');
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [allowed, setAllowed] = useState<boolean | null>(null);
+
+    useEffect(() => { const su = authService.isSuperAdmin(); setIsSuperAdmin(su); setAllowed(su); }, []);
     const [deleteUser, setDeleteUser] = useState<AppUser | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [selectedUserForView, setSelectedUserForView] = useState<AppUser | null>(null);
@@ -83,12 +89,22 @@ export default function UsersPage() {
         } catch (error) { toast.error('Failed to update status'); }
     };
 
-    const filtered = users.filter(u => {
+    // Distinct branches across all users — drives the branch filter dropdown.
+    const branchOptions = useMemo(() => {
+        const map = new Map<string, string>();
+        users.forEach((u: any) => (u.warehouses || []).forEach((w: any) => map.set(String(w.id), w.name)));
+        return Array.from(map, ([id, name]) => ({ id, name }));
+    }, [users]);
+
+    const filtered = users.filter((u: any) => {
         const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
         const matchesRole = activeRole === 'all' || u.role_name?.toLowerCase().includes(activeRole.toLowerCase());
         const matchesSearch = fullName.includes(search.toLowerCase()) || (u.email || '').toLowerCase().includes(search.toLowerCase());
         const matchesStatus = activeStatus === 'all' || (activeStatus === 'active' ? u.is_active : !u.is_active);
-        return matchesRole && matchesSearch && matchesStatus;
+        const matchesBranch = branchFilter === 'all'
+            || (branchFilter === 'none' ? (!u.is_super_admin && (u.warehouses || []).length === 0)
+                : (u.warehouses || []).some((w: any) => String(w.id) === branchFilter));
+        return matchesRole && matchesSearch && matchesStatus && matchesBranch;
     });
 
     const sel = useTableSelection(filtered);
@@ -105,6 +121,18 @@ export default function UsersPage() {
         toast.success(`Marked ${ids.length} user(s) ${active ? 'active' : 'inactive'}`);
     };
 
+    if (allowed === false) {
+        return (
+            <div className="max-w-xl mx-auto py-20 text-center">
+                <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                    <Shield size={26} />
+                </div>
+                <h2 className="text-[18px] font-bold text-slate-900">Super Admin only</h2>
+                <p className="text-[13px] text-slate-500 mt-2">Internal user management is restricted to Super Admins.</p>
+            </div>
+        );
+    }
+
     if (loading && users.length === 0) return <PageLoader />;
 
     return (
@@ -119,8 +147,13 @@ export default function UsersPage() {
                             <Button variant="outline" onClick={loadData} disabled={loading} className="whitespace-nowrap">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Sync</span>
                             </Button>
+                            {isSuperAdmin && (
+                                <Button variant="outline" onClick={() => router.push('/admin/branches')} className="whitespace-nowrap">
+                                    <Building2 size={14} /> <span className="hidden sm:inline">Branches</span>
+                                </Button>
+                            )}
                             <Button onClick={() => router.push('/admin/users/add')} className="whitespace-nowrap">
-                                <Plus size={16} /> Add User
+                                <Plus size={16} /> {isSuperAdmin ? 'Add New Admin' : 'Add User'}
                             </Button>
                         </>
                     }
@@ -138,19 +171,24 @@ export default function UsersPage() {
                         />
                     </div>
                     <div className="flex items-center justify-center sm:justify-start gap-3 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto overflow-x-auto">
-                        <div className="flex bg-white rounded-lg p-0.5 gap-1 border border-slate-200/70 shrink-0">
-                            {['all', 'admin'].map(r => (
-                                <button
-                                    key={r}
-                                    onClick={() => setActiveRole(r)}
-                                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all rounded-md
-                                        ${activeRole === r ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
-                                >
-                                    {r}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="h-4 w-px bg-slate-200 shrink-0" />
+                        {/* Role toggle is meaningless for a Super Admin (they only manage Admins). */}
+                        {!isSuperAdmin && (
+                            <>
+                                <div className="flex bg-white rounded-lg p-0.5 gap-1 border border-slate-200/70 shrink-0">
+                                    {['all', 'admin'].map(r => (
+                                        <button
+                                            key={r}
+                                            onClick={() => setActiveRole(r)}
+                                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all rounded-md
+                                                ${activeRole === r ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+                                        >
+                                            {r}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="h-4 w-px bg-slate-200 shrink-0" />
+                            </>
+                        )}
                         <div className="flex bg-white rounded-lg p-0.5 gap-1 border border-slate-200/70 shrink-0">
                             {['all', 'active', 'inactive'].map(s => (
                                 <button
@@ -163,6 +201,21 @@ export default function UsersPage() {
                                 </button>
                             ))}
                         </div>
+                        {(isSuperAdmin || branchOptions.length > 0) && (
+                            <>
+                                <div className="h-4 w-px bg-slate-200 shrink-0" />
+                                <select
+                                    value={branchFilter}
+                                    onChange={e => setBranchFilter(e.target.value)}
+                                    className="shrink-0 h-7 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none focus:border-indigo-400 cursor-pointer"
+                                    title="Filter by branch"
+                                >
+                                    <option value="all">All branches</option>
+                                    {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    <option value="none">— Unassigned —</option>
+                                </select>
+                            </>
+                        )}
                     </div>
                 </Card>
 
@@ -175,6 +228,7 @@ export default function UsersPage() {
                                     <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">User</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Role</th>
+                                    <th className="hidden md:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Branch</th>
                                     <th className="hidden sm:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Joined</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center whitespace-nowrap">Status</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Actions</th>
@@ -182,7 +236,7 @@ export default function UsersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filtered.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-24 text-center text-[14px] text-slate-500 font-medium">No users found.</td></tr>
+                                    <tr><td colSpan={7} className="py-24 text-center text-[14px] text-slate-500 font-medium">No users found.</td></tr>
                                 ) : (
                                     filtered.map(user => (
                                         <tr key={user.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
@@ -206,6 +260,21 @@ export default function UsersPage() {
                                                     {user.business_name && <p className="text-[10px] text-slate-400 font-bold uppercase">{user.business_name}</p>}
                                                 </div>
                                             </td>
+                                            <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
+                                                {(user as any).is_super_admin ? (
+                                                    <Badge tone="blue">All Branches</Badge>
+                                                ) : ((user as any).warehouses || []).length === 0 ? (
+                                                    <span className="text-[11px] font-semibold text-rose-500">No branch</span>
+                                                ) : (
+                                                    <div className="flex flex-wrap gap-1 max-w-[220px]">
+                                                        {((user as any).warehouses || []).map((w: any) => (
+                                                            <span key={w.id} className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                                                                <Building2 size={10} className="text-slate-400" />{w.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="hidden sm:table-cell px-6 py-4 text-slate-600 whitespace-nowrap tabular-nums">
                                                 {formatDate(user.date_joined || new Date().toISOString())}
                                             </td>
@@ -225,8 +294,13 @@ export default function UsersPage() {
                                                     <button onClick={() => setSelectedUserForView(user)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
-                                                    <span className="text-slate-300">|</span>
-                                                    <button onClick={() => setDeleteUser(user)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                    {/* A Super Admin account cannot be deleted from here. */}
+                                                    {!(user as any).is_super_admin && (
+                                                        <>
+                                                            <span className="text-slate-300">|</span>
+                                                            <button onClick={() => setDeleteUser(user)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

@@ -6,9 +6,9 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import {
     Search, RefreshCw, Plus, X, Loader2, Trash2, Wallet,
-    CalendarDays, ListChecks,
+    CalendarDays, ListChecks, AlertTriangle,
 } from 'lucide-react';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
 
 type Kind = 'inbound' | 'outbound';
 
@@ -75,6 +75,7 @@ export default function LedgerView({ kind }: { kind: Kind }) {
     const [sourceTab, setSourceTab] = useState('all');
     const [formOpen, setFormOpen] = useState(false);
     const [deleting, setDeleting] = useState<number | null>(null);
+    const [confirmEntry, setConfirmEntry] = useState<Entry | null>(null);
 
     const load = async () => {
         setLoading(true);
@@ -121,16 +122,14 @@ export default function LedgerView({ kind }: { kind: Kind }) {
             .reduce((s, e) => s + Number(e.amount || 0), 0);
     }, [entries]);
 
-    const handleDelete = async (entry: Entry) => {
-        if (entry.is_auto) {
-            toast.error('This entry comes from a sale, purchase or return. Reverse that instead.');
-            return;
-        }
-        if (!confirm('Delete this entry? This cannot be undone.')) return;
+    const doDelete = async () => {
+        const entry = confirmEntry;
+        if (!entry) return;
         setDeleting(entry.id);
         try {
             await paymentService.delete(entry.id);
             toast.success('Entry deleted');
+            setConfirmEntry(null);
             load();
         } catch {
             toast.error('Could not delete entry');
@@ -243,17 +242,16 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                                                     {kind === 'inbound' ? '+' : '-'}{formatCurrency(e.amount)}
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
-                                                    {e.is_auto ? (
-                                                        <span className="text-[11px] text-slate-400 italic">Auto</span>
-                                                    ) : (
+                                                    <div className="inline-flex items-center gap-2">
+                                                        {e.is_auto && <span className="text-[10px] text-slate-400 italic">Auto</span>}
                                                         <button
-                                                            onClick={() => handleDelete(e)}
+                                                            onClick={() => setConfirmEntry(e)}
                                                             disabled={deleting === e.id}
                                                             className="inline-flex items-center gap-1 text-[12px] font-bold text-[#c40000] hover:underline disabled:opacity-50"
                                                         >
                                                             {deleting === e.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete
                                                         </button>
-                                                    )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -264,6 +262,41 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                     </Card>
                 </>
             )}
+
+            {/* Delete confirmation */}
+            <Modal open={!!confirmEntry} onClose={() => setConfirmEntry(null)} size="sm">
+                {confirmEntry && (
+                    <div className="text-center py-2">
+                        <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                            <AlertTriangle size={24} className="text-rose-600" />
+                        </div>
+                        <h3 className="text-[17px] font-bold text-slate-900 mb-2">Delete this entry?</h3>
+                        <p className="text-[13px] text-slate-600">
+                            <span className="font-bold text-slate-900">{confirmEntry.payer_payee || confirmEntry.reference_number || 'Entry'}</span>
+                            {' · '}{kind === 'inbound' ? '+' : '-'}{formatCurrency(confirmEntry.amount)}
+                        </p>
+                        {confirmEntry.is_auto && (
+                            <p className="mt-3 text-[11.5px] text-amber-700 bg-amber-50/70 border border-amber-100 rounded-lg px-3 py-2 leading-snug">
+                                This line was generated from a {SOURCE_LABELS[confirmEntry.source] || 'transaction'}.
+                                Deleting it only removes this ledger line — the original transaction stays, and the
+                                line can reappear if that transaction is edited later.
+                            </p>
+                        )}
+                        <div className="mt-6 space-y-2">
+                            <Button variant="danger" onClick={doDelete} disabled={deleting === confirmEntry.id} className="w-full">
+                                {deleting === confirmEntry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+                            </Button>
+                            <button
+                                onClick={() => setConfirmEntry(null)}
+                                disabled={deleting === confirmEntry.id}
+                                className="w-full text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline font-bold"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }

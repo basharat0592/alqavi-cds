@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { userService, roleService, AppRole } from '@/lib/api';
 import {
-    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck, MapPin, ChevronDown, Info
+    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck, MapPin, ChevronDown, Info, Store,
+    Copy, Check, X
 } from 'lucide-react';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 import { getRolePreset } from '@/lib/rolePresets';
 import { areaService, Area } from '@/services/area.service';
+import { inventoryService } from '@/services/inventory.service';
+import { authService } from '@/lib/auth';
 
 const INPUT = (err?: boolean) =>
     `${ui.inputBase} ${err ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/10' : ''}`;
@@ -112,6 +115,9 @@ export default function AddUserPage() {
     const [roles, setRoles] = useState<AppRole[]>([]);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
+    // After a successful create we surface a shareable login link + credentials.
+    const [created, setCreated] = useState<{ name: string; email: string; password: string; loginUrl: string; invite: string } | null>(null);
+    const [copied, setCopied] = useState<string>('');
 
     const [form, setForm] = useState({
         first_name: '',
@@ -134,17 +140,57 @@ export default function AddUserPage() {
     const [areas, setAreas] = useState<Area[]>([]);
     const [selectedAreas, setSelectedAreas] = useState<number[]>([]);
 
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
+    const [canAssignBranch, setCanAssignBranch] = useState(false);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [branchAreaFilter, setBranchAreaFilter] = useState<string>('');
+
     useEffect(() => {
         roleService.getAll().then(setRoles).catch(() => setRoles([]));
         areaService.getActive().then(setAreas).catch(() => setAreas([]));
+        // Branch assignment is a Super-Admin-only capability. A Super Admin also
+        // only ever creates "Admin" users (branch admins); their staff are added
+        // by each branch admin within their own branch.
+        const superAdmin = authService.isSuperAdmin();
+        setIsSuperAdmin(superAdmin);
+        setCanAssignBranch(superAdmin);
+        inventoryService.getWarehouses().then(setWarehouses).catch(() => setWarehouses([]));
     }, []);
+
+    // For a Super Admin the role is always "Admin" — preselect it once roles load
+    // so the admin-specific fields (full access + branch assignment) show right away.
+    useEffect(() => {
+        if (isSuperAdmin && roles.length && !form.role) {
+            const adminRole = roles.find(r => r.name?.trim().toLowerCase() === 'admin');
+            if (adminRole) setForm(p => ({ ...p, role: adminRole.id }));
+        }
+    }, [isSuperAdmin, roles, form.role]);
+
+    // A Super Admin may only assign the "Admin" or "Super Admin" roles. Everyone
+    // else sees the full role list. (Branch admins create their own staff.)
+    const ADMIN_ASSIGNABLE_ROLES = ['admin', 'super admin', 'superadmin'];
+    const visibleRoles = isSuperAdmin
+        ? roles.filter(r => ADMIN_ASSIGNABLE_ROLES.includes(r.name?.trim().toLowerCase() || ''))
+        : roles;
 
     const selectedRoleName = roles.find(r => String(r.id) === String(form.role))?.name?.toLowerCase() || '';
     const isFullAccess = FULL_ACCESS_ROLES.includes(selectedRoleName);
     const isAreaManager = selectedRoleName === 'area manager';
+    // Super Admin / superadmin roles see every branch, so branch assignment is moot.
+    const isGlobalRole = ['super admin', 'superadmin'].includes(selectedRoleName);
+    const showBranches = canAssignBranch && !!form.role && !isGlobalRole;
+    // Warehouses shown in the picker, narrowed by the chosen area (city).
+    const branchWarehouses = branchAreaFilter
+        ? warehouses.filter(w => String((w as any).area ?? '') === branchAreaFilter)
+        : warehouses;
 
     const toggleArea = (id: number) => {
         setSelectedAreas(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+    };
+
+    const toggleWarehouse = (id: string) => {
+        setSelectedWarehouses(prev => prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]);
     };
 
     const handle = (k: string, v: any) => {
@@ -215,6 +261,16 @@ export default function AddUserPage() {
         setTimeout(() => setToast(null), 3000);
     };
 
+    const copy = async (key: string, text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(key);
+            setTimeout(() => setCopied(''), 1800);
+        } catch {
+            showToast('Could not copy — please copy manually.');
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
@@ -227,9 +283,23 @@ export default function AddUserPage() {
             payload.page_permissions = isFullAccess ? [] : selectedPages;
             payload.page_edit_permissions = isFullAccess ? [] : selectedEditPages;
             payload.areas = isAreaManager ? selectedAreas : [];
+            // Only a Super Admin can assign branches; global roles get none (they see all).
+            if (canAssignBranch) payload.warehouses = isGlobalRole ? [] : selectedWarehouses;
             await userService.create(payload);
-            showToast('User created successfully.');
-            setTimeout(() => router.push('/admin/users'), 1000);
+            // Build a shareable login link (email pre-filled) + credentials so the
+            // creator can hand the new admin everything they need to sign in.
+            const email = form.email.trim();
+            const password = form.password;
+            const name = `${form.first_name} ${form.last_name}`.trim();
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            const loginUrl = `${origin}/login?email=${encodeURIComponent(email)}`;
+            const invite =
+                `Hi ${form.first_name || 'there'}, your Al-Qavi Hub account is ready.\n\n` +
+                `Login link: ${loginUrl}\n` +
+                `Email: ${email}\n` +
+                `Password: ${password}\n\n` +
+                `Open the link and sign in.`;
+            setCreated({ name, email, password, loginUrl, invite });
         } catch (err: any) {
             console.error(err);
             const msg = err?.response?.data ? JSON.stringify(err.response.data) : 'Failed to save.';
@@ -244,8 +314,8 @@ export default function AddUserPage() {
     return (
         <div className="max-w-5xl mx-auto">
             <PageHeader
-                title="Add User"
-                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Users', href: '/admin/users' }, { label: 'Add User' }]}
+                title={isSuperAdmin ? 'Add New Admin' : 'Add User'}
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Users', href: '/admin/users' }, { label: isSuperAdmin ? 'Add New Admin' : 'Add User' }]}
             />
 
             <form onSubmit={handleSubmit}>
@@ -274,7 +344,7 @@ export default function AddUserPage() {
                                 <div className="relative">
                                     <select value={form.role} onChange={e => handleRoleChange(e.target.value)} className={`${INPUT(!!errors.role)} appearance-none pr-10 cursor-pointer`}>
                                         <option value="">Select Role</option>
-                                        {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                        {visibleRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                     </select>
                                     <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                 </div>
@@ -289,6 +359,91 @@ export default function AddUserPage() {
                                 <div>
                                     <label className={LABEL}>Business Name</label>
                                     <input value={form.business_name} onChange={e => handle('business_name', e.target.value)} className={INPUT()} placeholder="Store/Business Name" />
+                                </div>
+                            )}
+
+                            {/* Assigned Branches — appears right under the role field once an
+                                Admin is selected. A branch admin only sees data for the
+                                warehouse(s) chosen here. */}
+                            {showBranches && (
+                                <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                                    <div className="flex items-center gap-2">
+                                        <Store className="w-4 h-4 text-indigo-600 shrink-0" />
+                                        <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Assigned Branches</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500">
+                                        Pick an area, then choose the branch warehouse(s) this admin manages.
+                                        They will only see sales, purchases, inventory and payments for these branches.
+                                    </p>
+
+                                    {/* Step 1 — choose the area (city) to narrow the warehouse list. */}
+                                    <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                                        <div className="w-full sm:max-w-xs">
+                                            <label className={LABEL}>Select Area</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={branchAreaFilter}
+                                                    onChange={e => setBranchAreaFilter(e.target.value)}
+                                                    className={`${INPUT()} appearance-none pr-10 cursor-pointer`}
+                                                >
+                                                    <option value="">All areas</option>
+                                                    {areas.map(a => (
+                                                        <option key={a.id} value={String(a.id)}>{a.name}{a.code ? ` (${a.code})` : ''}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                        {branchWarehouses.length > 0 && (
+                                            <div className="flex gap-2 pb-0.5">
+                                                <button type="button"
+                                                    onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
+                                                    className="text-[11px] font-semibold text-indigo-600 hover:underline">
+                                                    Select all shown
+                                                </button>
+                                                <span className="text-slate-300">|</span>
+                                                <button type="button"
+                                                    onClick={() => setSelectedWarehouses(prev => prev.filter(id => !branchWarehouses.some(w => String(w.id) === id)))}
+                                                    className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                                    Clear shown
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Step 2 — pick warehouses (multi-select). */}
+                                    {warehouses.length === 0 ? (
+                                        <p className="text-[12px] text-slate-400 italic">No warehouses available. Create a warehouse first.</p>
+                                    ) : branchWarehouses.length === 0 ? (
+                                        <p className="text-[12px] text-slate-400 italic">No warehouses in this area yet. Tag a warehouse to this area first, or pick "All areas".</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                            {branchWarehouses.map(w => (
+                                                <label key={w.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer bg-white/60 hover:bg-white transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedWarehouses.includes(String(w.id))}
+                                                        onChange={() => toggleWarehouse(String(w.id))}
+                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-[12px] font-medium text-slate-700 truncate">
+                                                        {w.name}{w.area_name ? ` · ${w.area_name}` : (w.location ? ` · ${w.location}` : '')}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {selectedWarehouses.length === 0 && warehouses.length > 0 && (
+                                        <p className="flex items-center gap-1.5 text-[11px] text-amber-700 font-medium bg-amber-50/70 border border-amber-100 rounded-lg px-2.5 py-1.5">
+                                            <Info className="w-3.5 h-3.5 shrink-0" />
+                                            No branch selected — this user will not see any data until a branch is assigned.
+                                        </p>
+                                    )}
+                                    {selectedWarehouses.length > 0 && (
+                                        <p className="text-[11px] text-indigo-600 font-medium">
+                                            {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -486,6 +641,64 @@ export default function AddUserPage() {
                 <div className="fixed bottom-6 right-6 bg-white text-slate-700 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-[240px] border border-slate-200/70 border-l-4 border-l-emerald-500 z-[100] animate-in slide-in-from-bottom-5">
                     <CheckCircle className="h-5 w-5 text-emerald-500" />
                     <span className="text-sm font-medium">{toast}</span>
+                </div>
+            )}
+
+            {/* Success — shareable login link + credentials for the new account. */}
+            {created && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
+                        <div className="bg-emerald-50/60 px-5 py-4 border-b border-emerald-100 flex items-center gap-3">
+                            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 shrink-0"><CheckCircle className="w-5 h-5" /></span>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-[14px] font-bold text-slate-900 tracking-tight">Account created</h3>
+                                <p className="text-[11px] text-slate-500 truncate">Share the login link below with {created.name || 'the new user'}.</p>
+                            </div>
+                            <button type="button" onClick={() => { setCreated(null); router.push('/admin/users'); }} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"><X size={16} /></button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Login link</label>
+                                <div className="mt-1.5 flex items-center gap-2">
+                                    <input
+                                        readOnly
+                                        value={created.loginUrl}
+                                        onFocus={e => e.currentTarget.select()}
+                                        className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[12px] text-slate-700 outline-none focus:border-indigo-400"
+                                    />
+                                    <button type="button" onClick={() => copy('link', created.loginUrl)} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-indigo-700 transition-colors shrink-0">
+                                        {copied === 'link' ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
+                                    <p className="text-[12px] font-bold text-slate-800 truncate">{created.email}</p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</p>
+                                    <p className="text-[12px] font-bold text-slate-800 font-mono truncate">{created.password}</p>
+                                </div>
+                            </div>
+
+                            <button type="button" onClick={() => copy('invite', created.invite)} className="w-full h-10 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[12px] font-bold inline-flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors">
+                                {copied === 'invite' ? <><Check className="w-4 h-4" /> Copied invite message</> : <><Copy className="w-4 h-4" /> Copy invite (link + credentials)</>}
+                            </button>
+
+                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                                The user opens the link with their email pre-filled — they just enter the password above to sign in.
+                            </p>
+                        </div>
+
+                        <div className="px-5 py-3.5 bg-slate-50/60 border-t border-slate-100 flex justify-end">
+                            <Button variant="primary" onClick={() => { setCreated(null); router.push('/admin/users'); }}>
+                                Done
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

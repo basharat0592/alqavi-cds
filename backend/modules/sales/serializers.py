@@ -133,7 +133,17 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     'payment_status': validated_data.get('payment_status', 'PAID'),
                     'amount_paid': validated_data.get('amount_paid', 0) or 0,
                     'due_date': validated_data.get('due_date'),
+                    # Stamp the branch this sale was made from (drives multi-branch
+                    # isolation). Falls back to null for legacy/online flows.
+                    'warehouse_id': ((validated_data.get('warehouse_id') or '').strip() or None),
                 }
+
+                # Stamp the staff member who rang up this sale (POS) so a branch
+                # admin can see the sales they personally created.
+                _actor = getattr(request, 'user', None) if request else None
+                if (_actor and getattr(_actor, 'is_authenticated', False) and getattr(_actor, 'is_staff', False)
+                        and not getattr(_actor, 'is_supplier', False) and not getattr(_actor, 'is_customer', False)):
+                    params['created_by'] = _actor
 
                 if customer_obj:
                     params['customer'] = customer_obj

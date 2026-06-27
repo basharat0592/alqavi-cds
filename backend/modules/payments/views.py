@@ -9,6 +9,10 @@ from .serializers import (
     PaymentSerializer, PaymentCategorySerializer, TransactionPaymentSerializer,
 )
 from core.permissions import HasModulePermission
+from core.scoping import (
+    BranchScopedQuerysetMixin, scope_queryset, user_warehouse_ids,
+    user_can_use_warehouse, apply_report_scope,
+)
 
 
 class PaymentCategoryViewSet(viewsets.ModelViewSet):
@@ -21,10 +25,14 @@ class PaymentCategoryViewSet(viewsets.ModelViewSet):
         return None  # categories are a small fixed list — never paginate
 
 
-class PaymentViewSet(viewsets.ModelViewSet):
+class PaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'payments'
+    branch_field = 'warehouse'
+    # Branch admins see only ledger entries for transactions they created
+    # (manual entries they added, plus auto entries from their own sales/purchases).
+    creator_field = 'user'
 
     def get_queryset(self):
         qs = Payment.objects.select_related('category', 'user').all()
@@ -52,23 +60,30 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return super().paginate_queryset(queryset)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        user = user if getattr(user, 'pk', None) and user.__class__.__name__ == 'User' else None
+        from rest_framework.exceptions import PermissionDenied
+        actor = self.request.user
+        real_user = actor if getattr(actor, 'pk', None) and actor.__class__.__name__ == 'User' else None
+        # Branch for this manual entry: honour an explicit choice (super admin can
+        # pick any; a branch admin only their own), otherwise default to the
+        # creator's branch when they have exactly one.
+        wh_id = self.request.data.get('warehouse') or self.request.data.get('warehouse_id')
+        if wh_id and not user_can_use_warehouse(actor, wh_id):
+            raise PermissionDenied('You cannot record a payment for that branch.')
+        if not wh_id:
+            ids = user_warehouse_ids(actor)
+            if ids:
+                wh_id = sorted(ids)[0]
         # Manual entries only — auto entries are created by the ledger services.
-        serializer.save(user=user, source='manual', is_auto=False)
+        serializer.save(user=real_user, source='manual', is_auto=False, warehouse_id=wh_id or None)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.is_auto:
-            return Response(
-                {"error": "Auto-generated entries can't be deleted here. "
-                          "Reverse the related sale, purchase or return instead."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Any ledger line can be deleted from here (incl. auto ones). Note: deleting
+        # an auto entry only removes the ledger row — the source sale/purchase/return
+        # is untouched and may re-create the row if it is edited again.
         return super().destroy(request, *args, **kwargs)
 
 
-class TransactionPaymentViewSet(viewsets.ModelViewSet):
+class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     """Installments (partial payments) recorded against a single transaction.
 
     List/create with ?source_type=&source_id=. Each confirmed installment posts
@@ -77,6 +92,9 @@ class TransactionPaymentViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionPaymentSerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'payments'
+    branch_field = 'warehouse'
+    # Branch admins see only the installments they recorded.
+    creator_field = 'created_by'
 
     def get_queryset(self):
         qs = TransactionPayment.objects.select_related('created_by').all()
@@ -96,6 +114,12 @@ class TransactionPaymentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         user = user if getattr(user, 'pk', None) and user.__class__.__name__ == 'User' else None
         tp = serializer.save(created_by=user)
+        # Stamp the branch from the parent transaction so installments (and the
+        # ledger rows they post) stay branch-scoped.
+        wh_id = services.parent_warehouse_id(tp.source_type, tp.source_id)
+        if wh_id and tp.warehouse_id != wh_id:
+            tp.warehouse_id = wh_id
+            tp.save(update_fields=['warehouse'])
         services.record_installment(tp)
 
     def perform_update(self, serializer):
@@ -163,6 +187,7 @@ def payments_due(request):
               .exclude(status__in=['CANCELLED', 'REJECTED']))
     if area_ids is not None:
         orders = orders.filter(customer__area_id__in=area_ids)
+    orders = apply_report_scope(request, orders, 'warehouse', 'created_by')
     for o in orders.only('id', 'tracking_id', 'customer_name', 'total_amount',
                          'amount_paid', 'due_date'):
         rem = o.remaining_amount
@@ -171,7 +196,8 @@ def payments_due(request):
                                  o.total_amount, o.amount_paid, rem, o.due_date, o.id))
 
     # Purchases we still owe suppliers.
-    for p in (PurchaseOrder.objects.exclude(status='CANCELLED')
+    for p in (apply_report_scope(request,
+                                 PurchaseOrder.objects.exclude(status='CANCELLED'), 'warehouse', 'created_by')
               .select_related('supplier')):
         rem = p.remaining_amount
         if rem and rem > 0:
@@ -179,7 +205,9 @@ def payments_due(request):
                                  p.total_amount, p.paid_amount, rem, p.due_date, p.pk))
 
     # Sale returns: refunds we still owe customers.
-    for r in (SaleReturn.objects.filter(status='ACCEPTED', refund_status='PENDING')
+    for r in (apply_report_scope(request,
+                                 SaleReturn.objects.filter(status='ACCEPTED', refund_status='PENDING'),
+                                 'order__warehouse', 'order__created_by')
               .select_related('order')):
         rem = r.refund_remaining
         if rem and rem > 0:
@@ -188,7 +216,9 @@ def payments_due(request):
                                  rem, 0, rem, r.due_date, r.pk))
 
     # Purchase returns: refunds suppliers still owe us.
-    for r in (PurchaseReturn.objects.filter(status='ACCEPTED', refund_status='PENDING')
+    for r in (apply_report_scope(request,
+                                 PurchaseReturn.objects.filter(status='ACCEPTED', refund_status='PENDING'),
+                                 'purchase_order__warehouse', 'purchase_order__created_by')
               .select_related('supplier')):
         rem = r.refund_remaining
         if rem and rem > 0:
@@ -216,7 +246,9 @@ def payments_due(request):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def payment_stats(request):
-    qs = Payment.objects.all()
+    # Per-admin totals, matching the income/expense list (Payment.user = the
+    # responsible staff); super admin sees all with optional ?created_by/?warehouse.
+    qs = apply_report_scope(request, Payment.objects.all(), 'warehouse', 'user')
     inbound = qs.filter(payment_type='inbound').aggregate(t=Sum('amount'))['t'] or 0
     outbound = qs.filter(payment_type='outbound').aggregate(t=Sum('amount'))['t'] or 0
     # "Internal" = manually recorded expenses (rent, salary, etc.), not auto ones.

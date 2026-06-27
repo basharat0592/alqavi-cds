@@ -13,6 +13,8 @@ import PageLoader from '@/components/ui/PageLoader';
 import { PageHeader, Button } from '@/components/admin/ui';
 import { getRolePreset } from '@/lib/rolePresets';
 import { areaService, Area } from '@/services/area.service';
+import { inventoryService } from '@/services/inventory.service';
+import { authService } from '@/lib/auth';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
     <div className="flex items-center gap-2 mb-4">
@@ -125,6 +127,12 @@ export default function EditUserPage() {
     const [areas, setAreas] = useState<Area[]>([]);
     const [selectedAreas, setSelectedAreas] = useState<number[]>([]);
 
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
+    const [canAssignBranch, setCanAssignBranch] = useState(false);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [branchAreaFilter, setBranchAreaFilter] = useState<string>('');
+
     const [passwordData, setPasswordData] = useState({
         new_password: '',
         confirm_password: '',
@@ -138,13 +146,18 @@ export default function EditUserPage() {
     useEffect(() => {
         const load = async () => {
             try {
-                const [r, u, a] = await Promise.all([
+                const [r, u, a, w] = await Promise.all([
                     roleService.getAll(),
                     userService.getById(Number(userId)),
-                    areaService.getActive().catch(() => [] as Area[])
+                    areaService.getActive().catch(() => [] as Area[]),
+                    inventoryService.getWarehouses().catch(() => [] as any[]),
                 ]);
                 setRoles(r);
                 setAreas(a);
+                setWarehouses(w);
+                const superAdmin = authService.isSuperAdmin();
+                setIsSuperAdmin(superAdmin);
+                setCanAssignBranch(superAdmin);
                 setForm({
                     first_name: u.first_name || '',
                     last_name: u.last_name || '',
@@ -167,6 +180,16 @@ export default function EditUserPage() {
                             .map((id: any) => Number(id))
                     );
                 }
+                // Preload assigned branches (array of {id,name,area} or ids).
+                const rawWh = (u as any).warehouses;
+                if (Array.isArray(rawWh)) {
+                    setSelectedWarehouses(
+                        rawWh
+                            .map((x: any) => (typeof x === 'object' && x !== null ? x.id : x))
+                            .filter((id: any) => id != null)
+                            .map((id: any) => String(id))
+                    );
+                }
             } catch (err) {
                 showToast('Failed to load user data.', 'error');
             } finally {
@@ -176,12 +199,28 @@ export default function EditUserPage() {
         load();
     }, [userId]);
 
+    // A Super Admin may only assign the "Admin" or "Super Admin" roles. We still
+    // keep the user's current role in the list so editing never drops it.
+    const ADMIN_ASSIGNABLE_ROLES = ['admin', 'super admin', 'superadmin'];
+    const visibleRoles = isSuperAdmin
+        ? roles.filter(r => ADMIN_ASSIGNABLE_ROLES.includes(r.name?.trim().toLowerCase() || '') || String(r.id) === String(form.role))
+        : roles;
+
     const selectedRoleName = roles.find(r => String(r.id) === String(form.role))?.name?.toLowerCase() || '';
     const isFullAccess = FULL_ACCESS_ROLES.includes(selectedRoleName);
     const isAreaManager = selectedRoleName === 'area manager';
+    const isGlobalRole = ['super admin', 'superadmin'].includes(selectedRoleName);
+    const showBranches = canAssignBranch && !!form.role && !isGlobalRole;
+    const branchWarehouses = branchAreaFilter
+        ? warehouses.filter(w => String((w as any).area ?? '') === branchAreaFilter)
+        : warehouses;
 
     const toggleArea = (id: number) => {
         setSelectedAreas(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+    };
+
+    const toggleWarehouse = (id: string) => {
+        setSelectedWarehouses(prev => prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]);
     };
 
     const handle = (k: string, v: any) => {
@@ -260,6 +299,8 @@ export default function EditUserPage() {
             payload.page_permissions = isFullAccess ? [] : selectedPages;
             payload.page_edit_permissions = isFullAccess ? [] : selectedEditPages;
             payload.areas = isAreaManager ? selectedAreas : [];
+            // Only a Super Admin can (re)assign branches; backend enforces this too.
+            if (canAssignBranch) payload.warehouses = isGlobalRole ? [] : selectedWarehouses;
             await userService.update(Number(userId), payload);
             showToast('Identity updated successfully!', 'success');
             setTimeout(() => router.push('/admin/users'), 1500);
@@ -363,7 +404,7 @@ export default function EditUserPage() {
                             <select value={form.role} onChange={e => handleRoleChange(e.target.value)}
                                 className={inputCls('role')}>
                                 <option value="">Select a role</option>
-                                {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                {visibleRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                             </select>
                             {errors.role && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.role}</p>}
                         </div>
@@ -377,6 +418,85 @@ export default function EditUserPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Assigned Branches — appears right under the role field once an
+                        Admin is selected. A branch admin only sees data for the
+                        warehouse(s) chosen here. */}
+                    {showBranches && (
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <SectionHeader title="Assigned Branches" icon={Building2} />
+                            <p className="text-xs text-slate-500">
+                                Pick an area, then choose the branch warehouse(s) this admin manages.
+                                They will only see sales, purchases, inventory and payments for these branches.
+                            </p>
+
+                            {/* Step 1 — choose the area (city) to narrow the warehouse list. */}
+                            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                                <div className="w-full sm:max-w-xs">
+                                    <label className={labelCls}>Select Area</label>
+                                    <select
+                                        value={branchAreaFilter}
+                                        onChange={e => setBranchAreaFilter(e.target.value)}
+                                        className={inputCls('branch_area')}
+                                    >
+                                        <option value="">All areas</option>
+                                        {areas.map(a => (
+                                            <option key={a.id} value={String(a.id)}>{a.name}{a.code ? ` (${a.code})` : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {branchWarehouses.length > 0 && (
+                                    <div className="flex gap-2 pb-2.5">
+                                        <button type="button"
+                                            onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
+                                            className="text-[11px] font-semibold text-indigo-600 hover:underline">
+                                            Select all shown
+                                        </button>
+                                        <span className="text-slate-300">|</span>
+                                        <button type="button"
+                                            onClick={() => setSelectedWarehouses(prev => prev.filter(id => !branchWarehouses.some(w => String(w.id) === id)))}
+                                            className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                            Clear shown
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Step 2 — pick warehouses (multi-select). */}
+                            {warehouses.length === 0 ? (
+                                <p className="text-[12px] text-slate-400 italic">No warehouses available. Create a warehouse first.</p>
+                            ) : branchWarehouses.length === 0 ? (
+                                <p className="text-[12px] text-slate-400 italic">No warehouses in this area yet. Tag a warehouse to this area first, or pick "All areas".</p>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                    {branchWarehouses.map(w => (
+                                        <label key={w.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedWarehouses.includes(String(w.id))}
+                                                onChange={() => toggleWarehouse(String(w.id))}
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span className="text-[12px] font-medium text-slate-700 truncate">
+                                                {w.name}{w.area_name ? ` · ${w.area_name}` : (w.location ? ` · ${w.location}` : '')}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                            {selectedWarehouses.length === 0 && warehouses.length > 0 && (
+                                <p className="flex items-center gap-1.5 text-[11px] text-amber-700 font-medium bg-amber-50/70 border border-amber-100 rounded-lg px-2.5 py-1.5">
+                                    <XCircle className="w-3.5 h-3.5 shrink-0" />
+                                    No branch selected — this user will not see any data until a branch is assigned.
+                                </p>
+                            )}
+                            {selectedWarehouses.length > 0 && (
+                                <p className="text-[11px] text-indigo-600 font-medium">
+                                    {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {form.role === sellerRoleId?.toString() && (
                         <div>

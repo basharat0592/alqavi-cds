@@ -58,6 +58,24 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    # Branch (warehouse) this sale was made from. Stamped at POS create time from
+    # the selected source warehouse; drives multi-branch data isolation.
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse',
+        on_delete=models.SET_NULL,
+        related_name='orders',
+        null=True,
+        blank=True
+    )
+    # Staff member who created this sale (POS). Distinct from `user`/`customer`
+    # (the buyer); used so a branch admin can see only the sales they made.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='created_orders',
+        null=True,
+        blank=True
+    )
     # Rider assigned to deliver this order (managed by admin; drives the rider dashboard).
     delivery_person = models.ForeignKey(
         'delivery.DeliveryPerson',

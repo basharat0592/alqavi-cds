@@ -12,6 +12,7 @@ import { inventoryService } from '@/services/inventory.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { categoryService } from '@/services/category.service';
+import { areaService, Area } from '@/services/area.service';
 import toast from 'react-hot-toast';
 import { exportToCSV } from '@/lib/utils';
 import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
@@ -75,25 +76,29 @@ export default function WarehousesPage() {
     const [addingStock, setAddingStock] = useState(false);
     const [whProductIds, setWhProductIds] = useState<Set<number | string>>(new Set());
 
+    const [areas, setAreas] = useState<Area[]>([]);
     const [form, setForm] = useState({
         name: '',
         location: '',
+        area: '' as number | string,
         capacity: ''
     });
 
     const load = async () => {
         setLoading(true);
         try {
-            const [whs, prods, sups, cats] = await Promise.all([
+            const [whs, prods, sups, cats, ars] = await Promise.all([
                 inventoryService.getWarehouses(),
                 productService.getAllSupplier({ no_pagination: 'true' }),
                 companyService.getSuppliers(),
-                categoryService.getAll()
+                categoryService.getAll(),
+                areaService.getActive().catch(() => [] as Area[]),
             ]);
             setWarehouses(whs || []);
             setAllProducts(prods.results || prods || []);
             setSuppliers(sups || []);
             setCategories(cats || []);
+            setAreas(ars || []);
         } catch { toast.error("Refresh failure"); } finally { setLoading(false); }
     };
 
@@ -259,12 +264,13 @@ export default function WarehousesPage() {
         e.preventDefault();
         if (!form.name || !form.location) return toast.error("Required fields missing");
         setSaving(true);
+        const payload = { ...form, area: form.area || null };
         try {
             if (editWh) {
-                await inventoryService.updateWarehouse(editWh.id, form);
+                await inventoryService.updateWarehouse(editWh.id, payload);
                 toast.success('Warehouse updated');
             } else {
-                await inventoryService.createWarehouse(form);
+                await inventoryService.createWarehouse(payload);
                 toast.success('Warehouse saved');
             }
             load(); setView('list');
@@ -351,7 +357,7 @@ export default function WarehousesPage() {
                                 <Btn variant="secondary" onClick={load} loading={loading} className="justify-center">
                                     <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                                 </Btn>
-                                <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }} className="justify-center"><Plus size={14} /> Add Warehouse</Btn>
+                                <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', area: '', capacity: '' }); setView('form'); }} className="justify-center"><Plus size={14} /> Add Warehouse</Btn>
                             </>
                         ) : (
                             <Button variant="ghost" onClick={() => setView('list')}>
@@ -392,10 +398,17 @@ export default function WarehousesPage() {
                                                 </div>
                                                 <div>
                                                     <h3 className="font-bold text-[15px] text-slate-900 group-hover:text-indigo-600 truncate max-w-[150px]">{wh.name}</h3>
+                                                    {wh.area_name ? (
+                                                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full">
+                                                            <MapPin size={9} />{wh.area_name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-block mt-1 text-[10px] font-semibold text-slate-400">No city</span>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-end gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, capacity: wh.capacity || '' }); setView('form'); }} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, area: wh.area || '', capacity: wh.capacity || '' }); setView('form'); }} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => setDeleteWh(wh)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
@@ -595,6 +608,12 @@ export default function WarehousesPage() {
                                                 <input className={inputCls} value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Warehouse address" />
                                             </Field>
                                         </div>
+                                        <Field label="Area / City">
+                                            <select className={`${inputCls} cursor-pointer`} value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))}>
+                                                <option value="">— No area —</option>
+                                                {areas.map(a => <option key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ''}</option>)}
+                                            </select>
+                                        </Field>
                                         <Field label="Capacity (Optional)">
                                             <input type="number" className={inputCls} value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Storage capacity" />
                                         </Field>

@@ -12,6 +12,7 @@ class PaymentCategorySerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True, default='')
     user_name = serializers.SerializerMethodField()
+    warehouse_name = serializers.CharField(source='warehouse.name', read_only=True, default='')
 
     class Meta:
         model = Payment
@@ -19,8 +20,11 @@ class PaymentSerializer(serializers.ModelSerializer):
             'id', 'amount', 'payment_type', 'method', 'category', 'category_name',
             'reference_number', 'payer_payee', 'description', 'date',
             'user', 'user_name', 'source', 'is_auto', 'created_at',
+            'warehouse', 'warehouse_name',
         ]
-        read_only_fields = ['user', 'source', 'is_auto', 'created_at']
+        # Branch is set server-side (perform_create / ledger services) and only
+        # ever read here, so out-of-branch entries can't be forged via the API.
+        read_only_fields = ['user', 'source', 'is_auto', 'created_at', 'warehouse']
 
     def get_user_name(self, obj):
         if obj.user:
@@ -37,9 +41,11 @@ class TransactionPaymentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'source_type', 'source_id', 'amount', 'method', 'paid_at',
             'reference', 'slip', 'slip_url', 'note', 'status', 'direction',
-            'created_by', 'created_by_name', 'created_at',
+            'created_by', 'created_by_name', 'created_at', 'warehouse',
         ]
-        read_only_fields = ['created_by', 'created_at']
+        # Branch is copied from the parent transaction in the view, never set by
+        # the client.
+        read_only_fields = ['created_by', 'created_at', 'warehouse']
 
     def get_created_by_name(self, obj):
         if obj.created_by:

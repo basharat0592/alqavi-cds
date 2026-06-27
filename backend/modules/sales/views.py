@@ -9,6 +9,10 @@ from .serializers import OrderSerializer, CreateOrderSerializer, PurchaseOrderSe
 from modules.products.models import SupplierProduct
 from modules.inventory.models import StockMovement
 from core.permissions import HasModulePermission
+from core.scoping import (
+    BranchScopedQuerysetMixin, scope_queryset, user_warehouse_ids,
+    user_can_use_warehouse,
+)
 
 
 @api_view(['GET'])
@@ -31,15 +35,37 @@ def track_order_by_id(request, tracking_id):
         return Response({'error': 'Invalid order ID format.'}, status=400)
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Order.objects.all()
     permission_classes = [HasModulePermission]
     perm_module = 'sales'
+    branch_field = 'warehouse'
+    # Branch admins see only the sales they personally created.
+    creator_field = 'created_by'
 
     def get_serializer_class(self):
         if self.action == 'create':
             return CreateOrderSerializer
         return OrderSerializer
+
+    def perform_create(self, serializer):
+        """Stamp + enforce the branch for staff-created (POS) sales. Storefront /
+        customer / supplier order flows stay unrestricted by branch."""
+        from rest_framework.exceptions import PermissionDenied
+        actor = self.request.user
+        if getattr(actor, 'is_authenticated', False) and getattr(actor, 'is_staff', False):
+            ids = user_warehouse_ids(actor)
+            if ids is not None:  # a branch-scoped admin
+                wh_id = (serializer.validated_data.get('warehouse_id') or '').strip()
+                if not wh_id:
+                    # Auto-use the only branch they manage; require a choice otherwise.
+                    if len(ids) == 1:
+                        serializer.validated_data['warehouse_id'] = next(iter(ids))
+                    else:
+                        raise PermissionDenied('Select your branch warehouse to record this sale.')
+                elif not user_can_use_warehouse(actor, wh_id):
+                    raise PermissionDenied('You cannot sell from a branch you are not assigned to.')
+        serializer.save()
 
     def get_permissions(self):
         if self.action in ['create', 'track']:
@@ -239,8 +265,49 @@ class OrderViewSet(viewsets.ModelViewSet):
         else:
             today = timezone.now().date()
             
+        # Per-admin bases: a branch admin's dashboard counts only the sales/purchases
+        # THEY created; super admin sees everything (with optional ?created_by /
+        # ?warehouse drill-down).
+        from core.scoping import scope_queryset, apply_report_scope
+        orders = apply_report_scope(request, Order.objects.all(), 'warehouse', 'created_by')
+        purchase_orders = apply_report_scope(request, PurchaseOrder.objects.all(), 'warehouse', 'created_by')
+
+        # Branch-scoped low stock — computed from THIS branch's Stock rows (not the
+        # global product catalog), so a branch admin sees their own shortages.
+        from modules.inventory.models import Stock
+        from modules.products.models import Product
+        # Stock low-stock is branch-wide (all products in the user's warehouse),
+        # matching the Current Stock list — not per-creator.
+        stock_scope = scope_queryset(request.user, Stock.objects.all(), 'warehouse')
+        qty_by_name, sup_by_name = {}, {}
+        for s in stock_scope.values('product_name', 'supplier', 'total_quantity'):
+            key = (s['product_name'] or '').strip().lower()
+            if not key:
+                continue
+            qty_by_name[key] = qty_by_name.get(key, 0) + (s['total_quantity'] or 0)
+            if key not in sup_by_name and s['supplier']:
+                sup_by_name[key] = str(s['supplier'])
+        prod_meta = {}
+        for p in Product.objects.all().only('product_name', 'min_count', 'sku'):
+            k = (p.product_name or '').strip().lower()
+            if k:
+                prod_meta[k] = {'min': p.min_count if p.min_count is not None else 10, 'sku': p.sku, 'name': p.product_name}
+        low_stock = []
+        for key, qty in qty_by_name.items():
+            meta = prod_meta.get(key, {})
+            m = meta.get('min', 10)
+            if qty <= m:
+                low_stock.append({
+                    'product_name': meta.get('name') or key,
+                    'qty': qty, 'min': m,
+                    'sku': meta.get('sku'),
+                    'supplier': sup_by_name.get(key),
+                })
+        low_stock.sort(key=lambda x: x['qty'])
+        low_stock = low_stock[:60]
+
         # Base queryset WITH date/payment filters
-        filtered_qs = Order.objects.all()
+        filtered_qs = orders
         if date_filter:
             filtered_qs = filtered_qs.filter(created_at__date=today)
         if payment_method and payment_method != 'ALL':
@@ -250,12 +317,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         total_orders_filtered = filtered_qs.count()
         delivered_orders_qs = filtered_qs.filter(status='DELIVERED')
         delivered_count_filtered = delivered_orders_qs.count()
-        
-        # System-Wide Totals
-        total_pending = Order.objects.filter(status='PENDING').count()
-        total_active_all = Order.objects.exclude(status__in=['DELIVERED', 'CANCELLED']).count()
-        system_total_orders = Order.objects.count()
-        
+
+        # System-Wide Totals (within the user's branch scope)
+        total_pending = orders.filter(status='PENDING').count()
+        total_active_all = orders.exclude(status__in=['DELIVERED', 'CANCELLED']).count()
+        system_total_orders = orders.count()
+
         # Revenue Logic: Only Delivered orders count as revenue
         total_revenue = delivered_orders_qs.aggregate(tot=Sum('total_amount'))['tot'] or 0
 
@@ -268,10 +335,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 output_field=DecimalField(max_digits=12, decimal_places=2)
             )
         ).aggregate(tot=Sum('item_profit'))['tot'] or 0
-        
+
         # Accounts Payable: Sum of remaining balance on all active Purchase Orders
-        from .models import PurchaseOrder
-        total_payable = PurchaseOrder.objects.exclude(status='CANCELLED').annotate(
+        total_payable = purchase_orders.exclude(status='CANCELLED').annotate(
             balance=ExpressionWrapper(
                 F('total_amount') - F('paid_amount'),
                 output_field=DecimalField(max_digits=12, decimal_places=2)
@@ -279,14 +345,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         ).aggregate(tot=Sum('balance'))['tot'] or 0
 
         # Recent Orders for Dashboard
-        recent_orders_qs = Order.objects.all().order_by('-created_at')[:50]
+        recent_orders_qs = orders.order_by('-created_at')[:50]
         recent_orders = OrderSerializer(recent_orders_qs, many=True, context={'request': request}).data
 
         # Revenue history for graph (last 7 days)
         history = []
         for i in range(6, -1, -1):
             d = today - timezone.timedelta(days=i)
-            day_qs = Order.objects.filter(created_at__date=d, status='DELIVERED')
+            day_qs = orders.filter(created_at__date=d, status='DELIVERED')
             if payment_method and payment_method != 'ALL':
                 day_qs = day_qs.filter(payment_method=payment_method.upper())
             sales = day_qs.aggregate(t=Sum('total_amount'))['t'] or 0
@@ -302,14 +368,15 @@ class OrderViewSet(viewsets.ModelViewSet):
             "total_revenue": float(total_revenue),
             "total_profit": float(total_profit),
             "total_payable": float(total_payable),
-            "orders_today": Order.objects.filter(created_at__date=timezone.now().date()).count(),
+            "orders_today": orders.filter(created_at__date=timezone.now().date()).count(),
             "pending_orders": total_pending,
             "total_active": total_active_all,
             "delivered_orders": delivered_count_filtered,
             "recent_orders": recent_orders,
             "revenue_history": history,
             "top_products": [],
-            "recent_purchases": []
+            "recent_purchases": [],
+            "low_stock": low_stock,
         })
 
     def partial_update(self, request, *args, **kwargs):
@@ -455,10 +522,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         return self.partial_update(request, pk=pk)
 
 
-class SaleReturnViewSet(viewsets.ModelViewSet):
+class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = SaleReturn.objects.all()
     serializer_class = SaleReturnSerializer
     perm_module = 'sales'
+    # Scope through the originating sale's branch.
+    branch_field = 'order__warehouse'
+    # Branch admins see only returns against sales they created.
+    creator_field = 'order__created_by'
 
     def get_permissions(self):
         if self.action in ['update', 'partial_update', 'destroy']:
@@ -490,6 +561,14 @@ class SaleReturnViewSet(viewsets.ModelViewSet):
         user = self.request.user
         request_data = self.request.data
         
+        # Branch isolation: a branch admin can only file a return against an order
+        # in their own branch. The helper returns True for super admins and
+        # customers (unscoped), so this only blocks cross-branch admins.
+        order = serializer.validated_data.get('order')
+        if order is not None and not user_can_use_warehouse(user, str(getattr(order, 'warehouse_id', '') or '')):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("This order belongs to another branch — you cannot create a return for it.")
+
         from modules.customer.models import Customer
         customer_obj = None
         user_obj = None
@@ -575,6 +654,11 @@ class SaleReturnViewSet(viewsets.ModelViewSet):
         except Order.DoesNotExist:
             return Response({'error': 'Order not found.'}, status=404)
 
+        # Branch isolation: a branch admin may only act on orders in their own
+        # branch (customers aren't branch-scoped, so this only blocks admins).
+        if getattr(request.user, 'is_staff', False) and not user_can_use_warehouse(request.user, str(getattr(order, 'warehouse_id', '') or '')):
+            return Response({'error': 'This order belongs to another branch.'}, status=403)
+
         if not request.user.is_staff and order.customer_id != request.user.id and getattr(order.user, 'id', None) != request.user.id:
             return Response({'error': 'Not authorized to modify this order.'}, status=403)
 
@@ -627,11 +711,14 @@ class SaleReturnViewSet(viewsets.ModelViewSet):
 
 
 
-class PurchaseViewSet(viewsets.ModelViewSet):
+class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     """ViewSet for wholesale purchase orders from distributor to supplier"""
     serializer_class = PurchaseOrderSerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'purchases'
+    branch_field = 'warehouse'
+    # Branch admins see only the purchases they personally created.
+    creator_field = 'created_by'
 
     def get_queryset(self):
         user = self.request.user
@@ -716,7 +803,10 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                         price_per_item=item.price,
                         weight=item.weight,
                         size=item.size,
-                        date=timezone.now().date()
+                        date=timezone.now().date(),
+                        # Attribute the stock to whoever created the purchase, so a
+                        # branch admin sees only the stock from purchases they made.
+                        created_by=purchase.created_by,
                     )
 
                     # 3. Record the movement history
@@ -886,8 +976,21 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             if warehouse_id and str(warehouse_id).strip():
                 data['warehouse_id'] = warehouse_id
             else:
-                data.pop('warehouse_id', None) 
+                data.pop('warehouse_id', None)
                 data.pop('warehouse', None)
+
+            # Branch scoping: auto-use the only branch a single-branch admin manages,
+            # require a choice when they manage several, and reject a foreign branch.
+            _ids = user_warehouse_ids(request.user)
+            if _ids is not None:
+                _wh = data.get('warehouse_id')
+                if not _wh:
+                    if len(_ids) == 1:
+                        data['warehouse_id'] = next(iter(_ids))
+                    else:
+                        return Response({"error": "Select a branch warehouse for this purchase."}, status=400)
+                elif not user_can_use_warehouse(request.user, _wh):
+                    return Response({"error": "You cannot create a purchase for a branch you are not assigned to."}, status=403)
 
             # Date Sanitization
             for date_field in ['expected_delivery_date', 'payment_date', 'due_date']:
@@ -1138,11 +1241,15 @@ class SupplierDashboardViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
 
-class PurchaseReturnViewSet(viewsets.ModelViewSet):
+class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     """ViewSet for purchase returns with supplier response workflow"""
     serializer_class = PurchaseReturnSerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'purchases'
+    # Scope through the originating purchase order's branch.
+    branch_field = 'purchase_order__warehouse'
+    # Branch admins see only returns against purchases they created.
+    creator_field = 'purchase_order__created_by'
 
     def get_queryset(self):
         user = self.request.user
@@ -1194,7 +1301,14 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
                 if s: supplier_id = s.id
 
             po_id = data.pop('purchase_order', None)
-            
+
+            # Branch isolation: a branch admin can only return a purchase order from
+            # their own branch (helper returns True for super admins).
+            if po_id:
+                _po = PurchaseOrder.objects.filter(id=po_id).first()
+                if _po and not user_can_use_warehouse(request.user, str(getattr(_po, 'warehouse_id', '') or '')):
+                    return Response({"error": "This purchase order belongs to another branch."}, status=status.HTTP_403_FORBIDDEN)
+
             # Remove non-model fields
             data.pop('supplier_name', None)
             

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     ChevronLeft, RefreshCw, Building2
 } from 'lucide-react';
 import { inventoryService } from '@/services/inventory.service';
+import { areaService, Area } from '@/services/area.service';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
@@ -22,12 +23,18 @@ const AdminInput = ({ label, className = "", required = false, ...props }: { lab
 export default function AddWarehousePage() {
     const router = useRouter();
     const [saving, setSaving] = useState(false);
+    const [areas, setAreas] = useState<Area[]>([]);
     const [form, setForm] = useState({
         name: '',
-        location: ''
+        location: '',
+        area: '' as number | string,
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        areaService.getActive().then(setAreas).catch(() => setAreas([]));
+    }, []);
 
     const handle = (k: string, v: any) => {
         setForm(p => ({ ...p, [k]: v }));
@@ -47,7 +54,11 @@ export default function AddWarehousePage() {
         if (!validate()) return;
         setSaving(true);
         try {
-            await inventoryService.createWarehouse(form);
+            await inventoryService.createWarehouse({
+                name: form.name,
+                location: form.location,
+                area: form.area || null,
+            });
             toast.success('Warehouse added');
             router.push('/admin/inventory/warehouses');
         } catch (err: any) {
@@ -89,6 +100,20 @@ export default function AddWarehousePage() {
                             <div className="space-y-1">
                                 <AdminInput label="Location" value={form.location} onChange={e => handle('location', e.target.value)} placeholder="e.g. Plot 42, Sector 5, Karachi" required />
                                 {errors.location && <p className="text-[11px] text-rose-600 font-bold mt-1">{errors.location}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Area / City</label>
+                                <select
+                                    className={ui.inputBase}
+                                    value={form.area}
+                                    onChange={e => handle('area', e.target.value)}
+                                >
+                                    <option value="">— No area —</option>
+                                    {areas.map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ''}</option>
+                                    ))}
+                                </select>
+                                <p className="text-[11px] text-slate-400 mt-1">Group this warehouse under a city so admins can be assigned by area.</p>
                             </div>
                         </div>
 

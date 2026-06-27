@@ -111,6 +111,21 @@ def _load_parent(source_type, source_id):
     return model.objects.filter(pk=source_id).first()
 
 
+def parent_warehouse_id(source_type, source_id):
+    """Branch (warehouse) id for a transaction, used to stamp its ledger rows so
+    they stay branch-scoped. Returns None when it can't be resolved."""
+    parent = _load_parent(source_type, source_id)
+    if parent is None:
+        return None
+    if source_type in ('order', 'purchaseorder'):
+        return getattr(parent, 'warehouse_id', None)
+    if source_type == 'salereturn':
+        return getattr(getattr(parent, 'order', None), 'warehouse_id', None)
+    if source_type == 'purchasereturn':
+        return getattr(getattr(parent, 'purchase_order', None), 'warehouse_id', None)
+    return None
+
+
 def _status_for(paid, total):
     paid = Decimal(str(paid or 0))
     total = Decimal(str(total or 0))
@@ -222,6 +237,7 @@ def record_installment(tp):
             'description': desc or '',
             'date': (tp.paid_at or timezone.now()).date(),
             'user': _real_user(tp.created_by),
+            'warehouse_id': tp.warehouse_id or parent_warehouse_id(tp.source_type, tp.source_id),
         },
     )
     recompute_parent(tp.source_type, tp.source_id)
@@ -262,6 +278,8 @@ def record_sale(order):
             'payer_payee': order.customer_name or 'Walk-in Customer',
             'description': f"Sale from order #{order.tracking_id} ({order.get_payment_method_display()})",
             'date': (order.delivered_at or order.created_at or order.updated_at).date(),
+            'warehouse_id': order.warehouse_id,
+            'user': _real_user(getattr(order, 'created_by', None)),
         },
     )
 
@@ -299,6 +317,8 @@ def record_purchase_payment(purchase):
             'reference_number': purchase.purchase_number or '',
             'payer_payee': supplier_name,
             'description': f"Payment for purchase #{purchase.purchase_number} (accepted by supplier)",
+            'warehouse_id': purchase.warehouse_id,
+            'user': _real_user(getattr(purchase, 'created_by', None)),
         },
     )
 
@@ -326,6 +346,8 @@ def record_purchase_return(ret):
             'reference_number': ret.return_number or '',
             'payer_payee': supplier_name,
             'description': f"Refund received for purchase return {ret.return_number}",
+            'warehouse_id': getattr(getattr(ret, 'purchase_order', None), 'warehouse_id', None),
+            'user': _real_user(getattr(getattr(ret, 'purchase_order', None), 'created_by', None)),
         },
     )
 
@@ -356,6 +378,8 @@ def record_sale_return(sale_return):
             'reference_number': sale_return.return_number or '',
             'payer_payee': customer_name,
             'description': f"Refund paid for sale return {sale_return.return_number}",
+            'warehouse_id': getattr(getattr(sale_return, 'order', None), 'warehouse_id', None),
+            'user': _real_user(getattr(getattr(sale_return, 'order', None), 'created_by', None)),
         },
     )
 

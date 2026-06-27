@@ -9,7 +9,7 @@ import ReadOnlyController from '@/components/admin/ReadOnlyController';
 import {
     Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
-    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Wallet
+    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Wallet, Building2
 } from 'lucide-react';
 import { paymentsDueService } from '@/services/payment.service';
 import Link from 'next/link';
@@ -155,6 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
     const [adminRole, setAdminRole] = useState('');
     const [adminId, setAdminId] = useState<string | number>('');
+    const [branchLabel, setBranchLabel] = useState('');
 
     // Settings & Display
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -181,6 +182,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             setAdminAvatar(user.avatar || null);
             setAdminRole(user.role || 'Admin');
             setAdminId(user.id || '');
+            const wh = (user as any).warehouses;
+            setBranchLabel(authService.isSuperAdmin()
+                ? 'All Branches'
+                : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No branch'));
         }
 
         const loadSettings = async () => {
@@ -201,6 +206,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     setAdminAvatar(p.image || p.avatar || null);
                     setAdminRole(p.role_name || (p.role && typeof p.role === 'object' ? p.role.name : p.role) || 'Admin');
                     setAdminId(p.id);
+                    const wh = (p as any).warehouses;
+                    setBranchLabel((p as any).is_super_admin
+                        ? 'All Branches'
+                        : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No branch'));
                 }
             } catch { }
         };
@@ -460,6 +469,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         {/* Actions */}
                         <div className="flex items-center gap-3">
+                            {branchLabel && (
+                                <div
+                                    title={branchLabel === 'All Branches' ? 'You can see every branch' : `Your branch: ${branchLabel}`}
+                                    className={cn(
+                                        "hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold select-none",
+                                        branchLabel === 'All Branches'
+                                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                            : branchLabel === 'No branch'
+                                                ? "bg-rose-50 border-rose-200 text-rose-600"
+                                                : "bg-slate-50 border-slate-200 text-slate-600"
+                                    )}
+                                >
+                                    <Building2 className="h-3.5 w-3.5 opacity-80" />
+                                    <span className="truncate max-w-[160px]">{branchLabel}</span>
+                                </div>
+                            )}
                             <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
                             <div className="hidden lg:block h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <Link href="/" className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">

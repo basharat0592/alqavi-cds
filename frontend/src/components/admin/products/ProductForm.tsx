@@ -341,11 +341,13 @@ export default function ProductForm({ id }: ProductFormProps) {
     useEffect(() => {
         const fetchResources = async () => {
             try {
+                // Each lookup is independent — one failing endpoint (e.g. a 500 on
+                // categories) must not blank out the others (stock, suppliers, catalog).
                 const [stockData, supData, catData, catProdData] = await Promise.all([
-                    inventoryService.getInventory(),
-                    companyService.getSuppliers(),
-                    categoryService.getAll(),
-                    productService.getAllSupplier({ no_pagination: 'true' })
+                    inventoryService.getInventory().catch(() => []),
+                    companyService.getSuppliers().catch(() => []),
+                    categoryService.getAll().catch(() => []),
+                    productService.getAllSupplier({ no_pagination: 'true' }).catch(() => [])
                 ]);
                 setAllStocks(stockData || []);
                 setFilteredStocks(stockData || []);
@@ -537,7 +539,6 @@ export default function ProductForm({ id }: ProductFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.stock) return toast.error("Please select a stock entry");
-        if (!formData.category) return toast.error("Please select a category");
         if (!formData.selling_price) return toast.error("Please set the selling price");
 
         setSaving(true);
@@ -546,6 +547,9 @@ export default function ProductForm({ id }: ProductFormProps) {
             Object.keys(formData).forEach(key => {
                 if (key === 'sections') {
                     formData.sections.forEach(s => data.append('sections', s));
+                } else if (key === 'category' && !(formData as any).category) {
+                    // Category is optional — omit when blank so the backend falls back
+                    // to the linked stock's category (or leaves it empty).
                 } else {
                     data.append(key, (formData as any)[key]);
                 }
@@ -635,7 +639,6 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                                     <ProfessionalSelect
                                         label="Product Category"
-                                        required
                                         value={formData.category}
                                         options={allCategories.map(c => ({ id: c.id, name: c.name }))}
                                         onChange={(val: string) => setFormData(p => ({ ...p, category: val }))}

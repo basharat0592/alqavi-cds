@@ -5,11 +5,13 @@ from modules.supplier.serializers import SupplierSerializer
 
 class WarehouseSerializer(serializers.ModelSerializer):
     stock_count = serializers.SerializerMethodField()
+    area_name = serializers.CharField(source='area.name', read_only=True, default=None)
 
     class Meta:
         model = Warehouse
-        fields = ['id', 'name', 'location', 'stock_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'stock_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'location', 'area', 'area_name', 'is_active',
+                  'stock_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'area_name', 'stock_count', 'created_at', 'updated_at']
 
     def get_stock_count(self, obj):
         # 1. Count unique products linked to the catalog

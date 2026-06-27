@@ -7,6 +7,8 @@ import {
 import PageLoader from '@/components/ui/PageLoader';
 import { exportToCSV, formatCurrency } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
+import { inventoryService } from '@/services/inventory.service';
+import { authService } from '@/lib/auth';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
@@ -17,15 +19,30 @@ export default function UserReportPage() {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [userFilter, setUserFilter] = useState('All');
+    // Super admin gets cross-staff comparison + a branch filter; a branch admin
+    // sees only their own row ("My Performance").
+    const [isSuper, setIsSuper] = useState(false);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [branchFilter, setBranchFilter] = useState('');
+
+    useEffect(() => {
+        const sa = authService.isSuperAdmin();
+        setIsSuper(sa);
+        if (sa) inventoryService.getWarehouses().then(setWarehouses).catch(() => setWarehouses([]));
+    }, []);
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const d = await reportService.byUser({ date_from: dateFrom || undefined, date_to: dateTo || undefined });
+            const d = await reportService.byUser({
+                date_from: dateFrom || undefined,
+                date_to: dateTo || undefined,
+                warehouse: branchFilter || undefined,
+            });
             setRows(d.results || []);
             setTotals(d.totals || {});
         } finally { setLoading(false); }
-    }, [dateFrom, dateTo]);
+    }, [dateFrom, dateTo, branchFilter]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -43,16 +60,18 @@ export default function UserReportPage() {
 
     return (
         <div className="pb-10">
-            <div className="hidden print:block mb-4"><InvoiceHeader docTitle="Staff-wise Report" /></div>
+            <div className="hidden print:block mb-4"><InvoiceHeader docTitle={isSuper ? 'Staff Comparison' : 'My Performance'} /></div>
 
             <div className="print:hidden">
                 <PageHeader
-                    title="User / Staff-wise Report"
-                    subtitle="Sales, collections and activity grouped by staff member"
+                    title={isSuper ? 'Staff Comparison' : 'My Performance'}
+                    subtitle={isSuper
+                        ? 'Sales, collections and activity for every admin, side by side'
+                        : 'Your own sales, collections and activity'}
                     breadcrumbs={[
                         { label: 'Console', href: '/admin/dashboard' },
                         { label: 'Reports', href: '/admin/reports' },
-                        { label: 'Staff-wise' },
+                        { label: isSuper ? 'Staff Comparison' : 'My Performance' },
                     ]}
                     actions={
                         <div className="flex gap-2 no-print">
@@ -78,10 +97,18 @@ export default function UserReportPage() {
                 <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={ui.inputBase + ' w-auto'} />
                 <span className="text-slate-400 text-[12px]">to</span>
                 <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={ui.inputBase + ' w-auto'} />
-                <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className={ui.inputBase + ' w-auto'}>
-                    {userOptions.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-                {(dateFrom || dateTo) && <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</Button>}
+                {isSuper && warehouses.length > 0 && (
+                    <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className={ui.inputBase + ' w-auto'} title="Filter by branch">
+                        <option value="">All branches</option>
+                        {warehouses.map((w: any) => <option key={w.id} value={w.id}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>)}
+                    </select>
+                )}
+                {isSuper && (
+                    <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className={ui.inputBase + ' w-auto'}>
+                        {userOptions.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                )}
+                {(dateFrom || dateTo || branchFilter) && <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); setBranchFilter(''); }}>Clear</Button>}
                 {loading && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
             </Card>
 

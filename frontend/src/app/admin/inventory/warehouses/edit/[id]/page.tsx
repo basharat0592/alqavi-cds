@@ -7,6 +7,7 @@ import {
     MapPin
 } from 'lucide-react';
 import { inventoryService } from '@/lib/api';
+import { areaService, Area } from '@/services/area.service';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button } from '@/components/admin/ui';
 
@@ -45,10 +46,12 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
     const { id } = use(params);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [areas, setAreas] = useState<Area[]>([]);
     const [form, setForm] = useState({
         name: '',
         code: '',
         type: 'Main',
+        area: '' as number | string,
         address: '',
         city: '',
         state: '',
@@ -62,6 +65,7 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
+        areaService.getActive().then(setAreas).catch(() => setAreas([]));
         const fetchWarehouse = async () => {
             try {
                 const data = await inventoryService.getWarehouses();
@@ -87,6 +91,7 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
                         name: wh.name || '',
                         code: wh.warehouse_code || '',
                         type: wh.warehouse_type || 'Main',
+                        area: wh.area || '',
                         address: address,
                         city: city,
                         state: state,
@@ -130,6 +135,7 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
                 name: form.name,
                 warehouse_code: form.code.trim() || null,
                 warehouse_type: form.type,
+                area: form.area || null,
                 location: `${form.address}, ${form.city}, ${form.state}, ${form.country} ${form.postal_code}`,
                 status: form.status.toLowerCase(),
             };
@@ -184,6 +190,12 @@ export default function EditWarehousePage({ params }: { params: Promise<{ id: st
                         <Field label="Status" type="select" value={form.status} onChange={e => handle('status', e.target.value)}>
                             <option>Active</option>
                             <option>Inactive</option>
+                        </Field>
+                        <Field label="Area / City" type="select" value={form.area} onChange={e => handle('area', e.target.value)}>
+                            <option value="">— No area —</option>
+                            {areas.map(a => (
+                                <option key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ''}</option>
+                            ))}
                         </Field>
                     </div>
                 </Card>

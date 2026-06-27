@@ -17,11 +17,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Customer.objects.all().order_by('-created_at')
+        from core.scoping import user_area_ids, scope_to_creator
         # Area Manager scoping: only customers in their assigned area(s).
-        from core.scoping import user_area_ids
         area_ids = user_area_ids(self.request.user)
         if area_ids is not None:
             qs = qs.filter(area_id__in=area_ids)
+        # Per-admin isolation: a branch admin only sees customers they created;
+        # super admins (and shadow/anon storefront calls) see all.
+        qs = scope_to_creator(self.request.user, qs, 'created_by')
         return qs
 
     def get_serializer_class(self):
@@ -42,7 +45,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        customer = serializer.save(plain_password=request.data.get('password'))
+        # Stamp the creating admin so the customer is scoped to them (per-admin
+        # isolation). Null for self-registered / anonymous.
+        creator = request.user if getattr(request.user, 'is_staff', False) else None
+        customer = serializer.save(plain_password=request.data.get('password'), created_by=creator)
         
         # Return detail serializer output with context for absolute URLs
         return Response(CustomerSerializer(customer, context={'request': request}).data, status=status.HTTP_201_CREATED)
@@ -74,11 +80,16 @@ class CustomerViewSet(viewsets.ModelViewSet):
         """Running statement + receivables aging for one customer."""
         from modules.sales.models import Order, SaleReturn
         from modules.payments.services import aging_buckets
+        from core.scoping import apply_report_scope
 
         customer = self.get_object()
-        orders = (Order.objects.filter(customer=customer)
-                  .exclude(status__in=['CANCELLED', 'REJECTED'])
-                  .order_by('created_at', 'tracking_id'))
+        # Per-admin: a branch admin sees only the sales for this customer that THEY
+        # handled; super admin sees all (with optional ?created_by / ?warehouse).
+        orders = apply_report_scope(request,
+                                    (Order.objects.filter(customer=customer)
+                                     .exclude(status__in=['CANCELLED', 'REJECTED'])
+                                     .order_by('created_at', 'tracking_id')),
+                                    'warehouse', 'created_by')
 
         entries = []
         total_billed = 0.0
@@ -111,7 +122,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
         # Accepted sale returns reduce what the customer owes (money back to them).
         total_refunds = 0.0
-        for r in SaleReturn.objects.filter(customer=customer, status='ACCEPTED').order_by('created_at'):
+        for r in apply_report_scope(request,
+                                    SaleReturn.objects.filter(customer=customer, status='ACCEPTED').order_by('created_at'),
+                                    'order__warehouse', 'order__created_by'):
             amt = float(r.refund_amount or 0) or float(r.items_total or 0)
             total_refunds += amt
             balance -= amt

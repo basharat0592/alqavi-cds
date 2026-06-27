@@ -1,17 +1,62 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
     Package, TrendingUp, Tag,
     Boxes, ChevronRight, Settings, UserCheck,
-    Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
+    Activity, ListFilter, ShoppingCart, History, RefreshCcw,
     ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
     Truck, Book, AlertTriangle, Globe,
     ScanLine, Receipt, Landmark, ClipboardList, PackagePlus,
-    ArrowDownLeft, ArrowUpRight
+    ArrowDownLeft, ArrowUpRight, Building2,
+    MapPin, Bell, Wallet, Bike
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
+import { authService, sidebarVisibilityKey } from '@/lib/auth';
+import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
+
+// Dashboard cards/links only a Super Admin should see (cross-branch administration).
+// Branch admins run day-to-day ops and don't manage branches, staff, roles or
+// global config, so these are hidden from their dashboard.
+const SUPER_ONLY_HREFS = new Set<string>([
+    '/admin/branches',
+    '/admin/users',
+    '/admin/users/roles',
+    '/admin/users/permissions',
+    '/admin/settings',
+    '/admin/website-settings',
+    '/admin/inventory/warehouses',
+    '/admin/payments',
+]);
+
+// For a Super Admin, only these groups stay as big prominent cards (their job is
+// oversight). The operational groups (Sales & Orders, Purchasing & Inventory) drop
+// into the "Other Pages" list below. Branch admins keep operational cards on top.
+const SUPER_ADMIN_PROMINENT_GROUPS = new Set<string>(['Finance & Reports', 'Administration']);
+
+// For a Branch Admin, only the day-to-day essentials stay as prominent cards; the
+// rest drop into the "Other Pages" list. Tweak this set to change what's featured.
+const BRANCH_ADMIN_IMPORTANT_HREFS = new Set<string>([
+    // Sales & Orders
+    '/admin/sale',            // Point of Sale
+    '/admin/sales',           // Sales History
+    '/admin/invoices',        // Invoices
+    '/admin/sale-returns',    // Sale Returns
+    '/admin/orders',          // Order List
+    '/admin/tracking',        // Order Tracking
+    // Purchasing & Inventory
+    '/admin/purchases/add',   // New Purchase Order
+    '/admin/inventory/list',  // Current Stocks
+    '/admin/purchases',       // Purchase History
+    '/admin/products',        // Product List
+    '/admin/purchases/returns', // Purchase Returns
+    '/admin/products/add',    // Add Product
+    // Finance & Reports
+    '/admin/income',          // Income
+    '/admin/expense',         // Expense
+    '/admin/reports',         // Reports Center
+]);
 
 interface PageButton {
     name: string;
@@ -34,7 +79,33 @@ interface GroupSection {
 }
 
 export default function AdminDashboard() {
-    const { stats, products, loading } = useAdminDashboard();
+    const { stats, products, lowStock: serverLowStock, loading } = useAdminDashboard();
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    useEffect(() => { setIsSuperAdmin(authService.isSuperAdmin()); }, []);
+
+    // Sidebar-visibility toggles (System Settings → Sidebar Pages) hide pages here too.
+    const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
+    useEffect(() => {
+        const load = () => {
+            try { const s = localStorage.getItem(sidebarVisibilityKey()); setSidebarVisibility(s ? JSON.parse(s) : {}); }
+            catch { setSidebarVisibility({}); }
+        };
+        load();
+        window.addEventListener('sidebar_visibility_change', load);
+        window.addEventListener('storage', load);
+        return () => {
+            window.removeEventListener('sidebar_visibility_change', load);
+            window.removeEventListener('storage', load);
+        };
+    }, []);
+
+    // A card/link is visible if it's not super-admin-only (or the viewer is a super
+    // admin), it isn't an operational page hidden from the super admin, AND it isn't
+    // toggled off in the sidebar-visibility settings.
+    const canSee = (href: string) =>
+        (isSuperAdmin || !SUPER_ONLY_HREFS.has(href)) &&
+        !(isSuperAdmin && SUPER_ADMIN_HIDDEN_HREFS.includes(href)) &&
+        sidebarVisibility[href] !== false;
 
     // ── CORE OPERATIONS & KEY PAGES (PROMINENT BUTTONS) ──
     const corePages: PageButton[] = [
@@ -290,96 +361,155 @@ export default function AdminDashboard() {
             },
             keywords: ['config', 'sidebar', 'site details', 'settings', 'configure']
         },
+        {
+            name: 'Branches & Admins',
+            desc: 'Assign warehouses to admins',
+            href: '/admin/branches',
+            icon: Building2,
+            theme: {
+                border: 'hover:border-indigo-500',
+                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-indigo-600',
+                chevron: 'text-indigo-400 group-hover:text-indigo-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
+            },
+            keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch']
+        },
+        {
+            name: 'Supplier Registry',
+            desc: 'Vendors & manufacturers',
+            href: '/admin/company/suppliers',
+            icon: UserCheck,
+            theme: {
+                border: 'hover:border-amber-500',
+                iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
+                leftBar: 'bg-amber-600',
+                chevron: 'text-amber-400 group-hover:text-amber-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
+            },
+            keywords: ['vendors', 'manufacturers', 'contacts', 'supplier']
+        },
+        {
+            name: 'Customer Registry',
+            desc: 'Clients & profiles',
+            href: '/admin/company/customers',
+            icon: Users,
+            theme: {
+                border: 'hover:border-sky-500',
+                iconBg: 'bg-sky-50 border-sky-100 text-sky-600 group-hover:bg-sky-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(2,132,199,0.2)]',
+                leftBar: 'bg-sky-600',
+                chevron: 'text-sky-400 group-hover:text-sky-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(2,132,199,0.06)]'
+            },
+            keywords: ['clients', 'profiles', 'ledger', 'customer']
+        },
     ];
 
-    // ── UTILITIES & LESS FREQUENT PAGES (SIMPLE LIST LINKS) ──
-    const utilitySections: GroupSection[] = [
+    // ── COMPLETE PAGE CATALOG ──
+    // Every navigable admin page, grouped by category. This is the single source of
+    // truth for the "All Pages" directory at the bottom. Anything already shown as a
+    // prominent card up top is filtered out below so nothing appears twice. Add new
+    // admin pages here and they automatically show under their category.
+    const pageCatalog: GroupSection[] = [
         {
             title: 'Sales & Orders',
             items: [
+                { name: 'Point of Sale (POS)', href: '/admin/sale', icon: ScanLine, keywords: ['counter', 'cashier', 'barcode', 'checkout', 'pos'] },
                 { name: 'Sales History', href: '/admin/sales', icon: TrendingUp, keywords: ['sales list', 'transactions', 'revenue ledger'] },
-                { name: 'Activity Logs', href: '/admin/sales/recent', icon: Activity, keywords: ['audit', 'logs', 'actions', 'history'] },
-                { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, keywords: ['delivery', 'courier', 'dispatch'] },
+                { name: 'Invoices', href: '/admin/invoices', icon: Receipt, keywords: ['billing', 'receipts', 'print', 'invoice'] },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, keywords: ['returns', 'refunds', 'customer returns'] },
+                { name: 'Order List', href: '/admin/orders', icon: ClipboardList, keywords: ['orders', 'shipping', 'list'] },
+                { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, keywords: ['delivery', 'courier', 'dispatch'] },
+                { name: 'Delivery Persons', href: '/admin/delivery', icon: Bike, keywords: ['rider', 'riders', 'courier', 'driver', 'delivery boy'] },
+                { name: 'Activity Logs', href: '/admin/sales/recent', icon: Activity, keywords: ['audit', 'logs', 'actions', 'history'] },
             ]
         },
         {
-            title: 'Inventory & Stock',
+            title: 'Purchasing & Suppliers',
             items: [
-                { name: 'Add Product', href: '/admin/products/add', icon: PlusIcon, keywords: ['create', 'new item', 'upload'] },
+                { name: 'New Purchase Order', href: '/admin/purchases/add', icon: ShoppingCart, keywords: ['draft', 'buy', 'stock order', 'procurement'] },
+                { name: 'Purchase History', href: '/admin/purchases', icon: History, keywords: ['expenses', 'vendor orders', 'invoices'] },
+                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, keywords: ['refunds', 'damaged', 'shipback'] },
+                { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck, keywords: ['vendors', 'manufacturers', 'contacts'] },
+                { name: 'Supplier Catalog', href: '/admin/supplier-products', icon: Book, keywords: ['prices', 'vendor catalog', 'items'] },
+            ]
+        },
+        {
+            title: 'Products & Inventory',
+            items: [
+                { name: 'Product List', href: '/admin/products', icon: Package, keywords: ['items', 'catalog', 'skus', 'edit'] },
+                { name: 'Add Product', href: '/admin/products/add', icon: PackagePlus, keywords: ['create', 'new item', 'upload'] },
                 { name: 'Product Categories', href: '/admin/products/categories', icon: Tag, keywords: ['taxonomies', 'groups', 'labels'] },
                 { name: 'Product Sections', href: '/admin/products/sections', icon: ListFilter, keywords: ['blocks', 'sliders', 'banners'] },
-                { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes, keywords: ['volumes', 'quantities', 'adjustments'] },
+                { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes, keywords: ['volumes', 'quantities', 'adjustments', 'stock'] },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store, keywords: ['storage', 'depots', 'distribution'] },
             ]
         },
         {
-            title: 'Purchases & Suppliers',
+            title: 'Customers',
             items: [
-                { name: 'Purchase History', href: '/admin/purchases', icon: History, keywords: ['expenses', 'vendor orders', 'invoices'] },
-                { name: 'Supplier Catalog', href: '/admin/supplier-products', icon: Book, keywords: ['prices', 'vendor catalog', 'items'] },
-                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, keywords: ['refunds', 'damaged', 'shipback'] },
-            ]
-        },
-        {
-            title: 'Staff & Security',
-            items: [
-                { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck, keywords: ['vendors', 'manufacturers', 'contacts'] },
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users, keywords: ['clients', 'profiles', 'ledger'] },
-                { name: 'Internal Users', href: '/admin/users', icon: User, keywords: ['staff', 'logins', 'accounts'] },
-                { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck, keywords: ['groups', 'privileges', 'ranks'] },
-                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock, keywords: ['rules', 'gates', 'granular'] },
+                { name: 'Company Categories', href: '/admin/company/categories', icon: Tag, keywords: ['company tax categories', 'industry classifications'] },
+                { name: 'Areas / Territories', href: '/admin/company/areas', icon: MapPin, keywords: ['area', 'territory', 'region', 'zone', 'locality'] },
             ]
         },
         {
-            title: 'Detailed Reports',
+            title: 'Finance',
             items: [
+                { name: 'Income', href: '/admin/income', icon: ArrowDownLeft, keywords: ['income', 'money in', 'revenue', 'earnings', 'inbound'] },
+                { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight, keywords: ['expense', 'money out', 'spending', 'costs', 'outbound'] },
+                { name: 'Global Payments', href: '/admin/payments', icon: CreditCard, keywords: ['payment methods', 'stripe', 'paypal', 'banks'] },
+                { name: 'Receivables', href: '/admin/reports/receivables', icon: Wallet, keywords: ['receivable', 'money owed', 'customer dues', 'outstanding'] },
+                { name: 'Payables', href: '/admin/reports/payables', icon: Wallet, keywords: ['payable', 'we owe', 'supplier dues', 'outstanding'] },
+            ]
+        },
+        {
+            title: 'Reports',
+            items: [
+                { name: 'Reports Center', href: '/admin/reports', icon: BarChart3, keywords: ['hub', 'audits', 'graphs', 'reports'] },
                 { name: 'Accounting & Finance', href: '/admin/reports/accounting', icon: Landmark, keywords: ['p&l', 'cashflow', 'tax', 'finance', 'ledger'] },
                 { name: 'Sales Reports', href: '/admin/reports/sales', icon: TrendingUp, keywords: ['revenue', 'growth', 'metrics'] },
                 { name: 'Purchase Reports', href: '/admin/reports/purchases', icon: ShoppingCart, keywords: ['costs', 'purchases value'] },
                 { name: 'Inventory Reports', href: '/admin/reports/inventory', icon: Boxes, keywords: ['valuation', 'stock level reports'] },
                 { name: 'Customer Reports', href: '/admin/reports/customers', icon: Users, keywords: ['balances', 'rankings', 'activity'] },
                 { name: 'Returns Reports', href: '/admin/reports/sales-returns', icon: RotateCcw, keywords: ['refunds', 'returns reasons'] },
+                { name: 'Area-wise Report', href: '/admin/reports/by-area', icon: MapPin, keywords: ['area', 'territory', 'region wise', 'zone'] },
+                { name: 'My Performance / Staff Comparison', href: '/admin/reports/by-user', icon: Activity, keywords: ['my performance', 'staff comparison', 'by user', 'per admin', 'sales by staff'] },
                 { name: 'Data Hub', href: '/admin/reports/data-hub', icon: BarChart3, keywords: ['consolidated grid', 'tables', 'custom reports'] },
             ]
         },
         {
-            title: 'CMS & Settings',
+            title: 'Administration',
             items: [
-                { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor, keywords: ['slider', 'banners', 'content', 'seo', 'footer'] },
-                { name: 'Company Categories', href: '/admin/company/categories', icon: Tag, keywords: ['company tax categories', 'industry classifications'] },
-                { name: 'Global Payments', href: '/admin/payments', icon: CreditCard, keywords: ['payment methods', 'stripe', 'paypal', 'banks'] },
-                { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle, keywords: ['errors', 'warnings', 'alarms'] },
-                { name: 'System Settings', href: '/admin/settings', icon: Settings, keywords: ['config', 'sidebar visibility', 'site details'] },
+                { name: 'Branches & Admins', href: '/admin/branches', icon: Building2, keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch'] },
+                { name: 'Internal Users', href: '/admin/users', icon: User, keywords: ['staff', 'logins', 'accounts'] },
+                { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck, keywords: ['groups', 'privileges', 'ranks'] },
+                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock, keywords: ['rules', 'gates', 'granular'] },
             ]
-        }
+        },
+        {
+            title: 'System & CMS',
+            items: [
+                { name: 'Website CMS', href: '/admin/website-settings', icon: Globe, keywords: ['slider', 'banners', 'content', 'seo', 'footer', 'storefront'] },
+                { name: 'System Settings', href: '/admin/settings', icon: Settings, keywords: ['config', 'sidebar visibility', 'site details'] },
+                { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle, keywords: ['errors', 'warnings', 'alarms'] },
+                { name: 'Notifications', href: '/admin/notifications', icon: Bell, keywords: ['alerts', 'events', 'inbox', 'updates'] },
+            ]
+        },
     ];
 
-    function PlusIcon(props: any) {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-            </svg>
-        );
-    }
-
-    // ── REMAINING PAGES (everything not already promoted to Core Operations) ──
-    const otherPages = useMemo(() => {
-        const coreHrefs = new Set(corePages.map(p => p.href));
-        const seen = new Set<string>();
-        const out: Omit<PageButton, 'theme'>[] = [];
-        utilitySections.forEach(sec => sec.items.forEach(item => {
-            if (coreHrefs.has(item.href) || seen.has(item.href)) return;
-            seen.add(item.href);
-            out.push(item);
-        }));
-        return out;
-    }, []);
-
-    // Low-stock products (at or below each product's own min count threshold)
+    // Low-stock products. Prefer the branch-scoped feed from the server (driven by
+    // this branch's actual warehouse stock); fall back to the global product
+    // catalog only if the server didn't provide it.
     const DEFAULT_LOW_STOCK_MIN = 10;
     const lowStock = useMemo(() => {
+        if (Array.isArray(serverLowStock) && serverLowStock.length > 0) {
+            return serverLowStock.map((p: any) => ({
+                ...p,
+                _qty: Number(p.qty ?? 0),
+                _min: Number(p.min ?? DEFAULT_LOW_STOCK_MIN),
+            }));
+        }
         return (products || [])
             .map((p: any) => ({
                 ...p,
@@ -389,19 +519,47 @@ export default function AdminDashboard() {
             .filter((p: any) => p._qty <= p._min)
             .sort((a: any, b: any) => a._qty - b._qty)
             .slice(0, 60);
-    }, [products]);
+    }, [serverLowStock, products]);
 
     // ── Group the core button-cards into labeled sections (order = display order) ──
     const CORE_GROUPS: { title: string; hrefs: string[] }[] = [
         { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/invoices', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
         { title: 'Purchasing & Inventory', hrefs: ['/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns', '/admin/products', '/admin/products/add', '/admin/inventory/list'] },
         { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense'] },
-        { title: 'Administration', hrefs: ['/admin/users', '/admin/website-settings', '/admin/settings'] },
+        { title: 'Administration', hrefs: ['/admin/branches', '/admin/users', '/admin/website-settings', '/admin/settings', '/admin/company/suppliers', '/admin/company/customers'] },
     ];
     const coreByHref = new Map(corePages.map((p) => [p.href, p]));
+
+    // Whether a core card stays a big prominent button (vs dropping to the list):
+    //  - Super admin → only the oversight GROUPS (Finance & Administration).
+    //  - Branch admin → only the day-to-day essential cards.
+    const isPromoted = (groupTitle: string, href: string) =>
+        isSuperAdmin
+            ? SUPER_ADMIN_PROMINENT_GROUPS.has(groupTitle)
+            : BRANCH_ADMIN_IMPORTANT_HREFS.has(href);
+
     const groupedCore = CORE_GROUPS
-        .map((g) => ({ title: g.title, items: g.hrefs.map((h) => coreByHref.get(h)).filter(Boolean) as PageButton[] }))
+        .map((g) => ({
+            title: g.title,
+            items: (g.hrefs.map((h) => coreByHref.get(h)).filter(Boolean) as PageButton[])
+                .filter((p) => canSee(p.href) && isPromoted(g.title, p.href)),
+        }))
         .filter((g) => g.items.length > 0);
+
+    // Hrefs already shown as big prominent cards up top — excluded from the grouped
+    // lists below so nothing appears twice.
+    const promotedHrefs = new Set(groupedCore.flatMap((g) => g.items.map((i) => i.href)));
+
+    // "All Pages": the full catalog grouped by category. Drop the prominent cards
+    // already shown up top and any super-admin-only page a branch admin can't see,
+    // then hide categories that end up empty.
+    const groupedOther = pageCatalog
+        .map((cat) => ({
+            title: cat.title,
+            items: cat.items.filter((item) => canSee(item.href) && !promotedHrefs.has(item.href)),
+        }))
+        .filter((cat) => cat.items.length > 0);
+    const totalOtherCount = groupedOther.reduce((n, g) => n + g.items.length, 0);
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
@@ -429,7 +587,7 @@ export default function AdminDashboard() {
                                                 <Link
                                                     key={btn.href}
                                                     href={btn.href}
-                                                    className={`group relative flex items-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border border-slate-200/70 bg-white px-3 sm:px-3.5 py-2 sm:py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 ${theme?.border || 'hover:border-indigo-500'} ${theme?.hoverGlow || 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'}`}
+                                                    className={`group relative flex items-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border border-slate-200/70 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 ${theme?.border || 'hover:border-indigo-500'} ${theme?.hoverGlow || 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'}`}
                                                 >
                                                     {/* accent rail — slides in on hover */}
                                                     <span className={`pointer-events-none absolute left-0 top-0 h-full w-[3px] origin-center scale-y-0 rounded-r-full transition-transform duration-300 ease-out group-hover:scale-y-100 ${theme?.leftBar || 'bg-indigo-600'}`} />
@@ -438,8 +596,8 @@ export default function AdminDashboard() {
                                                     {/* top edge highlight */}
                                                     <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-70" />
 
-                                                    <div className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-300 ease-out shrink-0 group-hover:scale-105 group-hover:-rotate-3 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
-                                                        <Icon strokeWidth={1.75} className="w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform duration-300 group-hover:scale-110" />
+                                                    <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-300 ease-out shrink-0 group-hover:scale-105 group-hover:-rotate-3 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                                                        <Icon strokeWidth={1.75} className="w-4 h-4 sm:w-[17px] sm:h-[17px] transition-transform duration-300 group-hover:scale-110" />
                                                     </div>
                                                     <div className="relative min-w-0 flex-1">
                                                         <h3 className="text-[12px] sm:text-[13px] font-semibold text-slate-900 tracking-tight leading-tight truncate">
@@ -540,35 +698,46 @@ export default function AdminDashboard() {
                     </aside>
                 </div>
 
-                {/* ── OTHER PAGES (FULL WIDTH) ── */}
-                <div className="mt-10 border-t border-slate-200/70 pt-8 space-y-5">
-                    <div className="flex items-center gap-3 select-none">
-                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Other Pages</h2>
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{otherPages.length}</span>
+                {/* ── ALL PAGES (CATEGORIES AS COLUMNS) ── */}
+                <div className="mt-10 border-t border-slate-200/70 pt-8">
+                    <div className="flex items-center gap-3 select-none mb-6">
+                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">All Pages</h2>
+                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{totalOtherCount}</span>
                         <div className="h-px flex-1 bg-slate-200/70" />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-1">
-                        {otherPages.map((item) => {
-                            const ItemIcon = item.icon;
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className="flex items-center justify-between py-2 px-2.5 rounded-lg group/link transition-colors duration-200"
-                                >
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover/link:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
-                                            <ItemIcon size={13} className="transition-colors shrink-0" />
-                                        </div>
-                                        <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-900 transition-colors truncate">
-                                            {item.name}
-                                        </span>
-                                    </div>
-                                    <ChevronRight size={12} className="text-slate-300 group-hover/link:text-indigo-600 transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
-                                </Link>
-                            );
-                        })}
+                    {/* Each category is its own column; blocks flow into columns and never split. */}
+                    <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-x-8">
+                        {groupedOther.map((grp) => (
+                            <div key={grp.title} className="break-inside-avoid mb-7">
+                                <div className="flex items-center gap-2 select-none mb-2 pb-2 border-b border-slate-200/70">
+                                    <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">{grp.title}</h3>
+                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    {grp.items.map((item) => {
+                                        const ItemIcon = item.icon;
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className="flex items-center justify-between py-1.5 px-2 -mx-1 rounded-lg group/link transition-colors duration-200 hover:bg-slate-50"
+                                            >
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover/link:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
+                                                        <ItemIcon size={13} className="transition-colors shrink-0" />
+                                                    </div>
+                                                    <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-900 transition-colors truncate">
+                                                        {item.name}
+                                                    </span>
+                                                </div>
+                                                <ChevronRight size={12} className="text-slate-300 group-hover/link:text-indigo-600 transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

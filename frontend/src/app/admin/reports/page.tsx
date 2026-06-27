@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import {
-    BarChart3, Calendar, Printer, FileStack, FileSpreadsheet,
+    BarChart3, Calendar, Printer, FileSpreadsheet,
     ListFilter, Search, Download, ClipboardList, Info, CheckCircle,
     ChevronRight, ChevronLeft, LayoutDashboard, AlertTriangle, Clock,
-    User, CreditCard, ShoppingBag, Package, Boxes, TrendingUp, RotateCcw,
-    Truck, Building2, Tag, DollarSign
+    ShoppingBag, Package, Boxes, RotateCcw,
+    Truck, Tag, DollarSign
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
 import { companyService } from '@/services/company.service';
+import { authService } from '@/lib/auth';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
@@ -42,7 +43,7 @@ const SUB_OPTIONS: Record<string, string[]> = {
     purchases: ['Purchase Order By Date', 'Purchase Order By Invoice', 'By Supplier'],
     customers: ['Walk-in Customer', 'Registered Customer'],
     returns: ['Sales Returns', 'Purchase Returns'],
-    payments: ['Sales Payment', 'Purchase Payment'],
+    payments: ['Statements', 'Receivables', 'Payables', 'Sales Payment', 'Purchase Payment', 'Net Profit'],
     suppliers: ['All Suppliers', 'By Category', 'Outstanding Balance'],
     products: ['All Products', 'By Category', 'By Supplier', 'By Price Range'],
     stock: ['By Date Range', 'Stock Status', 'By Product Name', 'By Supplier', 'By Price Range', 'By Brand'],
@@ -80,6 +81,15 @@ const VIEW_FIELDS: Record<string, string[]> = {
     'Pending': ['dateRange'],
     'Delivered': ['dateRange'],
     'Cancelled': ['dateRange'],
+    'Net Profit': ['dateRange'],
+};
+
+// Payment-category views that open a full dedicated report page instead of
+// generating inline on this screen.
+const NAV_VIEWS: Record<string, string> = {
+    'Statements': '/admin/reports/sales',
+    'Receivables': '/admin/reports/receivables',
+    'Payables': '/admin/reports/payables',
 };
 
 /* Defensive field readers — report rows come from many different endpoints. */
@@ -98,6 +108,21 @@ const rowSubtitle = (r: any, category: string) =>
     (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
     r.reason || r.phone || r.email || r.tracking_id || category;
 
+// One line of the Net Profit panel.
+function ProfitRow({ label, value, sub, bold, neg }: { label: string; value: number; sub?: string; bold?: boolean; neg?: boolean }) {
+    return (
+        <div className="flex items-center justify-between px-4 py-2.5">
+            <div>
+                <p className={bold ? 'text-[13px] font-bold text-slate-900' : 'text-[13px] font-medium text-slate-600'}>{label}</p>
+                {sub && <p className="text-[10.5px] text-slate-400 mt-0.5">{sub}</p>}
+            </div>
+            <p className={`text-[13.5px] tabular-nums ${bold ? 'font-black text-slate-900' : neg ? 'font-bold text-rose-600' : 'font-bold text-slate-700'}`}>
+                {neg ? '− ' : ''}{formatCurrency(value)}
+            </p>
+        </div>
+    );
+}
+
 function ReportsEngineInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -108,8 +133,12 @@ function ReportsEngineInner() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [stocks, setStocks] = useState<any[]>([]);
+    // Super-Admin branch scope: pick a branch and the whole report follows it.
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     const [filters, setFilters] = useState({
+        branch: '',
         category: (searchParams.get('type') || '') as string,
         view: '',
         subView: '',
@@ -130,19 +159,24 @@ function ReportsEngineInner() {
     });
 
     const [reportResult, setReportResult] = useState<any[]>([]);
+    // Net Profit view produces a P&L summary instead of a row list.
+    const [profitSummary, setProfitSummary] = useState<any | null>(null);
 
     const loadMeta = useCallback(async () => {
-        try {
-            const [s, c, st] = await Promise.all([
-                supplierService.getAll({ no_pagination: 'true' }),
-                categoryService.getAll({ no_pagination: 'true' }),
-                inventoryService.getInventory({ no_pagination: 'true' })
-            ]);
-            setSuppliers(Array.isArray(s) ? s : (s as any).results || []);
-            setCategories(Array.isArray(c) ? c : (c as any).results || []);
-            setStocks(st || []);
-        } catch { console.error('Meta sync failure'); }
-        finally { setLoading(false); }
+        setIsSuperAdmin(authService.isSuperAdmin());
+        // Each lookup is independent — one failing endpoint (e.g. a 500 on
+        // categories) must NOT blank out the others (suppliers, stock, branches).
+        const [s, c, st, wh] = await Promise.all([
+            supplierService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
+            categoryService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
+            inventoryService.getInventory({ no_pagination: 'true' }).catch(() => [] as any[]),
+            inventoryService.getWarehouses().catch(() => [] as any[]),
+        ]);
+        setSuppliers(Array.isArray(s) ? s : (s as any).results || []);
+        setCategories(Array.isArray(c) ? c : (c as any).results || []);
+        setStocks(st || []);
+        setWarehouses(Array.isArray(wh) ? wh : (wh as any)?.results || []);
+        setLoading(false);
     }, []);
 
     useEffect(() => { loadMeta(); }, [loadMeta]);
@@ -152,12 +186,39 @@ function ReportsEngineInner() {
         ? (filters.subView ? (VIEW_FIELDS[filters.subView] || []) : [])
         : (filters.view ? (VIEW_FIELDS[filters.view] || []) : []);
 
+    // Does a row belong to the chosen branch? (Super-Admin scope; rows with no
+    // branch info — products/customers — always pass so those reports still work.)
+    const inSelectedBranch = (r: any): boolean => {
+        if (!(isSuperAdmin && filters.branch && filters.branch !== 'all')) return true;
+        const bid = String(filters.branch);
+        const bname = (warehouses.find((w: any) => String(w.id) === bid)?.name || '').toLowerCase();
+        const raw = r.warehouse;
+        const rwId = raw && typeof raw === 'object' ? raw.id : (raw ?? r.warehouse_id);
+        const rwName = String(r.warehouse_name || '').toLowerCase();
+        const hasBranch = (rwId !== undefined && rwId !== null && rwId !== '') || !!rwName;
+        if (!hasBranch) return true;
+        return String(rwId ?? '') === bid || (!!bname && rwName === bname);
+    };
+
+    // Is a row within the selected date range?
+    const inDateRange = (r: any): boolean => {
+        const from = filters.dateFrom ? new Date(filters.dateFrom + 'T00:00:00').getTime() : -Infinity;
+        const to = filters.dateTo ? new Date(filters.dateTo + 'T23:59:59').getTime() : Infinity;
+        const d = rowDateVal(r);
+        if (!d) return true;
+        const t = new Date(d).getTime();
+        return isNaN(t) ? true : (t >= from && t <= to);
+    };
+
     // Apply the selected filters on the client. The backend ignores several params
     // (e.g. date *ranges* on orders), so we narrow the fully-fetched dataset here to
     // guarantee every visible filter actually works.
     const applyClientFilters = (rows: any[]): any[] => {
         let out = Array.isArray(rows) ? [...rows] : [];
         const mode = isThreeLevel ? filters.subView : filters.view;
+
+        // Super-Admin branch scope (see inSelectedBranch).
+        out = out.filter(inSelectedBranch);
 
         if (activeFields.includes('dateRange') && (filters.dateFrom || filters.dateTo)) {
             const from = filters.dateFrom ? new Date(filters.dateFrom + 'T00:00:00').getTime() : -Infinity;
@@ -265,6 +326,59 @@ function ReportsEngineInner() {
             return;
         }
 
+        // Statements / Receivables / Payables open their own dedicated report page.
+        if (NAV_VIEWS[filters.view]) {
+            router.push(NAV_VIEWS[filters.view]);
+            return;
+        }
+
+        // Net Profit — a branch P&L summary (sales / purchases / returns), not a list.
+        if (filters.view === 'Net Profit') {
+            setGenerating(true);
+            setHasGenerated(true);
+            try {
+                const all = { no_pagination: 'true' };
+                const axiosClient = (await import('@/lib/axios')).default;
+                const [salesRes, purchaseRes, srRes, prRes] = await Promise.all([
+                    orderService.getAll(all),
+                    purchaseService.getAll(all),
+                    axiosClient.get('v1/sales/returns/', { params: all }).then(r => r.data).catch(() => []),
+                    axiosClient.get('v1/sales/purchase-returns/', { params: all }).then(r => r.data).catch(() => []),
+                ]);
+                const arr = (x: any) => Array.isArray(x) ? x : (x?.results || []);
+                const scoped = (rows: any[]) => rows.filter(r => inSelectedBranch(r) && inDateRange(r));
+                const sum = (rows: any[]) => scoped(rows).reduce((s, r) => s + rowAmount(r), 0);
+
+                const totalSales = sum(arr(salesRes));
+                const totalPurchases = sum(arr(purchaseRes));
+                const salesReturns = sum(arr(srRes));
+                const purchaseReturns = sum(arr(prRes));
+                const netSales = totalSales - salesReturns;
+                const netPurchases = totalPurchases - purchaseReturns;
+                const netProfit = netSales - netPurchases;
+
+                setReportResult([]);
+                setProfitSummary({
+                    totalSales, totalPurchases, salesReturns, purchaseReturns,
+                    netSales, netPurchases, netProfit,
+                    counts: {
+                        sales: scoped(arr(salesRes)).length,
+                        purchases: scoped(arr(purchaseRes)).length,
+                        salesReturns: scoped(arr(srRes)).length,
+                        purchaseReturns: scoped(arr(prRes)).length,
+                    },
+                });
+                toast.success('Net profit calculated');
+            } catch (e) {
+                console.error('Net profit failed:', e);
+                toast.error('Could not calculate net profit.');
+            } finally {
+                setGenerating(false);
+            }
+            return;
+        }
+
+        setProfitSummary(null);
         setGenerating(true);
         setHasGenerated(true);
         try {
@@ -323,7 +437,7 @@ function ReportsEngineInner() {
 
     const resetFilters = () => {
         setFilters({
-            category: '', view: '', subView: '',
+            branch: '', category: '', view: '', subView: '',
             dateFrom: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
             dateTo: new Date().toISOString().split('T')[0],
             productSearch: '', supplierId: '', customerId: '', categoryId: '',
@@ -331,6 +445,7 @@ function ReportsEngineInner() {
             invoiceNo: '', salesmanSearch: '', reasonSearch: '', accountSearch: '',
         });
         setReportResult([]);
+        setProfitSummary(null);
         setHasGenerated(false);
     };
 
@@ -352,10 +467,22 @@ function ReportsEngineInner() {
                         breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Reports' }]}
                         actions={
                             <>
-                                <Button variant="outline" size="sm" onClick={() => exportToCSV(reportResult, 'Report.csv')} disabled={reportResult.length === 0}>
+                                <Button variant="outline" size="sm"
+                                    onClick={() => profitSummary
+                                        ? exportToCSV([
+                                            { metric: 'Total Sales', amount: profitSummary.totalSales },
+                                            { metric: 'Sales Returns', amount: profitSummary.salesReturns },
+                                            { metric: 'Net Sales', amount: profitSummary.netSales },
+                                            { metric: 'Total Purchases', amount: profitSummary.totalPurchases },
+                                            { metric: 'Purchase Returns', amount: profitSummary.purchaseReturns },
+                                            { metric: 'Net Purchases', amount: profitSummary.netPurchases },
+                                            { metric: 'Net Profit', amount: profitSummary.netProfit },
+                                        ], 'net-profit.csv')
+                                        : exportToCSV(reportResult, 'Report.csv')}
+                                    disabled={reportResult.length === 0 && !profitSummary}>
                                     <FileSpreadsheet size={14} /> Export CSV
                                 </Button>
-                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0}>
+                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0 && !profitSummary}>
                                     <Printer size={14} /> Print Report
                                 </Button>
                             </>
@@ -363,40 +490,36 @@ function ReportsEngineInner() {
                     />
                 </div>
 
-                {/* Quick analytics reports (real grouped data) */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6 no-print">
-                    {[
-                        { href: '/admin/reports/by-area', label: 'Area-wise', icon: Building2, tint: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-                        { href: '/admin/reports/by-user', label: 'Staff-wise', icon: User, tint: 'text-violet-600 bg-violet-50 border-violet-100' },
-                        { href: '/admin/reports/sales', label: 'Statements', icon: FileStack, tint: 'text-sky-600 bg-sky-50 border-sky-100' },
-                        { href: '/admin/reports/receivables', label: 'Receivables', icon: TrendingUp, tint: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-                        { href: '/admin/reports/payables', label: 'Payables', icon: CreditCard, tint: 'text-rose-600 bg-rose-50 border-rose-100' },
-                        { href: '/admin/reports/sales-returns', label: 'Returns', icon: RotateCcw, tint: 'text-amber-600 bg-amber-50 border-amber-100' },
-                    ].map(c => (
-                        <button
-                            key={c.href}
-                            onClick={() => router.push(c.href)}
-                            className="group flex flex-col items-start gap-2 rounded-xl border border-slate-200/70 bg-white p-3.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
-                        >
-                            <span className={`flex items-center justify-center w-9 h-9 rounded-lg border ${c.tint}`}>
-                                <c.icon size={17} />
-                            </span>
-                            <span className="text-[12.5px] font-bold text-slate-800 group-hover:text-indigo-600">{c.label}</span>
-                        </button>
-                    ))}
-                </div>
-
                 <Card className="p-6 mb-6 no-print">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-end">
+
+                        {/* Super Admin: branch scope comes first — the report follows it. */}
+                        {isSuperAdmin && (
+                            <div className="space-y-1.5">
+                                <label className="text-[13px] font-bold text-slate-900">Select Branch</label>
+                                <select
+                                    value={filters.branch}
+                                    onChange={e => { setFilters({ ...filters, branch: e.target.value }); setHasGenerated(false); setProfitSummary(null); }}
+                                    className={inputCls}
+                                >
+                                    <option value="">Select Branch...</option>
+                                    <option value="all">All Branches</option>
+                                    {warehouses.map((w: any) => (
+                                        <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="space-y-1.5">
                             <label className="text-[13px] font-bold text-slate-900">1. Select Category</label>
                             <select
                                 value={filters.category}
-                                onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); }}
-                                className={inputCls}
+                                onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
+                                disabled={isSuperAdmin && !filters.branch}
+                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"}
                             >
-                                <option value="">Choose Category...</option>
+                                <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
                                 {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                             </select>
                         </div>
@@ -405,7 +528,7 @@ function ReportsEngineInner() {
                             <label className="text-[13px] font-bold text-slate-900">2. Select View</label>
                             <select
                                 value={filters.view}
-                                onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); }}
+                                onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
                                 disabled={!filters.category}
                                 className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400"}
                             >
@@ -524,7 +647,7 @@ function ReportsEngineInner() {
                                 className="flex-1"
                             >
                                 <BarChart3 className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-                                Generate Report
+                                {NAV_VIEWS[filters.view] ? 'Open Report' : 'Generate Report'}
                             </Button>
                             <Button
                                 variant="outline"
@@ -539,7 +662,51 @@ function ReportsEngineInner() {
                     </div>
                 </Card>
 
-                {reportResult.length > 0 ? (
+                {profitSummary ? (
+                    <div className="animate-in fade-in duration-500">
+                        <Card className="overflow-hidden">
+                            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100"><DollarSign size={20} /></span>
+                                <div>
+                                    <h3 className="text-[15px] font-bold text-slate-900">Net Profit</h3>
+                                    <p className="text-[12px] text-slate-500">
+                                        {filters.branch && filters.branch !== 'all'
+                                            ? (warehouses.find((w: any) => String(w.id) === String(filters.branch))?.name || 'Branch')
+                                            : 'All Branches'} · {filters.dateFrom} → {filters.dateTo}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="px-4 py-2.5 bg-emerald-50/60 border-b border-slate-100 text-[12px] font-bold text-emerald-700 uppercase tracking-wider">Sales</div>
+                                        <div className="divide-y divide-slate-100">
+                                            <ProfitRow label="Total Sales" value={profitSummary.totalSales} sub={`${profitSummary.counts.sales} order(s)`} />
+                                            <ProfitRow label="Sales Returns" value={profitSummary.salesReturns} sub={`${profitSummary.counts.salesReturns} return(s)`} neg />
+                                            <ProfitRow label="Net Sales" value={profitSummary.netSales} bold />
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-slate-100 text-[12px] font-bold text-amber-700 uppercase tracking-wider">Purchases</div>
+                                        <div className="divide-y divide-slate-100">
+                                            <ProfitRow label="Total Purchases" value={profitSummary.totalPurchases} sub={`${profitSummary.counts.purchases} order(s)`} />
+                                            <ProfitRow label="Purchase Returns" value={profitSummary.purchaseReturns} sub={`${profitSummary.counts.purchaseReturns} return(s)`} neg />
+                                            <ProfitRow label="Net Purchases" value={profitSummary.netPurchases} bold />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 ${profitSummary.netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                                    <div>
+                                        <p className="text-[12px] font-bold uppercase tracking-wider text-slate-600">Net Profit</p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">Net Sales − Net Purchases</p>
+                                    </div>
+                                    <p className={`text-[26px] font-black tabular-nums ${profitSummary.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(profitSummary.netProfit)}</p>
+                                </div>
+                            </div>
+                        </Card>
+                        <style jsx global>{`@media print { .no-print { display: none !important; } @page { margin: 1.5cm; } }`}</style>
+                    </div>
+                ) : reportResult.length > 0 ? (
                     <div className="animate-in fade-in duration-700">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2 mb-4 no-print">
                              <div className="flex items-center gap-2">

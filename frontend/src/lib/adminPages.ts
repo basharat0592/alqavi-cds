@@ -9,6 +9,115 @@ export interface AdminPage {
     keywords?: string[];
 }
 
+/**
+ * Operational "floor" pages a Super Admin never works in day-to-day (they oversee
+ * branches; branch admins run the counter). These are hidden from the Super Admin's
+ * sidebar and dashboard directory. Branch admins still see them normally.
+ * Add/remove a single href here to change what's hidden.
+ */
+export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
+    '/admin/sale',              // Point of Sale (POS)
+    '/admin/sale-returns',      // Sale Returns
+    '/admin/purchases/add',     // New Purchase Order
+    '/admin/purchases/returns', // Purchase Returns
+    '/admin/tracking',          // Order Tracking
+    '/admin/delivery',          // Delivery Persons
+];
+
+/**
+ * Every admin page, grouped — the single source of truth for the sidebar-visibility
+ * panel (System Settings → Sidebar Pages). Toggling a page off there hides it from
+ * the sidebar AND the dashboard directory (both read `sidebar_visibility`).
+ */
+export const ADMIN_PAGE_GROUPS: { group: string; items: { n: string; h: string }[] }[] = [
+    {
+        group: 'Main',
+        items: [
+            { n: 'Dashboard', h: '/admin/dashboard' },
+            { n: 'Point of Sale (POS)', h: '/admin/sale' },
+            { n: 'Sales History', h: '/admin/sales' },
+            { n: 'Invoices', h: '/admin/invoices' },
+            { n: 'Sale Returns', h: '/admin/sale-returns' },
+            { n: 'Order List', h: '/admin/orders' },
+            { n: 'Order Tracking', h: '/admin/tracking' },
+            { n: 'Delivery Persons', h: '/admin/delivery' },
+            { n: 'Recent Activity', h: '/admin/sales/recent' },
+        ],
+    },
+    {
+        group: 'Inventory & Stock',
+        items: [
+            { n: 'Product List', h: '/admin/products' },
+            { n: 'Add Product', h: '/admin/products/add' },
+            { n: 'Product Categories', h: '/admin/products/categories' },
+            { n: 'Product Sections', h: '/admin/products/sections' },
+            { n: 'Current Stocks', h: '/admin/inventory/list' },
+            { n: 'Warehouses', h: '/admin/inventory/warehouses' },
+        ],
+    },
+    {
+        group: 'Procurement',
+        items: [
+            { n: 'New Purchase Order', h: '/admin/purchases/add' },
+            { n: 'Purchase History', h: '/admin/purchases' },
+            { n: 'Purchase Returns', h: '/admin/purchases/returns' },
+            { n: 'Supplier Registry', h: '/admin/company/suppliers' },
+            { n: 'Supplier Catalog', h: '/admin/supplier-products' },
+        ],
+    },
+    {
+        group: 'Customers & Company',
+        items: [
+            { n: 'Customer Registry', h: '/admin/company/customers' },
+            { n: 'Company Categories', h: '/admin/company/categories' },
+            { n: 'Areas / Territories', h: '/admin/company/areas' },
+        ],
+    },
+    {
+        group: 'Finance',
+        items: [
+            { n: 'Income', h: '/admin/income' },
+            { n: 'Expense', h: '/admin/expense' },
+            { n: 'Global Payments', h: '/admin/payments' },
+            { n: 'Receivables', h: '/admin/reports/receivables' },
+            { n: 'Payables', h: '/admin/reports/payables' },
+        ],
+    },
+    {
+        group: 'Reports',
+        items: [
+            { n: 'Reports Center', h: '/admin/reports' },
+            { n: 'Accounting & Finance', h: '/admin/reports/accounting' },
+            { n: 'Sales Reports', h: '/admin/reports/sales' },
+            { n: 'Purchase Reports', h: '/admin/reports/purchases' },
+            { n: 'Inventory Reports', h: '/admin/reports/inventory' },
+            { n: 'Customer Reports', h: '/admin/reports/customers' },
+            { n: 'Returns Reports', h: '/admin/reports/sales-returns' },
+            { n: 'Area-wise Report', h: '/admin/reports/by-area' },
+            { n: 'My Performance', h: '/admin/reports/by-user' },
+            { n: 'Data Hub', h: '/admin/reports/data-hub' },
+        ],
+    },
+    {
+        group: 'Administration',
+        items: [
+            { n: 'Branches & Admins', h: '/admin/branches' },
+            { n: 'Internal Users', h: '/admin/users' },
+            { n: 'Staff Roles', h: '/admin/users/roles' },
+            { n: 'Permissions', h: '/admin/users/permissions' },
+        ],
+    },
+    {
+        group: 'System & CMS',
+        items: [
+            { n: 'Website CMS', h: '/admin/website-settings' },
+            { n: 'System Settings', h: '/admin/settings' },
+            { n: 'System Alerts', h: '/admin/alerts' },
+            { n: 'Notifications', h: '/admin/notifications' },
+        ],
+    },
+];
+
 export const ADMIN_PAGES: AdminPage[] = [
     // ── Core operations ──
     { name: 'Point of Sale (POS)', href: '/admin/sale', keywords: ['counter', 'cashier', 'barcode', 'checkout', 'pos', 'sales'] },
@@ -23,6 +132,8 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Add Product', href: '/admin/products/add', keywords: ['create', 'new item', 'upload', 'add product'] },
     { name: 'Current Stocks', href: '/admin/inventory/list', keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory'] },
     { name: 'Warehouses', href: '/admin/inventory/warehouses', keywords: ['storage', 'depots', 'distribution', 'warehouse'] },
+    { name: 'Branches & Admins', href: '/admin/branches', keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch', 'who manages'] },
+    { name: 'My Performance / Staff Comparison', href: '/admin/reports/by-user', keywords: ['my performance', 'staff comparison', 'staff-wise', 'per admin', 'by user', 'staff report', 'sales by staff'] },
     { name: 'Order Tracking', href: '/admin/tracking', keywords: ['delivery', 'courier', 'dispatch', 'tracking'] },
     { name: 'Supplier Registry', href: '/admin/company/suppliers', keywords: ['vendors', 'manufacturers', 'contacts', 'supplier'] },
     { name: 'Customer Registry', href: '/admin/company/customers', keywords: ['clients', 'profiles', 'ledger', 'customer'] },

@@ -260,7 +260,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     // Settlement mode: full = paid in full now; partial = pay some now, rest later;
     // credit = nothing now, customer owes the balance by a due date.
-    const [payMode, setPayMode] = useState<'full' | 'partial' | 'credit'>('full');
+    const [payMode, setPayMode] = useState<'full' | 'partial'>('full');
     const [amountPaidNow, setAmountPaidNow] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
@@ -436,7 +436,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 } catch (e) { console.error('installment record failed', e); }
             }
             setSuccessOrder(data);
-            toast.success(payMode === 'credit' ? 'Sale saved on credit!' : 'Sale finalized!');
+            toast.success(payMode === 'partial' ? 'Sale saved (partial payment)!' : 'Sale finalized!');
         } catch (err: any) { 
             console.error(err);
             const data = err.response?.data;
@@ -677,11 +677,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         </div>
                                     </div>
 
-                                    {/* Settlement: Full / Partial / Credit */}
+                                    {/* Settlement: Full / Partial (shown for the selected payment mode) */}
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Settlement</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {([['full', 'Full'], ['partial', 'Partial'], ['credit', 'Credit']] as const).map(([m, label]) => (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {([['full', 'Full'], ['partial', 'Partial']] as const).map(([m, label]) => (
                                                 <button
                                                     key={m}
                                                     onClick={() => setPayMode(m)}

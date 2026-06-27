@@ -46,6 +46,7 @@ export const userService = {
         if (userData.page_permissions !== undefined) payload.page_permissions = userData.page_permissions;
         if (userData.page_edit_permissions !== undefined) payload.page_edit_permissions = userData.page_edit_permissions;
         if (userData.areas !== undefined) payload.areas = userData.areas;
+        if ((userData as any).warehouses !== undefined) payload.warehouses = (userData as any).warehouses;
         const { data } = await api.post('v1/users/create/', payload);
         return data.user || data;
     },
