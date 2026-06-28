@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Plus, Search, Mail, Phone, MapPin,
     Trash2, X, CheckCircle,
@@ -33,6 +34,7 @@ const Field = ({ label, required = false, children }: { label: string; required?
 const inputCls = ui.inputBase;
 
 export default function CustomersPage() {
+    const router = useRouter();
     const [customers, setCustomers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -200,7 +202,7 @@ export default function CustomersPage() {
                     title="Customers"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Customers' }]}
                     actions={
-                        <Button onClick={openAdd} className="whitespace-nowrap">
+                        <Button onClick={() => router.push('/admin/company/customers/add')} className="whitespace-nowrap">
                             <Plus size={16} /> Add New Customer
                         </Button>
                     }

@@ -15,6 +15,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { getImageUrl } from "@/lib/utils";
 import { authService, User as AuthUser } from '@/lib/auth';
 import { productService } from '@/lib/api';
+import { areaService } from '@/services/area.service';
 import Logo from "@/components/ui/Logo";
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,11 +39,16 @@ export default function Navbar({ settings }: { settings?: any }) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [announcementVisible, setAnnouncementVisible] = useState(true);
+    // "Deliver to" city picker — cities come from the dashboard's Areas.
+    const [cities, setCities] = useState<string[]>([]);
+    const [selectedCity, setSelectedCity] = useState('');
+    const [cityOpen, setCityOpen] = useState(false);
 
     const router = useRouter();
     const pathname = usePathname();
     const { cartCount, openCart } = useCart();
     const searchRef = useRef<HTMLDivElement>(null);
+    const cityRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
     const mobileUserRef = useRef<HTMLDivElement>(null);
     const navScrollRef = useRef<HTMLDivElement>(null);
@@ -72,7 +78,35 @@ export default function Navbar({ settings }: { settings?: any }) {
         }).catch(() => { });
 
         if (settings) setSiteSettings(settings);
+
+        // Load the delivery cities from the dashboard's Areas (public read).
+        areaService.getActive().then(list => {
+            const names = (list || []).map((a: any) => a.name).filter(Boolean);
+            setCities(names);
+            setSelectedCity(prev => {
+                if (prev) return prev;
+                const saved = (typeof window !== 'undefined' && localStorage.getItem('deliver_to_city')) || '';
+                if (saved && names.includes(saved)) return saved;
+                return names[0] || '';
+            });
+        }).catch(() => setCities([]));
     }, [settings]);
+
+    // Close the city dropdown on outside click.
+    useEffect(() => {
+        if (!cityOpen) return;
+        const onDown = (e: MouseEvent) => {
+            if (cityRef.current && !cityRef.current.contains(e.target as Node)) setCityOpen(false);
+        };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [cityOpen]);
+
+    const selectCity = (c: string) => {
+        setSelectedCity(c);
+        setCityOpen(false);
+        try { localStorage.setItem('deliver_to_city', c); } catch { }
+    };
 
     useEffect(() => {
         if (siteSettings?.show_announcement) {
@@ -220,13 +254,29 @@ export default function Navbar({ settings }: { settings?: any }) {
                         </Link>
                     </div>
 
-                    {/* Deliver To (visible on large screens, hidden on smaller screens) */}
-                    <div className="hidden lg:flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight">
+                    {/* Deliver To — city picker driven by the dashboard's Areas */}
+                    <div ref={cityRef} className="relative hidden lg:flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight hover:bg-white/5"
+                        onClick={() => setCityOpen(o => !o)}>
                         <span className="text-[12px] text-slate-300 ml-4">Deliver to</span>
                         <div className="flex items-center gap-1">
                             <MapPin size={15} className="text-white" />
-                            <span className="text-sm font-bold uppercase tracking-tighter">Gilgit-Baltistan</span>
+                            <span className="text-sm font-bold uppercase tracking-tighter">{selectedCity || 'Select city'}</span>
+                            <ChevronDown size={14} className={`text-white transition-transform ${cityOpen ? 'rotate-180' : ''}`} />
                         </div>
+                        {cityOpen && (
+                            <div className="absolute top-full left-0 mt-1 z-[60] bg-white text-slate-800 rounded-lg shadow-xl border border-slate-200 py-1 min-w-[200px] max-h-72 overflow-auto">
+                                <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Choose your city</div>
+                                {cities.length === 0 ? (
+                                    <div className="px-4 py-3 text-[12px] text-slate-400">No cities available yet.</div>
+                                ) : cities.map(c => (
+                                    <button key={c} type="button" onClick={(e) => { e.stopPropagation(); selectCity(c); }}
+                                        className={`flex w-full items-center gap-2 text-left px-4 py-2 text-[13px] hover:bg-slate-50 transition-colors ${c === selectedCity ? 'font-bold text-indigo-600' : 'text-slate-700'}`}>
+                                        <MapPin size={13} className={c === selectedCity ? 'text-indigo-600' : 'text-slate-400'} />
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Mobile right icons (User & Cart) */}

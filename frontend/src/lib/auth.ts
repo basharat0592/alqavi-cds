@@ -159,7 +159,7 @@ export const authService = {
         const u = authService.getUser() as any;
         if (!u) return false;
         if (u.is_super_admin === true || u.is_superuser === true) return true;
-        const role = String(u.role || u.role_name || '').toLowerCase();
+        const role = String((typeof u.role === 'string' ? u.role : '') || u.role_name || '').toLowerCase();
         return role === 'super admin' || role === 'superadmin';
     },
 

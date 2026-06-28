@@ -13,7 +13,9 @@ class AreaSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'code', 'description', 'parent', 'parent_name',
             'is_active', 'created_at', 'customer_count', 'manager_count',
+            'tenant',
         ]
+        read_only_fields = ['tenant']
 
     def get_customer_count(self, obj):
         return obj.customers.count()

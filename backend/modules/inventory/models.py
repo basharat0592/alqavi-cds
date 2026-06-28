@@ -19,6 +19,11 @@ class Warehouse(BaseModel):
         null=True, blank=True, related_name='warehouses'
     )
     is_active = models.BooleanField(default=True)
+    # Owning Admin (tenant) — each Admin has their own warehouses. NULL = legacy/shared.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_warehouses'
+    )
 
     class Meta:
         db_table = 'warehouses'
@@ -62,6 +67,11 @@ class Stock(BaseModel):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='created_stocks'
     )
+    # Owning Admin (tenant) — per-Admin stock isolation.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_stocks'
+    )
 
     class Meta:
         db_table = 'stocks'
@@ -91,6 +101,11 @@ class StockMovement(BaseModel):
     to_warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, related_name='movements_in')
     date = models.DateField()
     description = models.TextField(null=True, blank=True)
+    # Owning Admin (tenant) — per-Admin movement isolation.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_stock_movements'
+    )
 
     class Meta:
         db_table = 'stock_movements'

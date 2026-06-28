@@ -2,6 +2,7 @@
 Users module models.
 """
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from core.models import BaseModel
 from core.mixins import StatusMixin
@@ -61,6 +62,12 @@ class Role(models.Model):
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Owning Admin (tenant) — NULL = global/system role (Admin, Super Admin,
+    # Supplier, …) shared by all tenants; set = a tenant's own custom role.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_roles'
+    )
     
     class Meta:
         ordering = ['name']
@@ -126,6 +133,16 @@ class User(AbstractUser, StatusMixin):
     # isolation: a non-super-admin only ever sees data for these warehouses.
     # Empty + not super admin == sees nothing (fail closed).
     warehouses = models.ManyToManyField('inventory.Warehouse', blank=True, related_name='admins')
+    # The owning Admin (tenant) — the PRIMARY data-isolation axis. A staff
+    # sub-user's tenant points at the Admin they belong to (so they share that
+    # Admin's workspace). An Admin AND the Super Admin both leave this NULL: an
+    # Admin resolves to their OWN id and the Super Admin is the cross-tenant
+    # platform operator (see core.scoping.tenant_id_for). PROTECT stops deleting
+    # an Admin who still owns staff.
+    tenant = models.ForeignKey(
+        'self', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_members'
+    )
 
     class Meta:
         ordering = ['-date_joined']
@@ -182,7 +199,13 @@ class UserActivityLog(models.Model):
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    
+    # Owning Admin (tenant) — stamped from the actor's tenant; scopes the activity
+    # feed per-Admin. NULL for guest/CMS/system events.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tenant_activity_logs'
+    )
+
     class Meta:
         ordering = ['-timestamp']
         indexes = [

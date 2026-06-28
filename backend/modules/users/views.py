@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.contrib.auth.hashers import check_password
 from .models import User, Role, Permission, UserActivityLog, UserSettings
+from core.scoping import tenant_id_for, scope_to_tenant, is_platform_operator
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import (
     UserListSerializer, UserDetailSerializer, UserCreateSerializer, UserUpdateSerializer,
@@ -78,7 +79,7 @@ def get_profile(request):
 # ==================== USER MANAGEMENT ====================
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_users(request):
     """List users, with support for real-time classification (Walk-in vs Registered)."""
     from modules.customer.models import Customer
@@ -175,18 +176,41 @@ def list_users(request):
 
     # 3. Standard Internal User List
     users = User.objects.exclude(role__name__iexact='customer').exclude(role__name__iexact='supplier')
+
+    # Tenant isolation:
+    #   • Platform operator (Super Admin) → manages the tenant-OWNER Admins only
+    #     (tenant_id NULL, or self-owned). Staff that an Admin created belong to
+    #     that Admin (tenant_id = that Admin's id) and stay hidden from the super
+    #     admin and every other admin — only their creating Admin sees them.
+    #   • A tenant Admin → sees themselves + their own staff.
+    from django.db.models import F
+    tid = tenant_id_for(request.user)
+    if is_platform_operator(request.user):
+        users = users.filter(Q(tenant_id__isnull=True) | Q(tenant_id=F('id')))
+    elif tid is not None:
+        users = users.filter(Q(tenant_id=tid) | Q(id=request.user.id))
+
     if search:
         users = users.filter(Q(username__icontains=search) | Q(email__icontains=search))
-    
+
     status_filter = request.query_params.get('status')
     if status_filter: users = users.filter(status=status_filter)
 
     serializer = UserListSerializer(users, many=True)
-    return Response({'results': serializer.data, 'count': users.count()})
+    data = serializer.data
+    # The platform operator (Super Admin) may see every internal user's password —
+    # they own the workspace. Everyone else only sees their own row's password.
+    self_id = str(getattr(request.user, 'id', ''))
+    reveal_all = is_platform_operator(request.user)
+    if not reveal_all:
+        for row in data:
+            if str(row.get('id')) != self_id:
+                row.pop('plain_password', None)
+    return Response({'results': data, 'count': users.count()})
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def user_detail(request, user_id):
     """Retrieve user details with role and permissions."""
     user, err = get_or_404_response(User, id=user_id)
@@ -196,7 +220,7 @@ def user_detail(request, user_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_user(request):
     """Create a new user, with dedicated logic for Suppliers."""
     from modules.users.models import Role
@@ -204,7 +228,16 @@ def create_user(request):
     role = None
     if role_id:
         role = Role.objects.filter(id=role_id).first()
-    
+
+    # Only the platform operator (Super Admin) may mint another Super Admin —
+    # that role is cross-tenant and would bypass per-admin isolation. A branch
+    # admin creating their own staff can assign any other role.
+    if role and role.name.strip().lower() in {'super admin', 'superadmin'}:
+        from core.scoping import is_platform_operator
+        if not is_platform_operator(request.user):
+            return Response({'role': ['You are not allowed to assign the Super Admin role.']},
+                            status=status.HTTP_400_BAD_REQUEST)
+
     # Check if this is meant to be a supplier
     if role and role.name.lower() == 'supplier':
         from django.contrib.auth.hashers import make_password
@@ -235,7 +268,8 @@ def create_user(request):
             UserActivityLog.objects.create(
                 user=request.user,
                 action='create',
-                description=f'Created supplier: {supplier.email}'
+                description=f'Created supplier: {supplier.email}',
+                tenant_id=tenant_id_for(request.user)
             )
             
         return Response({
@@ -254,7 +288,8 @@ def create_user(request):
             UserActivityLog.objects.create(
                 user=request.user,
                 action='create',
-                description=f'Created user: {user.username}'
+                description=f'Created user: {user.username}',
+                tenant_id=tenant_id_for(request.user)
             )
         return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -325,7 +360,7 @@ def update_user(request, user_id):
 
 
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def delete_user(request, user_id):
     """Delete a user."""
     user, err = get_or_404_response(User, id=user_id)
@@ -341,7 +376,8 @@ def delete_user(request, user_id):
         UserActivityLog.objects.create(
             user=request.user,
             action='delete',
-            description=f'Deleted user: {username}'
+            description=f'Deleted user: {username}',
+            tenant_id=tenant_id_for(request.user)
         )
     return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -349,7 +385,7 @@ def delete_user(request, user_id):
 # ==================== ROLE ASSIGNMENT ====================
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def assign_role(request, user_id):
     """Assign a role to a user."""
     user, err = get_or_404_response(User, id=user_id)
@@ -366,7 +402,8 @@ def assign_role(request, user_id):
         UserActivityLog.objects.create(
             user=request.user,
             action='role_assign',
-            description=f'Assigned role {role.name} to user {user.username}'
+            description=f'Assigned role {role.name} to user {user.username}',
+            tenant_id=tenant_id_for(request.user)
         )
     return Response(UserDetailSerializer(user).data)
 
@@ -386,27 +423,28 @@ def _set_user_status(request, user_id, is_active, status_value, log_msg):
         UserActivityLog.objects.create(
             user=request.user,
             action='status_change',
-            description=log_msg.format(username=user.username)
+            description=log_msg.format(username=user.username),
+            tenant_id=tenant_id_for(request.user)
         )
     return Response(UserDetailSerializer(user).data)
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def activate_user(request, user_id):
     """Activate a user account."""
     return _set_user_status(request, user_id, True, 'active', 'Activated user: {username}')
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def deactivate_user(request, user_id):
     """Deactivate a user account."""
     return _set_user_status(request, user_id, False, 'inactive', 'Deactivated user: {username}')
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def suspend_user(request, user_id):
     """Suspend a user account."""
     return _set_user_status(request, user_id, False, 'suspended', 'Suspended user: {username}')
@@ -475,7 +513,8 @@ def admin_reset_password(request, user_id):
     UserActivityLog.objects.create(
         user=request.user if request.user.is_authenticated else None,
         action='password_reset',
-        description=f'Admin reset password for user: {user.username}'
+        description=f'Admin reset password for user: {user.username}',
+        tenant_id=tenant_id_for(request.user) if request.user.is_authenticated else None
     )
     return Response({'message': 'Password reset successfully'})
 
@@ -509,7 +548,15 @@ def user_activity_log(request, user_id):
         if not curr_user.is_staff:
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         
-        target_user = User.objects.filter(id=user_id).first()
+        # Tenant isolation: a tenant admin/staff may only inspect users inside
+        # their own tenant; the platform operator may inspect anyone.
+        from core.scoping import tenant_id_for, is_platform_operator
+        from django.db.models import Q
+        target_qs = User.objects.filter(id=user_id)
+        if not is_platform_operator(curr_user):
+            tid = tenant_id_for(curr_user)
+            target_qs = target_qs.filter(Q(tenant_id=tid) | Q(id=getattr(curr_user, 'id', None)))
+        target_user = target_qs.first()
         if not target_user:
             return Response({'error': 'User not found'}, status=404)
 
@@ -541,17 +588,14 @@ def user_activity_log(request, user_id):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def all_activity_logs(request):
     """Get all activity logs (admin only)."""
-    from core.scoping import user_warehouse_ids
     logs = UserActivityLog.objects.all()
 
-    # Branch admins only see activity by staff who share at least one of their
-    # branch(es); super admins / unscoped see everything.
-    wh_ids = user_warehouse_ids(getattr(request, 'user', None))
-    if wh_ids is not None:
-        logs = logs.filter(user__warehouses__id__in=wh_ids).distinct() if wh_ids else logs.none()
+    # Tenant isolation: an Admin sees only their own tenant's logs; the platform
+    # operator (super admin / superuser) sees everything.
+    logs = scope_to_tenant(request.user, logs, 'tenant')
 
     user_id = request.query_params.get('user_id')
     if user_id:
@@ -587,30 +631,43 @@ def mark_activity_read(request, log_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_all_activities_read(request):
-    """Mark all unread activity logs for the current user as read."""
-    UserActivityLog.objects.filter(is_read=False).update(is_read=True)
+    """Mark all unread activity logs for the current tenant as read."""
+    logs = scope_to_tenant(request.user, UserActivityLog.objects.filter(is_read=False), 'tenant')
+    logs.update(is_read=True)
     return Response({'message': 'All logs marked as read'})
 
 
 # ==================== ROLE MANAGEMENT ====================
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_roles(request):
     """List all roles."""
+    from django.db.models import Q
     roles = Role.objects.all()
+    # Show GLOBAL roles (tenant NULL) + the caller's own-tenant roles; the
+    # platform operator sees every role.
+    tid = tenant_id_for(request.user)
+    if tid is not None and not is_platform_operator(request.user):
+        roles = roles.filter(Q(tenant__isnull=True) | Q(tenant_id=tid))
     serializer = RoleSerializer(roles, many=True)
     return Response({'results': serializer.data, 'count': roles.count()})
 
 
 @api_view(['GET', 'PATCH', 'DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def role_detail(request, role_id):
     """Get, update, or delete role details."""
     role, err = get_or_404_response(Role, id=role_id)
     if err:
         return err
-        
+
+    # Tenant isolation: a tenant user may only touch global roles or their own.
+    tid = tenant_id_for(request.user)
+    if tid is not None and not is_platform_operator(request.user):
+        if role.tenant_id not in (None, tid):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
     if request.method == 'GET':
         return Response(RoleSerializer(role).data)
         
@@ -629,12 +686,14 @@ def role_detail(request, role_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_role(request):
     """Create a new role."""
     serializer = RoleSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        # Stamp tenant: an Admin's role belongs to their tenant; the platform
+        # operator creates GLOBAL roles (tenant NULL).
+        serializer.save(tenant_id=tenant_id_for(request.user))
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -775,11 +834,13 @@ def signup_admin(request):
     if serializer.is_valid():
         user = serializer.save()
         
-        # Log Initial Activity
+        # Log Initial Activity. The new Admin owns their own tenant (tenant NULL
+        # on the row -> tenant_id_for resolves to their own pk).
         UserActivityLog.objects.create(
             user=user,
             action='create',
-            description=f'Admin account registered: {user.email}'
+            description=f'Admin account registered: {user.email}',
+            tenant_id=tenant_id_for(user)
         )
         
         return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)

@@ -70,12 +70,13 @@ class SupplierViewSet(viewsets.ModelViewSet):
         from core.scoping import apply_report_scope
 
         supplier = self.get_object()
-        # Per-admin: a branch admin sees only the purchases for this supplier that
-        # THEY created; super admin sees all (with optional ?created_by / ?warehouse).
+        # The supplier itself is shared across all Admins, but each Admin's LEDGER
+        # with that supplier is their own tenant's purchases. Super admin sees all
+        # (with optional ?tenant / ?created_by / ?warehouse drill-down).
         pos = apply_report_scope(request,
                                  (PurchaseOrder.objects.filter(supplier=supplier)
                                   .exclude(status='CANCELLED').order_by('order_date', 'purchase_number')),
-                                 'warehouse', 'created_by')
+                                 'warehouse', 'created_by', tenant_field='tenant')
 
         entries = []
         total_billed = 0.0   # what we owe the supplier
@@ -111,7 +112,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
         total_refunds = 0.0
         for r in apply_report_scope(request,
                                     PurchaseReturn.objects.filter(supplier=supplier, status='ACCEPTED').order_by('created_at'),
-                                    'purchase_order__warehouse', 'purchase_order__created_by'):
+                                    'purchase_order__warehouse', 'purchase_order__created_by', tenant_field='tenant'):
             amt = float(r.total_refund_amount or 0)
             total_refunds += amt
             balance -= amt

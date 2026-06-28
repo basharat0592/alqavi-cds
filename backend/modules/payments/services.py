@@ -126,6 +126,16 @@ def parent_warehouse_id(source_type, source_id):
     return None
 
 
+def parent_tenant_id(source_type, source_id):
+    """Owning-Admin (tenant) id for a transaction, used to stamp its ledger rows
+    and installments so they stay tenant-scoped — authoritative even when the
+    acting user is None. Returns None when it can't be resolved."""
+    parent = _load_parent(source_type, source_id)
+    if parent is None:
+        return None
+    return getattr(parent, 'tenant_id', None)
+
+
 def _status_for(paid, total):
     paid = Decimal(str(paid or 0))
     total = Decimal(str(total or 0))
@@ -238,6 +248,8 @@ def record_installment(tp):
             'date': (tp.paid_at or timezone.now()).date(),
             'user': _real_user(tp.created_by),
             'warehouse_id': tp.warehouse_id or parent_warehouse_id(tp.source_type, tp.source_id),
+            'tenant_id': (getattr(parent, 'tenant_id', None) or tp.tenant_id
+                          or parent_tenant_id(tp.source_type, tp.source_id)),
         },
     )
     recompute_parent(tp.source_type, tp.source_id)
@@ -280,6 +292,7 @@ def record_sale(order):
             'date': (order.delivered_at or order.created_at or order.updated_at).date(),
             'warehouse_id': order.warehouse_id,
             'user': _real_user(getattr(order, 'created_by', None)),
+            'tenant_id': getattr(order, 'tenant_id', None),
         },
     )
 
@@ -319,6 +332,7 @@ def record_purchase_payment(purchase):
             'description': f"Payment for purchase #{purchase.purchase_number} (accepted by supplier)",
             'warehouse_id': purchase.warehouse_id,
             'user': _real_user(getattr(purchase, 'created_by', None)),
+            'tenant_id': getattr(purchase, 'tenant_id', None),
         },
     )
 
@@ -348,6 +362,8 @@ def record_purchase_return(ret):
             'description': f"Refund received for purchase return {ret.return_number}",
             'warehouse_id': getattr(getattr(ret, 'purchase_order', None), 'warehouse_id', None),
             'user': _real_user(getattr(getattr(ret, 'purchase_order', None), 'created_by', None)),
+            'tenant_id': (getattr(ret, 'tenant_id', None)
+                          or getattr(getattr(ret, 'purchase_order', None), 'tenant_id', None)),
         },
     )
 
@@ -380,6 +396,8 @@ def record_sale_return(sale_return):
             'description': f"Refund paid for sale return {sale_return.return_number}",
             'warehouse_id': getattr(getattr(sale_return, 'order', None), 'warehouse_id', None),
             'user': _real_user(getattr(getattr(sale_return, 'order', None), 'created_by', None)),
+            'tenant_id': (getattr(sale_return, 'tenant_id', None)
+                          or getattr(getattr(sale_return, 'order', None), 'tenant_id', None)),
         },
     )
 

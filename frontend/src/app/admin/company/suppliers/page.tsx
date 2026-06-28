@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Search, Plus, RefreshCw, Trash2, User, ChevronRight, ChevronLeft,
     Phone, Mail, MapPin, Pencil, Save, Eye, EyeOff, X, Building2,
@@ -25,6 +26,7 @@ const Field = ({ label, required = false, children }: { label: string; required?
 const inputCls = ui.inputBase;
 
 export default function SuppliersPage() {
+    const router = useRouter();
     const [view, setView] = useState<'list' | 'add' | 'edit'>('list');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -150,7 +152,7 @@ export default function SuppliersPage() {
                                 <Button variant="outline" onClick={() => loadData()} disabled={loading} className="whitespace-nowrap">
                                     <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Refresh</span>
                                 </Button>
-                                <Button onClick={() => setView('add')} className="whitespace-nowrap"><Plus size={16} /> Add Supplier</Button>
+                                <Button onClick={() => router.push('/admin/company/suppliers/add')} className="whitespace-nowrap"><Plus size={16} /> Add Supplier</Button>
                             </>
                         ) : (
                             <Button variant="outline" onClick={() => setView('list')} className="whitespace-nowrap">

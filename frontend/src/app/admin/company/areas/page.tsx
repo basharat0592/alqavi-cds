@@ -5,6 +5,7 @@ import {
     Plus, Search, MapPin, RefreshCw, Save, Trash2, Users, ShieldCheck
 } from 'lucide-react';
 import { areaService, Area } from '@/services/area.service';
+import { authService } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
 
@@ -54,7 +55,18 @@ export default function AreasPage() {
 
     const openAdd = () => {
         setEditTarget(null);
-        setForm({ ...emptyForm });
+        const f = { ...emptyForm };
+        // Auto-fill Parent Area with the logged-in branch admin's city (the area of
+        // their assigned warehouse), so they nest territories under their branch.
+        try {
+            const u: any = authService.getUser();
+            const city = u?.warehouses?.[0]?.area;
+            if (city) {
+                const match = areas.find(a => (a.name || '').trim().toLowerCase() === String(city).trim().toLowerCase());
+                if (match) f.parent = match.id;
+            }
+        } catch { /* no-op */ }
+        setForm(f);
         setShowModal(true);
     };
 
@@ -75,9 +87,14 @@ export default function AreasPage() {
         if (!form.name.trim()) return toast.error('Area name is required');
         setSaving(true);
         try {
+            // Code is optional in the UI — generate a stable one from the name when
+            // left blank so the backend (which requires a code) accepts it.
+            const code = form.code.trim()
+                || form.name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20)
+                || 'AREA';
             const payload: any = {
                 name: form.name,
-                code: form.code,
+                code,
                 description: form.description,
                 parent: form.parent === '' ? null : Number(form.parent),
                 is_active: form.is_active,
@@ -272,7 +289,7 @@ export default function AreasPage() {
                             <input required className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. North Zone" />
                         </Field>
                         <Field label="Code">
-                            <input className={inputCls} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. NZ-01" />
+                            <input className={inputCls} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="Auto-generated if left blank" />
                         </Field>
                     </div>
                     <Field label="Description">

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
 from core.permissions import HasModulePermission
-from core.scoping import BranchScopedQuerysetMixin
+from core.scoping import BranchScopedQuerysetMixin, scope_to_tenant, tenant_id_for
 
 
 class WarehouseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
@@ -17,6 +17,11 @@ class WarehouseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     perm_module = 'inventory'
     # The model *is* the branch, so scope by its own id.
     branch_field = 'id'
+    # Tenant (owning-Admin) isolation is the primary axis.
+    tenant_field = 'tenant'
+
+    def perform_create(self, serializer):
+        serializer.save(tenant_id=tenant_id_for(self.request.user))
 
 
 class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
@@ -27,13 +32,15 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     # Stock is shared branch inventory: show ALL products in the user's
     # warehouse(s), no matter who brought them in (branch-scoped, not per-creator).
     branch_field = 'warehouse'
+    # Tenant (owning-Admin) isolation is the primary axis.
+    tenant_field = 'tenant'
 
     def perform_create(self, serializer):
         actor = self.request.user
         real = actor if (getattr(actor, 'pk', None) and actor.__class__.__name__ == 'User'
                          and not getattr(actor, 'is_supplier', False)
                          and not getattr(actor, 'is_customer', False)) else None
-        stock = serializer.save(created_by=real)
+        stock = serializer.save(created_by=real, tenant_id=tenant_id_for(actor))
         # Record initial purchase movement
         StockMovement.objects.create(
             stock=stock,
@@ -41,7 +48,8 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             quantity=stock.total_quantity,
             to_warehouse=stock.warehouse,
             date=stock.date,
-            description="Initial stock purchase"
+            description="Initial stock purchase",
+            tenant_id=stock.tenant_id,
         )
 
     def get_queryset(self):
@@ -116,13 +124,15 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response({"error": "Invalid quantity format"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            destination_warehouse = Warehouse.objects.get(id=destination_warehouse_id)
+            destination_warehouse = scope_to_tenant(
+                request.user, Warehouse.objects.all()
+            ).get(id=destination_warehouse_id)
         except Warehouse.DoesNotExist:
             return Response({"error": "Destination warehouse does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
         # Find all matching stock records in the source warehouse to deplete from
         # matching the "Global Price-Point Truth" (Product + Price + Warehouse)
-        matching_stocks = Stock.objects.filter(
+        matching_stocks = scope_to_tenant(request.user, Stock.objects.all()).filter(
             warehouse=primary_stock.warehouse,
             product=primary_stock.product,
             product_name=primary_stock.product_name,
@@ -164,11 +174,12 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     from_warehouse=stock.warehouse,
                     to_warehouse=destination_warehouse,
                     date=transfer_date,
-                    description=f"Transfer to {destination_warehouse.name}"
+                    description=f"Transfer to {destination_warehouse.name}",
+                    tenant_id=stock.tenant_id,
                 )
 
                 # 2. Add to destination stock (Merge if product/price matches)
-                dest_stock = Stock.objects.filter(
+                dest_stock = scope_to_tenant(request.user, Stock.objects.all()).filter(
                     warehouse=destination_warehouse,
                     product=stock.product,
                     product_name=stock.product_name,
@@ -193,7 +204,8 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         from_warehouse=stock.warehouse,
                         to_warehouse=destination_warehouse,
                         date=transfer_date,
-                        description=f"Transfer from {stock.warehouse.name}"
+                        description=f"Transfer from {stock.warehouse.name}",
+                        tenant_id=dest_stock.tenant_id,
                     )
                 else:
                     new_stock = Stock.objects.create(
@@ -212,6 +224,7 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         size=stock.size,
                         date=transfer_date,
                         created_by=stock.created_by,  # preserve the original owner
+                        tenant_id=stock.tenant_id,  # keep within the same tenant
                     )
                     
                     StockMovement.objects.create(
@@ -221,7 +234,8 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         from_warehouse=stock.warehouse,
                         to_warehouse=destination_warehouse,
                         date=transfer_date,
-                        description=f"Transfer from {stock.warehouse.name}"
+                        description=f"Transfer from {stock.warehouse.name}",
+                        tenant_id=new_stock.tenant_id,
                     )
                 
                 remaining_to_transfer -= transfer_from_this
@@ -234,7 +248,7 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         
         # Find all matching stock records ONLY in the CURRENT warehouse
         # matching by Product Name, Price, and Supplier
-        matching_stock_ids = Stock.objects.filter(
+        matching_stock_ids = scope_to_tenant(request.user, Stock.objects.all()).filter(
             warehouse=primary_stock.warehouse,
             product=primary_stock.product,
             product_name=primary_stock.product_name,

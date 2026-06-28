@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes
+    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail, Phone
 } from 'lucide-react';
+import { getImageUrl } from '@/lib/utils';
 import { userService } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
 import { areaService, Area } from '@/services/area.service';
@@ -22,10 +23,13 @@ export default function BranchesPage() {
     const [loading, setLoading] = useState(true);
     const [allowed, setAllowed] = useState<boolean | null>(null);
 
-    // "New Branch" creation (a branch is a store/warehouse tagged to a city).
+    // "New Branch" creation / edit (a branch is a store/warehouse tagged to a city).
     const [showNew, setShowNew] = useState(false);
+    const [editing, setEditing] = useState<any | null>(null);
     const [creating, setCreating] = useState(false);
     const [nb, setNb] = useState({ name: '', area: '', newCity: '', address: '' });
+    const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+    const [deletingBranch, setDeletingBranch] = useState(false);
 
     const load = async () => {
         setLoading(true);
@@ -45,9 +49,27 @@ export default function BranchesPage() {
         }
     };
 
-    // Create a branch: optionally spin up a new city, then create the warehouse.
-    // The Super Admin never deals with "warehouse" terms — just branch + city.
-    const createBranch = async (e?: React.SyntheticEvent) => {
+    const openCreate = () => {
+        setEditing(null);
+        setNb({ name: '', area: '', newCity: '', address: '' });
+        setShowNew(true);
+    };
+
+    // Open the modal pre-filled to edit an existing branch (warehouse).
+    const openEdit = (wh: any) => {
+        setEditing(wh);
+        setNb({
+            name: wh.name || '',
+            area: wh.area ? String(wh.area) : '',
+            newCity: '',
+            address: wh.location || '',
+        });
+        setShowNew(true);
+    };
+
+    // Create or update a branch: optionally spin up a new city, then save the
+    // warehouse. The Super Admin never deals with "warehouse" terms — just branch.
+    const saveBranch = async (e?: React.SyntheticEvent) => {
         e?.preventDefault();
         if (!nb.name.trim()) return toast.error('Branch name is required');
         if (nb.area === '__new__' && !nb.newCity.trim()) return toast.error('Enter the new city name');
@@ -60,19 +82,42 @@ export default function BranchesPage() {
                 });
                 areaId = city.id;
             }
-            await inventoryService.createWarehouse({
+            const payload = {
                 name: nb.name.trim(),
                 location: nb.address.trim() || nb.name.trim(),
                 area: areaId,
-            });
-            toast.success('Branch created');
+            };
+            if (editing) {
+                await inventoryService.updateWarehouse(editing.id, payload);
+                toast.success('Branch updated');
+            } else {
+                await inventoryService.createWarehouse(payload);
+                toast.success('Branch created');
+            }
             setShowNew(false);
+            setEditing(null);
             setNb({ name: '', area: '', newCity: '', address: '' });
             load();
         } catch {
-            toast.error('Failed to create branch');
+            toast.error(editing ? 'Failed to update branch' : 'Failed to create branch');
         } finally {
             setCreating(false);
+        }
+    };
+
+    // Delete a branch (warehouse). Cascades to its stock/products; unassigns admins.
+    const doDelete = async () => {
+        if (!deleteTarget) return;
+        setDeletingBranch(true);
+        try {
+            await inventoryService.deleteWarehouse(deleteTarget.id);
+            toast.success('Branch deleted');
+            setDeleteTarget(null);
+            load();
+        } catch {
+            toast.error('Failed to delete branch.');
+        } finally {
+            setDeletingBranch(false);
         }
     };
 
@@ -129,7 +174,7 @@ export default function BranchesPage() {
                             <Button variant="outline" onClick={load} disabled={loading} className="whitespace-nowrap">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Button>
-                            <Button onClick={() => { setNb({ name: '', area: '', newCity: '', address: '' }); setShowNew(true); }} className="whitespace-nowrap">
+                            <Button onClick={openCreate} className="whitespace-nowrap">
                                 <Plus size={16} /> New Branch
                             </Button>
                         </>
@@ -203,6 +248,16 @@ export default function BranchesPage() {
                                                             <p className="text-[11px] text-slate-400 flex items-center gap-1"><Boxes size={11} /> {wh.stock_count || 0} products</p>
                                                         </div>
                                                     </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <button onClick={() => openEdit(wh)} title="Edit branch"
+                                                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                            <Pencil size={12} /> Edit
+                                                        </button>
+                                                        <button onClick={() => setDeleteTarget(wh)} title="Delete branch"
+                                                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                            <Trash2 size={12} /> Delete
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <div className="p-5 space-y-3">
                                                     <div className="flex items-center justify-between">
@@ -214,20 +269,38 @@ export default function BranchesPage() {
                                                     {admins.length === 0 ? (
                                                         <p className="text-[12px] text-slate-400 italic">No admin assigned to this branch.</p>
                                                     ) : (
-                                                        <div className="flex flex-wrap gap-2">
+                                                        <div className="space-y-2">
                                                             {admins.map(u => (
                                                                 <button key={u.id} onClick={() => router.push(`/admin/users/edit/${u.id}`)}
-                                                                    title={u.email}
-                                                                    className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 px-2.5 py-1 rounded-full transition-colors">
-                                                                    {name(u)}
+                                                                    title="View / edit this admin"
+                                                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/50 hover:border-indigo-200 transition-colors text-left group">
+                                                                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[12px] font-bold text-slate-500">
+                                                                        {u.avatar ? (
+                                                                            <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            (u.full_name || u.username || 'A').split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="font-bold text-[13px] text-slate-900 truncate">{u.full_name?.trim() || u.username || 'Admin'}</p>
+                                                                        <p className="text-[11px] text-slate-500 truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
+                                                                        {u.phone && <p className="text-[11px] text-slate-400 truncate flex items-center gap-1"><Phone size={10} className="shrink-0" /> {u.phone}</p>}
+                                                                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                                            {u.role_name && <Badge tone="blue">{u.role_name}</Badge>}
+                                                                            {u.status && <Badge tone={String(u.status).toLowerCase() === 'active' ? 'green' : 'neutral'}>{u.status}</Badge>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                                                                 </button>
                                                             ))}
                                                         </div>
                                                     )}
-                                                    <Link href="/admin/users/add"
-                                                        className="flex items-center justify-center gap-1.5 mt-1 text-[11.5px] font-bold text-indigo-600 hover:bg-indigo-50 border border-dashed border-indigo-200 rounded-lg py-2 transition-colors">
-                                                        <Plus size={13} /> Assign an admin
-                                                    </Link>
+                                                    {admins.length === 0 && (
+                                                        <Link href={`/admin/users/add?warehouse=${wh.id}`}
+                                                            className="flex items-center justify-center gap-1.5 mt-1 text-[11.5px] font-bold text-indigo-600 hover:bg-indigo-50 border border-dashed border-indigo-200 rounded-lg py-2 transition-colors">
+                                                            <Plus size={13} /> Assign an admin
+                                                        </Link>
+                                                    )}
                                                 </div>
                                             </Card>
                                         );
@@ -239,24 +312,24 @@ export default function BranchesPage() {
                 )}
             </div>
 
-            {/* New Branch — branch-first creation (no warehouse jargon). */}
+            {/* New / Edit Branch — branch-first (no warehouse jargon). */}
             <Modal
                 open={showNew}
-                onClose={() => { if (!creating) setShowNew(false); }}
-                title="New Branch"
+                onClose={() => { if (!creating) { setShowNew(false); setEditing(null); } }}
+                title={editing ? 'Edit Branch' : 'New Branch'}
                 size="md"
                 footer={
                     <>
-                        <Button variant="outline" onClick={() => setShowNew(false)} disabled={creating}>Cancel</Button>
-                        <Button onClick={() => createBranch()} disabled={creating}>
-                            {creating ? <RefreshCw size={14} className="animate-spin" /> : <Plus size={14} />} Create Branch
+                        <Button variant="outline" onClick={() => { setShowNew(false); setEditing(null); }} disabled={creating}>Cancel</Button>
+                        <Button onClick={() => saveBranch()} disabled={creating}>
+                            {creating ? <RefreshCw size={14} className="animate-spin" /> : (editing ? <Pencil size={14} /> : <Plus size={14} />)} {editing ? 'Save Changes' : 'Create Branch'}
                         </Button>
                     </>
                 }
             >
-                <form onSubmit={createBranch} className="space-y-4">
+                <form onSubmit={saveBranch} className="space-y-4">
                     <p className="text-[12px] text-slate-500">
-                        A branch is a store/location in a city. Name it and pick its city — you then assign admins to it.
+                        A branch is a store/location in a city. Name it and pick its city — each branch is managed by one admin.
                     </p>
                     <div>
                         <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Branch Name <span className="text-rose-600">*</span></label>
@@ -303,6 +376,32 @@ export default function BranchesPage() {
                     {/* Hidden submit lets Enter create the branch. */}
                     <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
                 </form>
+            </Modal>
+
+            {/* Delete branch confirmation */}
+            <Modal
+                open={!!deleteTarget}
+                onClose={() => { if (!deletingBranch) setDeleteTarget(null); }}
+                title="Delete Branch"
+                size="sm"
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deletingBranch}>Cancel</Button>
+                        <Button variant="danger" onClick={doDelete} disabled={deletingBranch}>
+                            {deletingBranch ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete Branch
+                        </Button>
+                    </>
+                }
+            >
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+                        <AlertTriangle size={20} />
+                    </div>
+                    <div className="text-[13px] text-slate-600">
+                        <p className="font-bold text-slate-900 mb-1">Delete “{deleteTarget?.name}”?</p>
+                        <p>This permanently removes the branch and any inventory (products &amp; stock) in it, and unassigns its admin. This cannot be undone.</p>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

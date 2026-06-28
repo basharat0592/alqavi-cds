@@ -248,14 +248,12 @@ export default function PurchasesPage() {
     };
 
     const handleStatusChange = async (id: string, newStatus: string) => {
-        if (newStatus === 'RECEIVED') {
-            const p = filtered.find(x => x.id === id);
-            setWhModal({ open: true, purchase: p });
-            return;
-        }
+        // RECEIVED deposits the purchase stock straight into the PO's own branch
+        // warehouse (set when the PO was created) and into Current Stocks — no
+        // warehouse picker popup.
         try {
             await purchaseService.update(id, { status: newStatus });
-            toast.success('Order status updated');
+            toast.success(newStatus === 'RECEIVED' ? 'Stock received — added to Current Stocks' : 'Order status updated');
             load(true);
         } catch (err: any) {
             toast.error(err.response?.data?.error || 'Failed to update status');

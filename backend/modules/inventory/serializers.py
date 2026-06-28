@@ -10,8 +10,8 @@ class WarehouseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Warehouse
         fields = ['id', 'name', 'location', 'area', 'area_name', 'is_active',
-                  'stock_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'area_name', 'stock_count', 'created_at', 'updated_at']
+                  'tenant', 'stock_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'area_name', 'tenant', 'stock_count', 'created_at', 'updated_at']
 
     def get_stock_count(self, obj):
         # 1. Count unique products linked to the catalog
@@ -39,10 +39,10 @@ class StockSerializer(serializers.ModelSerializer):
             'id', 'product_name', 'product', 'category', 'category_name', 
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
             'purchase_type', 'cartons', 'items_per_carton', 'total_quantity', 
-            'price_per_carton', 'price_per_item', 'sku', 'barcode', 'description', 'product_image', 'date', 
-            'weight', 'size', 'created_at', 'updated_at'
+            'price_per_carton', 'price_per_item', 'sku', 'barcode', 'description', 'product_image', 'date',
+            'weight', 'size', 'tenant', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'supplier_name', 'warehouse_name', 'category_name']
+        read_only_fields = ['id', 'tenant', 'created_at', 'updated_at', 'supplier_name', 'warehouse_name', 'category_name']
 
     def get_weight(self, obj):
         if obj.weight: return obj.weight

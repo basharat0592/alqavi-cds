@@ -145,6 +145,14 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         and not getattr(_actor, 'is_supplier', False) and not getattr(_actor, 'is_customer', False)):
                     params['created_by'] = _actor
 
+                # Tenant (owning-Admin) isolation. tenant_id_for returns None for
+                # anonymous / storefront / supplier / customer flows, so public
+                # orders stay tenant=None and the storefront keeps working.
+                from core.scoping import tenant_id_for
+                _tid = tenant_id_for(_actor)
+                if _tid is not None:
+                    params['tenant_id'] = _tid
+
                 if customer_obj:
                     params['customer'] = customer_obj
                     # We EXCLUDE 'user' to bypass the failing FK constraint
@@ -307,6 +315,8 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed',
             'created_by', 'created_by_name'
         ]
+        # Ownership fields are server-stamped — clients cannot spoof them.
+        read_only_fields = ['created_by', 'warehouse']
 
     def get_created_by_name(self, obj):
         u = getattr(obj, 'created_by', None)

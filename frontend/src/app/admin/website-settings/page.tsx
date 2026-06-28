@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import {
     Globe, Layout, Image as ImageIcon, Phone, Menu,
-    Palette, CheckCircle, Loader2, Eye, RefreshCw
+    Palette, CheckCircle, Loader2, Eye, RefreshCw, ShieldCheck
 } from 'lucide-react';
 import cmsService, { SiteSettings, WebsiteSection, MediaAsset } from '@/services/cms.service';
 import { productService, categoryService } from '@/lib/api';
+import { authService } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { PageHeader, Button, Badge } from '@/components/admin/ui';
 
@@ -46,8 +47,9 @@ export default function WebsiteSettingsPage() {
     const [categories, setCategories] = useState<any[]>([]);
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [allowed, setAllowed] = useState<boolean | null>(null);
 
-    useEffect(() => { loadAll(); }, []);
+    useEffect(() => { setAllowed(authService.isSuperAdmin()); loadAll(); }, []);
 
     const loadAll = async () => {
         setLoading(true);
@@ -91,6 +93,18 @@ export default function WebsiteSettingsPage() {
         }
         finally { setSaving(false); }
     };
+
+    if (allowed === false) {
+        return (
+            <div className="max-w-xl mx-auto py-20 text-center">
+                <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                    <ShieldCheck size={26} />
+                </div>
+                <h2 className="text-[18px] font-bold text-slate-900">Super Admin only</h2>
+                <p className="text-[13px] text-slate-500 mt-2">Website CMS is restricted to Super Admins.</p>
+            </div>
+        );
+    }
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[70vh]">

@@ -8,18 +8,25 @@ from django.utils.text import slugify
 
 class MainCategory(BaseModel):
     """Broad product classification (e.g. Skin Care, Hair Care)"""
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, blank=True)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, default='active')
     position = models.IntegerField(default=0)
     is_visible = models.BooleanField(default=True)
     products = models.ManyToManyField('Product', related_name='sections', blank=True)
-    
+    # Owning Admin (tenant) — per-Admin sections. NULL = global/shared. Name &
+    # slug are unique per-tenant (see Meta), not globally.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_main_categories'
+    )
+
     class Meta:
         db_table = 'main_categories'
         verbose_name = 'Section'
         verbose_name_plural = 'Sections'
+        unique_together = [('tenant', 'name'), ('tenant', 'slug')]
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -38,15 +45,22 @@ class Category(BaseModel):
 
     main_category = models.ForeignKey(MainCategory, on_delete=models.CASCADE, related_name='categories', null=True)
     navbar_page = models.ForeignKey('cms.NavbarPage', on_delete=models.SET_NULL, related_name='categories', null=True, blank=True)
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, blank=True)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    # Owning Admin (tenant) — per-Admin categories. NULL = global/shared (the
+    # supplier & storefront taxonomy). Name & slug are unique per-tenant (Meta).
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_categories'
+    )
 
     class Meta:
         db_table = 'categories'
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
+        unique_together = [('tenant', 'name'), ('tenant', 'slug')]
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -71,13 +85,20 @@ class Product(BaseModel):
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)
-    sku = models.CharField(max_length=100, unique=True, null=True, blank=True)
-    barcode = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    # Not globally unique: the same product can exist in multiple branches with the
+    # same sku/barcode. Uniqueness is enforced per-warehouse via Meta.unique_together.
+    sku = models.CharField(max_length=100, null=True, blank=True)
+    barcode = models.CharField(max_length=100, null=True, blank=True)
     batch = models.CharField(max_length=100, null=True, blank=True)
     badge = models.CharField(max_length=20, null=True, blank=True)
     weight = models.CharField(max_length=50, null=True, blank=True)
     size = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, default='ACTIVE')
+    # Owning Admin (tenant) — per-Admin product isolation. NULL = legacy/shared.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_products'
+    )
 
     @property
     def available_quantity(self):
@@ -89,6 +110,9 @@ class Product(BaseModel):
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
         ordering = ['-created_at']
+        # SKU/barcode are unique within a branch (warehouse), not globally — the
+        # same product legitimately appears in multiple branches.
+        unique_together = [('tenant', 'warehouse', 'sku'), ('tenant', 'warehouse', 'barcode')]
 
     def save(self, *args, **kwargs):
         if self.stock:
@@ -116,15 +140,19 @@ class Product(BaseModel):
                     if not self.barcode: self.barcode = sp.barcode
                     if not self.description: self.description = sp.description
             
-            # Aggregate total quantity across ALL warehouses/batches for this product identity
+            # Sum stock for THIS branch only, so each branch's product shows its own
+            # quantity (not the combined total across every branch).
             from django.db.models import Sum
+            _wh = self.warehouse_id or (self.stock.warehouse_id if self.stock else None)
             total = Stock.objects.filter(
                 product_name__iexact=self.product_name or self.stock.product_name,
                 price_per_item=self.cost_price or self.stock.price_per_item,
                 weight=self.weight or self.stock.weight,
-                size=self.size or self.stock.size
+                size=self.size or self.stock.size,
+                warehouse_id=_wh,
+                tenant_id=self.tenant_id,
             ).aggregate(total=Sum('total_quantity'))['total'] or 0
-            
+
             self.total_quantity = total
             
             # Sync weight and size from stock if not set
@@ -200,3 +228,32 @@ class ProductImage(BaseModel):
 
     def __str__(self):
         return f"Image for {self.product.product_name}"
+
+
+class StoreProduct(BaseModel):
+    """Super-admin master store catalog.
+
+    The consolidated, store-facing listing. A super admin adds listings here
+    directly, and (later) branch products fold in by name+weight+size+price.
+    The storefront is sourced from the visible entries. `source` distinguishes a
+    manually-added listing from one synced up from a branch.
+    """
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='store_products')
+    size = models.CharField(max_length=50, blank=True, default='')
+    weight = models.CharField(max_length=50, blank=True, default='')
+    price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    quantity = models.IntegerField(default=0)
+    image = models.ImageField(upload_to='store_products/', null=True, blank=True)
+    description = models.TextField(blank=True, default='')
+    is_visible = models.BooleanField(default=True)   # shown on the storefront
+    source = models.CharField(max_length=20, default='manual')  # 'manual' | 'branch'
+
+    class Meta:
+        db_table = 'store_products'
+        verbose_name = 'Store Product'
+        verbose_name_plural = 'Store Products'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name

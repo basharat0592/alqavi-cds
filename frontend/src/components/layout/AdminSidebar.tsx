@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard, Package, TrendingUp, Tag,
+    LayoutDashboard, Package, TrendingUp,
     Boxes, Settings, UserCheck, ShoppingBag,
-    Activity, ListFilter, ShoppingCart, History, RefreshCcw, Monitor,
-    ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    Truck, Book, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin
+    ShoppingCart, History, RefreshCcw, Monitor,
+    ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
-import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
+import { SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
 
 interface NavItem {
     name: string;
@@ -27,8 +27,6 @@ interface NavGroup {
 
 const FULL_ACCESS_ROLES = ['admin', 'superadmin', 'super admin'];
 
-// Pages only a Super Admin may see (hidden from branch admins' sidebar).
-const SUPER_ONLY_HREFS: string[] = ['/admin/users', '/admin/website-settings'];
 
 export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate }: { isCollapsed?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
     const pathname = usePathname();
@@ -45,7 +43,9 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         const user = authService.getUser();
         setIsSuperAdmin(authService.isSuperAdmin());
         if (!user) { setUserPagePerms(null); return; }
-        const role = (user.role as string)?.toLowerCase() || '';
+        // role may arrive as the string name (login) or a numeric FK id (a profile
+        // refetch); prefer the string, else fall back to role_name.
+        const role = (typeof user.role === 'string' ? user.role : (user as any).role_name || '').toLowerCase();
         // Full access by ROLE (Admin/Super Admin) or superuser only — NOT is_staff,
         // since every internal staff role is is_staff but stays page-restricted.
         if (FULL_ACCESS_ROLES.includes(role) || user.is_superuser) {
@@ -61,7 +61,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             label: 'Main Dashboard',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Recent Activity', href: '/admin/sales/recent', icon: Activity },
                 { name: 'Order List', href: '/admin/orders', icon: ShoppingBag },
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
@@ -71,10 +70,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         {
             label: 'Inventory & Stock',
             items: [
-                { name: 'Product Categories', href: '/admin/products/categories', icon: Tag },
                 { name: 'Product List', href: '/admin/products', icon: LayoutDashboard },
-                { name: 'Add Product', href: '/admin/products/add', icon: Package },
-                { name: 'Product Sections', href: '/admin/products/sections', icon: ListFilter },
+                { name: 'Add Listing', href: '/admin/products/add', icon: Package },
                 { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
             ],
@@ -84,7 +81,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             items: [
                 { name: 'New Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
                 { name: 'Purchase History', href: '/admin/purchases', icon: History },
-                { name: 'Supplier Catalog', href: '/admin/supplier-products', icon: Book },
                 { name: 'Returns / Refunds', href: '/admin/purchases/returns', icon: RefreshCcw },
             ],
         },
@@ -96,7 +92,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
                 { name: 'Income', href: '/admin/income', icon: ArrowDownLeft },
                 { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight },
-                { name: 'Company Categories', href: '/admin/company/categories', icon: Tag },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
         },
@@ -109,7 +104,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'Areas', href: '/admin/company/areas', icon: MapPin },
                 { name: 'Internal Users', href: '/admin/users', icon: User },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
-                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock },
+                { name: 'System Users', href: '/admin/system-users', icon: UserCog },
                 { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
             ],
         },
@@ -117,13 +112,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             label: 'Detailed Reports',
             items: [
                 { name: 'Reports Center', href: '/admin/reports', icon: BarChart3 },
-                { name: 'Sales Reports', href: '/admin/reports/sales', icon: TrendingUp },
-                { name: 'Purchase Reports', href: '/admin/reports/purchases', icon: ShoppingCart },
-                { name: 'Inventory Reports', href: '/admin/reports/inventory', icon: Boxes },
-                { name: 'Customer Reports', href: '/admin/reports/customers', icon: Users },
-                { name: 'Accounting Reports', href: '/admin/reports/accounting', icon: CreditCard },
-                { name: 'Returns Reports', href: '/admin/reports/sales-returns', icon: RotateCcw },
-                { name: 'Data Hub', href: '/admin/reports/data-hub', icon: BarChart3 },
             ],
         },
     ];
@@ -139,13 +127,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 const defaults: Record<string, boolean> = {};
                 menuGroups.forEach(g => g.items.forEach(i => defaults[i.href] = true));
                 defaults['/admin/settings'] = true;
-                defaults['/admin/reports/sales'] = true;
-                defaults['/admin/reports/purchases'] = true;
-                defaults['/admin/reports/inventory'] = true;
-                defaults['/admin/reports/customers'] = true;
-                defaults['/admin/reports/accounting'] = true;
-                defaults['/admin/reports/sales-returns'] = true;
-                defaults['/admin/reports/data-hub'] = true;
                 setVisibility(defaults);
             }
         };

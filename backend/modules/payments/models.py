@@ -70,6 +70,12 @@ class Payment(models.Model):
     warehouse = models.ForeignKey(
         'inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True, related_name='payments'
     )
+    # Owning Admin (tenant) — per-Admin financial isolation. Auto entries copy it
+    # from the source transaction; NULL = legacy/public.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_payments'
+    )
 
     # Audit / auto-generation tracking
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual')
@@ -147,6 +153,11 @@ class TransactionPayment(models.Model):
     # transaction so installments stay branch-scoped like their ledger rows.
     warehouse = models.ForeignKey(
         'inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True, related_name='transaction_payments'
+    )
+    # Owning Admin (tenant) — copied from the parent transaction; per-Admin isolation.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_transaction_payments'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

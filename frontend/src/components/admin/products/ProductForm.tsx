@@ -599,7 +599,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                     <ChevronRight size={10} />
                     <Link href="/admin/products" className="hover:text-[#4338ca] hover:underline">Product Registry</Link>
                     <ChevronRight size={10} />
-                    <span className="text-[#4338ca]">{isEdit ? 'Update Product' : 'Add Product'}</span>
+                    <span className="text-[#4338ca]">{isEdit ? 'Update Listing' : 'Add Listing'}</span>
                 </div>
 
                 <div className="flex items-center justify-between mb-4">
@@ -822,7 +822,7 @@ export default function ProductForm({ id }: ProductFormProps) {
 
                                 <div className="mt-8 space-y-3 pt-6 border-t border-slate-100">
                                     <Btn className="w-full text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
-                                        <Save size={14} /> {isEdit ? 'Update Product' : 'Add Product'}
+                                        <Save size={14} /> {isEdit ? 'Update Listing' : 'Add Listing'}
                                     </Btn>
                                     <button onClick={() => router.push('/admin/products')} className="w-full text-[12px] text-[#64748b] hover:text-[#4338ca] hover:underline text-center">
                                         Discard

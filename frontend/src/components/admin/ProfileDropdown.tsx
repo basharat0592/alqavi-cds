@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { X, User, Settings, LogOut, ChevronRight, Shield, Globe, Users, Building2 } from 'lucide-react';
+import { X, User, Settings, LogOut, ChevronRight, Shield, ExternalLink, Users, Building2 } from 'lucide-react';
 import { getImageUrl, cn } from '@/lib/utils';
 
 /* ═══════════════════════════════════════════════
@@ -78,9 +78,9 @@ export default function ProfileDropdown({
                             <Building2 size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
                             <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Supplier</span>
                         </Link>
-                        <Link href="/" target="_blank" className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <Globe size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Visit Storefront</span>
+                        <Link href="/" target="_blank" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                            <ExternalLink size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
+                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">View Store</span>
                         </Link>
                     </div>
                 </div>

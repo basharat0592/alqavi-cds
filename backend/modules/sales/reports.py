@@ -36,9 +36,9 @@ def _scoped_orders(request):
     area_ids = user_area_ids(request.user)
     if area_ids is not None:
         qs = qs.filter(customer__area_id__in=area_ids)
-    # Per-admin: branch admin sees only their own sales; super admin sees all
-    # (with optional ?created_by / ?warehouse drill-down).
-    qs = apply_report_scope(request, qs, 'warehouse', 'created_by')
+    # Tenant-first: each Admin sees only their own tenant's sales; the platform
+    # operator sees all (with optional ?tenant / ?created_by / ?warehouse drill-down).
+    qs = apply_report_scope(request, qs, 'warehouse', 'created_by', tenant_field='tenant')
     return qs, area_ids
 
 
@@ -83,7 +83,7 @@ def report_by_area(request):
                .select_related('customer', 'customer__area', 'order', 'order__customer', 'order__customer__area')
                .prefetch_related('items'))
     returns = _date_range(request, returns)
-    returns = apply_report_scope(request, returns, 'order__warehouse', 'order__created_by')
+    returns = apply_report_scope(request, returns, 'order__warehouse', 'order__created_by', tenant_field='tenant')
     for r in returns:
         cust = r.customer or getattr(r.order, 'customer', None)
         area = cust.area if (cust and getattr(cust, 'area_id', None)) else None
@@ -141,7 +141,7 @@ def report_by_user(request):
 
     # Returns handled (by staff who processed the return).
     rets = _date_range(request, SaleReturn.objects.filter(status='ACCEPTED').select_related('user'))
-    rets = apply_report_scope(request, rets, 'order__warehouse', 'order__created_by')
+    rets = apply_report_scope(request, rets, 'order__warehouse', 'order__created_by', tenant_field='tenant')
     for r in rets:
         if r.user_id:
             urow(r.user)['returns_handled'] += 1
@@ -149,7 +149,7 @@ def report_by_user(request):
     # Collections = confirmed inbound installments recorded by each staff member.
     inst = _date_range(request, TransactionPayment.objects.filter(
         status='confirmed', direction='inbound').select_related('created_by'), field='paid_at')
-    inst = apply_report_scope(request, inst, 'warehouse', 'created_by')
+    inst = apply_report_scope(request, inst, 'warehouse', 'created_by', tenant_field='tenant')
     for tp in inst:
         if tp.created_by_id:
             urow(tp.created_by)['collections'] += float(tp.amount or 0)
@@ -158,7 +158,7 @@ def report_by_user(request):
     if area_ids is None:
         pos = _date_range(request, PurchaseOrder.objects.exclude(status='CANCELLED')
                           .select_related('created_by'), field='order_date')
-        pos = apply_report_scope(request, pos, 'warehouse', 'created_by')
+        pos = apply_report_scope(request, pos, 'warehouse', 'created_by', tenant_field='tenant')
         for p in pos:
             if p.created_by_id:
                 g = urow(p.created_by)
@@ -236,7 +236,7 @@ def report_returns_summary(request):
             .select_related('customer', 'customer__area', 'order', 'order__customer', 'order__customer__area')
             .prefetch_related('items'))
     rets = _date_range(request, rets)
-    rets = apply_report_scope(request, rets, 'order__warehouse', 'order__created_by')
+    rets = apply_report_scope(request, rets, 'order__warehouse', 'order__created_by', tenant_field='tenant')
     if area_ids is not None:
         rets = [r for r in rets if (
             (r.customer and r.customer.area_id in area_ids) or

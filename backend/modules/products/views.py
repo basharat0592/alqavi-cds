@@ -1,77 +1,126 @@
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import F, ExpressionWrapper, DecimalField, Q
-from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage, StoreProduct
 from .serializers import (
     ProductSerializer, WishlistSerializer, CategorySerializer,
-    SupplierProductSerializer, MainCategorySerializer
+    SupplierProductSerializer, MainCategorySerializer, StoreProductSerializer
 )
 from core.permissions import HasModulePermission
+from core.scoping import (
+    is_unscoped_admin, BranchScopedQuerysetMixin,
+    scope_to_tenant, tenant_id_for,
+)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class IsSuperAdmin(permissions.BasePermission):
+    """Allow only global Super Admins (they manage the cross-branch store catalog)."""
+    message = 'Super Admin only.'
+
+    def has_permission(self, request, view):
+        return is_unscoped_admin(getattr(request, 'user', None))
+
+
+class CategoryViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, HasModulePermission]
     perm_module = 'products'
     pagination_class = None
+    # Tenant is THE isolation axis: each Admin sees only their own categories;
+    # the storefront/suppliers/super-admin (tenant_id_for -> None) see all.
+    tenant_field = 'tenant'
+    shadow_safe = True  # storefront/portal users may read the category list
+
+    def perform_create(self, serializer):
+        serializer.save(tenant_id=tenant_id_for(self.request.user))
 
 
-class MainCategoryViewSet(viewsets.ModelViewSet):
+class MainCategoryViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = MainCategory.objects.all().order_by('name')
     serializer_class = MainCategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, HasModulePermission]
     perm_module = 'products'
     pagination_class = None
+    tenant_field = 'tenant'
+    shadow_safe = True  # storefront/portal users may read the sections list
+
+    def perform_create(self, serializer):
+        serializer.save(tenant_id=tenant_id_for(self.request.user))
 
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
+    # Branch admins only see products in their assigned warehouse(s). Super admins,
+    # customers and storefront guests are unscoped (helper returns None for them).
+    branch_field = 'warehouse'
+    # Tenant is THE isolation axis. The admin list shows only the logged-in
+    # Admin's products; the anonymous storefront list is unscoped (tenant_id_for
+    # -> None makes scope_to_tenant a no-op) so it still shows every tenant.
+    tenant_field = 'tenant'
+    shadow_safe = True  # public storefront catalog (anon + logged-in shoppers)
     queryset = Product.objects.exclude(status='ARCHIVED').order_by('-created_at')
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, HasModulePermission]
     perm_module = 'products'
 
+    def create(self, request, *args, **kwargs):
+        # Turn DB uniqueness collisions into a clean message instead of a raw 500.
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError as e:
+            msg = str(e).lower()
+            if 'barcode' in msg:
+                detail = 'A product with this barcode already exists in this branch.'
+            elif 'sku' in msg:
+                detail = 'A product with this SKU already exists in this branch.'
+            else:
+                detail = 'This product conflicts with an existing one (duplicate value).'
+            return Response({'error': detail}, status=status.HTTP_400_BAD_REQUEST)
+
     def perform_create(self, serializer):
-        """Handle professional deduplication and merging with existing products"""
+        """Merge into an existing product ONLY when it is the same item in the SAME
+        branch — same name, price, size, weight AND warehouse. Different branches
+        keep their own rows (each admin sees only their products); the storefront
+        deduplicates across branches at display time. Size/weight fall back to the
+        linked stock when not supplied.
+        """
+        tenant_id = tenant_id_for(self.request.user)
         stock_obj = serializer.validated_data.get('stock')
-        sku = serializer.validated_data.get('sku')
-        barcode = serializer.validated_data.get('barcode')
-        name = serializer.validated_data.get('product_name')
+        name = serializer.validated_data.get('product_name') or (getattr(stock_obj, 'product_name', None) if stock_obj else None)
+        price = serializer.validated_data.get('selling_price')
+        weight = serializer.validated_data.get('weight') or (getattr(stock_obj, 'weight', None) if stock_obj else None)
+        size = serializer.validated_data.get('size') or (getattr(stock_obj, 'size', None) if stock_obj else None)
+        warehouse_id = getattr(stock_obj, 'warehouse_id', None) if stock_obj else None
 
-        # Complex query to find existing product by Name, SKU or Barcode
-        query = Q(product_name=name)
-        if sku: query |= Q(sku=sku)
-        if barcode: query |= Q(barcode=barcode)
-
-        existing = Product.objects.filter(query).first()
+        # Match on tenant too, so two Admins' identically-named products do not
+        # merge into a single shared row.
+        existing = Product.objects.filter(
+            product_name=name, selling_price=price, weight=weight, size=size,
+            warehouse_id=warehouse_id, tenant_id=tenant_id,
+        ).first()
 
         if existing:
-            # Atomic Merge with existing: increase quantity and update metadata
+            # Same item, same branch -> merge quantities, keep ONE row for this branch.
             added_qty = serializer.validated_data.get('total_quantity', 0)
             existing.total_quantity = F('total_quantity') + added_qty
-            
-            # Update price if changed
-            new_price = serializer.validated_data.get('selling_price')
-            if new_price:
-                existing.selling_price = new_price
-            
-            # Update other metadata
             existing.category = serializer.validated_data.get('category', existing.category)
             existing.cost_price = serializer.validated_data.get('cost_price', existing.cost_price)
             existing.stock = stock_obj or existing.stock
             existing.badge = serializer.validated_data.get('badge', existing.badge)
             existing.status = serializer.validated_data.get('status', existing.status)
             existing.description = serializer.validated_data.get('description', existing.description)
-            
+
             existing.save()
-            serializer.instance = existing # Link to serializer for response serialization
+            serializer.instance = existing  # Link to serializer for response serialization
             return existing
 
-        # If no existing product, proceed with normal creation
-        instance = serializer.save()
-        
+        # New unique listing. Stamp the owning Admin (tenant); anonymous/storefront
+        # create paths leave tenant = None (tenant_id_for(anon) -> None).
+        instance = serializer.save(tenant_id=tenant_id)
+
         # Handle additional images
         additional_images = self.request.FILES.getlist('additional_images')
         for img in additional_images:
@@ -142,6 +191,25 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get('no_pagination') == 'true':
             return None
         return super().paginate_queryset(queryset)
+
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        # Storefront (customers / guests — not staff) get a DEDUPLICATED catalog:
+        # the same product (name+price+size+weight) from different branches shows
+        # once, with quantities summed. Staff see the branch-scoped list as-is.
+        if not getattr(request.user, 'is_staff', False):
+            seen = {}
+            for p in qs:
+                key = (p.product_name, str(p.selling_price), p.weight or '', p.size or '')
+                if key in seen:
+                    seen[key].total_quantity = (seen[key].total_quantity or 0) + (p.total_quantity or 0)
+                else:
+                    seen[key] = p
+            qs = list(seen.values())
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            return self.get_paginated_response(self.get_serializer(page, many=True).data)
+        return Response(self.get_serializer(qs, many=True).data)
 
     def destroy(self, request, *args, **kwargs):
         """Perform a soft-delete by marking the product as ARCHIVED"""
@@ -275,3 +343,21 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"DEBUG: SupplierProduct save failed: {str(e)}")
             raise e
+
+
+class StoreProductViewSet(viewsets.ModelViewSet):
+    """Super-admin master store catalog.
+
+    Super admins add/edit listings here directly; (later) branch products fold in
+    by name+weight+size+price. The storefront is sourced from the visible entries.
+    Restricted to Super Admins — it spans every branch.
+    """
+    queryset = StoreProduct.objects.all().order_by('-created_at')
+    serializer_class = StoreProductSerializer
+    permission_classes = [IsSuperAdmin]
+    pagination_class = None
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)

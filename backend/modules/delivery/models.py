@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 
 class DeliveryPerson(models.Model):
@@ -36,6 +37,17 @@ class DeliveryPerson(models.Model):
         'company.Area', on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_persons'
     )
     avatar = models.ImageField(upload_to='delivery/avatars/', null=True, blank=True)
+
+    # Admin who created this rider — drives per-admin data isolation.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='created_delivery_persons'
+    )
+    # Owning Admin (tenant) — per-Admin delivery riders.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_delivery_persons'
+    )
 
     status = models.CharField(max_length=20, default='active')
     is_active = models.BooleanField(default=True)

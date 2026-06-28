@@ -7,7 +7,7 @@ import NotificationPanel, { type ActivityItem } from '@/components/admin/Notific
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import ReadOnlyController from '@/components/admin/ReadOnlyController';
 import {
-    Menu, X, Bell, Search, ExternalLink, Package, ShoppingCart,
+    Menu, X, Bell, Search, Package, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Wallet, Building2
 } from 'lucide-react';
@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { userService, settingsService } from '@/lib/api';
-import { ADMIN_PAGES } from '@/lib/adminPages';
+import { ADMIN_PAGES, SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
 import { getImageUrl, cn } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
@@ -144,7 +144,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const pageResults = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
         if (!q) return [];
+        const isSuperAdmin = authService.isSuperAdmin();
         return ADMIN_PAGES
+            // Honour the same visibility split the sidebar/dashboard use: hide a
+            // super admin's operational "floor" pages, and hide super-only pages
+            // from branch admins.
+            .filter(p => isSuperAdmin
+                ? !SUPER_ADMIN_HIDDEN_HREFS.includes(p.href)
+                : !SUPER_ONLY_HREFS.includes(p.href))
             .filter(p => p.name.toLowerCase().includes(q) || p.keywords?.some(k => k.includes(q)))
             .slice(0, 8);
     }, [searchQuery]);
@@ -469,7 +476,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         {/* Actions */}
                         <div className="flex items-center gap-3">
-                            {branchLabel && (
+                            {/* Hide the branch badge entirely for users with no branch (e.g. staff). */}
+                            {branchLabel && branchLabel !== 'No branch' && (
                                 <div
                                     title={branchLabel === 'All Branches' ? 'You can see every branch' : `Your branch: ${branchLabel}`}
                                     className={cn(
@@ -486,10 +494,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </div>
                             )}
                             <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
-                            <div className="hidden lg:block h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
-                            <Link href="/" className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
-                                <ExternalLink className="h-3.5 w-3.5 opacity-80" /> View Store
-                            </Link>
                             {(dueOverdue > 0 || dueSoon > 0) && (
                                 <Link
                                     href="/admin/alerts"

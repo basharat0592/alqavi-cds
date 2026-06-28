@@ -12,10 +12,15 @@ from core.permissions import HasModulePermission
 from core.scoping import (
     BranchScopedQuerysetMixin, scope_queryset, user_warehouse_ids,
     user_can_use_warehouse, apply_report_scope,
+    tenant_id_for, is_platform_operator,
 )
 
 
 class PaymentCategoryViewSet(viewsets.ModelViewSet):
+    # PaymentCategory is a GLOBAL (shared) lookup — NOT tenant-scoped. Reads are
+    # open to any authenticated user with the module permission; mutations are
+    # restricted to the platform operator (super admin) so a tenant can't alter
+    # the shared category list everyone depends on.
     queryset = PaymentCategory.objects.all()
     serializer_class = PaymentCategorySerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
@@ -24,15 +29,32 @@ class PaymentCategoryViewSet(viewsets.ModelViewSet):
     def paginate_queryset(self, queryset):
         return None  # categories are a small fixed list — never paginate
 
+    def _ensure_platform_operator(self):
+        from rest_framework.exceptions import PermissionDenied
+        if not is_platform_operator(self.request.user):
+            raise PermissionDenied('Only the super admin can manage payment categories.')
+
+    def create(self, request, *args, **kwargs):
+        self._ensure_platform_operator()
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self._ensure_platform_operator()
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self._ensure_platform_operator()
+        return super().destroy(request, *args, **kwargs)
+
 
 class PaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'payments'
     branch_field = 'warehouse'
-    # Branch admins see only ledger entries for transactions they created
-    # (manual entries they added, plus auto entries from their own sales/purchases).
-    creator_field = 'user'
+    # Tenant (owning Admin) is THE isolation axis — branch/creator scoping is
+    # superseded once tenant_field is set.
+    tenant_field = 'tenant'
 
     def get_queryset(self):
         qs = Payment.objects.select_related('category', 'user').all()
@@ -74,7 +96,8 @@ class PaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             if ids:
                 wh_id = sorted(ids)[0]
         # Manual entries only — auto entries are created by the ledger services.
-        serializer.save(user=real_user, source='manual', is_auto=False, warehouse_id=wh_id or None)
+        serializer.save(user=real_user, source='manual', is_auto=False,
+                        warehouse_id=wh_id or None, tenant_id=tenant_id_for(actor))
 
     def destroy(self, request, *args, **kwargs):
         # Any ledger line can be deleted from here (incl. auto ones). Note: deleting
@@ -93,8 +116,8 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'payments'
     branch_field = 'warehouse'
-    # Branch admins see only the installments they recorded.
-    creator_field = 'created_by'
+    # Tenant (owning Admin) is THE isolation axis.
+    tenant_field = 'tenant'
 
     def get_queryset(self):
         qs = TransactionPayment.objects.select_related('created_by').all()
@@ -114,12 +137,20 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
         user = self.request.user
         user = user if getattr(user, 'pk', None) and user.__class__.__name__ == 'User' else None
         tp = serializer.save(created_by=user)
-        # Stamp the branch from the parent transaction so installments (and the
-        # ledger rows they post) stay branch-scoped.
+        # Stamp the branch + owning tenant from the parent transaction so
+        # installments (and the ledger rows they post) stay branch- and
+        # tenant-scoped — authoritative even when the actor is a shadow user.
+        update_fields = []
         wh_id = services.parent_warehouse_id(tp.source_type, tp.source_id)
         if wh_id and tp.warehouse_id != wh_id:
             tp.warehouse_id = wh_id
-            tp.save(update_fields=['warehouse'])
+            update_fields.append('warehouse')
+        ten_id = services.parent_tenant_id(tp.source_type, tp.source_id)
+        if ten_id and tp.tenant_id != ten_id:
+            tp.tenant_id = ten_id
+            update_fields.append('tenant')
+        if update_fields:
+            tp.save(update_fields=update_fields)
         services.record_installment(tp)
 
     def perform_update(self, serializer):
@@ -187,7 +218,7 @@ def payments_due(request):
               .exclude(status__in=['CANCELLED', 'REJECTED']))
     if area_ids is not None:
         orders = orders.filter(customer__area_id__in=area_ids)
-    orders = apply_report_scope(request, orders, 'warehouse', 'created_by')
+    orders = apply_report_scope(request, orders, 'warehouse', 'created_by', tenant_field='tenant')
     for o in orders.only('id', 'tracking_id', 'customer_name', 'total_amount',
                          'amount_paid', 'due_date'):
         rem = o.remaining_amount
@@ -197,7 +228,8 @@ def payments_due(request):
 
     # Purchases we still owe suppliers.
     for p in (apply_report_scope(request,
-                                 PurchaseOrder.objects.exclude(status='CANCELLED'), 'warehouse', 'created_by')
+                                 PurchaseOrder.objects.exclude(status='CANCELLED'),
+                                 'warehouse', 'created_by', tenant_field='tenant')
               .select_related('supplier')):
         rem = p.remaining_amount
         if rem and rem > 0:
@@ -207,7 +239,7 @@ def payments_due(request):
     # Sale returns: refunds we still owe customers.
     for r in (apply_report_scope(request,
                                  SaleReturn.objects.filter(status='ACCEPTED', refund_status='PENDING'),
-                                 'order__warehouse', 'order__created_by')
+                                 'order__warehouse', 'order__created_by', tenant_field='tenant')
               .select_related('order')):
         rem = r.refund_remaining
         if rem and rem > 0:
@@ -218,7 +250,7 @@ def payments_due(request):
     # Purchase returns: refunds suppliers still owe us.
     for r in (apply_report_scope(request,
                                  PurchaseReturn.objects.filter(status='ACCEPTED', refund_status='PENDING'),
-                                 'purchase_order__warehouse', 'purchase_order__created_by')
+                                 'purchase_order__warehouse', 'purchase_order__created_by', tenant_field='tenant')
               .select_related('supplier')):
         rem = r.refund_remaining
         if rem and rem > 0:
@@ -248,7 +280,7 @@ def payments_due(request):
 def payment_stats(request):
     # Per-admin totals, matching the income/expense list (Payment.user = the
     # responsible staff); super admin sees all with optional ?created_by/?warehouse.
-    qs = apply_report_scope(request, Payment.objects.all(), 'warehouse', 'user')
+    qs = apply_report_scope(request, Payment.objects.all(), 'warehouse', 'user', tenant_field='tenant')
     inbound = qs.filter(payment_type='inbound').aggregate(t=Sum('amount'))['t'] or 0
     outbound = qs.filter(payment_type='outbound').aggregate(t=Sum('amount'))['t'] or 0
     # "Internal" = manually recorded expenses (rent, salary, etc.), not auto ones.

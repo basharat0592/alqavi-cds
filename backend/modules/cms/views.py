@@ -1,12 +1,24 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission, SAFE_METHODS
+from core.scoping import is_platform_operator
 from .models import SiteSettings, WebsiteSection, MediaAsset, NavigationMenu, NavigationItem, NavbarPage
 from .serializers import (
     SiteSettingsSerializer, WebsiteSectionSerializer, MediaAssetSerializer,
     NavigationMenuSerializer, NavigationItemSerializer, NavbarPageSerializer
 )
+
+
+class ReadOnlyOrPlatformOperator(BasePermission):
+    """Reads (safe methods) allowed for any authenticated user; writes restricted
+    to the platform operator (super admin). The CMS/storefront is a single global
+    site, so writes must never be performed by tenant admins."""
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return is_platform_operator(request.user)
 
 class CmsConfigViewSet(viewsets.ViewSet):
     def get_permissions(self):
@@ -51,6 +63,8 @@ class CmsConfigViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['patch'])
     def update_settings(self, request):
+        if not is_platform_operator(request.user):
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
         settings, _ = SiteSettings.objects.get_or_create(id=1)
         serializer = SiteSettingsSerializer(settings, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
@@ -60,6 +74,8 @@ class CmsConfigViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def upload_branding(self, request):
+        if not is_platform_operator(request.user):
+            return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
         settings, _ = SiteSettings.objects.get_or_create(id=1)
         field = request.data.get('field')
         file = request.FILES.get('file')
@@ -116,7 +132,7 @@ class CmsConfigViewSet(viewsets.ViewSet):
 class WebsiteSectionViewSet(viewsets.ModelViewSet):
     queryset = WebsiteSection.objects.all().order_by('order')
     serializer_class = WebsiteSectionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ReadOnlyOrPlatformOperator]
     pagination_class = None
 
     @action(detail=False, methods=['post'])
@@ -139,27 +155,27 @@ class WebsiteSectionViewSet(viewsets.ModelViewSet):
 class MediaAssetViewSet(viewsets.ModelViewSet):
     queryset = MediaAsset.objects.all().order_by('-created_at')
     serializer_class = MediaAssetSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ReadOnlyOrPlatformOperator]
     pagination_class = None
 
 
 class NavigationMenuViewSet(viewsets.ModelViewSet):
     queryset = NavigationMenu.objects.all()
     serializer_class = NavigationMenuSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ReadOnlyOrPlatformOperator]
     pagination_class = None
 
 
 class NavigationItemViewSet(viewsets.ModelViewSet):
     queryset = NavigationItem.objects.all()
     serializer_class = NavigationItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ReadOnlyOrPlatformOperator]
     pagination_class = None
 
 class NavbarPageViewSet(viewsets.ModelViewSet):
     queryset = NavbarPage.objects.all().order_by('order')
     serializer_class = NavbarPageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ReadOnlyOrPlatformOperator]
     pagination_class = None
 
     @action(detail=False, methods=['post'])

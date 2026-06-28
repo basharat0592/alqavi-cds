@@ -35,7 +35,6 @@ const PAGE_GROUPS = [
         label: 'Main Dashboard',
         items: [
             { name: 'Dashboard', href: '/admin/dashboard' },
-            { name: 'Recent Activity', href: '/admin/sales/recent' },
             { name: 'Order List', href: '/admin/orders' },
             { name: 'All Sales', href: '/admin/sales' },
             { name: 'Order Tracking', href: '/admin/tracking' },
@@ -45,10 +44,8 @@ const PAGE_GROUPS = [
     {
         label: 'Inventory & Stock',
         items: [
-            { name: 'Product Categories', href: '/admin/products/categories' },
             { name: 'Product List', href: '/admin/products' },
-            { name: 'Add Product', href: '/admin/products/add' },
-            { name: 'Product Sections', href: '/admin/products/sections' },
+            { name: 'Add Listing', href: '/admin/products/add' },
             { name: 'Current Stocks', href: '/admin/inventory/list' },
             { name: 'Warehouses', href: '/admin/inventory/warehouses' },
         ],
@@ -58,7 +55,6 @@ const PAGE_GROUPS = [
         items: [
             { name: 'New Purchase', href: '/admin/purchases/add' },
             { name: 'Purchase History', href: '/admin/purchases' },
-            { name: 'Supplier Catalog', href: '/admin/supplier-products' },
             { name: 'Returns / Refunds', href: '/admin/purchases/returns' },
         ],
     },
@@ -68,7 +64,6 @@ const PAGE_GROUPS = [
             { name: 'Point of Sale', href: '/admin/sale' },
             { name: 'Invoices', href: '/admin/invoices' },
             { name: 'Global Payments', href: '/admin/payments' },
-            { name: 'Company Categories', href: '/admin/company/categories' },
             { name: 'Sale Returns', href: '/admin/sale-returns' },
         ],
     },
@@ -80,7 +75,6 @@ const PAGE_GROUPS = [
             { name: 'Areas', href: '/admin/company/areas' },
             { name: 'Internal Users', href: '/admin/users' },
             { name: 'Staff Roles', href: '/admin/users/roles' },
-            { name: 'Permissions', href: '/admin/users/permissions' },
             { name: 'System Alerts', href: '/admin/alerts' },
         ],
     },
@@ -88,13 +82,6 @@ const PAGE_GROUPS = [
         label: 'Detailed Reports',
         items: [
             { name: 'Reports Center', href: '/admin/reports' },
-            { name: 'Sales Reports', href: '/admin/reports/sales' },
-            { name: 'Purchase Reports', href: '/admin/reports/purchases' },
-            { name: 'Inventory Reports', href: '/admin/reports/inventory' },
-            { name: 'Customer Reports', href: '/admin/reports/customers' },
-            { name: 'Accounting Reports', href: '/admin/reports/accounting' },
-            { name: 'Returns Reports', href: '/admin/reports/sales-returns' },
-            { name: 'Data Hub', href: '/admin/reports/data-hub' },
         ],
     },
     {
@@ -155,7 +142,17 @@ export default function AddUserPage() {
         const superAdmin = authService.isSuperAdmin();
         setIsSuperAdmin(superAdmin);
         setCanAssignBranch(superAdmin);
-        inventoryService.getWarehouses().then(setWarehouses).catch(() => setWarehouses([]));
+        inventoryService.getWarehouses().then((whs) => {
+            setWarehouses(whs);
+            // Arriving from a branch card's "Assign an admin" (?warehouse=<id>) —
+            // pre-check that branch so the super admin doesn't re-pick it by hand.
+            try {
+                const pre = new URLSearchParams(window.location.search).get('warehouse');
+                if (pre && (whs || []).some((w: any) => String(w.id) === String(pre))) {
+                    setSelectedWarehouses([String(pre)]);
+                }
+            } catch { /* no-op */ }
+        }).catch(() => setWarehouses([]));
     }, []);
 
     // For a Super Admin the role is always "Admin" — preselect it once roles load
@@ -372,8 +369,9 @@ export default function AddUserPage() {
                                         <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Assigned Branches</span>
                                     </div>
                                     <p className="text-xs text-slate-500">
-                                        Pick an area, then choose the branch warehouse(s) this admin manages.
-                                        They will only see sales, purchases, inventory and payments for these branches.
+                                        This admin gets their own fully independent workspace — their own products,
+                                        stock, customers, sales and payments. Optionally tag the branch warehouse(s)
+                                        they work in (organizational only); it can be left empty.
                                     </p>
 
                                     {/* Step 1 — choose the area (city) to narrow the warehouse list. */}
@@ -434,9 +432,10 @@ export default function AddUserPage() {
                                         </div>
                                     )}
                                     {selectedWarehouses.length === 0 && warehouses.length > 0 && (
-                                        <p className="flex items-center gap-1.5 text-[11px] text-amber-700 font-medium bg-amber-50/70 border border-amber-100 rounded-lg px-2.5 py-1.5">
+                                        <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
                                             <Info className="w-3.5 h-3.5 shrink-0" />
-                                            No branch selected — this user will not see any data until a branch is assigned.
+                                            Optional — leaving this empty is fine. This admin starts with their own
+                                            empty workspace and builds their own products, stock and branches.
                                         </p>
                                     )}
                                     {selectedWarehouses.length > 0 && (

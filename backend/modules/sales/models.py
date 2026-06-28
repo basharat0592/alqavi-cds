@@ -76,6 +76,12 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    # Owning Admin (tenant) — the per-Admin isolation axis. NULL for storefront /
+    # anonymous orders (which stay public/unscoped). See core.scoping.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_orders'
+    )
     # Rider assigned to deliver this order (managed by admin; drives the rider dashboard).
     delivery_person = models.ForeignKey(
         'delivery.DeliveryPerson',
@@ -252,6 +258,11 @@ class PurchaseOrder(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='created_purchase_orders'
     )
+    # Owning Admin (tenant) — per-Admin isolation axis.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_purchase_orders'
+    )
 
     # Payment Details
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -335,6 +346,11 @@ class PurchaseReturn(models.Model):
 
     return_number = models.CharField(max_length=20, unique=True, db_index=True)
     supplier = models.ForeignKey('supplier.Supplier', on_delete=models.CASCADE, related_name='returns')
+    # Owning Admin (tenant) — per-Admin isolation axis.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_purchase_returns'
+    )
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='returns')
     
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='WAITING_FOR_SUPPLIER')
@@ -427,7 +443,12 @@ class SaleReturn(models.Model):
     # Identify who is returning
     customer = models.ForeignKey('customer.Customer', on_delete=models.SET_NULL, null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    
+    # Owning Admin (tenant) — per-Admin isolation axis. NULL for storefront returns.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_sale_returns'
+    )
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     reason = models.TextField()
     notes = models.TextField(null=True, blank=True)

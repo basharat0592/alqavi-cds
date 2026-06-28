@@ -155,7 +155,7 @@ export default function ProductsPage() {
                                 <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
                             </Button>
                             <Button variant="primary" size="sm" onClick={() => router.push('/admin/products/add')}>
-                                <Plus size={14} /> Add Product
+                                <Plus size={14} /> Add Listing
                             </Button>
                         </>
                     }

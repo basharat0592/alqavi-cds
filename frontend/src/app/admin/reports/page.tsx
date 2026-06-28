@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense, useRef } from 'react';
 import {
     BarChart3, Calendar, Printer, FileSpreadsheet,
     ListFilter, Search, Download, ClipboardList, Info, CheckCircle,
@@ -11,7 +11,7 @@ import {
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
     productService, orderService,
-    purchaseService, supplierService, categoryService
+    purchaseService, supplierService, categoryService, userService, paymentService
 } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
 import { companyService } from '@/services/company.service';
@@ -38,15 +38,24 @@ const CATEGORIES = [
     { id: 'stock', label: 'Stock' },
 ];
 
+// When the "Personal" branch is selected, the report covers the Super Admin's own
+// ledger (income / expense entries not tied to any branch) instead of a branch.
+const PERSONAL_CATEGORIES = [
+    { id: 'income', label: 'Income' },
+    { id: 'expense', label: 'Expense' },
+];
+
 const SUB_OPTIONS: Record<string, string[]> = {
     sales: ['Offline Sales', 'Online Sales'],
     purchases: ['Purchase Order By Date', 'Purchase Order By Invoice', 'By Supplier'],
     customers: ['Walk-in Customer', 'Registered Customer'],
     returns: ['Sales Returns', 'Purchase Returns'],
-    payments: ['Statements', 'Receivables', 'Payables', 'Sales Payment', 'Purchase Payment', 'Net Profit'],
+    payments: ['Sales Payment', 'Purchase Payment', 'Net Profit'],
     suppliers: ['All Suppliers', 'By Category', 'Outstanding Balance'],
     products: ['All Products', 'By Category', 'By Supplier', 'By Price Range'],
     stock: ['By Date Range', 'Stock Status', 'By Product Name', 'By Supplier', 'By Price Range', 'By Brand'],
+    income: ['All Records', 'By Date Range'],
+    expense: ['All Records', 'By Date Range'],
 };
 
 const MODES: Record<string, string[]> = {
@@ -86,15 +95,11 @@ const VIEW_FIELDS: Record<string, string[]> = {
 
 // Payment-category views that open a full dedicated report page instead of
 // generating inline on this screen.
-const NAV_VIEWS: Record<string, string> = {
-    'Statements': '/admin/reports/sales',
-    'Receivables': '/admin/reports/receivables',
-    'Payables': '/admin/reports/payables',
-};
+const NAV_VIEWS: Record<string, string> = {};
 
 /* Defensive field readers — report rows come from many different endpoints. */
 const rowDateVal = (r: any) => r.created_at || r.order_date || r.date || r.return_date || r.purchase_date || r.date_joined || r.updated_at || null;
-const rowAmount = (r: any) => Number(r.total_amount ?? r.total_refund_amount ?? r.grand_total ?? r.price_per_item ?? r.price ?? r.selling_price ?? 0);
+const rowAmount = (r: any) => Number(r.total_amount ?? r.total_refund_amount ?? r.grand_total ?? r.price_per_item ?? r.price ?? r.selling_price ?? r.amount ?? 0);
 const rowQty = (r: any): number => {
     if (Array.isArray(r.items) && r.items.length) return r.items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0);
     return Number(r.total_quantity ?? r.stock_quantity ?? r.quantity ?? 0);
@@ -102,11 +107,12 @@ const rowQty = (r: any): number => {
 const rowTitle = (r: any) =>
     r.product_name || r.company ||
     [r.first_name, r.last_name].filter(Boolean).join(' ').trim() ||
-    r.name || r.customer_display_name || r.customer_name || r.supplier_name || r.full_name || r.username || 'Record';
+    r.name || r.customer_display_name || r.customer_name || r.supplier_name || r.full_name || r.username ||
+    r.category_name || r.payer_payee || r.description || 'Record';
 const rowSubtitle = (r: any, category: string) =>
     r.return_number || r.order_number || r.purchase_number ||
     (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
-    r.reason || r.phone || r.email || r.tracking_id || category;
+    r.reason || r.phone || r.email || r.tracking_id || r.payer_payee || r.reference_number || category;
 
 // One line of the Net Profit panel.
 function ProfitRow({ label, value, sub, bold, neg }: { label: string; value: number; sub?: string; bold?: boolean; neg?: boolean }) {
@@ -135,6 +141,7 @@ function ReportsEngineInner() {
     const [stocks, setStocks] = useState<any[]>([]);
     // Super-Admin branch scope: pick a branch and the whole report follows it.
     const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     const [filters, setFilters] = useState({
@@ -166,20 +173,34 @@ function ReportsEngineInner() {
         setIsSuperAdmin(authService.isSuperAdmin());
         // Each lookup is independent — one failing endpoint (e.g. a 500 on
         // categories) must NOT blank out the others (suppliers, stock, branches).
-        const [s, c, st, wh] = await Promise.all([
+        const [s, c, st, wh, u] = await Promise.all([
             supplierService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
             categoryService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
             inventoryService.getInventory({ no_pagination: 'true' }).catch(() => [] as any[]),
             inventoryService.getWarehouses().catch(() => [] as any[]),
+            userService.getAll?.().catch(() => [] as any[]) ?? Promise.resolve([] as any[]),
         ]);
         setSuppliers(Array.isArray(s) ? s : (s as any).results || []);
         setCategories(Array.isArray(c) ? c : (c as any).results || []);
         setStocks(st || []);
         setWarehouses(Array.isArray(wh) ? wh : (wh as any)?.results || []);
+        setUsers(Array.isArray(u) ? u : (u as any)?.results || []);
         setLoading(false);
     }, []);
 
     useEffect(() => { loadMeta(); }, [loadMeta]);
+
+    // Branches the Super Admin can scope to: only warehouses actually assigned to a
+    // (non-super) admin. An unassigned branch has no admin running it, so showing it
+    // here would just produce empty reports.
+    const assignedWarehouses = useMemo(() => {
+        const assigned = new Set<string>();
+        users.forEach((u: any) => {
+            if (u.is_super_admin) return;
+            (u.warehouses || []).forEach((w: any) => assigned.add(String(typeof w === 'object' ? w?.id : w)));
+        });
+        return warehouses.filter((w: any) => assigned.has(String(w.id)));
+    }, [warehouses, users]);
 
     const isThreeLevel = !!MODES[filters.view];
     const activeFields = isThreeLevel
@@ -189,7 +210,8 @@ function ReportsEngineInner() {
     // Does a row belong to the chosen branch? (Super-Admin scope; rows with no
     // branch info — products/customers — always pass so those reports still work.)
     const inSelectedBranch = (r: any): boolean => {
-        if (!(isSuperAdmin && filters.branch && filters.branch !== 'all')) return true;
+        // 'personal' is the Super Admin's own ledger, scoped during fetch — skip here.
+        if (!(isSuperAdmin && filters.branch && filters.branch !== 'all' && filters.branch !== 'personal')) return true;
         const bid = String(filters.branch);
         const bname = (warehouses.find((w: any) => String(w.id) === bid)?.name || '').toLowerCase();
         const raw = r.warehouse;
@@ -337,7 +359,10 @@ function ReportsEngineInner() {
             setGenerating(true);
             setHasGenerated(true);
             try {
-                const all = { no_pagination: 'true' };
+                // Server-side branch scope: the backend filters by ?warehouse for a
+                // super admin, so only the selected branch's rows come back.
+                const branchParam = (isSuperAdmin && filters.branch && filters.branch !== 'all' && filters.branch !== 'personal') ? { warehouse: filters.branch } : {};
+                const all = { no_pagination: 'true', ...branchParam };
                 const axiosClient = (await import('@/lib/axios')).default;
                 const [salesRes, purchaseRes, srRes, prRes] = await Promise.all([
                     orderService.getAll(all),
@@ -386,39 +411,55 @@ function ReportsEngineInner() {
             // visible filter on the client. No narrowing server params are sent, so a
             // backend that ignores (or mismatches) a param can never silently empty the
             // result before the client filters run.
+            // Server-side branch scope: the backend filters branch-scoped models by
+            // ?warehouse for a super admin, so only the selected branch's rows return.
+            // (Products/customers/suppliers aren't warehouse-scoped, so they skip it.)
+            const branchParam = (isSuperAdmin && filters.branch && filters.branch !== 'all' && filters.branch !== 'personal') ? { warehouse: filters.branch } : {};
             const all = { no_pagination: 'true' };
+            const branchAll = { ...all, ...branchParam };
             const axiosClient = (await import('@/lib/axios')).default;
             let result: any[] = [];
 
-            if (filters.category === 'products') {
+            if (filters.category === 'income' || filters.category === 'expense') {
+                // Income/Expense ledger:
+                //   • Personal     → the Super Admin's own entries (no branch attached)
+                //   • A branch      → that branch's ledger (server filters by ?warehouse)
+                //   • All Branches  → everything
+                const ptype = filters.category === 'income' ? 'inbound' : 'outbound';
+                const res: any = await paymentService.getAll({ payment_type: ptype, ...branchAll });
+                const rows = Array.isArray(res) ? res : res.results || [];
+                result = filters.branch === 'personal'
+                    ? rows.filter((r: any) => !(r.warehouse ?? r.warehouse_id) && !r.warehouse_name)
+                    : rows;
+            } else if (filters.category === 'products') {
                 const res: any = await productService.getAll(all);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'stock') {
-                const res: any = await inventoryService.getInventory(all);
+                const res: any = await inventoryService.getInventory(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'sales') {
-                const res: any = await orderService.getAll(all);
+                const res: any = await orderService.getAll(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'purchases') {
-                const res: any = await purchaseService.getAll(all);
+                const res: any = await purchaseService.getAll(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'customers') {
                 result = await companyService.getCustomers();
             } else if (filters.category === 'suppliers') {
                 result = await companyService.getSuppliers();
             } else if (filters.category === 'returns' && filters.view === 'Sales Returns') {
-                const { data } = await axiosClient.get('v1/sales/returns/', { params: all });
+                const { data } = await axiosClient.get('v1/sales/returns/', { params: branchAll });
                 result = data.results || data || [];
             } else if (filters.category === 'returns' && filters.view === 'Purchase Returns') {
-                const { data } = await axiosClient.get('v1/sales/purchase-returns/', { params: all });
+                const { data } = await axiosClient.get('v1/sales/purchase-returns/', { params: branchAll });
                 result = data.results || data || [];
             } else if (filters.category === 'payments' && filters.view === 'Sales Payment') {
                 // Sales payments are derived from real orders (amount = order total).
-                const res: any = await orderService.getAll(all);
+                const res: any = await orderService.getAll(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'payments' && filters.view === 'Purchase Payment') {
                 // Purchase payments are derived from purchase orders (amount = paid amount).
-                const res: any = await purchaseService.getAll(all);
+                const res: any = await purchaseService.getAll(branchAll);
                 result = (Array.isArray(res) ? res : res.results || [])
                     .map((r: any) => ({ ...r, total_amount: r.paid_amount ?? r.total_amount }));
             }
@@ -499,14 +540,15 @@ function ReportsEngineInner() {
                                 <label className="text-[13px] font-bold text-slate-900">Select Branch</label>
                                 <select
                                     value={filters.branch}
-                                    onChange={e => { setFilters({ ...filters, branch: e.target.value }); setHasGenerated(false); setProfitSummary(null); }}
+                                    onChange={e => { setFilters({ ...filters, branch: e.target.value, category: '', view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); setReportResult([]); }}
                                     className={inputCls}
                                 >
                                     <option value="">Select Branch...</option>
                                     <option value="all">All Branches</option>
-                                    {warehouses.map((w: any) => (
+                                    {assignedWarehouses.map((w: any) => (
                                         <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                                     ))}
+                                    <option value="personal">Personal</option>
                                 </select>
                             </div>
                         )}
@@ -520,7 +562,7 @@ function ReportsEngineInner() {
                                 className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"}
                             >
                                 <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
-                                {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                                {(filters.branch === 'personal' ? PERSONAL_CATEGORIES : [...CATEGORIES, ...PERSONAL_CATEGORIES]).map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                             </select>
                         </div>
 

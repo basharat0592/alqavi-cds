@@ -19,10 +19,13 @@ class DeliveryPersonViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = DeliveryPerson.objects.all().order_by('-created_at')
-        from core.scoping import user_area_ids
+        from core.scoping import user_area_ids, scope_to_tenant
         area_ids = user_area_ids(self.request.user)
         if area_ids is not None:
             qs = qs.filter(area_id__in=area_ids)
+        # Per-admin (tenant) isolation: a tenant user only sees riders in their
+        # tenant; the platform operator / shadow logins see all.
+        qs = scope_to_tenant(self.request.user, qs, 'tenant')
         search = self.request.query_params.get('search')
         if search:
             from django.db.models import Q
@@ -47,7 +50,11 @@ class DeliveryPersonViewSet(viewsets.ModelViewSet):
             data['username'] = data.get('email')
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        rider = serializer.save(plain_password=plain or '')
+        # Stamp the creating admin + owning tenant for per-admin isolation.
+        from core.scoping import tenant_id_for
+        creator = request.user if getattr(request.user, 'is_staff', False) else None
+        rider = serializer.save(plain_password=plain or '', created_by=creator,
+                                tenant_id=tenant_id_for(request.user))
         return Response(DeliveryPersonSerializer(rider, context={'request': request}).data,
                         status=status.HTTP_201_CREATED)
 

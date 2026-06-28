@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     FileText, Search, Plus, Printer, Eye,
     RefreshCw, ShoppingCart, RotateCcw,
-    ShoppingBag, User, Calendar, DollarSign,
+    ShoppingBag, User, Calendar,
     CheckCircle2, Clock, ArrowUpRight,
     Package, TrendingUp, AlertCircle
 } from 'lucide-react';
@@ -390,7 +390,6 @@ export default function InvoicesPage() {
                             { label: 'Sale Returns', desc: 'Manage customer returns', href: '/admin/sale-returns', icon: RotateCcw },
                             { label: 'Purchase Returns', desc: 'Manage supplier returns', href: '/admin/purchases/returns', icon: RefreshCw },
                             { label: 'Order Tracking', desc: 'Track delivery status', href: '/admin/tracking', icon: ShoppingBag },
-                            { label: 'Accounting', desc: 'Finance & payment overview', href: '/admin/reports/accounting', icon: DollarSign },
                         ].map(l => {
                             const Icon = l.icon;
                             return (

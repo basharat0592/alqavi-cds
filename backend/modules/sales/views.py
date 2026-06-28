@@ -11,7 +11,7 @@ from modules.inventory.models import StockMovement
 from core.permissions import HasModulePermission
 from core.scoping import (
     BranchScopedQuerysetMixin, scope_queryset, user_warehouse_ids,
-    user_can_use_warehouse,
+    user_can_use_warehouse, scope_to_tenant, tenant_id_for,
 )
 
 
@@ -40,6 +40,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     permission_classes = [HasModulePermission]
     perm_module = 'sales'
     branch_field = 'warehouse'
+    # Tenant (owning-Admin) isolation is THE primary axis.
+    tenant_field = 'tenant'
+    shadow_safe = True  # get_queryset already limits customer/supplier to their own slice
     # Branch admins see only the sales they personally created.
     creator_field = 'created_by'
 
@@ -129,11 +132,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             if is_customer_identity:
                 queryset = Order.objects.filter(Q(customer_id=user.id) | Q(user_id=user.id))
             elif is_supplier_identity:
-                supplier_id = getattr(user, "real_id", None)
-                if supplier_id:
-                    queryset = Order.objects.filter(items__product__supplier_id=supplier_id).distinct()
-                else:
-                    queryset = Order.objects.none()
+                # Suppliers must NOT see the admin's sales orders / customers —
+                # their portal is limited to their own purchase orders & returns.
+                queryset = Order.objects.none()
             else:
                 queryset = Order.objects.filter(user=user)
 
@@ -170,6 +171,10 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(payment_method='SHOP')
         elif market == 'Online':
             queryset = queryset.filter(payment_method__in=['COD', 'ONLINE'])
+
+        # Tenant isolation: lock to the requester's owning Admin (no-op for the
+        # platform operator, supplier/customer shadow logins, and anonymous).
+        queryset = scope_to_tenant(user, queryset, 'tenant')
 
         return queryset.order_by('-created_at')
 
@@ -209,13 +214,13 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         if is_customer_identity:
             queryset = Order.objects.filter(Q(customer_id=user.id) | Q(user_id=user.id))
         elif is_supplier_identity:
-            supplier_id = getattr(user, "real_id", None)
-            if supplier_id:
-                queryset = Order.objects.filter(items__product__supplier_id=supplier_id).distinct()
-            else:
-                queryset = Order.objects.none()
+            # Suppliers must NOT see the admin's sales orders / customers.
+            queryset = Order.objects.none()
         else:
             queryset = Order.objects.filter(user=user)
+
+        # Tenant isolation (no-op for customer/supplier shadow logins & anon).
+        queryset = scope_to_tenant(user, queryset, 'tenant')
 
         items = OrderItem.objects.filter(
             order__in=queryset,
@@ -269,16 +274,16 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         # THEY created; super admin sees everything (with optional ?created_by /
         # ?warehouse drill-down).
         from core.scoping import scope_queryset, apply_report_scope
-        orders = apply_report_scope(request, Order.objects.all(), 'warehouse', 'created_by')
-        purchase_orders = apply_report_scope(request, PurchaseOrder.objects.all(), 'warehouse', 'created_by')
+        orders = apply_report_scope(request, Order.objects.all(), 'warehouse', 'created_by', tenant_field='tenant')
+        purchase_orders = apply_report_scope(request, PurchaseOrder.objects.all(), 'warehouse', 'created_by', tenant_field='tenant')
 
         # Branch-scoped low stock — computed from THIS branch's Stock rows (not the
         # global product catalog), so a branch admin sees their own shortages.
         from modules.inventory.models import Stock
         from modules.products.models import Product
-        # Stock low-stock is branch-wide (all products in the user's warehouse),
-        # matching the Current Stock list — not per-creator.
-        stock_scope = scope_queryset(request.user, Stock.objects.all(), 'warehouse')
+        # Low-stock is scoped to the requesting tenant (their own stock only); the
+        # platform operator sees all (tenant_id_for -> None makes this a no-op).
+        stock_scope = scope_to_tenant(request.user, Stock.objects.all(), 'tenant')
         qty_by_name, sup_by_name = {}, {}
         for s in stock_scope.values('product_name', 'supplier', 'total_quantity'):
             key = (s['product_name'] or '').strip().lower()
@@ -288,7 +293,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             if key not in sup_by_name and s['supplier']:
                 sup_by_name[key] = str(s['supplier'])
         prod_meta = {}
-        for p in Product.objects.all().only('product_name', 'min_count', 'sku'):
+        for p in scope_to_tenant(request.user, Product.objects.all(), 'tenant').only('product_name', 'min_count', 'sku'):
             k = (p.product_name or '').strip().lower()
             if k:
                 prod_meta[k] = {'min': p.min_count if p.min_count is not None else 10, 'sku': p.sku, 'name': p.product_name}
@@ -498,7 +503,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     def request_cancel(self, request, pk=None):
         """Customer requests cancellation — only allowed before order is shipped."""
         try:
-            order = Order.objects.get(pk=pk)
+            order = scope_to_tenant(request.user, Order.objects.all(), 'tenant').get(pk=pk)
         except Order.DoesNotExist:
             return Response({'error': 'Order not found.'}, status=404)
 
@@ -526,6 +531,9 @@ class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = SaleReturn.objects.all()
     serializer_class = SaleReturnSerializer
     perm_module = 'sales'
+    # Tenant isolation through the SaleReturn's own tenant column.
+    tenant_field = 'tenant'
+    shadow_safe = True  # get_queryset limits a customer to their own returns
     # Scope through the originating sale's branch.
     branch_field = 'order__warehouse'
     # Branch admins see only returns against sales they created.
@@ -539,13 +547,13 @@ class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if getattr(user, 'is_staff', False):
-            return SaleReturn.objects.all()
-        
+            return scope_to_tenant(user, SaleReturn.objects.all(), 'tenant')
+
         from modules.customer.models import Customer
         from django.db.models import Q
         is_customer = (
-            isinstance(user, Customer) or 
-            getattr(user, 'is_customer', False) or 
+            isinstance(user, Customer) or
+            getattr(user, 'is_customer', False) or
             user.__class__.__name__ == 'Customer'
         )
         if is_customer:
@@ -584,7 +592,13 @@ class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         else:
             user_obj = user
 
-        sale_return = serializer.save(customer=customer_obj, user=user_obj)
+        # Tenant isolation: copy the owning Admin from the parent order when
+        # present, else fall back to the actor's tenant (None for anon/shadow).
+        _tid = getattr(order, 'tenant_id', None) if order is not None else None
+        if _tid is None:
+            _tid = tenant_id_for(user)
+
+        sale_return = serializer.save(customer=customer_obj, user=user_obj, tenant_id=_tid)
         
         # Add items if provided in request
         items_data = request_data.get('items', [])
@@ -650,7 +664,7 @@ class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     def mark_received(self, request, pk=None):
         """Customer confirms they have received the order — only when SHIPPED."""
         try:
-            order = Order.objects.get(pk=pk)
+            order = scope_to_tenant(request.user, Order.objects.all(), 'tenant').get(pk=pk)
         except Order.DoesNotExist:
             return Response({'error': 'Order not found.'}, status=404)
 
@@ -717,6 +731,9 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'purchases'
     branch_field = 'warehouse'
+    # Tenant (owning-Admin) isolation is THE primary axis.
+    tenant_field = 'tenant'
+    shadow_safe = True  # get_queryset limits a supplier to purchase orders addressed to them
     # Branch admins see only the purchases they personally created.
     creator_field = 'created_by'
 
@@ -760,6 +777,9 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 Q(items__product__name__icontains=search)
             ).distinct()
 
+        # Tenant isolation (no-op for the platform operator & supplier shadow login).
+        qs = scope_to_tenant(user, qs, 'tenant')
+
         return qs.order_by('-order_date')
 
     def paginate_queryset(self, queryset):
@@ -778,6 +798,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
         try:
             warehouse = purchase.warehouse
+            if warehouse is None and purchase.created_by_id:
+                # No warehouse on the PO — fall back to the creating admin's
+                # assigned branch so received stock still lands somewhere sensible
+                # (no picker shown to branch admins).
+                warehouse = purchase.created_by.warehouses.first()
 
             with transaction.atomic():
                 for item in purchase.items.all():
@@ -807,6 +832,9 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         # Attribute the stock to whoever created the purchase, so a
                         # branch admin sees only the stock from purchases they made.
                         created_by=purchase.created_by,
+                        # Owning Admin (tenant) — inherit from the purchase order so
+                        # synced stock stays inside the same tenant.
+                        tenant_id=purchase.tenant_id,
                     )
 
                     # 3. Record the movement history
@@ -816,7 +844,8 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         quantity=units,
                         to_warehouse=warehouse,
                         date=timezone.now().date(),
-                        description=f"Purchase Order #{purchase.purchase_number} received"
+                        description=f"Purchase Order #{purchase.purchase_number} received",
+                        tenant_id=purchase.tenant_id,
                     )
             
             purchase.is_inventory_synced = True
@@ -1020,6 +1049,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             # Record which admin/user created this PO (shown to the supplier as "From").
             if getattr(request, 'user', None) and request.user.is_authenticated:
                 final_data['created_by'] = request.user
+
+            # Tenant (owning-Admin) isolation. None for platform op / shadow logins.
+            _tid = tenant_id_for(getattr(request, 'user', None))
+            if _tid is not None:
+                final_data['tenant_id'] = _tid
 
             # 4. Atomic Creation
             with transaction.atomic():
@@ -1246,6 +1280,9 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = PurchaseReturnSerializer
     permission_classes = [permissions.IsAuthenticated, HasModulePermission]
     perm_module = 'purchases'
+    # Tenant isolation through the PurchaseReturn's own tenant column.
+    tenant_field = 'tenant'
+    shadow_safe = True  # get_queryset limits a supplier to their own returns
     # Scope through the originating purchase order's branch.
     branch_field = 'purchase_order__warehouse'
     # Branch admins see only returns against purchases they created.
@@ -1278,6 +1315,9 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 Q(purchase_order__purchase_number__icontains=search_param)
             ).distinct()
 
+        # Tenant isolation (no-op for the platform operator & supplier shadow login).
+        qs = scope_to_tenant(user, qs, 'tenant')
+
         return qs.order_by('-created_at')
 
     def paginate_queryset(self, queryset):
@@ -1304,6 +1344,7 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
             # Branch isolation: a branch admin can only return a purchase order from
             # their own branch (helper returns True for super admins).
+            _po = None
             if po_id:
                 _po = PurchaseOrder.objects.filter(id=po_id).first()
                 if _po and not user_can_use_warehouse(request.user, str(getattr(_po, 'warehouse_id', '') or '')):
@@ -1318,7 +1359,15 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             # Explicitly set Foreign Keys and Handle Empty Strings
             final_data['supplier_id'] = supplier_id if supplier_id and str(supplier_id).strip() else None
             final_data['purchase_order_id'] = po_id if po_id and str(po_id).strip() else None
-            
+
+            # Tenant isolation: copy the owning Admin from the parent purchase order
+            # when present, else fall back to the actor's tenant (None for shadow).
+            _tid = getattr(_po, 'tenant_id', None) if _po is not None else None
+            if _tid is None:
+                _tid = tenant_id_for(request.user)
+            if _tid is not None:
+                final_data['tenant_id'] = _tid
+
             ret = PurchaseReturn.objects.create(**final_data)
             
             total = Decimal('0.00')
@@ -1374,13 +1423,15 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     sp = item.product
                     if not sp: continue
                     
-                    # 1. Deduct from Admin Stock (Matching by product name)
-                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier).update(
+                    # 1. Deduct from Admin Stock (Matching by product name) — scoped
+                    # to THIS return's tenant so one Admin's return cannot touch
+                    # another Admin's stock of the same product.
+                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id).update(
                         total_quantity=F('total_quantity') - item.quantity
                     )
-                    
-                    # 1b. Deduct from Admin Product Catalog to sync Admin UI
-                    Product.objects.filter(product_name=sp.name, supplier=ret.supplier).update(
+
+                    # 1b. Deduct from Admin Product Catalog to sync Admin UI (tenant-scoped)
+                    Product.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id).update(
                         total_quantity=F('total_quantity') - item.quantity
                     )
                     

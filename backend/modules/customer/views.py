@@ -17,14 +17,20 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Customer.objects.all().order_by('-created_at')
-        from core.scoping import user_area_ids, scope_to_creator
+        from core.scoping import user_area_ids, scope_to_tenant, is_platform_operator
+        user = self.request.user
+        # Fail CLOSED for the admin LIST/detail read: an unauthenticated or
+        # non-staff caller must never be able to dump customers across tenants.
+        # (The storefront self-signup CREATE path does not go through here.)
+        if not is_platform_operator(user) and not getattr(user, 'is_staff', False):
+            return qs.none()
         # Area Manager scoping: only customers in their assigned area(s).
-        area_ids = user_area_ids(self.request.user)
+        area_ids = user_area_ids(user)
         if area_ids is not None:
             qs = qs.filter(area_id__in=area_ids)
-        # Per-admin isolation: a branch admin only sees customers they created;
-        # super admins (and shadow/anon storefront calls) see all.
-        qs = scope_to_creator(self.request.user, qs, 'created_by')
+        # Per-admin (tenant) isolation: a tenant user only sees their tenant's
+        # customers; the platform operator (super admin) sees all.
+        qs = scope_to_tenant(user, qs, 'tenant')
         return qs
 
     def get_serializer_class(self):
@@ -46,9 +52,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         # Stamp the creating admin so the customer is scoped to them (per-admin
-        # isolation). Null for self-registered / anonymous.
+        # isolation). Null for self-registered / anonymous storefront signups.
+        from core.scoping import tenant_id_for
         creator = request.user if getattr(request.user, 'is_staff', False) else None
-        customer = serializer.save(plain_password=request.data.get('password'), created_by=creator)
+        customer = serializer.save(
+            plain_password=request.data.get('password'),
+            created_by=creator,
+            tenant_id=tenant_id_for(request.user),
+        )
         
         # Return detail serializer output with context for absolute URLs
         return Response(CustomerSerializer(customer, context={'request': request}).data, status=status.HTTP_201_CREATED)
@@ -89,7 +100,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                                     (Order.objects.filter(customer=customer)
                                      .exclude(status__in=['CANCELLED', 'REJECTED'])
                                      .order_by('created_at', 'tracking_id')),
-                                    'warehouse', 'created_by')
+                                    'warehouse', 'created_by', tenant_field='tenant')
 
         entries = []
         total_billed = 0.0
@@ -124,7 +135,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         total_refunds = 0.0
         for r in apply_report_scope(request,
                                     SaleReturn.objects.filter(customer=customer, status='ACCEPTED').order_by('created_at'),
-                                    'order__warehouse', 'order__created_by'):
+                                    'order__warehouse', 'order__created_by', tenant_field='tenant'):
             amt = float(r.refund_amount or 0) or float(r.items_total or 0)
             total_refunds += amt
             balance -= amt

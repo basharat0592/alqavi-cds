@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { userService, roleService, AppUser, AppRole } from '@/lib/api';
 import { authService } from '@/lib/auth';
-import { formatDate, exportToCSV } from '@/lib/utils';
+import { formatDate, exportToCSV, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
 import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
@@ -50,7 +50,6 @@ export default function UsersPage() {
     const [deleteUser, setDeleteUser] = useState<AppUser | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [selectedUserForView, setSelectedUserForView] = useState<AppUser | null>(null);
-    const [resetting, setResetting] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -243,8 +242,12 @@ export default function UsersPage() {
                                             <RowCheckboxTd sel={sel} id={user.id} />
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
-                                                        {(user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
+                                                    <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
+                                                        {user.avatar ? (
+                                                            <img src={getImageUrl(user.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            (user.first_name?.[0] || '') + (user.last_name?.[0] || '')
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-slate-900">{user.first_name} {user.last_name}</p>
@@ -354,13 +357,13 @@ export default function UsersPage() {
             {/* Password / Details Popup */}
             {selectedUserForView && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
-                        <div className="bg-slate-50/60 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                    <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
+                        <div className="bg-slate-50/60 px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                             <span className="text-[12px] font-bold text-slate-900 uppercase tracking-wider">Full User Profile</span>
                             <button onClick={() => setSelectedUserForView(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={16} /></button>
                         </div>
-                        <div className="p-4 sm:p-8 space-y-6">
-                            <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
+                        <div className="p-4 sm:p-6 space-y-4">
+                            <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
                                 <div className="w-12 h-12 bg-slate-100 border border-slate-200 flex items-center justify-center rounded-xl">
                                     <User size={24} className="text-slate-400" />
                                 </div>
@@ -370,28 +373,16 @@ export default function UsersPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl text-center">
+                            <div className="bg-indigo-50 border border-indigo-100 p-3.5 rounded-xl text-center">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Security Key / Password</label>
                                 {selectedUserForView.plain_password ? (
-                                    <div className="text-[28px] font-bold text-indigo-600 tracking-wider font-mono">{selectedUserForView.plain_password}</div>
+                                    <div className="text-[24px] font-bold text-indigo-600 tracking-wider font-mono">{selectedUserForView.plain_password}</div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        <p className="text-[12px] text-rose-600 font-bold uppercase">No Tracking</p>
-                                        <Btn onClick={async () => {
-                                            const newKey = Math.random().toString(36).slice(-8);
-                                            setResetting(true);
-                                            try {
-                                                await userService.adminResetPassword(selectedUserForView.id, newKey);
-                                                setSelectedUserForView(p => p ? { ...p, plain_password: newKey } : null);
-                                                setUsers(prev => prev.map(u => u.id === selectedUserForView.id ? { ...u, plain_password: newKey } : u));
-                                                toast.success("New password generated");
-                                            } catch { toast.error("Failed to generate password"); } finally { setResetting(false); }
-                                        }} loading={resetting} className="w-full">Reset & Show Password</Btn>
-                                    </div>
+                                    <p className="text-[12px] text-slate-400 font-semibold">Not available</p>
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-6 text-[12px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 sm:gap-y-4 text-[12px]">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</p>
                                     <p className="font-bold text-slate-900 truncate">{selectedUserForView.email || '—'}</p>
@@ -405,20 +396,12 @@ export default function UsersPage() {
                                     <p className="font-bold text-slate-900">{selectedUserForView.phone || '—'}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Postal Code</p>
-                                    <p className="font-bold text-slate-900">{selectedUserForView.postal_code || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City <span className="text-slate-300 normal-case font-medium">· branch</span></p>
+                                    <p className="font-bold text-slate-900">{(selectedUserForView as any).warehouses?.[0]?.area || '—'}</p>
                                 </div>
                                 <div className="col-span-full space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Address</p>
-                                    <p className="font-bold text-slate-900">{selectedUserForView.address || 'No address provided'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City</p>
-                                    <p className="font-bold text-slate-900">{selectedUserForView.city || '—'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Country</p>
-                                    <p className="font-bold text-slate-900">{selectedUserForView.country || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Address <span className="text-slate-300 normal-case font-medium">· branch</span></p>
+                                    <p className="font-bold text-slate-900">{(selectedUserForView as any).warehouses?.[0]?.location || (selectedUserForView as any).warehouses?.[0]?.name || 'No branch assigned'}</p>
                                 </div>
                             </div>
                         </div>

@@ -7,7 +7,7 @@ import { userService, roleService, AppRole, AppUser } from '@/lib/api';
 import {
     User, Mail, Phone, KeyRound,
     Shield, Building2, CheckCircle, XCircle, Save, Loader2, Zap, Calendar, History,
-    Eye, EyeOff, Lock, ShieldCheck, MapPin
+    Eye, EyeOff, Lock, ShieldCheck, MapPin, Info
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { PageHeader, Button } from '@/components/admin/ui';
@@ -28,7 +28,6 @@ const PAGE_GROUPS = [
         label: 'Main Dashboard',
         items: [
             { name: 'Dashboard', href: '/admin/dashboard' },
-            { name: 'Recent Activity', href: '/admin/sales/recent' },
             { name: 'Order List', href: '/admin/orders' },
             { name: 'All Sales', href: '/admin/sales' },
             { name: 'Order Tracking', href: '/admin/tracking' },
@@ -38,10 +37,8 @@ const PAGE_GROUPS = [
     {
         label: 'Inventory & Stock',
         items: [
-            { name: 'Product Categories', href: '/admin/products/categories' },
             { name: 'Product List', href: '/admin/products' },
-            { name: 'Add Product', href: '/admin/products/add' },
-            { name: 'Product Sections', href: '/admin/products/sections' },
+            { name: 'Add Listing', href: '/admin/products/add' },
             { name: 'Current Stocks', href: '/admin/inventory/list' },
             { name: 'Warehouses', href: '/admin/inventory/warehouses' },
         ],
@@ -51,7 +48,6 @@ const PAGE_GROUPS = [
         items: [
             { name: 'New Purchase', href: '/admin/purchases/add' },
             { name: 'Purchase History', href: '/admin/purchases' },
-            { name: 'Supplier Catalog', href: '/admin/supplier-products' },
             { name: 'Returns / Refunds', href: '/admin/purchases/returns' },
         ],
     },
@@ -61,7 +57,6 @@ const PAGE_GROUPS = [
             { name: 'Point of Sale', href: '/admin/sale' },
             { name: 'Invoices', href: '/admin/invoices' },
             { name: 'Global Payments', href: '/admin/payments' },
-            { name: 'Company Categories', href: '/admin/company/categories' },
             { name: 'Sale Returns', href: '/admin/sale-returns' },
         ],
     },
@@ -73,7 +68,6 @@ const PAGE_GROUPS = [
             { name: 'Areas', href: '/admin/company/areas' },
             { name: 'Internal Users', href: '/admin/users' },
             { name: 'Staff Roles', href: '/admin/users/roles' },
-            { name: 'Permissions', href: '/admin/users/permissions' },
             { name: 'System Alerts', href: '/admin/alerts' },
         ],
     },
@@ -81,13 +75,6 @@ const PAGE_GROUPS = [
         label: 'Detailed Reports',
         items: [
             { name: 'Reports Center', href: '/admin/reports' },
-            { name: 'Sales Reports', href: '/admin/reports/sales' },
-            { name: 'Purchase Reports', href: '/admin/reports/purchases' },
-            { name: 'Inventory Reports', href: '/admin/reports/inventory' },
-            { name: 'Customer Reports', href: '/admin/reports/customers' },
-            { name: 'Accounting Reports', href: '/admin/reports/accounting' },
-            { name: 'Returns Reports', href: '/admin/reports/sales-returns' },
-            { name: 'Data Hub', href: '/admin/reports/data-hub' },
         ],
     },
     {
@@ -292,6 +279,20 @@ export default function EditUserPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
+        // If a new password was typed in the security section, validate it here too
+        // so the main Save persists it — users expect one Save to save everything,
+        // not a separate "Set New Password" click.
+        const wantsPasswordChange = !!(passwordData.new_password || passwordData.confirm_password);
+        if (wantsPasswordChange) {
+            if (passwordData.new_password.length < 8) {
+                showToast('Password must be at least 8 characters.', 'error');
+                return;
+            }
+            if (passwordData.new_password !== passwordData.confirm_password) {
+                showToast('Passwords do not match.', 'error');
+                return;
+            }
+        }
         setSaving(true);
         try {
             const payload: any = { ...form };
@@ -302,6 +303,11 @@ export default function EditUserPage() {
             // Only a Super Admin can (re)assign branches; backend enforces this too.
             if (canAssignBranch) payload.warehouses = isGlobalRole ? [] : selectedWarehouses;
             await userService.update(Number(userId), payload);
+            // Apply the password change in the same Save (updates login + stored password).
+            if (wantsPasswordChange) {
+                await userService.adminResetPassword(Number(userId), passwordData.new_password);
+                setPasswordData({ new_password: '', confirm_password: '' });
+            }
             showToast('Identity updated successfully!', 'success');
             setTimeout(() => router.push('/admin/users'), 1500);
         } catch (err: any) {
@@ -426,8 +432,9 @@ export default function EditUserPage() {
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                             <SectionHeader title="Assigned Branches" icon={Building2} />
                             <p className="text-xs text-slate-500">
-                                Pick an area, then choose the branch warehouse(s) this admin manages.
-                                They will only see sales, purchases, inventory and payments for these branches.
+                                This admin has their own fully independent workspace — their own products,
+                                stock, customers, sales and payments. Optionally tag the branch warehouse(s)
+                                they work in (organizational only); it can be left empty.
                             </p>
 
                             {/* Step 1 — choose the area (city) to narrow the warehouse list. */}
@@ -485,9 +492,10 @@ export default function EditUserPage() {
                                 </div>
                             )}
                             {selectedWarehouses.length === 0 && warehouses.length > 0 && (
-                                <p className="flex items-center gap-1.5 text-[11px] text-amber-700 font-medium bg-amber-50/70 border border-amber-100 rounded-lg px-2.5 py-1.5">
-                                    <XCircle className="w-3.5 h-3.5 shrink-0" />
-                                    No branch selected — this user will not see any data until a branch is assigned.
+                                <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                                    <Info className="w-3.5 h-3.5 shrink-0" />
+                                    Optional — leaving this empty is fine. This admin has their own independent
+                                    workspace regardless of branch tagging.
                                 </p>
                             )}
                             {selectedWarehouses.length > 0 && (

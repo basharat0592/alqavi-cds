@@ -1,12 +1,25 @@
 from rest_framework import serializers
-from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage, StoreProduct
+
+
+class StoreProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.ReadOnlyField(source='category.name')
+
+    class Meta:
+        model = StoreProduct
+        fields = [
+            'id', 'name', 'category', 'category_name', 'size', 'weight', 'price',
+            'quantity', 'image', 'description', 'is_visible', 'source',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'category_name', 'source', 'created_at', 'updated_at']
 
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'description', 'status', 'navbar_page', 'created_at']
-        read_only_fields = ['id', 'slug', 'created_at']
+        fields = ['id', 'name', 'slug', 'description', 'status', 'navbar_page', 'tenant', 'created_at']
+        read_only_fields = ['id', 'slug', 'tenant', 'created_at']
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -36,9 +49,9 @@ class ProductSerializer(serializers.ModelSerializer):
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
             'cost_price', 'total_quantity', 'reserved_quantity', 'available_quantity', 'min_count', 'image', 'additional_images',
             'description', 'sku', 'barcode', 'selling_price', 'batch', 'badge', 'weight', 'size', 'status',
-            'profit_margin', 'created_at', 'catalog_image'
+            'profit_margin', 'created_at', 'catalog_image', 'tenant'
         ]
-        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'section_names', 'profit_margin', 'catalog_image']
+        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'section_names', 'profit_margin', 'catalog_image', 'tenant']
 
     def get_section_names(self, obj):
         return [s.name for s in obj.sections.all()]
@@ -78,8 +91,8 @@ class MainCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MainCategory
-        fields = ['id', 'name', 'slug', 'description', 'status', 'position', 'is_visible', 'product_ids', 'product_details', 'created_at']
-        read_only_fields = ['id', 'slug', 'created_at']
+        fields = ['id', 'name', 'slug', 'description', 'status', 'position', 'is_visible', 'product_ids', 'product_details', 'tenant', 'created_at']
+        read_only_fields = ['id', 'slug', 'tenant', 'created_at']
 
 
 class WishlistSerializer(serializers.ModelSerializer):

@@ -8,9 +8,9 @@ from modules.inventory.models import Warehouse
 
 
 def _warehouse_brief(obj):
-    """Compact branch list for a user: id + name + city/area label."""
+    """Compact branch list for a user: id + name + location (address) + city/area label."""
     return [
-        {'id': str(w.id), 'name': w.name, 'area': (w.area.name if w.area_id else None)}
+        {'id': str(w.id), 'name': w.name, 'location': w.location, 'area': (w.area.name if w.area_id else None)}
         for w in obj.warehouses.all()
     ]
 
@@ -159,6 +159,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
         # Internal users created here are staff so they can reach the admin panel;
         # page_permissions + area/branch scoping handle what they can actually see.
         user.is_staff = True
+        # Tenant (owning Admin): a staff sub-user inherits the creating Admin's
+        # tenant so they share that Admin's workspace. An Admin/Super-Admin is
+        # created with tenant NULL and resolves to their own id (Admin) or
+        # cross-tenant (Super Admin) via core.scoping.tenant_id_for — so when the
+        # creator is the platform operator / public signup, the new account
+        # correctly owns its own tenant.
+        from core.scoping import tenant_id_for
+        creator = getattr(request, 'user', None) if request else None
+        user.tenant_id = tenant_id_for(creator)
         user.save()
         if areas is not None:
             user.areas.set(areas)

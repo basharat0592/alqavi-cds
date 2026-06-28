@@ -3,18 +3,19 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-    Package, TrendingUp, Tag,
+    Package, TrendingUp,
     Boxes, ChevronRight, Settings, UserCheck,
-    Activity, ListFilter, ShoppingCart, History, RefreshCcw,
-    ShieldCheck, Lock, BarChart3, Store, RotateCcw, User, Users, CreditCard,
-    Truck, Book, AlertTriangle, Globe,
-    ScanLine, Receipt, Landmark, ClipboardList, PackagePlus,
+    ShoppingCart, History, RefreshCcw,
+    ShieldCheck, BarChart3, Store, RotateCcw, User, Users, CreditCard,
+    Truck, AlertTriangle, Globe,
+    ScanLine, Receipt, ClipboardList, PackagePlus,
     ArrowDownLeft, ArrowUpRight, Building2,
-    MapPin, Bell, Wallet, Bike
+    MapPin, Bell, Bike
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
+import { inventoryService, companyService, supplierService } from '@/lib/api';
 
 // Dashboard cards/links only a Super Admin should see (cross-branch administration).
 // Branch admins run day-to-day ops and don't manage branches, staff, roles or
@@ -23,17 +24,12 @@ const SUPER_ONLY_HREFS = new Set<string>([
     '/admin/branches',
     '/admin/users',
     '/admin/users/roles',
-    '/admin/users/permissions',
     '/admin/settings',
     '/admin/website-settings',
     '/admin/inventory/warehouses',
+    '/admin/company/areas',
     '/admin/payments',
 ]);
-
-// For a Super Admin, only these groups stay as big prominent cards (their job is
-// oversight). The operational groups (Sales & Orders, Purchasing & Inventory) drop
-// into the "Other Pages" list below. Branch admins keep operational cards on top.
-const SUPER_ADMIN_PROMINENT_GROUPS = new Set<string>(['Finance & Reports', 'Administration']);
 
 // For a Branch Admin, only the day-to-day essentials stay as prominent cards; the
 // rest drop into the "Other Pages" list. Tweak this set to change what's featured.
@@ -81,7 +77,40 @@ interface GroupSection {
 export default function AdminDashboard() {
     const { stats, products, lowStock: serverLowStock, loading } = useAdminDashboard();
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-    useEffect(() => { setIsSuperAdmin(authService.isSuperAdmin()); }, []);
+    // Pages this user may open (null = full access). Mirrors the sidebar so the
+    // dashboard only shows cards for pages the user actually has access to.
+    const [userPagePerms, setUserPagePerms] = useState<string[] | null>(null);
+    useEffect(() => {
+        setIsSuperAdmin(authService.isSuperAdmin());
+        const u: any = authService.getUser();
+        const role = (typeof u?.role === 'string' ? u.role : u?.role_name || '').toLowerCase();
+        if (['admin', 'super admin', 'superadmin'].includes(role) || u?.is_superuser) {
+            setUserPagePerms(null); // full access — no page restriction
+        } else {
+            const perms = u?.page_permissions;
+            setUserPagePerms(Array.isArray(perms) && perms.length > 0 ? perms : null);
+        }
+    }, []);
+
+    // Cross-branch counts for the Super Admin "Business Overview" panel. Branches,
+    // customers and suppliers aren't in the dashboard stats payload, so fetch them
+    // directly (products & employees come from the dashboard hook). null = still loading.
+    const [overviewCounts, setOverviewCounts] = useState<{ branches: number | null; customers: number | null; suppliers: number | null }>({ branches: null, customers: null, suppliers: null });
+    useEffect(() => {
+        if (!isSuperAdmin) return;
+        let cancelled = false;
+        const len = (r: any) => (Array.isArray(r) ? r.length : (r?.results?.length ?? r?.count ?? 0));
+        (async () => {
+            const [wh, cust, sup] = await Promise.all([
+                inventoryService.getWarehouses().catch(() => []),
+                companyService.getCustomers().catch(() => []),
+                supplierService.getAll().catch(() => []),
+            ]);
+            if (cancelled) return;
+            setOverviewCounts({ branches: len(wh), customers: len(cust), suppliers: len(sup) });
+        })();
+        return () => { cancelled = true; };
+    }, [isSuperAdmin]);
 
     // Sidebar-visibility toggles (System Settings → Sidebar Pages) hide pages here too.
     const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
@@ -105,7 +134,8 @@ export default function AdminDashboard() {
     const canSee = (href: string) =>
         (isSuperAdmin || !SUPER_ONLY_HREFS.has(href)) &&
         !(isSuperAdmin && SUPER_ADMIN_HIDDEN_HREFS.includes(href)) &&
-        sidebarVisibility[href] !== false;
+        sidebarVisibility[href] !== false &&
+        (userPagePerms === null || userPagePerms.includes(href));
 
     // ── CORE OPERATIONS & KEY PAGES (PROMINENT BUTTONS) ──
     const corePages: PageButton[] = [
@@ -306,7 +336,7 @@ export default function AdminDashboard() {
             keywords: ['items', 'catalog', 'skus', 'edit']
         },
         {
-            name: 'Add Product',
+            name: 'Add Listing',
             desc: 'Create a new item',
             href: '/admin/products/add',
             icon: PackagePlus,
@@ -403,6 +433,76 @@ export default function AdminDashboard() {
             },
             keywords: ['clients', 'profiles', 'ledger', 'customer']
         },
+        {
+            name: 'Warehouses',
+            desc: 'Storage & distribution',
+            href: '/admin/inventory/warehouses',
+            icon: Store,
+            theme: {
+                border: 'hover:border-orange-500',
+                iconBg: 'bg-orange-50 border-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(234,88,12,0.2)]',
+                leftBar: 'bg-orange-600',
+                chevron: 'text-orange-400 group-hover:text-orange-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(234,88,12,0.06)]'
+            },
+            keywords: ['storage', 'depots', 'distribution', 'warehouse']
+        },
+        {
+            name: 'Areas / Territories',
+            desc: 'Regions & zones',
+            href: '/admin/company/areas',
+            icon: MapPin,
+            theme: {
+                border: 'hover:border-sky-500',
+                iconBg: 'bg-sky-50 border-sky-100 text-sky-600 group-hover:bg-sky-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(2,132,199,0.2)]',
+                leftBar: 'bg-sky-600',
+                chevron: 'text-sky-400 group-hover:text-sky-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(2,132,199,0.06)]'
+            },
+            keywords: ['area', 'territory', 'region', 'zone', 'locality']
+        },
+        {
+            name: 'Global Payments',
+            desc: 'Payment methods',
+            href: '/admin/payments',
+            icon: CreditCard,
+            theme: {
+                border: 'hover:border-emerald-500',
+                iconBg: 'bg-emerald-50 border-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)]',
+                leftBar: 'bg-emerald-600',
+                chevron: 'text-emerald-400 group-hover:text-emerald-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(16,185,129,0.06)]'
+            },
+            keywords: ['payment methods', 'stripe', 'paypal', 'banks', 'global payments']
+        },
+        {
+            name: 'System Alerts',
+            desc: 'Errors & warnings',
+            href: '/admin/alerts',
+            icon: AlertTriangle,
+            theme: {
+                border: 'hover:border-rose-500',
+                iconBg: 'bg-rose-50 border-rose-100 text-rose-600 group-hover:bg-rose-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]',
+                leftBar: 'bg-rose-600',
+                chevron: 'text-rose-400 group-hover:text-rose-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(244,63,94,0.06)]'
+            },
+            keywords: ['errors', 'warnings', 'alarms', 'alerts']
+        },
+        {
+            name: 'Notifications',
+            desc: 'Events & updates',
+            href: '/admin/notifications',
+            icon: Bell,
+            theme: {
+                border: 'hover:border-violet-500',
+                iconBg: 'bg-violet-50 border-violet-100 text-violet-600 group-hover:bg-violet-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)]',
+                leftBar: 'bg-violet-600',
+                chevron: 'text-violet-400 group-hover:text-violet-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(139,92,246,0.06)]'
+            },
+            keywords: ['alerts', 'events', 'inbox', 'updates', 'notifications']
+        },
     ];
 
     // ── COMPLETE PAGE CATALOG ──
@@ -421,7 +521,6 @@ export default function AdminDashboard() {
                 { name: 'Order List', href: '/admin/orders', icon: ClipboardList, keywords: ['orders', 'shipping', 'list'] },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, keywords: ['delivery', 'courier', 'dispatch'] },
                 { name: 'Delivery Persons', href: '/admin/delivery', icon: Bike, keywords: ['rider', 'riders', 'courier', 'driver', 'delivery boy'] },
-                { name: 'Activity Logs', href: '/admin/sales/recent', icon: Activity, keywords: ['audit', 'logs', 'actions', 'history'] },
             ]
         },
         {
@@ -431,16 +530,13 @@ export default function AdminDashboard() {
                 { name: 'Purchase History', href: '/admin/purchases', icon: History, keywords: ['expenses', 'vendor orders', 'invoices'] },
                 { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, keywords: ['refunds', 'damaged', 'shipback'] },
                 { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck, keywords: ['vendors', 'manufacturers', 'contacts'] },
-                { name: 'Supplier Catalog', href: '/admin/supplier-products', icon: Book, keywords: ['prices', 'vendor catalog', 'items'] },
             ]
         },
         {
             title: 'Products & Inventory',
             items: [
                 { name: 'Product List', href: '/admin/products', icon: Package, keywords: ['items', 'catalog', 'skus', 'edit'] },
-                { name: 'Add Product', href: '/admin/products/add', icon: PackagePlus, keywords: ['create', 'new item', 'upload'] },
-                { name: 'Product Categories', href: '/admin/products/categories', icon: Tag, keywords: ['taxonomies', 'groups', 'labels'] },
-                { name: 'Product Sections', href: '/admin/products/sections', icon: ListFilter, keywords: ['blocks', 'sliders', 'banners'] },
+                { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, keywords: ['create', 'new item', 'upload'] },
                 { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes, keywords: ['volumes', 'quantities', 'adjustments', 'stock'] },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store, keywords: ['storage', 'depots', 'distribution'] },
             ]
@@ -449,7 +545,6 @@ export default function AdminDashboard() {
             title: 'Customers',
             items: [
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users, keywords: ['clients', 'profiles', 'ledger'] },
-                { name: 'Company Categories', href: '/admin/company/categories', icon: Tag, keywords: ['company tax categories', 'industry classifications'] },
                 { name: 'Areas / Territories', href: '/admin/company/areas', icon: MapPin, keywords: ['area', 'territory', 'region', 'zone', 'locality'] },
             ]
         },
@@ -459,23 +554,12 @@ export default function AdminDashboard() {
                 { name: 'Income', href: '/admin/income', icon: ArrowDownLeft, keywords: ['income', 'money in', 'revenue', 'earnings', 'inbound'] },
                 { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight, keywords: ['expense', 'money out', 'spending', 'costs', 'outbound'] },
                 { name: 'Global Payments', href: '/admin/payments', icon: CreditCard, keywords: ['payment methods', 'stripe', 'paypal', 'banks'] },
-                { name: 'Receivables', href: '/admin/reports/receivables', icon: Wallet, keywords: ['receivable', 'money owed', 'customer dues', 'outstanding'] },
-                { name: 'Payables', href: '/admin/reports/payables', icon: Wallet, keywords: ['payable', 'we owe', 'supplier dues', 'outstanding'] },
             ]
         },
         {
             title: 'Reports',
             items: [
                 { name: 'Reports Center', href: '/admin/reports', icon: BarChart3, keywords: ['hub', 'audits', 'graphs', 'reports'] },
-                { name: 'Accounting & Finance', href: '/admin/reports/accounting', icon: Landmark, keywords: ['p&l', 'cashflow', 'tax', 'finance', 'ledger'] },
-                { name: 'Sales Reports', href: '/admin/reports/sales', icon: TrendingUp, keywords: ['revenue', 'growth', 'metrics'] },
-                { name: 'Purchase Reports', href: '/admin/reports/purchases', icon: ShoppingCart, keywords: ['costs', 'purchases value'] },
-                { name: 'Inventory Reports', href: '/admin/reports/inventory', icon: Boxes, keywords: ['valuation', 'stock level reports'] },
-                { name: 'Customer Reports', href: '/admin/reports/customers', icon: Users, keywords: ['balances', 'rankings', 'activity'] },
-                { name: 'Returns Reports', href: '/admin/reports/sales-returns', icon: RotateCcw, keywords: ['refunds', 'returns reasons'] },
-                { name: 'Area-wise Report', href: '/admin/reports/by-area', icon: MapPin, keywords: ['area', 'territory', 'region wise', 'zone'] },
-                { name: 'My Performance / Staff Comparison', href: '/admin/reports/by-user', icon: Activity, keywords: ['my performance', 'staff comparison', 'by user', 'per admin', 'sales by staff'] },
-                { name: 'Data Hub', href: '/admin/reports/data-hub', icon: BarChart3, keywords: ['consolidated grid', 'tables', 'custom reports'] },
             ]
         },
         {
@@ -484,7 +568,6 @@ export default function AdminDashboard() {
                 { name: 'Branches & Admins', href: '/admin/branches', icon: Building2, keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch'] },
                 { name: 'Internal Users', href: '/admin/users', icon: User, keywords: ['staff', 'logins', 'accounts'] },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck, keywords: ['groups', 'privileges', 'ranks'] },
-                { name: 'Permissions', href: '/admin/users/permissions', icon: Lock, keywords: ['rules', 'gates', 'granular'] },
             ]
         },
         {
@@ -528,21 +611,34 @@ export default function AdminDashboard() {
         { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense'] },
         { title: 'Administration', hrefs: ['/admin/branches', '/admin/users', '/admin/website-settings', '/admin/settings', '/admin/company/suppliers', '/admin/company/customers'] },
     ];
+
+    // The Super Admin sees only oversight pages, so the operational groups above would
+    // each render as a lonely 1-card row. Give them their own balanced grouping that
+    // fills rows cleanly. Every page here is shown as a prominent card (their dashboard
+    // has no "All Pages" directory below).
+    const SUPER_ADMIN_CORE_GROUPS: { title: string; hrefs: string[] }[] = [
+        { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense', '/admin/payments'] },
+        { title: 'Administration', hrefs: ['/admin/branches', '/admin/users', '/admin/company/suppliers', '/admin/company/customers', '/admin/company/areas'] },
+        { title: 'System & CMS', hrefs: ['/admin/website-settings', '/admin/settings', '/admin/alerts', '/admin/notifications'] },
+    ];
     const coreByHref = new Map(corePages.map((p) => [p.href, p]));
 
     // Whether a core card stays a big prominent button (vs dropping to the list):
-    //  - Super admin → only the oversight GROUPS (Finance & Administration).
+    //  - Super admin → every page they can see is a prominent card (the "All Pages"
+    //    directory is hidden for them, so the cards are their full menu).
     //  - Branch admin → only the day-to-day essential cards.
-    const isPromoted = (groupTitle: string, href: string) =>
+    const isPromoted = (_groupTitle: string, href: string) =>
         isSuperAdmin
-            ? SUPER_ADMIN_PROMINENT_GROUPS.has(groupTitle)
+            ? true
             : BRANCH_ADMIN_IMPORTANT_HREFS.has(href);
 
-    const groupedCore = CORE_GROUPS
+    const groupedCore = (isSuperAdmin ? SUPER_ADMIN_CORE_GROUPS : CORE_GROUPS)
         .map((g) => ({
             title: g.title,
             items: (g.hrefs.map((h) => coreByHref.get(h)).filter(Boolean) as PageButton[])
-                .filter((p) => canSee(p.href) && isPromoted(g.title, p.href)),
+                // Super admin: every page in their groups is a prominent card. Branch
+                // admin: only the day-to-day essentials stay prominent.
+                .filter((p) => canSee(p.href) && (isSuperAdmin || isPromoted(g.title, p.href))),
         }))
         .filter((g) => g.items.length > 0);
 
@@ -560,6 +656,17 @@ export default function AdminDashboard() {
         }))
         .filter((cat) => cat.items.length > 0);
     const totalOtherCount = groupedOther.reduce((n, g) => n + g.items.length, 0);
+
+    // Super-admin oversight panel (replaces the branch admin's Low Stock Alert).
+    // Products & employees come from the dashboard hook; branches/customers/suppliers
+    // from overviewCounts. `value` is null while that count is still loading.
+    const businessOverview: { label: string; value: number | null; icon: any; color: string }[] = [
+        { label: 'Total Branches', value: overviewCounts.branches, icon: Building2, color: 'bg-indigo-50 text-indigo-600' },
+        { label: 'Total Employees', value: stats?.activeUsers ?? null, icon: User, color: 'bg-violet-50 text-violet-600' },
+        { label: 'Total Products', value: stats?.totalProducts ?? null, icon: Package, color: 'bg-teal-50 text-teal-600' },
+        { label: 'Total Customers', value: overviewCounts.customers, icon: Users, color: 'bg-sky-50 text-sky-600' },
+        { label: 'Active Suppliers', value: overviewCounts.suppliers, icon: Truck, color: 'bg-amber-50 text-amber-600' },
+    ];
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
@@ -629,8 +736,35 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* ── RIGHT: LOW STOCK ALERT ── */}
+                    {/* ── RIGHT: SUPER ADMIN → BUSINESS OVERVIEW · BRANCH ADMIN → LOW STOCK ── */}
                     <aside className="w-full xl:w-[340px] shrink-0">
+                        {isSuperAdmin ? (
+                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col xl:h-full">
+                            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                    <BarChart3 size={16} />
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Business Overview</h3>
+                                    <p className="text-[10.5px] text-slate-400 font-medium">Across all branches</p>
+                                </div>
+                            </div>
+                            <div className="flex-1 divide-y divide-slate-50">
+                                {businessOverview.map((m) => {
+                                    const MIcon = m.icon;
+                                    return (
+                                        <div key={m.label} className="flex items-center gap-3 px-5 py-3.5">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${m.color}`}>
+                                                <MIcon size={17} strokeWidth={1.75} />
+                                            </div>
+                                            <span className="flex-1 min-w-0 truncate text-[12.5px] font-semibold text-slate-600">{m.label}</span>
+                                            <span className="text-[15px] font-black text-slate-900 tabular-nums">{m.value === null ? '—' : m.value.toLocaleString('en-US')}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        ) : (
                         <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col xl:h-full">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                                 <div className="flex items-center gap-2.5 min-w-0">
@@ -695,10 +829,13 @@ export default function AdminDashboard() {
                                 View full inventory <ChevronRight size={13} />
                             </Link>
                         </div>
+                        )}
                     </aside>
                 </div>
 
                 {/* ── ALL PAGES (CATEGORIES AS COLUMNS) ── */}
+                {/* The super admin works from the prominent cards only — hide the full directory. */}
+                {!isSuperAdmin && (
                 <div className="mt-10 border-t border-slate-200/70 pt-8">
                     <div className="flex items-center gap-3 select-none mb-6">
                         <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">All Pages</h2>
@@ -740,6 +877,7 @@ export default function AdminDashboard() {
                         ))}
                     </div>
                 </div>
+                )}
             </div>
         </div>
     );

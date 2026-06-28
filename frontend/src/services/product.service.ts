@@ -20,6 +20,44 @@ export const productService = {
         const { data } = await api.get(`v1/products/items/${id}/`);
         return data;
     },
+    // Super-admin master store catalog (consolidated listings).
+    getStoreCatalog: async (): Promise<any[]> => {
+        const { data } = await api.get('v1/products/store-catalog/');
+        return Array.isArray(data) ? data : data?.results || [];
+    },
+    createStoreListing: async (payload: any): Promise<any> => {
+        if (payload.image instanceof File) {
+            const fd = new FormData();
+            Object.entries(payload).forEach(([k, v]) => {
+                if (v !== null && v !== undefined && v !== '') fd.append(k, v as any);
+            });
+            const { data } = await api.post('v1/products/store-catalog/', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return data;
+        }
+        const { image, ...rest } = payload;
+        const { data } = await api.post('v1/products/store-catalog/', rest);
+        return data;
+    },
+    updateStoreListing: async (id: string | number, payload: any): Promise<any> => {
+        if (payload.image instanceof File) {
+            const fd = new FormData();
+            Object.entries(payload).forEach(([k, v]) => {
+                if (v !== null && v !== undefined && v !== '') fd.append(k, v as any);
+            });
+            const { data } = await api.patch(`v1/products/store-catalog/${id}/`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return data;
+        }
+        const { image, ...rest } = payload;
+        const { data } = await api.patch(`v1/products/store-catalog/${id}/`, rest);
+        return data;
+    },
+    deleteStoreListing: async (id: string | number): Promise<void> => {
+        await api.delete(`v1/products/store-catalog/${id}/`);
+    },
     getProducts: async (params?: any): Promise<any> => {
         return productService.getAll(params);
     },
