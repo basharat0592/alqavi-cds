@@ -74,6 +74,16 @@ class PaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 | Q(reference_number__icontains=search)
                 | Q(description__icontains=search)
             )
+
+        # The Super Admin's own ledger pages (Payments / Income / Expense) show ONLY
+        # the platform operator's OWN entries (tenant NULL) — a branch admin's sales
+        # income belongs to that admin and stays out of the super admin's books.
+        # A branch drill-down (?warehouse / ?created_by) or an explicit ?scope=all
+        # override this so reports can still aggregate across branches.
+        params = self.request.query_params
+        if is_platform_operator(self.request.user):
+            if not (params.get('warehouse') or params.get('created_by') or params.get('scope') == 'all'):
+                qs = qs.filter(tenant__isnull=True)
         return qs
 
     def paginate_queryset(self, queryset):
@@ -279,8 +289,15 @@ def payments_due(request):
 @permission_classes([permissions.IsAuthenticated])
 def payment_stats(request):
     # Per-admin totals, matching the income/expense list (Payment.user = the
-    # responsible staff); super admin sees all with optional ?created_by/?warehouse.
+    # responsible staff). The Super Admin's cards show only their OWN ledger
+    # (tenant NULL) to mirror the list — a branch drill-down (?warehouse /
+    # ?created_by) or ?scope=all aggregates across branches instead.
     qs = apply_report_scope(request, Payment.objects.all(), 'warehouse', 'user', tenant_field='tenant')
+    params = request.query_params
+    if is_platform_operator(request.user) and not (
+        params.get('warehouse') or params.get('created_by') or params.get('scope') == 'all'
+    ):
+        qs = qs.filter(tenant__isnull=True)
     inbound = qs.filter(payment_type='inbound').aggregate(t=Sum('amount'))['t'] or 0
     outbound = qs.filter(payment_type='outbound').aggregate(t=Sum('amount'))['t'] or 0
     # "Internal" = manually recorded expenses (rent, salary, etc.), not auto ones.

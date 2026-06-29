@@ -27,15 +27,22 @@ import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/
    ───────────────────────────────────────────────────────────────────────────── */
 const inputCls = ui.inputBase;
 
+// Grouped in a logical order: Sales → Purchases → Inventory → People → Finance.
+// (The Category dropdown appends Income, Expense and System Users after these.)
 const CATEGORIES = [
+    // Sales
     { id: 'sales', label: 'Sale Order' },
-    { id: 'purchases', label: 'Purchase Order' },
-    { id: 'customers', label: 'Customers' },
     { id: 'returns', label: 'Returns' },
-    { id: 'payments', label: 'Payments' },
+    // Purchases
+    { id: 'purchases', label: 'Purchase Order' },
     { id: 'suppliers', label: 'Suppliers' },
+    // Inventory
     { id: 'products', label: 'Products' },
     { id: 'stock', label: 'Stock' },
+    // People
+    { id: 'customers', label: 'Customers' },
+    // Finance
+    { id: 'payments', label: 'Payments' },
 ];
 
 // When the "Personal" branch is selected, the report covers the Super Admin's own
@@ -151,6 +158,9 @@ function ReportsEngineInner() {
     // Super-Admin branch scope: pick a branch and the whole report follows it.
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<any[]>([]);
+    // Per-customer profile (total bought / dues / orders) shown when a customer is picked.
+    const [customerSummary, setCustomerSummary] = useState<any | null>(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     const [filters, setFilters] = useState({
@@ -182,18 +192,20 @@ function ReportsEngineInner() {
         setIsSuperAdmin(authService.isSuperAdmin());
         // Each lookup is independent — one failing endpoint (e.g. a 500 on
         // categories) must NOT blank out the others (suppliers, stock, branches).
-        const [s, c, st, wh, u] = await Promise.all([
+        const [s, c, st, wh, u, cust] = await Promise.all([
             supplierService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
             categoryService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
             inventoryService.getInventory({ no_pagination: 'true' }).catch(() => [] as any[]),
             inventoryService.getWarehouses().catch(() => [] as any[]),
             userService.getAll?.().catch(() => [] as any[]) ?? Promise.resolve([] as any[]),
+            companyService.getCustomers().catch(() => [] as any[]),
         ]);
         setSuppliers(Array.isArray(s) ? s : (s as any).results || []);
         setCategories(Array.isArray(c) ? c : (c as any).results || []);
         setStocks(st || []);
         setWarehouses(Array.isArray(wh) ? wh : (wh as any)?.results || []);
         setUsers(Array.isArray(u) ? u : (u as any)?.results || []);
+        setCustomers(Array.isArray(cust) ? cust : (cust as any)?.results || []);
         setLoading(false);
     }, []);
 
@@ -454,7 +466,53 @@ function ReportsEngineInner() {
             return;
         }
 
+        // Customer profile: pick a customer → full history (bought, paid, dues, orders).
+        if (filters.category === 'customers' && String(filters.view).startsWith('cust:')) {
+            const custId = String(filters.view).slice(5);
+            setGenerating(true);
+            setHasGenerated(true);
+            setProfitSummary(null);
+            try {
+                const ordRes: any = await orderService.getAll({ no_pagination: 'true' });
+                const all = Array.isArray(ordRes) ? ordRes : ordRes?.results || [];
+                const sameCustomer = (o: any) => {
+                    const raw = o.customer;
+                    const cid = raw && typeof raw === 'object' ? raw.id : (raw ?? o.customer_id);
+                    return String(cid ?? '') === custId;
+                };
+                const orders = all.filter(sameCustomer)
+                    .sort((a: any, b: any) => new Date(rowDateVal(b) || 0).getTime() - new Date(rowDateVal(a) || 0).getTime());
+                const live = orders.filter((o: any) => String(o.status || '').toUpperCase() !== 'CANCELLED');
+                // A fully-PAID order counts as paid in full even if amount_paid wasn't
+                // recorded; partial/unpaid orders count only what was received.
+                const paidOf = (o: any) => String(o.payment_status || '').toUpperCase() === 'PAID'
+                    ? rowAmount(o) : Number(o.amount_paid || 0);
+                const totalBought = live.reduce((s: number, o: any) => s + rowAmount(o), 0);
+                const totalPaid = live.reduce((s: number, o: any) => s + paidOf(o), 0);
+                const dues = Math.max(0, totalBought - totalPaid);
+                const delivered = live.filter((o: any) => String(o.status || '').toUpperCase() === 'DELIVERED').length;
+                const cust = customers.find((c: any) => String(c.id) === custId) || {};
+                setReportResult(orders);
+                setCustomerSummary({
+                    name: [cust.first_name, cust.last_name].filter(Boolean).join(' ') || cust.full_name || cust.username || cust.email || 'Customer',
+                    phone: cust.phone || '—', email: cust.email || '—',
+                    address: [cust.address, cust.city].filter(Boolean).join(', ') || '—',
+                    totalBought, totalPaid, dues,
+                    orders: live.length, allOrders: orders.length, delivered,
+                    lastOrder: orders.length ? rowDateVal(orders[0]) : null,
+                });
+                toast.success(`${orders.length} order(s) for ${[cust.first_name, cust.last_name].filter(Boolean).join(' ') || 'customer'}`);
+            } catch (e) {
+                console.error('Customer report failed:', e);
+                toast.error('Could not load customer details.');
+            } finally {
+                setGenerating(false);
+            }
+            return;
+        }
+
         setProfitSummary(null);
+        setCustomerSummary(null);
         setGenerating(true);
         setHasGenerated(true);
         try {
@@ -484,7 +542,11 @@ function ReportsEngineInner() {
                 //   • A branch      → that branch's ledger (server filters by ?warehouse)
                 //   • All Branches  → everything
                 const ptype = filters.category === 'income' ? 'inbound' : 'outbound';
-                const res: any = await paymentService.getAll({ payment_type: ptype, ...branchAll });
+                // "All Branches" must aggregate across every branch — the payments
+                // endpoint otherwise scopes a super admin to their OWN ledger only.
+                const payParams: any = { payment_type: ptype, ...branchAll };
+                if (filters.branch === 'all') payParams.scope = 'all';
+                const res: any = await paymentService.getAll(payParams);
                 const rows = Array.isArray(res) ? res : res.results || [];
                 result = filters.branch === 'personal'
                     ? rows.filter((r: any) => !(r.warehouse ?? r.warehouse_id) && !r.warehouse_name)
@@ -545,6 +607,7 @@ function ReportsEngineInner() {
         });
         setReportResult([]);
         setProfitSummary(null);
+        setCustomerSummary(null);
         setHasGenerated(false);
     };
 
@@ -640,15 +703,28 @@ function ReportsEngineInner() {
 
                         {!isNetProfitMode && (
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-slate-900">2. Select View</label>
+                            <label className="text-[13px] font-bold text-slate-900">{filters.category === 'customers' ? '2. Select Customer' : '2. Select View'}</label>
                             <select
                                 value={filters.view}
-                                onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
+                                onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); setCustomerSummary(null); }}
                                 disabled={!filters.category}
                                 className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400"}
                             >
-                                <option value="">Select Option...</option>
-                                {filters.category && SUB_OPTIONS[filters.category]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                {filters.category === 'customers' ? (
+                                    <>
+                                        <option value="">Select Customer...</option>
+                                        <option value="__all__">All Customers</option>
+                                        {customers.map((c: any) => {
+                                            const nm = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.full_name || c.username || c.email || 'Customer';
+                                            return <option key={c.id} value={`cust:${c.id}`}>{nm}{c.phone ? ` · ${c.phone}` : ''}</option>;
+                                        })}
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="">Select Option...</option>
+                                        {filters.category && SUB_OPTIONS[filters.category]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </>
+                                )}
                             </select>
                         </div>
                         )}
@@ -777,6 +853,38 @@ function ReportsEngineInner() {
                         </div>
                     </div>
                 </Card>
+
+                {/* ── CUSTOMER PROFILE SUMMARY (when a specific customer is picked) ── */}
+                {customerSummary && (
+                    <div className="animate-in fade-in duration-500 mb-6">
+                        <Card className="overflow-hidden">
+                            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 text-[16px] font-black">
+                                    {(customerSummary.name || 'C').slice(0, 1).toUpperCase()}
+                                </span>
+                                <div className="min-w-0">
+                                    <h3 className="text-[16px] font-bold text-slate-900">{customerSummary.name}</h3>
+                                    <p className="text-[12px] text-slate-500 truncate">{customerSummary.phone} · {customerSummary.email}{customerSummary.address !== '—' ? ` · ${customerSummary.address}` : ''}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100">
+                                {[
+                                    { label: 'Total Bought', value: formatCurrency(customerSummary.totalBought), tone: 'text-slate-900' },
+                                    { label: 'Total Paid', value: formatCurrency(customerSummary.totalPaid), tone: 'text-emerald-600' },
+                                    { label: 'Dues', value: formatCurrency(customerSummary.dues), tone: customerSummary.dues > 0 ? 'text-rose-600' : 'text-slate-900' },
+                                    { label: 'Orders', value: String(customerSummary.allOrders), tone: 'text-slate-900' },
+                                    { label: 'Delivered', value: String(customerSummary.delivered), tone: 'text-emerald-600' },
+                                    { label: 'Last Order', value: customerSummary.lastOrder ? formatDate(customerSummary.lastOrder) : '—', tone: 'text-slate-700' },
+                                ].map((m) => (
+                                    <div key={m.label} className="px-5 py-4 text-center">
+                                        <p className={`text-[18px] font-black tabular-nums ${m.tone}`}>{m.value}</p>
+                                        <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{m.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
+                )}
 
                 {profitSummary ? (
                     <div className="animate-in fade-in duration-500">
