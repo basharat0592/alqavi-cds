@@ -3,7 +3,7 @@ from django.db import IntegrityError
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import F, ExpressionWrapper, DecimalField, Q
+from django.db.models import F, ExpressionWrapper, DecimalField, Q, Sum
 from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage, StoreProduct
 from .serializers import (
     ProductSerializer, WishlistSerializer, CategorySerializer,
@@ -198,6 +198,13 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         # the same product (name+price+size+weight) from different branches shows
         # once, with quantities summed. Staff see the branch-scoped list as-is.
         if not getattr(request.user, 'is_staff', False):
+            # City scope: when a city is selected, keep only products stocked in an
+            # active branch of that city. "all"/blank = every branch (merged).
+            city = (request.query_params.get('city') or '').strip()
+            city_scoped = bool(city and city.lower() != 'all')
+            if city_scoped:
+                qs = qs.filter(warehouse__area__name__iexact=city, warehouse__is_active=True)
+
             seen = {}
             for p in qs:
                 key = (p.product_name, str(p.selling_price), p.weight or '', p.size or '')
@@ -205,11 +212,32 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     seen[key].total_quantity = (seen[key].total_quantity or 0) + (p.total_quantity or 0)
                 else:
                     seen[key] = p
-            qs = list(seen.values())
+            items = list(seen.values())
+            # In a selected city, hide products that have no stock there.
+            if city_scoped:
+                items = [p for p in items if (p.total_quantity or 0) > 0]
+            qs = items
         page = self.paginate_queryset(qs)
         if page is not None:
             return self.get_paginated_response(self.get_serializer(page, many=True).data)
         return Response(self.get_serializer(qs, many=True).data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = self.get_serializer(instance).data
+        # Storefront product detail shows the selected city's stock (or the sum
+        # across all branches when no city is chosen) for this exact item.
+        if not getattr(request.user, 'is_staff', False):
+            city = (request.query_params.get('city') or '').strip()
+            ident = Product.objects.exclude(status='ARCHIVED').filter(
+                product_name=instance.product_name,
+                selling_price=instance.selling_price,
+                weight=instance.weight, size=instance.size,
+            )
+            if city and city.lower() != 'all':
+                ident = ident.filter(warehouse__area__name__iexact=city, warehouse__is_active=True)
+            data['total_quantity'] = ident.aggregate(t=Sum('total_quantity'))['t'] or 0
+        return Response(data)
 
     def destroy(self, request, *args, **kwargs):
         """Perform a soft-delete by marking the product as ARCHIVED"""

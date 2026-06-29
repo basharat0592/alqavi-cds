@@ -45,6 +45,9 @@ const PERSONAL_CATEGORIES = [
     { id: 'expense', label: 'Expense' },
 ];
 
+// Extra category shown for a branch / All Branches: the branch's system users (staff).
+const SYSTEM_USER_CATEGORY = { id: 'system_users', label: 'System Users' };
+
 const SUB_OPTIONS: Record<string, string[]> = {
     sales: ['Offline Sales', 'Online Sales'],
     purchases: ['Purchase Order By Date', 'Purchase Order By Invoice', 'By Supplier'],
@@ -56,6 +59,7 @@ const SUB_OPTIONS: Record<string, string[]> = {
     stock: ['By Date Range', 'Stock Status', 'By Product Name', 'By Supplier', 'By Price Range', 'By Brand'],
     income: ['All Records', 'By Date Range'],
     expense: ['All Records', 'By Date Range'],
+    system_users: ['All Staff'],
 };
 
 const MODES: Record<string, string[]> = {
@@ -109,10 +113,15 @@ const rowTitle = (r: any) =>
     [r.first_name, r.last_name].filter(Boolean).join(' ').trim() ||
     r.name || r.customer_display_name || r.customer_name || r.supplier_name || r.full_name || r.username ||
     r.category_name || r.payer_payee || r.description || 'Record';
-const rowSubtitle = (r: any, category: string) =>
-    r.return_number || r.order_number || r.purchase_number ||
-    (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
-    r.reason || r.phone || r.email || r.tracking_id || r.payer_payee || r.reference_number || category;
+const rowSubtitle = (r: any, category: string) => {
+    // System users: surface the role (Sales Manager, etc.) + a contact.
+    if (category === 'system_users') {
+        return [r.role_name, r.email || r.phone].filter(Boolean).join(' · ') || 'Staff';
+    }
+    return r.return_number || r.order_number || r.purchase_number ||
+        (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
+        r.reason || r.phone || r.email || r.tracking_id || r.payer_payee || r.reference_number || category;
+};
 
 // One line of the Net Profit panel.
 function ProfitRow({ label, value, sub, bold, neg }: { label: string; value: number; sub?: string; bold?: boolean; neg?: boolean }) {
@@ -202,17 +211,25 @@ function ReportsEngineInner() {
         return warehouses.filter((w: any) => assigned.has(String(w.id)));
     }, [warehouses, users]);
 
+    // Net Profit mode: the Select Branch dropdown picks "Net Profit", and the second
+    // dropdown becomes a SCOPE selector (All Branches / a branch / Personal), held in
+    // filters.category. effectiveBranch is the branch the report is actually scoped to.
+    const isNetProfitMode = filters.branch === 'netprofit';
+    const effectiveBranch = isNetProfitMode ? filters.category : filters.branch;
+
     const isThreeLevel = !!MODES[filters.view];
-    const activeFields = isThreeLevel
-        ? (filters.subView ? (VIEW_FIELDS[filters.subView] || []) : [])
-        : (filters.view ? (VIEW_FIELDS[filters.view] || []) : []);
+    const activeFields = isNetProfitMode
+        ? ['dateRange']
+        : isThreeLevel
+            ? (filters.subView ? (VIEW_FIELDS[filters.subView] || []) : [])
+            : (filters.view ? (VIEW_FIELDS[filters.view] || []) : []);
 
     // Does a row belong to the chosen branch? (Super-Admin scope; rows with no
     // branch info — products/customers — always pass so those reports still work.)
     const inSelectedBranch = (r: any): boolean => {
         // 'personal' is the Super Admin's own ledger, scoped during fetch — skip here.
-        if (!(isSuperAdmin && filters.branch && filters.branch !== 'all' && filters.branch !== 'personal')) return true;
-        const bid = String(filters.branch);
+        if (!(isSuperAdmin && effectiveBranch && effectiveBranch !== 'all' && effectiveBranch !== 'personal')) return true;
+        const bid = String(effectiveBranch);
         const bname = (warehouses.find((w: any) => String(w.id) === bid)?.name || '').toLowerCase();
         const raw = r.warehouse;
         const rwId = raw && typeof raw === 'object' ? raw.id : (raw ?? r.warehouse_id);
@@ -343,7 +360,12 @@ function ReportsEngineInner() {
     };
 
     const generateReport = async () => {
-        if (!filters.category || !filters.view) {
+        if (isNetProfitMode) {
+            if (!filters.category) {
+                toast.error('Please select a scope (a branch, All Branches, or Personal).');
+                return;
+            }
+        } else if (!filters.category || !filters.view) {
             toast.error('Please select both Category and View.');
             return;
         }
@@ -354,14 +376,43 @@ function ReportsEngineInner() {
             return;
         }
 
-        // Net Profit — a branch P&L summary (sales / purchases / returns), not a list.
-        if (filters.view === 'Net Profit') {
+        // Net Profit — a P&L summary (not a list). Triggered either by the Net Profit
+        // view under Payments, or by the dedicated "Net Profit" branch mode whose scope
+        // (All Branches / a branch / Personal) lives in filters.category.
+        if (filters.view === 'Net Profit' || isNetProfitMode) {
             setGenerating(true);
             setHasGenerated(true);
             try {
-                // Server-side branch scope: the backend filters by ?warehouse for a
-                // super admin, so only the selected branch's rows come back.
-                const branchParam = (isSuperAdmin && filters.branch && filters.branch !== 'all' && filters.branch !== 'personal') ? { warehouse: filters.branch } : {};
+                const arr = (x: any) => Array.isArray(x) ? x : (x?.results || []);
+
+                // Personal scope: the Super Admin's own P&L = personal income − expense
+                // (ledger entries with no branch attached).
+                if (isNetProfitMode && effectiveBranch === 'personal') {
+                    const [inc, exp] = await Promise.all([
+                        paymentService.getAll({ payment_type: 'inbound', no_pagination: 'true' }),
+                        paymentService.getAll({ payment_type: 'outbound', no_pagination: 'true' }),
+                    ]);
+                    const personalRows = (rows: any[]) => rows.filter((r: any) =>
+                        !(r.warehouse ?? r.warehouse_id) && !r.warehouse_name && inDateRange(r));
+                    const incRows = personalRows(arr(inc));
+                    const expRows = personalRows(arr(exp));
+                    const totalSales = incRows.reduce((s, r) => s + rowAmount(r), 0);
+                    const totalPurchases = expRows.reduce((s, r) => s + rowAmount(r), 0);
+                    setReportResult([]);
+                    setProfitSummary({
+                        personal: true,
+                        totalSales, totalPurchases, salesReturns: 0, purchaseReturns: 0,
+                        netSales: totalSales, netPurchases: totalPurchases,
+                        netProfit: totalSales - totalPurchases,
+                        counts: { sales: incRows.length, purchases: expRows.length, salesReturns: 0, purchaseReturns: 0 },
+                    });
+                    toast.success('Net profit calculated');
+                    return;
+                }
+
+                // Branch / All Branches scope: P&L from transactions. Server filters by
+                // ?warehouse for a super admin, so only the chosen branch's rows return.
+                const branchParam = (isSuperAdmin && effectiveBranch && effectiveBranch !== 'all' && effectiveBranch !== 'personal') ? { warehouse: effectiveBranch } : {};
                 const all = { no_pagination: 'true', ...branchParam };
                 const axiosClient = (await import('@/lib/axios')).default;
                 const [salesRes, purchaseRes, srRes, prRes] = await Promise.all([
@@ -370,7 +421,6 @@ function ReportsEngineInner() {
                     axiosClient.get('v1/sales/returns/', { params: all }).then(r => r.data).catch(() => []),
                     axiosClient.get('v1/sales/purchase-returns/', { params: all }).then(r => r.data).catch(() => []),
                 ]);
-                const arr = (x: any) => Array.isArray(x) ? x : (x?.results || []);
                 const scoped = (rows: any[]) => rows.filter(r => inSelectedBranch(r) && inDateRange(r));
                 const sum = (rows: any[]) => scoped(rows).reduce((s, r) => s + rowAmount(r), 0);
 
@@ -384,6 +434,7 @@ function ReportsEngineInner() {
 
                 setReportResult([]);
                 setProfitSummary({
+                    personal: false,
                     totalSales, totalPurchases, salesReturns, purchaseReturns,
                     netSales, netPurchases, netProfit,
                     counts: {
@@ -420,7 +471,14 @@ function ReportsEngineInner() {
             const axiosClient = (await import('@/lib/axios')).default;
             let result: any[] = [];
 
-            if (filters.category === 'income' || filters.category === 'expense') {
+            if (filters.category === 'system_users') {
+                // A branch's system users (staff). Server returns the branch's staff +
+                // owning admin when a warehouse is given, or everyone for All Branches.
+                const params: any = { include_staff: 'true' };
+                if (effectiveBranch && effectiveBranch !== 'all') params.warehouse = effectiveBranch;
+                const res: any = await userService.getAll(params);
+                result = Array.isArray(res) ? res : res.results || [];
+            } else if (filters.category === 'income' || filters.category === 'expense') {
                 // Income/Expense ledger:
                 //   • Personal     → the Super Admin's own entries (no branch attached)
                 //   • A branch      → that branch's ledger (server filters by ?warehouse)
@@ -549,23 +607,38 @@ function ReportsEngineInner() {
                                         <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                                     ))}
                                     <option value="personal">Personal</option>
+                                    <option value="netprofit">Net Profit</option>
                                 </select>
                             </div>
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-slate-900">1. Select Category</label>
+                            <label className="text-[13px] font-bold text-slate-900">{isNetProfitMode ? 'Select Scope' : '1. Select Category'}</label>
                             <select
                                 value={filters.category}
                                 onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
                                 disabled={isSuperAdmin && !filters.branch}
                                 className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"}
                             >
-                                <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
-                                {(filters.branch === 'personal' ? PERSONAL_CATEGORIES : [...CATEGORIES, ...PERSONAL_CATEGORIES]).map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                                {isNetProfitMode ? (
+                                    <>
+                                        <option value="">Select Scope...</option>
+                                        <option value="all">All Branches</option>
+                                        {assignedWarehouses.map((w: any) => (
+                                            <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
+                                        ))}
+                                        <option value="personal">Personal</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
+                                        {(filters.branch === 'personal' ? PERSONAL_CATEGORIES : [...CATEGORIES, ...PERSONAL_CATEGORIES, SYSTEM_USER_CATEGORY]).map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                                    </>
+                                )}
                             </select>
                         </div>
 
+                        {!isNetProfitMode && (
                         <div className="space-y-1.5">
                             <label className="text-[13px] font-bold text-slate-900">2. Select View</label>
                             <select
@@ -578,6 +651,7 @@ function ReportsEngineInner() {
                                 {filters.category && SUB_OPTIONS[filters.category]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
                         </div>
+                        )}
 
                         {isThreeLevel && (
                             <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
@@ -685,7 +759,7 @@ function ReportsEngineInner() {
                             <Button
                                 variant="primary"
                                 onClick={generateReport}
-                                disabled={generating || !filters.view}
+                                disabled={generating || (isNetProfitMode ? !filters.category : !filters.view)}
                                 className="flex-1"
                             >
                                 <BarChart3 className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
@@ -712,35 +786,37 @@ function ReportsEngineInner() {
                                 <div>
                                     <h3 className="text-[15px] font-bold text-slate-900">Net Profit</h3>
                                     <p className="text-[12px] text-slate-500">
-                                        {filters.branch && filters.branch !== 'all'
-                                            ? (warehouses.find((w: any) => String(w.id) === String(filters.branch))?.name || 'Branch')
-                                            : 'All Branches'} · {filters.dateFrom} → {filters.dateTo}
+                                        {profitSummary.personal
+                                            ? 'Personal'
+                                            : (effectiveBranch && effectiveBranch !== 'all'
+                                                ? (warehouses.find((w: any) => String(w.id) === String(effectiveBranch))?.name || 'Branch')
+                                                : 'All Branches')} · {filters.dateFrom} → {filters.dateTo}
                                     </p>
                                 </div>
                             </div>
                             <div className="p-6 space-y-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <div className="rounded-xl border border-slate-200 overflow-hidden">
-                                        <div className="px-4 py-2.5 bg-emerald-50/60 border-b border-slate-100 text-[12px] font-bold text-emerald-700 uppercase tracking-wider">Sales</div>
+                                        <div className="px-4 py-2.5 bg-emerald-50/60 border-b border-slate-100 text-[12px] font-bold text-emerald-700 uppercase tracking-wider">{profitSummary.personal ? 'Income' : 'Sales'}</div>
                                         <div className="divide-y divide-slate-100">
-                                            <ProfitRow label="Total Sales" value={profitSummary.totalSales} sub={`${profitSummary.counts.sales} order(s)`} />
-                                            <ProfitRow label="Sales Returns" value={profitSummary.salesReturns} sub={`${profitSummary.counts.salesReturns} return(s)`} neg />
-                                            <ProfitRow label="Net Sales" value={profitSummary.netSales} bold />
+                                            <ProfitRow label={profitSummary.personal ? 'Total Income' : 'Total Sales'} value={profitSummary.totalSales} sub={`${profitSummary.counts.sales} ${profitSummary.personal ? 'entry(s)' : 'order(s)'}`} />
+                                            {!profitSummary.personal && <ProfitRow label="Sales Returns" value={profitSummary.salesReturns} sub={`${profitSummary.counts.salesReturns} return(s)`} neg />}
+                                            <ProfitRow label={profitSummary.personal ? 'Net Income' : 'Net Sales'} value={profitSummary.netSales} bold />
                                         </div>
                                     </div>
                                     <div className="rounded-xl border border-slate-200 overflow-hidden">
-                                        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-slate-100 text-[12px] font-bold text-amber-700 uppercase tracking-wider">Purchases</div>
+                                        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-slate-100 text-[12px] font-bold text-amber-700 uppercase tracking-wider">{profitSummary.personal ? 'Expense' : 'Purchases'}</div>
                                         <div className="divide-y divide-slate-100">
-                                            <ProfitRow label="Total Purchases" value={profitSummary.totalPurchases} sub={`${profitSummary.counts.purchases} order(s)`} />
-                                            <ProfitRow label="Purchase Returns" value={profitSummary.purchaseReturns} sub={`${profitSummary.counts.purchaseReturns} return(s)`} neg />
-                                            <ProfitRow label="Net Purchases" value={profitSummary.netPurchases} bold />
+                                            <ProfitRow label={profitSummary.personal ? 'Total Expense' : 'Total Purchases'} value={profitSummary.totalPurchases} sub={`${profitSummary.counts.purchases} ${profitSummary.personal ? 'entry(s)' : 'order(s)'}`} />
+                                            {!profitSummary.personal && <ProfitRow label="Purchase Returns" value={profitSummary.purchaseReturns} sub={`${profitSummary.counts.purchaseReturns} return(s)`} neg />}
+                                            <ProfitRow label={profitSummary.personal ? 'Net Expense' : 'Net Purchases'} value={profitSummary.netPurchases} bold />
                                         </div>
                                     </div>
                                 </div>
                                 <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 ${profitSummary.netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
                                     <div>
                                         <p className="text-[12px] font-bold uppercase tracking-wider text-slate-600">Net Profit</p>
-                                        <p className="text-[11px] text-slate-500 mt-0.5">Net Sales − Net Purchases</p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">{profitSummary.personal ? 'Income − Expense' : 'Net Sales − Net Purchases'}</p>
                                     </div>
                                     <p className={`text-[26px] font-black tabular-nums ${profitSummary.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(profitSummary.netProfit)}</p>
                                 </div>

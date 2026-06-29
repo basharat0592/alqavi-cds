@@ -61,4 +61,10 @@ export const riderService = {
         const { data } = await api.patch(`v1/delivery/orders/${orderId}/status/`, { status });
         return data;
     },
+    changePassword: async (oldPassword: string, newPassword: string): Promise<any> => {
+        const { data } = await api.post('v1/delivery/change-password/', {
+            old_password: oldPassword, new_password: newPassword,
+        });
+        return data;
+    },
 };

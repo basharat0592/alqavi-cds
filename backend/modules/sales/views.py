@@ -53,7 +53,8 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Stamp + enforce the branch for staff-created (POS) sales. Storefront /
-        customer / supplier order flows stay unrestricted by branch."""
+        customer order routing to the chosen branch's admin is handled in the
+        CreateOrderSerializer (which owns tenant/warehouse stamping)."""
         from rest_framework.exceptions import PermissionDenied
         actor = self.request.user
         if getattr(actor, 'is_authenticated', False) and getattr(actor, 'is_staff', False):
@@ -395,7 +396,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             
             new_status = request.data.get("status", "").upper()
             old_status = order.status.upper()
-            warehouse_id = request.data.get("warehouse_id")
+            # Prefer the order's own branch (chosen at checkout / POS); fall back to
+            # any warehouse passed in the request.
+            warehouse_id = str(getattr(order, 'warehouse_id', '') or '') or request.data.get("warehouse_id")
 
             with transaction.atomic():
                 # 1. RESERVE STOCK on Confirmation/Processing (Acceptance)

@@ -11,6 +11,7 @@ import {
     Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
+import { orderService } from '@/lib/api';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
 
@@ -115,6 +116,26 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             ],
         },
     ];
+
+    // Live count of active (not delivered / cancelled) orders for the branch — shown
+    // as a blinking badge on the Order List link. Polled so it stays fresh.
+    const [activeOrders, setActiveOrders] = useState(0);
+    useEffect(() => {
+        let cancelled = false;
+        const loadCount = async () => {
+            try {
+                const s: any = await orderService.getStats?.();
+                if (cancelled || !s) return;
+                const n = Number(s.total_active ?? s.pending_orders ?? 0);
+                setActiveOrders(isNaN(n) ? 0 : n);
+            } catch { /* ignore */ }
+        };
+        loadCount();
+        const id = setInterval(loadCount, 25000);
+        const onChange = () => loadCount();
+        window.addEventListener('orders_changed', onChange);
+        return () => { cancelled = true; clearInterval(id); window.removeEventListener('orders_changed', onChange); };
+    }, []);
 
     const [visibility, setVisibility] = useState<Record<string, boolean>>({});
 
@@ -227,6 +248,16 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                             {!isCollapsed && (
                                                 <span className={`text-[13px] tracking-tight whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                                     {item.name}
+                                                </span>
+                                            )}
+
+                                            {/* Live active-orders badge (blinks) on the Order List link */}
+                                            {item.href === '/admin/orders' && activeOrders > 0 && (
+                                                <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-1 right-1.5' : 'relative ml-auto'}`}>
+                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-60 motion-safe:animate-ping" />
+                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold tabular-nums shadow-sm shadow-rose-600/40">
+                                                        {activeOrders}
+                                                    </span>
                                                 </span>
                                             )}
 

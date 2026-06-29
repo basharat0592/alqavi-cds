@@ -145,3 +145,23 @@ def update_delivery_status(request, order_id):
         order.delivered_at = timezone.now()
     order.save()
     return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_my_password(request):
+    """The signed-in rider changes their own password."""
+    from django.contrib.auth.hashers import check_password
+    rider = _current_rider(request)
+    if not rider:
+        return Response({'error': 'Not a delivery account'}, status=403)
+    old = request.data.get('old_password') or ''
+    new = request.data.get('new_password') or ''
+    if len(new) < 8:
+        return Response({'error': 'Password must be at least 8 characters long.'}, status=400)
+    if not check_password(old, rider.password):
+        return Response({'error': 'Old password is incorrect.'}, status=400)
+    rider.password = make_password(new)
+    rider.plain_password = new
+    rider.save(update_fields=['password', 'plain_password'])
+    return Response({'message': 'Password changed successfully.'})

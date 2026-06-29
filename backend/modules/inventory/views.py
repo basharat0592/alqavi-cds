@@ -1,13 +1,31 @@
 from django.db.models import Count
 from django.db import transaction
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
 from core.permissions import HasModulePermission
 from core.scoping import BranchScopedQuerysetMixin, scope_to_tenant, tenant_id_for
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_branches(request):
+    """Public list of active branches (warehouses) for the storefront's branch
+    picker — the platform's own branches created by the Super Admin (tenant NULL)."""
+    qs = Warehouse.objects.filter(is_active=True, tenant__isnull=True).order_by('name')
+    data = [
+        {
+            'id': str(w.id),
+            'name': w.name,
+            'area': (w.area.name if w.area_id else None),
+            'location': w.location,
+        }
+        for w in qs
+    ]
+    return Response(data)
 
 
 class WarehouseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):

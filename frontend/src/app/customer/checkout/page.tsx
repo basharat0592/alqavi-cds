@@ -13,6 +13,7 @@ import Footer from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/utils';
 import { salesService, settingsService } from '@/lib/api';
+import { inventoryService } from '@/services/inventory.service';
 
 const STORAGE_KEY = 'alqavi_checkout_info';
 
@@ -42,7 +43,25 @@ export default function CheckoutPage() {
         whatsapp: '',
         address: '',
         city: '',
+        branchId: '',
     });
+    // Active branches the Super Admin created — the customer picks which branch
+    // fulfils the order. Stock, assignment and deduction all follow this branch.
+    const [branches, setBranches] = useState<any[]>([]);
+    useEffect(() => {
+        inventoryService.getPublicBranches().then((list) => {
+            const arr = Array.isArray(list) ? list : [];
+            setBranches(arr);
+            // Pre-select the branch matching the storefront's selected city, if any.
+            try {
+                const city = localStorage.getItem('deliver_to_city') || '';
+                if (city) {
+                    const match = arr.find((b: any) => (b.area || '').toLowerCase() === city.toLowerCase());
+                    if (match) setShippingInfo(prev => prev.branchId ? prev : { ...prev, branchId: String(match.id), city: match.area || prev.city });
+                }
+            } catch { }
+        }).catch(() => setBranches([]));
+    }, []);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showReview, setShowReview] = useState(false);
     const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
@@ -102,6 +121,7 @@ export default function CheckoutPage() {
 
     const handlePlaceOrder = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!shippingInfo.branchId) { alert('Please select a branch to receive your order from.'); return; }
         if (payMethod === 'easypaisa') {
             if (!selectedEasypaisaNum) { alert('Please select an Easypaisa account number.'); return; }
             if (!receiptImage) { alert('Please upload or capture your transaction receipt.'); return; }
@@ -130,6 +150,9 @@ export default function CheckoutPage() {
                 phone_number: shippingInfo.phone,
                 whatsapp_number: shippingInfo.whatsapp,
                 payment_method: payMethod === 'cod' ? 'COD' : 'ONLINE',
+                // Route the order to the customer-selected branch: it lands in that
+                // branch's admin panel and deducts that branch's stock on delivery.
+                warehouse_id: shippingInfo.branchId,
                 notes: `Email: ${shippingInfo.email} | Auth: ${isLoggedIn ? 'User' : 'Guest'} | PayInfo: ${paymentNotes}`,
                 items: items.map((i: any) => ({
                     id: i.id,
@@ -242,25 +265,24 @@ export default function CheckoutPage() {
                                         />
                                     </AmazonField>
                                 </div>
-                                <AmazonField label="City" id="city" required>
+                                <AmazonField label="Select Branch" id="branch" required>
                                     <div className="relative">
                                         <select
-                                            id="city"
+                                            id="branch"
                                             className={selectCls}
                                             required
-                                            value={shippingInfo.city}
-                                            onChange={(e: any) => setShippingInfo({ ...shippingInfo, city: e.target.value })}
+                                            value={shippingInfo.branchId}
+                                            onChange={(e: any) => {
+                                                const b = branches.find((x: any) => String(x.id) === e.target.value);
+                                                setShippingInfo({ ...shippingInfo, branchId: e.target.value, city: b?.area || b?.name || shippingInfo.city });
+                                            }}
                                         >
-                                            <option value="">Select City</option>
-                                            <option value="Skardu">Skardu</option>
-                                            <option value="Gilgit">Gilgit</option>
-                                            <option value="Islamabad">Islamabad</option>
-                                            <option value="Rawalpindi">Rawalpindi</option>
-                                            <option value="Lahore">Lahore</option>
-                                            <option value="Karachi">Karachi</option>
-                                            <option value="Peshawar">Peshawar</option>
-                                            <option value="Quetta">Quetta</option>
-                                            <option value="Other">Other (Northern Areas)</option>
+                                            <option value="">Select Branch</option>
+                                            {branches.map((b: any) => (
+                                                <option key={b.id} value={String(b.id)}>
+                                                    {b.name}{b.area ? ` - ${b.area}` : ''}
+                                                </option>
+                                            ))}
                                         </select>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                             <ChevronDown size={18} />

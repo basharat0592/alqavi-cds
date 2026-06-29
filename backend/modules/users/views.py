@@ -182,11 +182,22 @@ def list_users(request):
     #     (tenant_id NULL, or self-owned). Staff that an Admin created belong to
     #     that Admin (tenant_id = that Admin's id) and stay hidden from the super
     #     admin and every other admin — only their creating Admin sees them.
+    #     EXCEPTION: the Reports "System Users" view passes ?include_staff=true to
+    #     list a branch's staff (optionally scoped to a ?warehouse=<id>). A user
+    #     belongs to a branch if directly assigned to it OR owned by an Admin who is.
     #   • A tenant Admin → sees themselves + their own staff.
     from django.db.models import F
     tid = tenant_id_for(request.user)
+    include_staff = request.query_params.get('include_staff') in ('true', '1', 'yes')
+    warehouse = request.query_params.get('warehouse')
     if is_platform_operator(request.user):
-        users = users.filter(Q(tenant_id__isnull=True) | Q(tenant_id=F('id')))
+        if include_staff:
+            if warehouse:
+                admin_ids = list(User.objects.filter(warehouses__id=warehouse).values_list('id', flat=True))
+                users = users.filter(Q(warehouses__id=warehouse) | Q(tenant_id__in=admin_ids)).distinct()
+            # else: All Branches → every internal user (admins + staff)
+        else:
+            users = users.filter(Q(tenant_id__isnull=True) | Q(tenant_id=F('id')))
     elif tid is not None:
         users = users.filter(Q(tenant_id=tid) | Q(id=request.user.id))
 

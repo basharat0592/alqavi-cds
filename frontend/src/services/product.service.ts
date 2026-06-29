@@ -1,5 +1,21 @@
 import api from '@/lib/axios';
 
+// Storefront city scope: the customer-selected city (a city that has at least one
+// active branch) is stored in localStorage and auto-applied to product reads. The
+// backend honours `city` ONLY for storefront (non-staff) requests, so admin/POS
+// calls are unaffected even though they share localStorage.
+export const SELECTED_CITY_KEY = 'deliver_to_city';
+const withCity = (params?: any) => {
+    if (typeof window === 'undefined') return params;
+    try {
+        const city = localStorage.getItem(SELECTED_CITY_KEY) || '';
+        if (city && (!params || params.city === undefined)) {
+            return { ...(params || {}), city };
+        }
+    } catch { }
+    return params;
+};
+
 /**
  * Service for managing Product catalog items.
  * Linked to the new Stock-integrated Product model.
@@ -8,7 +24,7 @@ export const productService = {
     // ── Product Registry ─────────────────────────────────────────────────────
     getAll: async (params?: any): Promise<any> => {
         try {
-            const { data } = await api.get('v1/products/items/', { params });
+            const { data } = await api.get('v1/products/items/', { params: withCity(params) });
             // Return the full response object so the caller can handle pagination
             return data;
         } catch (error) {
@@ -17,7 +33,7 @@ export const productService = {
         }
     },
     getById: async (id: string | number): Promise<any> => {
-        const { data } = await api.get(`v1/products/items/${id}/`);
+        const { data } = await api.get(`v1/products/items/${id}/`, { params: withCity() });
         return data;
     },
     // Super-admin master store catalog (consolidated listings).

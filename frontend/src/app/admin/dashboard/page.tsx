@@ -717,10 +717,10 @@ export default function AdminDashboard() {
                                                         )}
                                                     </div>
                                                     <div className="relative flex items-center gap-1.5 shrink-0">
-                                                        {isOrders && stats?.pendingOrders > 0 && (
+                                                        {isOrders && (((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) > 0) && (
                                                             <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-sm shadow-rose-600/30 select-none tabular-nums">
                                                                 <span className="absolute inset-0 rounded-full bg-rose-500 opacity-40 motion-safe:animate-ping" style={{ animationDuration: '2.5s' }} />
-                                                                <span className="relative">{stats.pendingOrders}</span>
+                                                                <span className="relative">{(stats as any)?.totalActive ?? stats?.pendingOrders}</span>
                                                             </span>
                                                         )}
                                                         <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-50 transition-all duration-300 group-hover:bg-white group-hover:shadow-sm">

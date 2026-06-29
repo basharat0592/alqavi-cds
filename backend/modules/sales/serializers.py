@@ -145,11 +145,20 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         and not getattr(_actor, 'is_supplier', False) and not getattr(_actor, 'is_customer', False)):
                     params['created_by'] = _actor
 
-                # Tenant (owning-Admin) isolation. tenant_id_for returns None for
-                # anonymous / storefront / supplier / customer flows, so public
-                # orders stay tenant=None and the storefront keeps working.
+                # Tenant (owning-Admin) isolation. For staff (POS) the tenant is the
+                # actor's. For a storefront/customer order (tenant_id_for -> None) we
+                # route it to the OWNING ADMIN of the branch the customer chose, so the
+                # order shows in that branch's panel and deducts that branch's stock.
                 from core.scoping import tenant_id_for
                 _tid = tenant_id_for(_actor)
+                if _tid is None and params.get('warehouse_id'):
+                    from modules.users.models import User
+                    _badmin = (User.objects.filter(warehouses__id=params['warehouse_id'])
+                               .exclude(is_superuser=True)
+                               .exclude(role__name__iexact='customer')
+                               .order_by('id').first())
+                    if _badmin:
+                        _tid = tenant_id_for(_badmin)
                 if _tid is not None:
                     params['tenant_id'] = _tid
 

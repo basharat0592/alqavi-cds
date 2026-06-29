@@ -15,7 +15,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { getImageUrl } from "@/lib/utils";
 import { authService, User as AuthUser } from '@/lib/auth';
 import { productService } from '@/lib/api';
-import { areaService } from '@/services/area.service';
+import { inventoryService } from '@/services/inventory.service';
 import Logo from "@/components/ui/Logo";
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -43,6 +43,10 @@ export default function Navbar({ settings }: { settings?: any }) {
     const [cities, setCities] = useState<string[]>([]);
     const [selectedCity, setSelectedCity] = useState('');
     const [cityOpen, setCityOpen] = useState(false);
+    // Active branches the Super Admin created (used to derive the cities list).
+    const [branches, setBranches] = useState<any[]>([]);
+    const [branchOpen, setBranchOpen] = useState(false);
+    const branchRef = useRef<HTMLDivElement>(null);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -79,17 +83,17 @@ export default function Navbar({ settings }: { settings?: any }) {
 
         if (settings) setSiteSettings(settings);
 
-        // Load the delivery cities from the dashboard's Areas (public read).
-        areaService.getActive().then(list => {
-            const names = (list || []).map((a: any) => a.name).filter(Boolean);
-            setCities(names);
-            setSelectedCity(prev => {
-                if (prev) return prev;
-                const saved = (typeof window !== 'undefined' && localStorage.getItem('deliver_to_city')) || '';
-                if (saved && names.includes(saved)) return saved;
-                return names[0] || '';
-            });
-        }).catch(() => setCities([]));
+        // Cities that have at least one ACTIVE branch (deduped) — the single source
+        // for both the "Deliver to" picker and the search "All" city dropdown.
+        inventoryService.getPublicBranches().then(list => {
+            const arr = Array.isArray(list) ? list : [];
+            setBranches(arr);
+            const cityNames = Array.from(new Set(arr.map((b: any) => b.area).filter(Boolean))).sort() as string[];
+            setCities(cityNames);
+            const saved = (typeof window !== 'undefined' && localStorage.getItem('deliver_to_city')) || '';
+            // '' = All Cities (every branch). Keep a saved city only if it still has a branch.
+            setSelectedCity(saved && cityNames.includes(saved) ? saved : '');
+        }).catch(() => { setBranches([]); setCities([]); });
     }, [settings]);
 
     // Close the city dropdown on outside click.
@@ -102,10 +106,27 @@ export default function Navbar({ settings }: { settings?: any }) {
         return () => document.removeEventListener('mousedown', onDown);
     }, [cityOpen]);
 
+    // Close the branch dropdown on outside click.
+    useEffect(() => {
+        if (!branchOpen) return;
+        const onDown = (e: MouseEvent) => {
+            if (branchRef.current && !branchRef.current.contains(e.target as Node)) setBranchOpen(false);
+        };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [branchOpen]);
+
+    // Selecting a city scopes the WHOLE storefront to that city's branch inventory.
+    // Persist it and reload so every product section refetches with the new city.
     const selectCity = (c: string) => {
         setSelectedCity(c);
         setCityOpen(false);
-        try { localStorage.setItem('deliver_to_city', c); } catch { }
+        setBranchOpen(false);
+        try {
+            if (c) localStorage.setItem('deliver_to_city', c);
+            else localStorage.removeItem('deliver_to_city');
+        } catch { }
+        if (typeof window !== 'undefined') window.location.reload();
     };
 
     useEffect(() => {
@@ -260,12 +281,16 @@ export default function Navbar({ settings }: { settings?: any }) {
                         <span className="text-[12px] text-slate-300 ml-4">Deliver to</span>
                         <div className="flex items-center gap-1">
                             <MapPin size={15} className="text-white" />
-                            <span className="text-sm font-bold uppercase tracking-tighter">{selectedCity || 'Select city'}</span>
+                            <span className="text-sm font-bold uppercase tracking-tighter">{selectedCity || 'All Cities'}</span>
                             <ChevronDown size={14} className={`text-white transition-transform ${cityOpen ? 'rotate-180' : ''}`} />
                         </div>
                         {cityOpen && (
                             <div className="absolute top-full left-0 mt-1 z-[60] bg-white text-slate-800 rounded-lg shadow-xl border border-slate-200 py-1 min-w-[200px] max-h-72 overflow-auto">
                                 <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Choose your city</div>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); selectCity(''); }}
+                                    className={`flex w-full items-center gap-2 text-left px-4 py-2 text-[13px] hover:bg-slate-50 transition-colors ${!selectedCity ? 'font-bold text-indigo-600' : 'text-slate-700'}`}>
+                                    <Store size={13} className={!selectedCity ? 'text-indigo-600' : 'text-slate-400'} /> All Cities
+                                </button>
                                 {cities.length === 0 ? (
                                     <div className="px-4 py-3 text-[12px] text-slate-400">No cities available yet.</div>
                                 ) : cities.map(c => (
@@ -425,8 +450,34 @@ export default function Navbar({ settings }: { settings?: any }) {
                         }
                     `}</style>
                     <form onSubmit={handleSearch} className="flex h-10 w-full rounded-lg md:rounded-md overflow-hidden bg-white">
-                        <div className="hidden md:flex items-center px-3 bg-[#f3f3f3] border-r border-slate-300 text-[12px] text-slate-600 cursor-pointer hover:bg-slate-200 transition-colors">
-                            All <ChevronDown size={14} className="ml-1 opacity-60" />
+                        <div ref={branchRef} className="relative hidden md:block">
+                            <button
+                                type="button"
+                                onClick={() => setBranchOpen(o => !o)}
+                                className="h-full flex items-center px-3 bg-[#f3f3f3] border-r border-slate-300 text-[12px] text-slate-600 cursor-pointer hover:bg-slate-200 transition-colors max-w-[160px]"
+                                title="Filter by city"
+                            >
+                                <span className="truncate">{selectedCity || 'All'}</span>
+                                <ChevronDown size={14} className={`ml-1 opacity-60 shrink-0 transition-transform ${branchOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {branchOpen && (
+                                <div className="absolute top-[calc(100%+6px)] left-0 w-60 bg-white rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.18)] border border-slate-200 z-[10001] overflow-hidden py-1 max-h-[320px] overflow-y-auto">
+                                    <p className="px-4 pt-2 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cities</p>
+                                    <button type="button" onClick={() => selectCity('')}
+                                        className={`flex w-full items-center gap-2 text-left px-4 py-2 text-[13px] hover:bg-slate-50 transition-colors ${!selectedCity ? 'font-bold text-indigo-600' : 'text-slate-700'}`}>
+                                        <Store size={13} className={!selectedCity ? 'text-indigo-600' : 'text-slate-400'} /> All Branches
+                                    </button>
+                                    {cities.length === 0 ? (
+                                        <p className="px-4 py-2 text-[12px] text-slate-400 italic">No cities available.</p>
+                                    ) : cities.map((c) => (
+                                        <button key={c} type="button" onClick={() => selectCity(c)}
+                                            className={`flex w-full items-center gap-2 text-left px-4 py-2 text-[13px] hover:bg-slate-50 transition-colors ${c === selectedCity ? 'font-bold text-indigo-600' : 'text-slate-700'}`}>
+                                            <MapPin size={13} className={c === selectedCity ? 'text-indigo-600' : 'text-slate-400'} />
+                                            <span className="truncate">{c}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <input
                             type="text"

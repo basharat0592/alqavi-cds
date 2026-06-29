@@ -10,6 +10,11 @@ export const inventoryService = {
         const { data } = await api.get('v1/inventory/warehouses/', { params });
         return data.results || data || [];
     },
+    // Public list of active branches (no auth) — used by the storefront branch picker.
+    getPublicBranches: async (): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/public-branches/');
+        return Array.isArray(data) ? data : (data?.results || []);
+    },
     createWarehouse: async (payload: any): Promise<any> => {
         const { data } = await api.post('v1/inventory/warehouses/', payload);
         return data;

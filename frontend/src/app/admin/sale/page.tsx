@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
 import { installmentService } from '@/services/payment.service';
+import { authService } from '@/lib/auth';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Modal } from '@/components/admin/ui';
@@ -316,12 +317,15 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    // Default warehouse selection - only runs when warehouses are loaded and none is selected
+    // Source warehouse = the logged-in branch admin's own branch. There's no picker;
+    // we auto-select their assigned warehouse (falling back to the first available).
     useEffect(() => {
-        if (warehouses.length > 0 && !warehouseId) {
-            setWarehouseId(String(warehouses[0].id));
-        }
-    }, [warehouses]); // Remove warehouseId from dependencies to only auto-select once when list arrives
+        if (warehouseId) return;
+        const u: any = authService.getUser();
+        const mine = Array.isArray(u?.warehouses) && u.warehouses.length ? String(u.warehouses[0].id) : '';
+        if (mine) setWarehouseId(mine);
+        else if (warehouses.length > 0) setWarehouseId(String(warehouses[0].id));
+    }, [warehouses]);
 
 
     // Live Telemetry: Auto-update catalog every 10 seconds to keep stock in sync
@@ -384,6 +388,20 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             ? Math.min(Number(amountPaidNow) || 0, totalBill)
             : 0;
     const settlementStatus = paidNow >= totalBill ? 'PAID' : paidNow > 0 ? 'PARTIAL' : 'UNPAID';
+
+    // Products available in THIS branch's warehouse only, each carrying its real
+    // stock count. The source warehouse is the branch admin's own (auto-selected),
+    // so the picker lists exactly what this branch holds — nothing from other branches.
+    const branchProducts = products
+        .map((p: any) => {
+            const ws = warehouseStock.find((s: any) =>
+                (s.product_name?.toLowerCase().trim() === p.product_name?.toLowerCase().trim()) &&
+                (s.weight === p.weight || (!s.weight && !p.weight)) &&
+                (s.size === p.size || (!s.size && !p.size))
+            );
+            return ws ? { ...p, total_quantity: ws.total_quantity } : null;
+        })
+        .filter(Boolean);
 
     const handleSave = async () => {
         // Guard rails for credit / partial sales.
@@ -530,14 +548,6 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     <Field label="Walk-in Name">
                                         <input className={inputCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
                                     </Field>
-                                    <Field label="Source Warehouse" required>
-                                        <select className={selectCls} value={warehouseId} onChange={e => setWarehouseId(e.target.value)}>
-                                            <option value="">Choose Warehouse...</option>
-                                            {warehouses.map(w => (
-                                                <option key={w.id} value={String(w.id)}>{w.name} ({w.location})</option>
-                                            ))}
-                                        </select>
-                                    </Field>
                                 </div>
                             </Card>
 
@@ -566,14 +576,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 <div className="flex-1 min-w-0">
                                                     <ProductSelector
                                                         selectedId={item.product}
-                                                        products={products.map(p => {
-                                                            const ws = warehouseStock.find((s: any) =>
-                                                                (s.product_name?.toLowerCase() === p.product_name?.toLowerCase()) &&
-                                                                (s.weight === p.weight || (!s.weight && !p.weight)) &&
-                                                                (s.size === p.size || (!s.size && !p.size))
-                                                            );
-                                                            return { ...p, total_quantity: ws ? ws.total_quantity : 0, weight: p.weight, size: p.size };
-                                                        })}
+                                                        products={branchProducts}
                                                         inputCls={selectCls}
                                                         onSelect={(p: any) => updateItem(i, p)}
                                                     />
@@ -604,14 +607,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 <div className="col-span-6">
                                                     <ProductSelector
                                                         selectedId={item.product}
-                                                        products={products.map(p => {
-                                                            const ws = warehouseStock.find((s: any) =>
-                                                                (s.product_name?.toLowerCase() === p.product_name?.toLowerCase()) &&
-                                                                (s.weight === p.weight || (!s.weight && !p.weight)) &&
-                                                                (s.size === p.size || (!s.size && !p.size))
-                                                            );
-                                                            return { ...p, total_quantity: ws ? ws.total_quantity : 0, weight: p.weight, size: p.size };
-                                                        })}
+                                                        products={branchProducts}
                                                         inputCls={selectCls}
                                                         onSelect={(p: any) => updateItem(i, p)}
                                                     />
@@ -829,22 +825,9 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 title="Inventory Issue"
                 size="md"
                 footer={
-                    <>
-                        <Button variant="outline" onClick={() => setStockError(null)}>
-                            Dismiss
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={() => {
-                                setStockError(null);
-                                // Focus the warehouse selector if possible
-                                const whSelect = document.querySelector('select[value="' + warehouseId + '"]');
-                                (whSelect as any)?.focus();
-                            }}
-                        >
-                            Change Warehouse
-                        </Button>
-                    </>
+                    <Button variant="primary" onClick={() => setStockError(null)}>
+                        Dismiss
+                    </Button>
                 }
             >
                 <div className="flex items-center gap-4 mb-4">
@@ -861,7 +844,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 </div>
 
                 <p className="text-[13px] text-slate-600">
-                    The current warehouse doesn't have enough units for this order. Please try selecting a different warehouse or adjust the quantities.
+                    This branch doesn't have enough units for this order. Please adjust the quantities.
                 </p>
             </Modal>
         </div>

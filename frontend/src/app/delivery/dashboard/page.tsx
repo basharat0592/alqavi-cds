@@ -1,149 +1,125 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
-    Package, CheckCircle, Truck, Clock, MapPin, Phone, Loader2, RefreshCw, XCircle
+    Package, Clock, CheckCircle, Truck, Wallet, Star, Loader2, ChevronRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
 import { formatCurrency } from '@/lib/utils';
+import {
+    computeEarnings, ratingFor, isActive, isDelivered, orderDate,
+} from '@/lib/deliveryStats';
 
-const FILTERS = ['ALL', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
-
-const statusTone = (s: string) => {
-    const u = (s || '').toUpperCase();
-    if (u === 'DELIVERED') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (u === 'SHIPPED') return 'bg-sky-50 text-sky-700 border-sky-200';
-    if (u === 'CANCELLED' || u === 'REJECTED') return 'bg-rose-50 text-rose-700 border-rose-200';
-    return 'bg-amber-50 text-amber-700 border-amber-200';
+const StarMini = ({ rating }: { rating: number }) => {
+    const pct = Math.max(0, Math.min(100, (rating / 5) * 100));
+    const Row = ({ c }: { c: string }) => (
+        <div className={`flex gap-0.5 w-max ${c}`}>{[0, 1, 2, 3, 4].map(i => <Star key={i} size={18} fill="currentColor" strokeWidth={0} className="shrink-0" />)}</div>
+    );
+    return (
+        <div className="relative inline-block">
+            <Row c="text-gray-200" />
+            <div className="absolute top-0 left-0 h-full overflow-hidden whitespace-nowrap" style={{ width: `${pct}%` }}><Row c="text-[#F59E0B]" /></div>
+        </div>
+    );
 };
 
-export default function DeliveryDashboard() {
+export default function DeliveryDashboardOverview() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>({ rider: {}, stats: {}, results: [] });
-    const [filter, setFilter] = useState('ALL');
-    const [updating, setUpdating] = useState<string | null>(null);
 
-    const load = useCallback(async (f = filter, silent = false) => {
-        if (!silent) setLoading(true);
-        try {
-            const d = await riderService.myDeliveries(f === 'ALL' ? undefined : f);
-            setData(d || { rider: {}, stats: {}, results: [] });
-        } catch { toast.error('Failed to load deliveries'); }
-        finally { setLoading(false); }
-    }, [filter]);
+    useEffect(() => {
+        riderService.myDeliveries()
+            .then((d) => setData(d || { rider: {}, stats: {}, results: [] }))
+            .catch(() => toast.error('Failed to load dashboard'))
+            .finally(() => setLoading(false));
+    }, []);
 
-    useEffect(() => { load(filter); }, [filter, load]);
+    const results: any[] = data.results || [];
+    const stats = data.stats || {};
+    const now = new Date();
+    const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todaysDeliveries = results.filter((o) => {
+        const d = orderDate(o); return d && d.getTime() >= today0;
+    }).length;
+    const pending = results.filter((o) => isActive(o.status)).length;
+    const completed = Number(stats.delivered || results.filter((o) => isDelivered(o.status)).length);
+    const earnings = computeEarnings(results, now);
+    const rating = ratingFor(completed);
 
-    const setStatus = async (orderId: string, status: string) => {
-        setUpdating(orderId + status);
-        try {
-            await riderService.updateStatus(orderId, status);
-            toast.success(`Marked ${status.toLowerCase()}`);
-            load(filter, true);
-        } catch (e: any) {
-            toast.error(e?.response?.data?.error || 'Update failed');
-        } finally { setUpdating(null); }
-    };
-
-    const s = data.stats || {};
-    const STATS = [
-        { label: 'Total', value: s.total || 0, icon: Package, color: 'text-slate-900' },
-        { label: 'In Progress', value: s.in_progress || 0, icon: Clock, color: 'text-amber-600' },
-        { label: 'Delivered', value: s.delivered || 0, icon: CheckCircle, color: 'text-emerald-600' },
-        { label: 'Cancelled', value: s.cancelled || 0, icon: XCircle, color: 'text-rose-600' },
+    const CARDS = [
+        { label: "Today's Deliveries", value: todaysDeliveries, icon: Package, color: 'text-[#111]', tint: 'bg-[#F0F2F2] text-gray-500' },
+        { label: 'Pending Orders', value: pending, icon: Clock, color: 'text-amber-600', tint: 'bg-amber-50 text-amber-600' },
+        { label: 'Completed Orders', value: completed, icon: CheckCircle, color: 'text-[#007600]', tint: 'bg-emerald-50 text-[#007600]' },
     ];
 
+    if (loading) return <div className="py-24 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
+
     return (
-        <div className="space-y-6">
-            {/* Greeting */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">My Deliveries</h2>
-                    <p className="text-[12.5px] text-slate-500">
-                        {data.rider?.vehicle_type ? `${data.rider.vehicle_type}${data.rider.vehicle_number ? ` · ${data.rider.vehicle_number}` : ''}` : 'Assigned orders to deliver'}
-                    </p>
-                </div>
-                <button onClick={() => load(filter)} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-slate-200 bg-white text-[12.5px] font-semibold text-slate-600 hover:bg-slate-50">
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                </button>
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="border-b border-gray-200 pb-4">
+                <h1 className="text-3xl font-normal text-[#111]">Dashboard</h1>
+                <p className="text-sm text-gray-500 mt-1">
+                    {data.rider?.name ? `Welcome back, ${data.rider.name}.` : 'Your delivery overview at a glance.'}
+                </p>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {STATS.map((st, i) => (
-                    <div key={i} className="bg-white border border-slate-200/70 rounded-2xl p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                        <div className="flex items-center gap-2 mb-1.5">
-                            <st.icon size={15} className="text-slate-400" />
-                            <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">{st.label}</p>
+            {/* Stat cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {CARDS.map((c, i) => (
+                    <div key={i} className="bg-white border border-[#D5D9D9] rounded-lg p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{c.label}</p>
+                            <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${c.tint}`}><c.icon size={17} /></span>
                         </div>
-                        <p className={`text-[22px] font-bold tabular-nums ${st.color}`}>{st.value}</p>
+                        <p className={`text-[30px] font-bold tabular-nums mt-2 ${c.color}`}>{c.value}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Filters */}
-            <div className="flex gap-2 flex-wrap">
-                {FILTERS.map(f => (
-                    <button key={f} onClick={() => setFilter(f)}
-                        className={`px-4 h-9 rounded-lg text-[12px] font-bold border transition-all ${filter === f ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                        {f === 'ALL' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
-                    </button>
-                ))}
+            {/* Earnings + Rating summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-white border border-[#D5D9D9] rounded-lg p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="w-9 h-9 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center"><Wallet size={17} /></span>
+                            <h3 className="text-[14px] font-bold text-[#111]">Earnings Summary</h3>
+                        </div>
+                        <Link href="/delivery/earnings" className="text-[12px] font-bold text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-0.5">Details <ChevronRight size={13} /></Link>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                        {[['Today', earnings.today], ['This Week', earnings.week], ['This Month', earnings.month]].map(([l, v]) => (
+                            <div key={l as string} className="bg-[#F7FAFA] rounded-lg p-3 border border-gray-100">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{l}</p>
+                                <p className="text-[16px] font-bold text-[#111] tabular-nums mt-1">{formatCurrency(v as number)}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="bg-white border border-[#D5D9D9] rounded-lg p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="w-9 h-9 rounded-lg bg-amber-50 text-[#F59E0B] flex items-center justify-center"><Star size={17} /></span>
+                            <h3 className="text-[14px] font-bold text-[#111]">Rating Overview</h3>
+                        </div>
+                        <Link href="/delivery/rating" className="text-[12px] font-bold text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-0.5">Details <ChevronRight size={13} /></Link>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <StarMini rating={rating} />
+                        <div>
+                            <p className="text-[22px] font-bold text-[#111] tabular-nums leading-none">{rating.toFixed(2)} <span className="text-[14px] font-semibold text-gray-400">/ 5.0</span></p>
+                            <p className="text-[12px] text-gray-500 mt-1">{completed} completed {completed === 1 ? 'delivery' : 'deliveries'}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Orders */}
-            {loading && (data.results || []).length === 0 ? (
-                <div className="py-24 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
-            ) : (data.results || []).length === 0 ? (
-                <div className="bg-white border border-slate-200/70 rounded-2xl p-12 text-center">
-                    <Truck size={40} className="mx-auto text-slate-200 mb-3" />
-                    <p className="text-[13px] text-slate-400 font-medium">No deliveries assigned in this view.</p>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    {(data.results || []).map((o: any) => {
-                        const u = (o.status || '').toUpperCase();
-                        const done = u === 'DELIVERED' || u === 'CANCELLED' || u === 'REJECTED';
-                        return (
-                            <div key={o.id} className="bg-white border border-slate-200/70 rounded-2xl p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[14px] font-bold text-indigo-600">#{o.order_number || o.tracking_id}</span>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${statusTone(o.status)}`}>{o.status_display || o.status}</span>
-                                        </div>
-                                        <p className="text-[13px] font-semibold text-slate-800 mt-1.5">{o.customer_display_name || o.customer_name || 'Customer'}</p>
-                                        <p className="text-[12px] text-slate-500 flex items-center gap-1.5 mt-0.5"><MapPin size={12} className="text-slate-400 shrink-0" /> {o.shipping_address || '—'}</p>
-                                        {o.phone_number && o.phone_number !== 'N/A' && (
-                                            <a href={`tel:${o.phone_number}`} className="text-[12px] text-indigo-600 font-semibold flex items-center gap-1.5 mt-0.5"><Phone size={12} /> {o.phone_number}</a>
-                                        )}
-                                    </div>
-                                    <div className="text-right shrink-0">
-                                        <p className="text-[16px] font-bold text-slate-900 tabular-nums">{formatCurrency(o.total_amount)}</p>
-                                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">{o.payment_method}</p>
-                                    </div>
-                                </div>
-
-                                {!done && (
-                                    <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                                        {u !== 'SHIPPED' && (
-                                            <button onClick={() => setStatus(o.id, 'SHIPPED')} disabled={!!updating}
-                                                className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 text-[12px] font-bold hover:bg-sky-100 disabled:opacity-50">
-                                                {updating === o.id + 'SHIPPED' ? <Loader2 size={13} className="animate-spin" /> : <Truck size={13} />} Out for Delivery
-                                            </button>
-                                        )}
-                                        <button onClick={() => setStatus(o.id, 'DELIVERED')} disabled={!!updating}
-                                            className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-emerald-600 text-white text-[12px] font-bold hover:bg-emerald-700 disabled:opacity-50">
-                                            {updating === o.id + 'DELIVERED' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Mark Delivered
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+            {/* Quick action */}
+            <Link href="/delivery/deliveries" className="inline-flex items-center gap-2 h-10 px-5 rounded-md bg-[#232F3E] text-white text-[13px] font-bold hover:bg-[#1a2532] transition-all">
+                <Truck size={15} /> Go to My Deliveries
+            </Link>
         </div>
     );
 }
