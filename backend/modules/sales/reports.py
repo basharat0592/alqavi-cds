@@ -31,7 +31,7 @@ def _scoped_orders(request):
     qs = (Order.objects
           .exclude(status__in=['CANCELLED', 'REJECTED'])
           .select_related('user', 'customer', 'customer__area')
-          .prefetch_related('items'))
+          .prefetch_related('items', 'sale_returns__items'))
     qs = _date_range(request, qs)
     area_ids = user_area_ids(request.user)
     if area_ids is not None:
@@ -42,8 +42,33 @@ def _scoped_orders(request):
     return qs, area_ids
 
 
+def _returned_qty_by_product(order):
+    """Qty returned per product across this order's ACCEPTED sale returns."""
+    out = {}
+    for r in order.sale_returns.all():
+        if str(r.status).upper() != 'ACCEPTED':
+            continue
+        for it in r.items.all():
+            if it.product_id:
+                out[it.product_id] = out.get(it.product_id, 0) + (it.quantity or 0)
+    return out
+
+
 def _order_profit(order):
-    return sum(float((it.price - it.cost_price) * it.quantity) for it in order.items.all())
+    """Profit for an order, net of items returned via accepted sale returns.
+
+    A returned unit reverses its own margin, so it's excluded from the qty that
+    earns profit. Uses each line's own snapshotted price/cost so the netting is
+    exact even if catalog prices changed later.
+    """
+    returned = _returned_qty_by_product(order)
+    total = 0.0
+    for it in order.items.all():
+        qty = it.quantity or 0
+        if it.product_id and returned.get(it.product_id):
+            qty = max(0, qty - returned[it.product_id])
+        total += float((it.price - it.cost_price) * qty)
+    return total
 
 
 def _supplier_name(sup):

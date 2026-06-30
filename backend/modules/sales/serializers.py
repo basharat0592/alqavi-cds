@@ -35,13 +35,18 @@ class OrderSerializer(serializers.ModelSerializer):
     is_overdue = serializers.ReadOnlyField()
     days_overdue = serializers.ReadOnlyField()
     delivery_person_name = serializers.SerializerMethodField()
+    # 'registered' when tied to a real customer/user account, else 'walkin'
+    # (a counter guest with no account). Drives the Sales list sub-label.
+    customer_type = serializers.SerializerMethodField()
+    # Contact number for the buyer — prefers the linked account, then the snapshot.
+    customer_phone = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
             'amount_paid', 'payment_status', 'due_date', 'remaining_amount', 'is_overdue', 'days_overdue',
-            'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'notes',
+            'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'customer_type', 'customer_phone', 'notes',
             'delivery_person', 'delivery_person_name',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
@@ -50,6 +55,29 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_delivery_person_name(self, obj):
         return obj.delivery_person.name if obj.delivery_person_id else None
+
+    def get_customer_type(self, obj):
+        # Registered ONLY when a real Customer account was selected (POS dropdown),
+        # or an online buyer User that is NOT the staff who created the sale. A POS
+        # walk-in falls back to stamping the creating staff as `user`, so a user_id
+        # equal to created_by must NOT count as a registered customer.
+        if obj.customer_id:
+            return 'registered'
+        if obj.user_id and obj.user_id != obj.created_by_id:
+            return 'registered'
+        return 'walkin'
+
+    def get_customer_phone(self, obj):
+        # Prefer the linked account's phone (real customer / online buyer, not the
+        # staff creator), then fall back to the order's snapshot phone.
+        if obj.customer_id and getattr(obj.customer, 'phone', None):
+            return obj.customer.phone
+        if obj.user_id and obj.user_id != obj.created_by_id:
+            ph = getattr(obj.user, 'phone', None)
+            if ph:
+                return ph
+        snap = (obj.phone_number or '').strip()
+        return snap if snap and snap.upper() != 'N/A' else None
 
     def get_customer_display_name(self, obj):
         """Resolve the real customer name: prefer the linked account, then the
@@ -267,6 +295,12 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         continue
                 
                 order.total_amount = total_amount
+                # Full (PAID) sales are settled in full at the counter — record the
+                # payment so the remaining balance is zero. POS sales are created
+                # already DELIVERED, so the delivery-time settlement never runs for
+                # them; partial / on-credit sales keep their provided amount_paid.
+                if str(order.payment_status).upper() == 'PAID':
+                    order.amount_paid = total_amount
                 order.save()
                 return order
                 

@@ -7,7 +7,56 @@ from rest_framework.response import Response
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
 from core.permissions import HasModulePermission
-from core.scoping import BranchScopedQuerysetMixin, scope_to_tenant, tenant_id_for
+from core.scoping import (
+    BranchScopedQuerysetMixin, scope_to_tenant, scope_queryset, tenant_id_for,
+    user_can_use_warehouse,
+)
+
+
+def compute_low_stock(user, warehouse_id=None, limit=60):
+    """Per-branch low-stock list.
+
+    Returns products whose on-hand quantity (summed within the user's tenant AND
+    branch scope) is at or below their ``Product.min_count`` (default 10). A branch
+    admin sees only their warehouse(s) — an item full in one branch but empty in
+    another is still flagged for the empty branch. The platform operator sees every
+    tenant. ``warehouse_id`` narrows to a single branch.
+    """
+    from modules.products.models import Product
+    stock_scope = scope_to_tenant(user, Stock.objects.all(), 'tenant')
+    stock_scope = scope_queryset(user, stock_scope, 'warehouse')
+    if warehouse_id:
+        stock_scope = stock_scope.filter(warehouse_id=warehouse_id)
+
+    qty_by_name, sup_by_name = {}, {}
+    for s in stock_scope.values('product_name', 'supplier', 'total_quantity'):
+        key = (s['product_name'] or '').strip().lower()
+        if not key:
+            continue
+        qty_by_name[key] = qty_by_name.get(key, 0) + (s['total_quantity'] or 0)
+        if key not in sup_by_name and s['supplier']:
+            sup_by_name[key] = str(s['supplier'])
+
+    prod_meta = {}
+    for p in scope_to_tenant(user, Product.objects.all(), 'tenant').only('product_name', 'min_count', 'sku'):
+        k = (p.product_name or '').strip().lower()
+        if k:
+            prod_meta[k] = {'min': p.min_count if p.min_count is not None else 10,
+                            'sku': p.sku, 'name': p.product_name}
+
+    low = []
+    for key, qty in qty_by_name.items():
+        meta = prod_meta.get(key, {})
+        m = meta.get('min', 10)
+        if qty <= m:
+            low.append({
+                'product_name': meta.get('name') or key,
+                'qty': qty, 'min': m,
+                'sku': meta.get('sku'),
+                'supplier': sup_by_name.get(key),
+            })
+    low.sort(key=lambda x: x['qty'])
+    return low[:limit]
 
 
 @api_view(['GET'])
@@ -124,6 +173,13 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response(serializer.data)
         return super().list(request, *args, **kwargs)
 
+    @action(detail=False, methods=['get'])
+    def low_stock(self, request):
+        """Per-branch low-stock alerts (tenant + branch scoped) vs Product.min_count.
+        Optional ?warehouse= narrows to one branch."""
+        wh = request.query_params.get('warehouse')
+        return Response(compute_low_stock(request.user, wh))
+
     @action(detail=True, methods=['post'])
     def transfer(self, request, pk=None):
         primary_stock = self.get_object()
@@ -147,6 +203,18 @@ class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             ).get(id=destination_warehouse_id)
         except Warehouse.DoesNotExist:
             return Response({"error": "Destination warehouse does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Branch isolation: stock must never cross tenants, and the actor may only
+        # move stock between branches they are allowed to use. scope_to_tenant above
+        # already blocks cross-tenant destinations for tenant users, but the platform
+        # operator is unscoped — so assert the tenants match explicitly.
+        if destination_warehouse.tenant_id != primary_stock.tenant_id:
+            return Response({"error": "Cannot transfer stock to a branch in another tenant."},
+                            status=status.HTTP_403_FORBIDDEN)
+        if not (user_can_use_warehouse(request.user, str(primary_stock.warehouse_id or ''))
+                and user_can_use_warehouse(request.user, str(destination_warehouse_id))):
+            return Response({"error": "You can only transfer between branches you manage."},
+                            status=status.HTTP_403_FORBIDDEN)
 
         # Find all matching stock records in the source warehouse to deplete from
         # matching the "Global Price-Point Truth" (Product + Price + Warehouse)

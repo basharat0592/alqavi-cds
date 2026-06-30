@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { paymentService, paymentCategoryService } from '@/lib/api';
+import { paymentService, paymentCategoryService, inventoryService } from '@/lib/api';
+import { authService } from '@/lib/auth';
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import {
@@ -37,6 +38,9 @@ export default function PaymentsPage() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [formOpen, setFormOpen] = useState(false);
     const [categories, setCategories] = useState<any[]>([]);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [myWarehouses, setMyWarehouses] = useState<any[]>([]);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -58,7 +62,12 @@ export default function PaymentsPage() {
         } catch (error) { } finally { setLoading(false); }
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => {
+        loadData();
+        inventoryService.getWarehouses().then(setWarehouses).catch(() => setWarehouses([]));
+        setIsSuperAdmin(authService.isSuperAdmin());
+        setMyWarehouses((authService.getUser() as any)?.warehouses || []);
+    }, []);
 
     const filtered = (payments || []).filter(p => {
         const matchesSearch =
@@ -99,6 +108,8 @@ export default function PaymentsPage() {
                         onClose={() => setFormOpen(false)}
                         onSuccess={() => { setFormOpen(false); loadData(); showToast('Payment saved'); }}
                         categories={categories}
+                        warehouses={isSuperAdmin ? warehouses : myWarehouses}
+                        isSuperAdmin={isSuperAdmin}
                     />
                 ) : (
                     <>
@@ -246,8 +257,12 @@ function StatCard({ label, val, icon: Icon, color, bg, bar }: any) {
     );
 }
 
-function CreateView({ onClose, onSuccess, categories }: any) {
+function CreateView({ onClose, onSuccess, categories, warehouses = [], isSuperAdmin = false }: any) {
     const [loading, setLoading] = useState(false);
+    const today = new Date().toISOString().slice(0, 10);
+    // Branch admins record against their own branch: auto-select when they manage
+    // exactly one (and lock it). Super admins pick any branch.
+    const lockBranch = !isSuperAdmin && warehouses.length === 1;
     const [formData, setFormData] = useState({
         amount: '',
         payment_type: 'inbound',
@@ -255,7 +270,9 @@ function CreateView({ onClose, onSuccess, categories }: any) {
         category: '',
         payer_payee: '',
         reference_number: '',
-        description: ''
+        description: '',
+        date: today,
+        warehouse_id: warehouses.length === 1 ? String(warehouses[0].id) : '',
     });
 
     const set = (f: string, v: any) => setFormData(prev => ({ ...prev, [f]: v }));
@@ -345,6 +362,36 @@ function CreateView({ onClose, onSuccess, categories }: any) {
 
                         {/* Reference & Note */}
                         <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[13px] font-bold text-slate-900 mb-2">Date</label>
+                                    <input
+                                        type="date" value={formData.date}
+                                        onChange={e => set('date', e.target.value)}
+                                        className={inputCls + " cursor-pointer"}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[13px] font-bold text-slate-900 mb-2">Branch</label>
+                                    {lockBranch ? (
+                                        <div className={inputCls + " flex items-center bg-slate-50 text-slate-700"}>
+                                            {warehouses[0]?.name || 'Your branch'}
+                                        </div>
+                                    ) : (
+                                        <select
+                                            required={!isSuperAdmin}
+                                            value={formData.warehouse_id}
+                                            onChange={e => set('warehouse_id', e.target.value)}
+                                            className={inputCls + " cursor-pointer"}
+                                        >
+                                            <option value="">{isSuperAdmin ? 'All / Unassigned' : 'Select branch...'}</option>
+                                            {warehouses.map((w: any) => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            </div>
                             <div>
                                 <label className="block text-[13px] font-bold text-slate-900 mb-2">Reference #</label>
                                 <input

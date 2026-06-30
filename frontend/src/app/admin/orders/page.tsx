@@ -6,6 +6,7 @@ import { Package, Clock, MapPin, LayoutDashboard, Globe, MoreHorizontal, User, P
 import Link from 'next/link';
 import { salesService, orderService, inventoryService } from '@/lib/api';
 import { deliveryService } from '@/services/delivery.service';
+import { authService } from '@/lib/auth';
 import PageLoader from '@/components/ui/PageLoader';
 import { Modal } from '@/components/ui/Modal';
 import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
@@ -149,6 +150,11 @@ export default function AdminOrdersPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
 
+    // Branch context of the logged-in admin (drives branch-isolated delivery:
+    // a branch admin fulfils from their OWN branch, auto-selected — no picker).
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [myWarehouses, setMyWarehouses] = useState<any[]>([]);
+
     // Ship → assign rider (optional) modal
     const [shipModal, setShipModal] = useState<{ orderId: string; order?: any } | null>(null);
     const [shipRiderId, setShipRiderId] = useState<string>('');
@@ -170,6 +176,9 @@ export default function AdminOrdersPage() {
         inventoryService.getWarehouses().then(setWarehouses).catch(() => []);
         inventoryService.getInventory().then(setAllStocks).catch(() => []);
         deliveryService.getAll().then(setRiders).catch(() => setRiders([]));
+        // Resolve the admin's branch context (client-only — reads sessionStorage).
+        setIsSuperAdmin(authService.isSuperAdmin());
+        setMyWarehouses((authService.getUser() as any)?.warehouses || []);
     }, []);
 
     const assignRider = async (riderId: string) => {
@@ -197,7 +206,33 @@ export default function AdminOrdersPage() {
     const handleStatusUpdateWithLoading = async (id: string, newStatus: string) => {
         const order = orders.find((o: any) => o.id?.toString() === id.toString());
         if (newStatus.toLowerCase() === 'delivered') {
-            setDeliveryModal({ orderId: id, status: newStatus, order });
+            // Super admin must pick which branch fulfils the order → show the picker.
+            if (isSuperAdmin) {
+                setSelectedWarehouse('');
+                setDeliveryModal({ orderId: id, status: newStatus, order });
+                return;
+            }
+            // Branch admin: deliver directly, NO popup. The backend auto-deducts
+            // from their OWN branch and books the sale to their branch accounts.
+            setUpdatingRow(id);
+            try {
+                await orderService.update(id, { status: 'DELIVERED' });
+                toast.success('Order delivered & stock deducted');
+                loadOrders();
+            } catch (err: any) {
+                const code = err?.response?.status;
+                const msg = err?.response?.data?.error || 'Delivery update failed';
+                // 400 = branch couldn't be auto-resolved (admin manages several) →
+                // fall back to the picker so they can choose one of THEIR branches.
+                if (code === 400) {
+                    setSelectedWarehouse('');
+                    setDeliveryModal({ orderId: id, status: newStatus, order });
+                } else {
+                    toast.error(msg);
+                }
+            } finally {
+                setUpdatingRow(null);
+            }
             return;
         }
         // Shipping out → ask which rider delivers it (optional).
@@ -342,6 +377,11 @@ export default function AdminOrdersPage() {
 
     const warehouseStockInfo = getWarehouseStockInfo();
     const hasEnoughStock = warehouseStockInfo.every((i: { insufficient: boolean }) => !i.insufficient);
+
+    // The delivery picker only appears for the super admin (who chooses any
+    // branch) or as a fallback when a multi-branch admin's branch couldn't be
+    // auto-resolved — in which case limit the options to THEIR own branches.
+    const deliveryWarehouseOptions = isSuperAdmin ? warehouses : myWarehouses;
 
     const filtered = (orders || []).filter(o => {
         const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
@@ -972,7 +1012,7 @@ export default function AdminOrdersPage() {
                                         className="w-full h-11 px-4 border border-slate-200 rounded-lg text-[13.5px] font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="" className="text-slate-400">Choose a warehouse...</option>
-                                        {warehouses.map((w: any) => (
+                                        {deliveryWarehouseOptions.map((w: any) => (
                                             <option key={w.id} value={w.id} className="text-slate-800">{w.name}</option>
                                         ))}
                                     </select>

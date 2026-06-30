@@ -10,12 +10,13 @@ import {
     Truck, AlertTriangle, Globe,
     ScanLine, Receipt, ClipboardList, PackagePlus,
     ArrowDownLeft, ArrowUpRight, Building2,
-    MapPin, Bell, Bike
+    MapPin, Bell, Bike, CalendarClock, Search
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
 import { inventoryService, companyService, supplierService } from '@/lib/api';
+import { paymentsDueService } from '@/services/payment.service';
 
 // Dashboard cards/links only a Super Admin should see (cross-branch administration).
 // Branch admins run day-to-day ops and don't manage branches, staff, roles or
@@ -28,7 +29,6 @@ const SUPER_ONLY_HREFS = new Set<string>([
     '/admin/website-settings',
     '/admin/inventory/warehouses',
     '/admin/company/areas',
-    '/admin/payments',
 ]);
 
 // For a Branch Admin, only the day-to-day essentials stay as prominent cards; the
@@ -51,6 +51,7 @@ const BRANCH_ADMIN_IMPORTANT_HREFS = new Set<string>([
     // Finance & Reports
     '/admin/income',          // Income
     '/admin/expense',         // Expense
+    '/admin/payments',        // Global Payments
     '/admin/reports',         // Reports Center
 ]);
 
@@ -111,6 +112,63 @@ export default function AdminDashboard() {
         })();
         return () => { cancelled = true; };
     }, [isSuperAdmin]);
+
+    // Payments Due (receivables) widget — branch admin only. Shows sales with an
+    // outstanding balance, filtered by how soon they fall due.
+    const money = (n: number) => `Rs ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    const DUE_WINDOWS: { k: string; label: string; days: number }[] = [
+        { k: 'overdue', label: 'Overdue only', days: -1 },
+        { k: '12h', label: 'Due within 12 hours', days: 0 },
+        { k: '1d', label: 'Due within 1 day', days: 1 },
+        { k: '2d', label: 'Due within 2 days', days: 2 },
+        { k: '3d', label: 'Due within 3 days', days: 3 },
+        { k: '1w', label: 'Due within 1 week', days: 7 },
+        { k: '1m', label: 'Due within 1 month', days: 30 },
+        { k: 'all', label: 'All upcoming', days: 99999 },
+    ];
+    const [due, setDue] = useState<any[]>([]);
+    const [dueWindow, setDueWindow] = useState<string>('3d');
+    const [dueSearch, setDueSearch] = useState('');
+    useEffect(() => {
+        if (isSuperAdmin) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await paymentsDueService.get('all');
+                if (!cancelled) setDue(Array.isArray(res?.results) ? res.results : []);
+            } catch { if (!cancelled) setDue([]); }
+        })();
+        return () => { cancelled = true; };
+    }, [isSuperAdmin]);
+
+    // Whole-day delta from today (negative = overdue, 0 = due today).
+    const daysUntilDue = (d: any) => {
+        if (!d?.due_date) return Infinity;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const dd = new Date(d.due_date); dd.setHours(0, 0, 0, 0);
+        return Math.round((dd.getTime() - today.getTime()) / 86400000);
+    };
+    const dueLabel = (d: any) => {
+        const n = daysUntilDue(d);
+        if (!isFinite(n)) return '—';
+        if (n < 0) return `${Math.abs(n)}d late`;
+        if (n === 0) return 'Today';
+        if (n === 1) return 'Tomorrow';
+        return `${n}d left`;
+    };
+    const dueRows = useMemo(() => {
+        // Receivables = money customers owe us (sales with a balance).
+        let rows = (due || []).filter((d: any) => d.type === 'sale' && d.due_date);
+        const win = DUE_WINDOWS.find((w) => w.k === dueWindow) || DUE_WINDOWS[4];
+        if (dueWindow === 'overdue') rows = rows.filter((d: any) => daysUntilDue(d) < 0);
+        else rows = rows.filter((d: any) => daysUntilDue(d) <= win.days); // overdue always included
+        const q = dueSearch.trim().toLowerCase();
+        if (q) rows = rows.filter((d: any) =>
+            (d.party || '').toLowerCase().includes(q) || (d.products || '').toLowerCase().includes(q));
+        // Most urgent first (soonest / most overdue at the top).
+        return rows.slice().sort((a: any, b: any) => daysUntilDue(a) - daysUntilDue(b));
+    }, [due, dueWindow, dueSearch]);
+    const dueOverdueCount = useMemo(() => dueRows.filter((d: any) => daysUntilDue(d) < 0).length, [dueRows]);
 
     // Sidebar-visibility toggles (System Settings → Sidebar Pages) hide pages here too.
     const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
@@ -463,7 +521,7 @@ export default function AdminDashboard() {
         },
         {
             name: 'Global Payments',
-            desc: 'Payment methods',
+            desc: 'Record & track payments',
             href: '/admin/payments',
             icon: CreditCard,
             theme: {
@@ -608,7 +666,7 @@ export default function AdminDashboard() {
     const CORE_GROUPS: { title: string; hrefs: string[] }[] = [
         { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/invoices', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
         { title: 'Purchasing & Inventory', hrefs: ['/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns', '/admin/products', '/admin/products/add', '/admin/inventory/list'] },
-        { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense'] },
+        { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense', '/admin/payments'] },
         { title: 'Administration', hrefs: ['/admin/branches', '/admin/users', '/admin/website-settings', '/admin/settings', '/admin/company/suppliers', '/admin/company/customers'] },
     ];
 
@@ -765,7 +823,8 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                         ) : (
-                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col xl:h-full">
+                        <div className="flex flex-col gap-5">
+                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
@@ -828,6 +887,99 @@ export default function AdminDashboard() {
                             >
                                 View full inventory <ChevronRight size={13} />
                             </Link>
+                        </div>
+
+                        {/* ── PAYMENTS DUE (RECEIVABLES) ── */}
+                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                                        <CalendarClock size={16} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Payments Due</h3>
+                                        <p className="text-[10.5px] text-slate-400 font-medium">Receivables by due window</p>
+                                    </div>
+                                </div>
+                                {dueOverdueCount > 0 ? (
+                                    <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full shrink-0">{dueOverdueCount} overdue</span>
+                                ) : (
+                                    <span className="text-[11px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full shrink-0">{dueRows.length}</span>
+                                )}
+                            </div>
+
+                            {/* Filters: search + due-window dropdown */}
+                            <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+                                <div className="relative flex-1 min-w-0">
+                                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        value={dueSearch}
+                                        onChange={(e) => setDueSearch(e.target.value)}
+                                        placeholder="Search…"
+                                        className="w-full h-8 pl-7 pr-2 rounded-lg border border-slate-200 text-[11.5px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
+                                    />
+                                </div>
+                                <div className="relative shrink-0">
+                                    <select
+                                        value={dueWindow}
+                                        onChange={(e) => setDueWindow(e.target.value)}
+                                        className="h-8 pl-2.5 pr-7 rounded-lg border border-slate-200 text-[11.5px] font-semibold text-slate-700 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white appearance-none cursor-pointer"
+                                    >
+                                        {DUE_WINDOWS.map((w) => (
+                                            <option key={w.k} value={w.k}>{w.label}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronRight size={12} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-slate-400" />
+                                </div>
+                            </div>
+
+                            <div className="flex-1 max-h-[380px] overflow-y-auto divide-y divide-slate-50">
+                                {loading ? (
+                                    <div className="px-5 py-8 text-center text-[12px] text-slate-400">Loading…</div>
+                                ) : dueRows.length === 0 ? (
+                                    <div className="px-5 py-8 text-center text-[12px] text-slate-400">
+                                        <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
+                                        Nothing due in this window.
+                                    </div>
+                                ) : (
+                                    dueRows.map((d: any) => {
+                                        const n = daysUntilDue(d);
+                                        const overdue = n < 0;
+                                        const urgent = n >= 0 && n <= 1;
+                                        const dot = overdue ? 'bg-rose-500' : urgent ? 'bg-amber-500' : 'bg-slate-300';
+                                        const dueColor = overdue ? 'text-rose-600' : urgent ? 'text-amber-600' : 'text-slate-500';
+                                        return (
+                                            <Link
+                                                key={`${d.source_type}-${d.source_id}`}
+                                                href={`/admin/sales?search=${encodeURIComponent(d.ref || '')}`}
+                                                className="group flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                                            >
+                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[12px] font-bold text-slate-800 truncate group-hover:text-slate-900">{d.party || 'Walk-in Customer'}</p>
+                                                    <p className="text-[10px] text-slate-400 truncate">{d.products || `#${d.ref}`}</p>
+                                                    <p className="text-[9.5px] font-semibold text-slate-400">
+                                                        Paid <span className="text-emerald-600">{money(d.paid)}</span> · #{d.ref}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-[12.5px] font-black text-rose-600 tabular-nums leading-tight">{money(d.remaining)}</p>
+                                                    <p className={`text-[9.5px] font-bold tabular-nums ${dueColor}`}>{dueLabel(d)}</p>
+                                                    <p className="text-[8.5px] text-slate-400 tabular-nums">{new Date(d.due_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                                                </div>
+                                            </Link>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <Link
+                                href="/admin/alerts"
+                                className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
+                            >
+                                View all dues <ChevronRight size={13} />
+                            </Link>
+                        </div>
                         </div>
                         )}
                     </aside>

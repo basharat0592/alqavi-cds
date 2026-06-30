@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { productService, orderService, userService } from '@/lib/api';
+import { orderService, userService, inventoryService } from '@/lib/api';
 import { purchaseService } from '@/services/purchase.service';
 import { paymentsDueService } from '@/services/payment.service';
 import {
@@ -38,7 +38,7 @@ export default function AlertsPage() {
         if (!isSilent) setLoading(true);
         try {
             const [pRes, oRes, uRes, purRes, dueRes] = await Promise.allSettled([
-                productService.getAll(),
+                inventoryService.getLowStock(),
                 orderService.getAll(),
                 userService.getAll(),
                 purchaseService.getAll(),
@@ -61,28 +61,29 @@ export default function AlertsPage() {
                 return [];
             };
 
-            const products = getArr(pRes);
-            products.forEach((p: any) => {
-                const stock = parseInt(p.quantity_in_stock ?? p.stock ?? 0);
-                if (stock < 10) {
-                    newAlerts.push({
-                        id: `stock-${p.id}`,
-                        productId: p.id,
-                        type: stock === 0 ? 'Out of Stock' : 'Low Stock',
-                        priority: stock === 0 ? 'high' : 'medium',
-                        title: stock === 0 ? 'Out of Stock' : 'Low Stock',
-                        product: p.name,
-                        remaining: stock,
-                        supplierName: p.supplier_name || p.company_name || 'Al-Qavi Hub',
-                        sku: p.sku || 'No Identifier',
-                        time: 'Live',
-                        href: `/admin/products?search=${p.name}`,
-                        icon: stock === 0 ? XCircle : AlertTriangle,
-                        color: stock === 0 ? 'text-red-600' : 'text-amber-600',
-                        bg: stock === 0 ? 'bg-red-50' : 'bg-amber-50',
-                        border: stock === 0 ? 'border-red-200' : 'border-amber-200',
-                    });
-                }
+            // Per-branch low stock from the server (tenant + branch scoped, vs each
+            // product's min_count) — not a hardcoded client-side threshold.
+            const lowStock = getArr(pRes);
+            lowStock.forEach((p: any) => {
+                const qty = parseInt(p.qty ?? 0);
+                const isOut = qty <= 0;
+                newAlerts.push({
+                    id: `stock-${p.product_name}`,
+                    type: isOut ? 'Out of Stock' : 'Low Stock',
+                    priority: isOut ? 'high' : 'medium',
+                    title: isOut ? 'Out of Stock' : 'Low Stock',
+                    product: p.product_name,
+                    remaining: qty,
+                    min: p.min,
+                    supplierName: p.supplier || 'Al-Qavi Hub',
+                    sku: p.sku || 'No Identifier',
+                    time: 'Live',
+                    href: `/admin/products?search=${encodeURIComponent(p.product_name || '')}`,
+                    icon: isOut ? XCircle : AlertTriangle,
+                    color: isOut ? 'text-red-600' : 'text-amber-600',
+                    bg: isOut ? 'bg-red-50' : 'bg-amber-50',
+                    border: isOut ? 'border-red-200' : 'border-amber-200',
+                });
             });
 
             const orders = getArr(oRes);

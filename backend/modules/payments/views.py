@@ -174,7 +174,7 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
         services.recompute_parent(st, sid)
 
 
-def _due_row(kind, ref, party, total, paid, remaining, due_date, sid):
+def _due_row(kind, ref, party, total, paid, remaining, due_date, sid, products=''):
     from modules.sales.models import _settlement_alert
     is_overdue, days_overdue, is_due_soon = _settlement_alert(due_date, remaining)
     if is_overdue:
@@ -197,6 +197,7 @@ def _due_row(kind, ref, party, total, paid, remaining, due_date, sid):
         'is_overdue': is_overdue,
         'is_due_soon': is_due_soon,
         'bucket': bucket,
+        'products': products or '',
         'source_type': {'sale': 'order', 'purchase': 'purchaseorder',
                         'sale_return': 'salereturn', 'purchase_return': 'purchasereturn'}.get(kind, kind),
         'source_id': str(sid),
@@ -229,12 +230,15 @@ def payments_due(request):
     if area_ids is not None:
         orders = orders.filter(customer__area_id__in=area_ids)
     orders = apply_report_scope(request, orders, 'warehouse', 'created_by', tenant_field='tenant')
-    for o in orders.only('id', 'tracking_id', 'customer_name', 'total_amount',
-                         'amount_paid', 'due_date'):
+    for o in orders.prefetch_related('items__product'):
         rem = o.remaining_amount
         if rem and rem > 0:
+            prods = ', '.join(
+                f"{(it.product.product_name if it.product else 'Item')}×{it.quantity}"
+                for it in o.items.all()
+            )
             rows.append(_due_row('sale', o.tracking_id, o.customer_name or 'Walk-in Customer',
-                                 o.total_amount, o.amount_paid, rem, o.due_date, o.id))
+                                 o.total_amount, o.amount_paid, rem, o.due_date, o.id, products=prods))
 
     # Purchases we still owe suppliers.
     for p in (apply_report_scope(request,

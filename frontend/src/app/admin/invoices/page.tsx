@@ -17,37 +17,46 @@ import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAl
 
 type BadgeTone = 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue';
 
-/* ── STATUS BADGE ── */
-const StatusBadge = ({ status }: { status: string }) => {
-    const map: Record<string, { label: string; tone: BadgeTone }> = {
-        delivered: { label: 'Paid', tone: 'green' },
-        processing: { label: 'Processing', tone: 'blue' },
-        pending: { label: 'Pending', tone: 'amber' },
-        cancelled: { label: 'Cancelled', tone: 'red' },
-        paid: { label: 'Paid', tone: 'green' },
-        unpaid: { label: 'Unpaid', tone: 'red' },
-        partial: { label: 'Partial', tone: 'amber' },
-        returned: { label: 'Returned', tone: 'indigo' },
-    };
-    const s = map[status?.toLowerCase()] || { label: status || '—', tone: 'neutral' as BadgeTone };
-    return <Badge tone={s.tone}>{s.label}</Badge>;
+/* Effective settlement status (mirrors the Sales page): for a sale we read the
+   real payment status (not the delivery state); cancelled = void; purchases use
+   payment_status; returns use refund_status. */
+const effectiveInvStatus = (inv: any, tab: string): { key: string; label: string; tone: BadgeTone } => {
+    const status = (inv.status || '').toUpperCase();
+    if (tab === 'sale') {
+        if (['CANCELLED', 'REJECTED'].includes(status)) return { key: 'cancelled', label: 'Cancelled', tone: 'red' };
+        const ps = (inv.payment_status || 'PAID').toUpperCase();
+        if (ps === 'PAID' || Number(inv.remaining_amount ?? 0) <= 0) return { key: 'paid', label: 'Paid', tone: 'green' };
+        return ps === 'PARTIAL' ? { key: 'partial', label: 'Partial', tone: 'amber' } : { key: 'unpaid', label: 'Unpaid', tone: 'red' };
+    }
+    if (tab === 'purchase') {
+        if (status === 'CANCELLED') return { key: 'cancelled', label: 'Cancelled', tone: 'red' };
+        const ps = (inv.payment_status || 'UNPAID').toUpperCase();
+        if (ps === 'PAID') return { key: 'paid', label: 'Paid', tone: 'green' };
+        if (ps === 'PARTIAL') return { key: 'partial', label: 'Partial', tone: 'amber' };
+        return { key: 'unpaid', label: 'Unpaid', tone: 'red' };
+    }
+    // sale-return / purchase-return
+    const rs = (inv.refund_status || 'PENDING').toUpperCase();
+    return rs === 'PAID' ? { key: 'paid', label: 'Refunded', tone: 'green' } : { key: 'pending', label: 'Pending', tone: 'amber' };
 };
 
-/* ── STAT CARD ── */
-const StatCard = ({ label, value, icon: Icon, color }: any) => (
-    <Card className="p-4 flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-            <Icon size={16} />
-        </div>
-        <div>
-            <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">{label}</p>
-            <p className="text-[17px] font-bold text-slate-900 leading-tight">{value}</p>
-        </div>
-    </Card>
-);
+const channelOf = (inv: any) => (inv.payment_method === 'SHOP' ? 'POS' : 'Online');
+
+const invRemaining = (inv: any, tab: string): number => {
+    if (tab === 'sale') {
+        if (['CANCELLED', 'REJECTED'].includes((inv.status || '').toUpperCase())) return 0;
+        return Math.max(0, Number(inv.remaining_amount ?? 0));
+    }
+    if (tab === 'purchase') {
+        if ((inv.status || '').toUpperCase() === 'CANCELLED') return 0;
+        return Math.max(0, Number(inv.remaining_amount ?? (Number(inv.total_amount || 0) - Number(inv.paid_amount || 0))));
+    }
+    return 0;
+};
 
 /* ── INVOICE TABLE ── */
-const InvoiceTable = ({ rows, onView, onPrint, onDelete, type, sel }: { rows: any[]; onView: (id: any) => void; onPrint: (id: any) => void; onDelete: (inv: any) => void; type: string; sel: TableSelection }) => {
+const InvoiceTable = ({ rows, onView, onPrint, onDelete, type, tab, sel }: { rows: any[]; onView: (id: any) => void; onPrint: (id: any) => void; onDelete: (inv: any) => void; type: string; tab: string; sel: TableSelection }) => {
+    const isPurchaseSide = tab === 'purchase' || tab === 'purchase-return';
     if (rows.length === 0) return (
         <div className="py-16 text-center text-[13px] text-slate-400">No {type} invoices found.</div>
     );
@@ -77,10 +86,25 @@ const InvoiceTable = ({ rows, onView, onPrint, onDelete, type, sel }: { rows: an
                             </span>
                         </td>
                         <td className="px-5 py-3.5">
-                            <div className="font-medium text-slate-800">
-                                {inv.customer_name || inv.supplier_name || inv.guest_name || 'Walk-in'}
+                            <div className="font-semibold text-slate-800">
+                                {isPurchaseSide
+                                    ? (inv.supplier_name || inv.supplier?.company || inv.supplier?.name || 'Supplier')
+                                    : (inv.customer_display_name || inv.customer_name || 'Walk-in Customer')}
                             </div>
-                            <div className="text-[11px] text-slate-400 mt-0.5">{inv.payment_method || '—'}</div>
+                            <div className="mt-0.5 flex items-center gap-1.5">
+                                {tab === 'sale' ? (
+                                    <>
+                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${channelOf(inv) === 'POS' ? 'bg-violet-50 text-violet-600 border border-violet-100' : 'bg-sky-50 text-sky-600 border border-sky-100'}`}>
+                                            {channelOf(inv)}
+                                        </span>
+                                        <span className="text-[10.5px] text-slate-400 font-medium">
+                                            {inv.customer_type === 'walkin' ? 'Walk-in' : 'Registered'}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-[11px] text-slate-400">{inv.payment_method || '—'}</span>
+                                )}
+                            </div>
                         </td>
                         <td className="px-5 py-3.5 text-slate-500">
                             <div className="flex items-center gap-1.5 text-[12px]">
@@ -88,11 +112,18 @@ const InvoiceTable = ({ rows, onView, onPrint, onDelete, type, sel }: { rows: an
                                 {formatDateTime(inv.created_at || inv.date)}
                             </div>
                         </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-slate-900 tabular-nums">
-                            {formatCurrency(inv.total_amount || inv.total || 0)}
+                        <td className="px-5 py-3.5 text-right">
+                            <div className="font-bold text-slate-900 tabular-nums">
+                                {formatCurrency(inv.total_amount || inv.total || inv.total_refund_amount || 0)}
+                            </div>
+                            {invRemaining(inv, tab) > 0 && (
+                                <div className="text-[10px] font-bold text-rose-500 tabular-nums mt-0.5">
+                                    {formatCurrency(invRemaining(inv, tab))} due
+                                </div>
+                            )}
                         </td>
                         <td className="px-5 py-3.5 text-center">
-                            <StatusBadge status={inv.status} />
+                            {(() => { const st = effectiveInvStatus(inv, tab); return <Badge tone={st.tone}>{st.label}</Badge>; })()}
                         </td>
                         <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-2.5">
@@ -186,9 +217,9 @@ export default function InvoicesPage() {
     const filtered = (activeData || []).filter(inv => {
         const q = search.toLowerCase();
         const matchSearch =
-            (inv.order_number || inv.invoice_number || inv.id || '').toString().toLowerCase().includes(q) ||
-            (inv.customer_name || inv.supplier_name || inv.guest_name || '').toLowerCase().includes(q);
-        const matchStatus = filterStatus === 'all' || inv.status?.toLowerCase() === filterStatus;
+            (inv.order_number || inv.invoice_number || inv.purchase_number || inv.return_number || inv.id || '').toString().toLowerCase().includes(q) ||
+            (inv.customer_display_name || inv.customer_name || inv.supplier_name || inv.guest_name || '').toLowerCase().includes(q);
+        const matchStatus = filterStatus === 'all' || effectiveInvStatus(inv, activeTab).key === filterStatus;
         return matchSearch && matchStatus;
     });
 
@@ -236,8 +267,8 @@ export default function InvoicesPage() {
                     }
                 />
 
-                {/* ── TAB SWITCHER BUTTONS ── */}
-                <div className="flex flex-wrap gap-2 mb-6">
+                {/* ── TAB SWITCHER BUTTONS — 2×2 on mobile, inline row on larger screens ── */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-6">
                     {tabButtons.map(tb => {
                         const Icon = tb.icon;
                         const isActive = activeTab === tb.id;
@@ -245,12 +276,12 @@ export default function InvoicesPage() {
                             <button
                                 key={tb.id}
                                 onClick={() => { setActiveTab(tb.id); setSearch(''); setFilterStatus('all'); setPage(1); }}
-                                className={`flex items-center gap-2 px-4 h-9 rounded-lg text-[13px] font-semibold border transition-all ${isActive ? tb.active : tb.inactive
+                                className={`flex items-center justify-center sm:justify-start gap-2 min-w-0 px-3 sm:px-4 h-9 rounded-lg text-[12px] sm:text-[13px] font-semibold border transition-all ${isActive ? tb.active : tb.inactive
                                     }`}
                             >
-                                <Icon size={14} />
-                                {tb.label}
-                                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/25 text-white' : `${tb.badge} text-white`
+                                <Icon size={14} className="shrink-0" />
+                                <span className="truncate">{tb.label}</span>
+                                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? 'bg-white/25 text-white' : `${tb.badge} text-white`
                                     }`}>{tb.count}</span>
                             </button>
                         );
@@ -273,17 +304,20 @@ export default function InvoicesPage() {
                                 className={`${ui.inputBase} h-9 pl-9`}
                             />
                         </div>
-                        <div className="flex items-center gap-1">
-                            {['all', 'delivered', 'processing', 'pending', 'cancelled'].map(s => (
+                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                            {(activeTab.includes('return')
+                                ? [['all', 'All'], ['paid', 'Refunded'], ['pending', 'Pending']]
+                                : [['all', 'All'], ['paid', 'Paid'], ['partial', 'Partial'], ['unpaid', 'Unpaid'], ['cancelled', 'Cancelled']]
+                            ).map(([key, label]) => (
                                 <button
-                                    key={s}
-                                    onClick={() => { setFilterStatus(s); setPage(1); }}
-                                    className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg capitalize transition-all ${filterStatus === s
-                                        ? 'bg-indigo-600 text-white'
+                                    key={key}
+                                    onClick={() => { setFilterStatus(key); setPage(1); }}
+                                    className={`px-3 py-1.5 text-[11px] font-bold rounded-lg whitespace-nowrap transition-all ${filterStatus === key
+                                        ? 'bg-indigo-600 text-white shadow-sm'
                                         : 'text-slate-500 hover:bg-slate-100'
                                         }`}
                                 >
-                                    {s === 'delivered' ? 'Paid' : s}
+                                    {label}
                                 </button>
                             ))}
                         </div>
@@ -299,6 +333,7 @@ export default function InvoicesPage() {
                             <InvoiceTable
                                 sel={sel}
                                 rows={paginated}
+                                tab={activeTab}
                                 type={activeTab.includes('purchase') ? 'purchase' : 'sale'}
                                 onView={(id) => {
                                     if (activeTab === 'sale') router.push(`/admin/sales/${id}/invoice`);

@@ -101,6 +101,55 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         order.save(update_fields=['due_date'])
         return Response({'id': str(order.id), 'due_date': order.due_date})
 
+    def _resolve_delivery_warehouse(self, order, request):
+        """Resolve the branch (warehouse) a delivery is fulfilled from.
+
+        Branch isolation: a branch admin always delivers from THEIR OWN assigned
+        branch — the warehouse is auto-selected from the logged-in admin, never a
+        manual cross-branch choice. The platform operator (super admin) may pick
+        any branch. Returns ``(warehouse_id, error_response)``; on success the
+        error is None, on failure the warehouse_id is None.
+        """
+        actor = request.user
+        order_wh = str(getattr(order, 'warehouse_id', '') or '')
+        req_wh = str(request.data.get('warehouse_id') or '')
+        ids = user_warehouse_ids(actor)  # None -> unscoped (super admin / superuser)
+
+        if ids is not None:
+            # Branch-scoped admin: lock the fulfillment to a branch they manage.
+            if not ids:
+                return None, Response(
+                    {"error": "No branch is assigned to your account."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            # An order already tied to a branch must be one this admin owns.
+            if order_wh and order_wh not in ids:
+                return None, Response(
+                    {"error": "This order belongs to another branch — you cannot deliver it."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if order_wh:
+                return order_wh, None
+            # No branch on the order yet: auto-use their single branch; if they
+            # manage several, require a valid choice among their own.
+            if len(ids) == 1:
+                return next(iter(ids)), None
+            if req_wh and req_wh in ids:
+                return req_wh, None
+            return None, Response(
+                {"error": "Select your branch warehouse to complete this delivery."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Unscoped operator: prefer the order's own branch, else the chosen one.
+        wh = order_wh or req_wh
+        if not wh:
+            return None, Response(
+                {"error": "Warehouse selection is required for delivery."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return wh, None
+
     @action(detail=True, methods=['patch'])
     def assign_delivery(self, request, pk=None):
         """Assign (or clear) the delivery rider for an order."""
@@ -278,39 +327,12 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         orders = apply_report_scope(request, Order.objects.all(), 'warehouse', 'created_by', tenant_field='tenant')
         purchase_orders = apply_report_scope(request, PurchaseOrder.objects.all(), 'warehouse', 'created_by', tenant_field='tenant')
 
-        # Branch-scoped low stock — computed from THIS branch's Stock rows (not the
-        # global product catalog), so a branch admin sees their own shortages.
-        from modules.inventory.models import Stock
-        from modules.products.models import Product
-        # Low-stock is scoped to the requesting tenant (their own stock only); the
-        # platform operator sees all (tenant_id_for -> None makes this a no-op).
-        stock_scope = scope_to_tenant(request.user, Stock.objects.all(), 'tenant')
-        qty_by_name, sup_by_name = {}, {}
-        for s in stock_scope.values('product_name', 'supplier', 'total_quantity'):
-            key = (s['product_name'] or '').strip().lower()
-            if not key:
-                continue
-            qty_by_name[key] = qty_by_name.get(key, 0) + (s['total_quantity'] or 0)
-            if key not in sup_by_name and s['supplier']:
-                sup_by_name[key] = str(s['supplier'])
-        prod_meta = {}
-        for p in scope_to_tenant(request.user, Product.objects.all(), 'tenant').only('product_name', 'min_count', 'sku'):
-            k = (p.product_name or '').strip().lower()
-            if k:
-                prod_meta[k] = {'min': p.min_count if p.min_count is not None else 10, 'sku': p.sku, 'name': p.product_name}
-        low_stock = []
-        for key, qty in qty_by_name.items():
-            meta = prod_meta.get(key, {})
-            m = meta.get('min', 10)
-            if qty <= m:
-                low_stock.append({
-                    'product_name': meta.get('name') or key,
-                    'qty': qty, 'min': m,
-                    'sku': meta.get('sku'),
-                    'supplier': sup_by_name.get(key),
-                })
-        low_stock.sort(key=lambda x: x['qty'])
-        low_stock = low_stock[:60]
+        # Branch-scoped low stock — computed from THIS branch's Stock rows vs each
+        # product's min_count, so a branch admin sees their own shortages (an item
+        # full in branch A but empty in branch B is still low for B). Shared helper
+        # also powers the GET /v1/inventory/stocks/low_stock/ endpoint.
+        from modules.inventory.views import compute_low_stock
+        low_stock = compute_low_stock(request.user, request.query_params.get('warehouse'))
 
         # Base queryset WITH date/payment filters
         filtered_qs = orders
@@ -332,15 +354,33 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         # Revenue Logic: Only Delivered orders count as revenue
         total_revenue = delivered_orders_qs.aggregate(tot=Sum('total_amount'))['tot'] or 0
 
-        # Profit Logic
-        from .models import OrderItem
+        # Profit Logic — gross margin on delivered items, NET of items that were
+        # returned via accepted sale returns (a returned unit reverses its margin).
+        from .models import OrderItem, SaleReturnItem
+        from decimal import Decimal as _D
         items = OrderItem.objects.filter(order__in=delivered_orders_qs)
-        total_profit = items.annotate(
+        gross_profit = items.annotate(
             item_profit=ExpressionWrapper(
                 (F('price') - F('cost_price')) * F('quantity'),
                 output_field=DecimalField(max_digits=12, decimal_places=2)
             )
         ).aggregate(tot=Sum('item_profit'))['tot'] or 0
+        # Cost basis per (order, product) from the original sale lines.
+        cost_map = {
+            (oi['order_id'], oi['product_id']): (oi['price'], oi['cost_price'])
+            for oi in items.values('order_id', 'product_id', 'price', 'cost_price')
+        }
+        returned_profit = _D('0')
+        ret_items = SaleReturnItem.objects.filter(
+            sale_return__order__in=delivered_orders_qs,
+            sale_return__status='ACCEPTED',
+        ).values('sale_return__order_id', 'product_id', 'quantity', 'price')
+        for ri in ret_items:
+            sell, cost = cost_map.get(
+                (ri['sale_return__order_id'], ri['product_id']), (ri['price'], 0)
+            )
+            returned_profit += (_D(str(sell)) - _D(str(cost))) * (ri['quantity'] or 0)
+        total_profit = _D(str(gross_profit)) - returned_profit
 
         # Accounts Payable: Sum of remaining balance on all active Purchase Orders
         total_payable = purchase_orders.exclude(status='CANCELLED').annotate(
@@ -396,9 +436,6 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             
             new_status = request.data.get("status", "").upper()
             old_status = order.status.upper()
-            # Prefer the order's own branch (chosen at checkout / POS); fall back to
-            # any warehouse passed in the request.
-            warehouse_id = str(getattr(order, 'warehouse_id', '') or '') or request.data.get("warehouse_id")
 
             with transaction.atomic():
                 # 1. RESERVE STOCK on Confirmation/Processing (Acceptance)
@@ -413,9 +450,16 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
                 # 2. DEDUCT PHYSICAL STOCK on Delivery
                 if new_status == "DELIVERED" and old_status != "DELIVERED":
-                    if not warehouse_id:
-                        return Response({"error": "Warehouse selection is required for delivery."}, status=status.HTTP_400_BAD_REQUEST)
-                    
+                    # Branch isolation: auto-resolve the fulfillment branch from the
+                    # logged-in branch admin (never another branch's stock).
+                    warehouse_id, wh_error = self._resolve_delivery_warehouse(order, request)
+                    if wh_error is not None:
+                        return wh_error
+                    # Persist the resolved branch so the payment ledger (recorded by
+                    # the post_save signal when status hits DELIVERED) lands in THIS
+                    # branch's accounts even when the order had no branch set.
+                    order.warehouse_id = warehouse_id
+
                     from modules.inventory.models import Stock
                     for item in order.items.all():
                         if item.product:
@@ -423,15 +467,21 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             if order.is_reserved:
                                 item.product.reserved_quantity = F("reserved_quantity") - item.quantity
                                 item.product.save()
-                            
-                            # Actual Deduction from Physical Stock (Master Stock Table)
-                            stock = Stock.objects.filter(
+
+                            # Actual Deduction from Physical Stock (Master Stock Table).
+                            # Scope to THIS branch and, when the order is owned by a
+                            # tenant, to that tenant — so a delivery can only ever
+                            # deplete the current branch's own stock.
+                            stock_filter = dict(
                                 product_name__iexact=item.product.product_name,
                                 weight=item.product.weight,
                                 size=item.product.size,
-                                warehouse_id=warehouse_id
-                            ).first()
-                            
+                                warehouse_id=warehouse_id,
+                            )
+                            if getattr(order, 'tenant_id', None):
+                                stock_filter['tenant_id'] = order.tenant_id
+                            stock = Stock.objects.filter(**stock_filter).first()
+
                             if stock:
                                 stock.total_quantity = F("total_quantity") - item.quantity
                                 stock.save()
@@ -457,6 +507,16 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                                     "price": item.price
                                 }
                             )
+                    # Payment is collected at delivery for fully-paid (cash/COD)
+                    # sales: settle the balance so it's recorded directly in the
+                    # branch accounts and no manual "Collect" step is needed.
+                    # Genuine credit sales (explicitly UNPAID/PARTIAL) keep their
+                    # outstanding balance so they can still be collected later.
+                    from modules.payments.services import has_confirmed_installments
+                    if (str(order.payment_status).upper() == 'PAID'
+                            and not has_confirmed_installments('order', order.id)):
+                        order.amount_paid = order.total_amount
+
                     order.is_reserved = False
                     order.delivered_at = timezone.now()
                     order.save()

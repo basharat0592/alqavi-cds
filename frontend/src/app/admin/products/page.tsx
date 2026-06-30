@@ -56,7 +56,7 @@ export default function ProductsPage() {
             };
             const [resp, stockResp, catProdData] = await Promise.all([
                 productService.getAll(params),
-                inventoryService.getInventory(),
+                inventoryService.getInventory({ no_pagination: 'true' }),
                 productService.getAllSupplier({ no_pagination: 'true' })
             ]);
 
@@ -103,28 +103,42 @@ export default function ProductsPage() {
         } catch { toast.error('Failed to delete product'); } finally { setDeleting(false); }
     };
 
-    // Grouped Products: Merge by [Name + Selling Price]
+    // Grouped Products: Merge by [Name + Selling Price].
+    // Current units come from the REAL Stock table (warehouse + tenant scoped),
+    // counted once per [name|weight|size] variant — the same source the POS and
+    // Current Stocks read. This avoids the denormalized Product.total_quantity
+    // drifting / double-counting across duplicate product rows.
     const groupedProducts = useMemo(() => {
+        const stockMap = new Map<string, number>();
+        (allStocks || []).forEach((s: any) => {
+            const vk = `${(s.product_name || '').toLowerCase().trim()}|${(s.weight || '').trim()}|${(s.size || '').trim()}`;
+            stockMap.set(vk, (stockMap.get(vk) || 0) + Number(s.total_quantity || 0));
+        });
+
         const groups = new Map();
-
         products.forEach(prod => {
-            const key = `${(prod.product_name || '').toLowerCase().trim()}_${prod.selling_price}`;
-
+            const name = (prod.product_name || '').toLowerCase().trim();
+            const key = `${name}_${prod.selling_price}`;
+            const vkey = `${name}|${(prod.weight || '').trim()}|${(prod.size || '').trim()}`;
             if (!groups.has(key)) {
-                groups.set(key, { ...prod, total_quantity: Number(prod.total_quantity || 0) });
+                groups.set(key, { ...prod, _variants: new Set([vkey]) });
             } else {
                 const g = groups.get(key);
-                g.total_quantity = (g.total_quantity || 0) + Number(prod.total_quantity || 0);
-
-                // Track if multiple warehouses are involved in this price point
-                if (g.warehouse_name !== prod.warehouse_name) {
-                    g.warehouse_name = 'Multiple';
-                }
+                g._variants.add(vkey);
+                if (g.warehouse_name !== prod.warehouse_name) g.warehouse_name = 'Multiple';
             }
         });
 
-        return Array.from(groups.values());
-    }, [products]);
+        return Array.from(groups.values()).map((g: any) => {
+            let units = 0, matched = false;
+            g._variants.forEach((vk: string) => {
+                if (stockMap.has(vk)) { units += stockMap.get(vk)!; matched = true; }
+            });
+            delete g._variants;
+            // Fall back to the denormalized field only when no stock row matched.
+            return { ...g, current_units: matched ? units : Number(g.total_quantity || 0) };
+        });
+    }, [products, allStocks]);
 
     const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
@@ -263,8 +277,8 @@ export default function ProductsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className={`text-[14px] sm:text-[16px] font-black tabular-nums ${(prod.total_quantity || 0) < 10 ? 'text-rose-600' : 'text-slate-900'}`}>
-                                                        {(prod.total_quantity || 0).toLocaleString()}
+                                                    <div className={`text-[14px] sm:text-[16px] font-black tabular-nums ${(prod.current_units || 0) < 10 ? 'text-rose-600' : 'text-slate-900'}`}>
+                                                        {(prod.current_units || 0).toLocaleString()}
                                                     </div>
                                                     <div className="hidden sm:block text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Unit Balance</div>
                                                 </td>
@@ -314,7 +328,7 @@ export default function ProductsPage() {
                         status: p.status || '',
                         supplier: p.supplier_name || '',
                         warehouse: p.warehouse_name || '',
-                        quantity: p.total_quantity ?? 0,
+                        quantity: p.current_units ?? p.total_quantity ?? 0,
                     })),
                     'products.csv',
                 )}

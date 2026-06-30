@@ -53,6 +53,12 @@ export const inventoryService = {
         const { data } = await api.get(`v1/inventory/stocks/${stockId}/movements/`);
         return data;
     },
+    // Per-branch low-stock alerts (tenant + branch scoped, vs Product.min_count).
+    // Pass { warehouse } to narrow to one branch.
+    getLowStock: async (params?: any): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/stocks/low_stock/', { params });
+        return Array.isArray(data) ? data : (data?.results || []);
+    },
 
     // Legacy or placeholder methods - keeping for safety but may be removed if not used
     getInventorySummary: async (): Promise<any> => {

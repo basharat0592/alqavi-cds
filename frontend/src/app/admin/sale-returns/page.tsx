@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     Package, Search,
     RefreshCw, AlertTriangle, XCircle,
-    User, Clock, Loader2, CheckCircle2, Trash2
+    User, Clock, Loader2, CheckCircle2, Trash2, Plus
 } from 'lucide-react';
 import { formatDateTime, exportToCSV, formatCurrency } from '@/lib/utils';
 import api from '@/lib/axios';
@@ -210,9 +210,14 @@ export default function SaleReturnsPage() {
                     title="Customer Return Requests"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Sale Returns' }]}
                     actions={
-                        <Button variant="secondary" onClick={() => loadReturns()} disabled={loading}>
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                        </Button>
+                        <>
+                            <Button variant="secondary" onClick={() => loadReturns()} disabled={loading}>
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                            </Button>
+                            <Button variant="primary" onClick={() => router.push('/admin/sale-returns/add')} className="whitespace-nowrap">
+                                <Plus size={14} /> Add Return
+                            </Button>
+                        </>
                     }
                 />
 

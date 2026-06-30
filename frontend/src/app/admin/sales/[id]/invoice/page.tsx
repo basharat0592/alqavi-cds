@@ -68,8 +68,22 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     const customerName = (order as any).customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || 'Guest');
     const customerCell = c?.phone || c?.phone_number || '';
     const totalAmount = parseFloat(order.total_amount || '0');
-    const paidAmount = parseFloat((order as any).paid_amount || '0');
-    const balance = Math.max(0, totalAmount - paidAmount);
+    // Cancelled / rejected sales are void — no payment was collected (paid 0).
+    const voided = ['CANCELLED', 'REJECTED'].includes(String((order as any).status || '').toUpperCase());
+    // A PAID sale is settled in full — treat it as fully paid even on older rows
+    // whose amount_paid field was never stamped. Otherwise read the real settlement
+    // (`amount_paid`; fall back to legacy `paid_amount`) and server remaining.
+    const isPaid = !voided && String((order as any).payment_status || 'PAID').toUpperCase() === 'PAID';
+    const paidAmount = voided
+        ? 0
+        : (isPaid
+            ? totalAmount
+            : parseFloat((order as any).amount_paid ?? (order as any).paid_amount ?? '0'));
+    const balance = (voided || isPaid)
+        ? 0
+        : ((order as any).remaining_amount != null
+            ? Math.max(0, parseFloat((order as any).remaining_amount))
+            : Math.max(0, totalAmount - paidAmount));
 
     return (
         <div className="pb-20 font-sans text-slate-900 text-left">
@@ -183,6 +197,12 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                             <div className="flex justify-between">
                                 <span className="text-rose-600 font-black uppercase text-[11px]">Remaining Balance</span>
                                 <span className="font-black text-rose-600 tabular-nums">{formatCurrency(balance)}</span>
+                            </div>
+                        )}
+                        {balance > 0 && (order as any).due_date && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Due Date</span>
+                                <span className="font-bold text-slate-700 tabular-nums">{formatDate((order as any).due_date)}</span>
                             </div>
                         )}
                     </div>

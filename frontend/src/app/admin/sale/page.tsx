@@ -270,6 +270,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     const [warehouseStock, setWarehouseStock] = useState<any[]>([]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
 
+    // Partial is registered-customer-only — revert to Full if the account is cleared.
+    useEffect(() => {
+        if (!customerId && payMode === 'partial') setPayMode('full');
+    }, [customerId, payMode]);
+
     const loadData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
@@ -291,21 +296,25 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             const whArray = Array.isArray(w) ? w : (w as any)?.results || [];
             setWarehouses(whArray);
 
-            // LIVE SYNC: If a warehouse is selected, refresh its specific stock levels too
+            // LIVE SYNC: If a warehouse is selected, refresh its specific stock levels too.
+            // Fetch ALL batches (no_pagination) and SUM them per product — a product can
+            // have several stock batches, so a single row underreports the real on-hand qty.
             if (warehouseId) {
-                const stockRes = await inventoryService.getInventory({ warehouse: warehouseId }).catch(() => []);
+                const stockRes = await inventoryService.getInventory({ warehouse: warehouseId, no_pagination: 'true' }).catch(() => []);
                 const stockData = Array.isArray(stockRes) ? stockRes : (stockRes as any)?.results || [];
                 setWarehouseStock(stockData);
 
-                // Update current bill items with latest stock levels from the selected warehouse
+                const sumStock = (name: string, weight: string, size: string) =>
+                    stockData.reduce((acc: number, s: any) => {
+                        const m = (s.product_name || '').toLowerCase().trim() === (name || '').toLowerCase().trim()
+                            && (s.weight || '') === (weight || '') && (s.size || '') === (size || '');
+                        return m ? acc + Number(s.total_quantity || 0) : acc;
+                    }, 0);
+
+                // Update current bill items with the latest (summed) warehouse stock.
                 setItems(prev => prev.map(item => {
                     if (!item.product) return item;
-                    const ws = stockData.find((s: any) => 
-                        (s.product_name?.toLowerCase().trim() === item.product_name?.toLowerCase().trim()) &&
-                        (s.weight === item.weight || (!s.weight && !item.weight)) &&
-                        (s.size === item.size || (!s.size && !item.size))
-                    );
-                    return { ...item, stock: ws ? ws.total_quantity : 0 };
+                    return { ...item, stock: sumStock(item.product_name, item.weight, item.size) };
                 }));
             }
         } catch { 
@@ -394,19 +403,28 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     // so the picker lists exactly what this branch holds — nothing from other branches.
     const branchProducts = products
         .map((p: any) => {
-            const ws = warehouseStock.find((s: any) =>
+            // SUM every stock batch of this product in the branch — a product can hold
+            // multiple batches, so a single row underreports the true on-hand quantity.
+            const matches = warehouseStock.filter((s: any) =>
                 (s.product_name?.toLowerCase().trim() === p.product_name?.toLowerCase().trim()) &&
                 (s.weight === p.weight || (!s.weight && !p.weight)) &&
                 (s.size === p.size || (!s.size && !p.size))
             );
-            return ws ? { ...p, total_quantity: ws.total_quantity } : null;
+            if (matches.length === 0) return null;
+            const total = matches.reduce((sum: number, s: any) => sum + Number(s.total_quantity || 0), 0);
+            return { ...p, total_quantity: total };
         })
         .filter(Boolean);
 
     const handleSave = async () => {
         // Guard rails for credit / partial sales.
         if (payMode !== 'full') {
-            if (!customerId) { setShowConfirm(false); return toast.error('Select a registered customer for credit / partial sales.'); }
+            // Partial / credit sales must be tied to a registered customer account
+            // so the outstanding balance lives on a real ledger (no walk-in credit).
+            if (!customerId) {
+                setShowConfirm(false);
+                return toast.error('Partial / credit sales require a registered customer account.');
+            }
             if (!dueDate) { setShowConfirm(false); return toast.error('Set a payment due date for the outstanding balance.'); }
             if (payMode === 'partial' && (paidNow <= 0 || paidNow >= totalBill)) {
                 setShowConfirm(false);
@@ -438,7 +456,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             };
             const data = await orderService.create(payload);
             // Record the amount collected now as an installment so it shows in the
-            // payment history and the ledger (full sales already book via delivery).
+            // payment history (full sales already book via delivery).
+            let installmentOk = true;
             if (payMode === 'partial' && paidNow > 0 && data?.id) {
                 try {
                     await installmentService.create({
@@ -451,10 +470,22 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         paid_at: new Date().toISOString(),
                         reference: orderNumber,
                     });
-                } catch (e) { console.error('installment record failed', e); }
+                } catch (e) {
+                    installmentOk = false;
+                    console.error('installment record failed', e);
+                }
             }
             setSuccessOrder(data);
-            toast.success(payMode === 'partial' ? 'Sale saved (partial payment)!' : 'Sale finalized!');
+            if (payMode === 'partial' && !installmentOk) {
+                // Don't pretend it fully succeeded — the admin must collect it from
+                // Sales History so the payment history stays accurate.
+                toast.error(
+                    'Sale saved, but recording the partial payment failed. Open it in Sales History → Collect to add the payment.',
+                    { duration: 7000 }
+                );
+            } else {
+                toast.success(payMode === 'partial' ? 'Sale saved (partial payment)!' : 'Sale finalized!');
+            }
         } catch (err: any) { 
             console.error(err);
             const data = err.response?.data;
@@ -664,11 +695,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 Cash
                                             </button>
                                             <button
-                                                onClick={() => setPaymentMethod('card')}
-                                                className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12.5px] font-bold transition-all ${paymentMethod === 'card' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                                                onClick={() => setPaymentMethod('online')}
+                                                className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12.5px] font-bold transition-all ${paymentMethod === 'online' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
                                             >
-                                                <CreditCard size={15} className={paymentMethod === 'card' ? 'text-indigo-600' : 'text-slate-400'} />
-                                                Card
+                                                <CreditCard size={15} className={paymentMethod === 'online' ? 'text-indigo-600' : 'text-slate-400'} />
+                                                Online Transfer
                                             </button>
                                         </div>
                                     </div>
@@ -677,16 +708,27 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Settlement</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {([['full', 'Full'], ['partial', 'Partial']] as const).map(([m, label]) => (
-                                                <button
-                                                    key={m}
-                                                    onClick={() => setPayMode(m)}
-                                                    className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
-                                                >
-                                                    {label}
-                                                </button>
-                                            ))}
+                                            {([['full', 'Full'], ['partial', 'Partial']] as const).map(([m, label]) => {
+                                                // Partial / credit is only allowed for a registered customer
+                                                // account (a walk-in has no ledger to carry the balance).
+                                                const disabled = m === 'partial' && !customerId;
+                                                return (
+                                                    <button
+                                                        key={m}
+                                                        type="button"
+                                                        disabled={disabled}
+                                                        onClick={() => { if (!disabled) setPayMode(m); }}
+                                                        title={disabled ? 'Select a registered customer to enable partial payment' : undefined}
+                                                        className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
+                                        {!customerId && (
+                                            <p className="mt-2 text-[10.5px] text-slate-400 font-medium">Partial payment is available only for a registered customer account.</p>
+                                        )}
                                         {payMode !== 'full' && (
                                             <div className="mt-3 space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/40 p-3.5">
                                                 {payMode === 'partial' && (
@@ -711,7 +753,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 </div>
                                                 <p className="flex items-start gap-1.5 text-[10.5px] text-amber-700 font-medium leading-snug">
                                                     <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                                                    Requires a registered customer. The remaining balance is tracked as outstanding.
+                                                    Requires a registered customer. The remaining balance is tracked as outstanding and can be collected later from Sales History.
                                                 </p>
                                             </div>
                                         )}
