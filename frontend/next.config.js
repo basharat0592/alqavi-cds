@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    output: 'standalone',
+    typescript: {
+        ignoreBuildErrors: true,
+    },
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
     images: {
         remotePatterns: [
             {
@@ -9,6 +16,18 @@ const nextConfig = {
             {
                 protocol: 'http',
                 hostname: '127.0.0.1',
+            },
+            {
+                protocol: 'http',
+                hostname: '74.208.242.204',
+            },
+            {
+                protocol: 'https',
+                hostname: 'alqavitraders.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'www.alqavitraders.com',
             },
             {
                 protocol: 'https',

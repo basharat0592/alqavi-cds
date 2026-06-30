@@ -116,6 +116,7 @@ class User(AbstractUser, StatusMixin):
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
     plain_password = models.CharField(max_length=255, blank=True, null=True)
+    page_permissions = models.JSONField(default=list, blank=True)
     
     class Meta:
         ordering = ['-date_joined']
@@ -171,6 +172,7 @@ class UserActivityLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
     
     class Meta:
         ordering = ['-timestamp']

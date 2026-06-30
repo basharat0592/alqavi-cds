@@ -9,3 +9,4 @@ drf-spectacular
 djangorestframework-simplejwt
 Pillow
 django-filter<24
+requests

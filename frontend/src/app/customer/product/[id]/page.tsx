@@ -78,18 +78,20 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
             <main className="flex-1 pt-16 pb-20 max-w-[1500px] mx-auto px-4 lg:px-8">
 
-                {/* ── BREADCRUMBS ── */}
+                {/* â”€â”€ BREADCRUMBS â”€â”€ */}
                 <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-4">
                     <Link href="/customer" className="hover:text-[#c45500] hover:underline">Home</Link>
                     <ChevronRight size={12} />
                     <span className="hover:text-[#c45500] hover:underline cursor-pointer">{product.category_name}</span>
                     <ChevronRight size={12} />
-                    <span className="text-[#565959] truncate max-w-[200px]">{product.product_name}</span>
+                    <span className="text-[#565959] truncate max-w-[200px]">
+                        {(product.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                    </span>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-                    {/* ── COL 1: GALLERY ── */}
+                    {/* â”€â”€ COL 1: GALLERY â”€â”€ */}
                     <div className="w-full lg:w-[45%] flex flex-col-reverse lg:flex-row gap-4">
                         <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto no-scrollbar lg:max-h-[500px]">
                             {images.map((img, i) => (
@@ -97,7 +99,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                     key={i}
                                     onMouseEnter={() => setActiveImage(i)}
                                     onClick={() => setActiveImage(i)}
-                                    className={`w-[45px] lg:w-[50px] aspect-square rounded-[3px] border-2 transition-all p-1 bg-white shrink-0 ${activeImage === i ? 'border-[#e77600] shadow-[0_0_3px_2px_rgba(228,121,17,0.5)]' : 'border-[#ddd] hover:border-[#e77600]'}`}
+                                    className={`w-[45px] lg:w-[50px] aspect-square rounded-[3px] border-2 transition-all p-1 bg-white shrink-0 ${activeImage === i ? 'border-[#119AB8] shadow-[0_0_3px_2px_rgba(228,121,17,0.5)]' : 'border-[#ddd] hover:border-[#119AB8]'}`}
                                 >
                                     <img src={img} className="w-full h-full object-contain" alt="" />
                                 </button>
@@ -105,21 +107,25 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                         </div>
 
                         <div className="flex-1 bg-white border border-[#eee] rounded-[4px] aspect-square flex items-center justify-center relative cursor-zoom-in group overflow-hidden">
-                            <img src={images[activeImage]} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" alt={product.product_name} />
+                        <img 
+                            src={images[activeImage]} 
+                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" 
+                            alt={(product.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()} 
+                        />
                             {discount > 0 && (
                                 <span className="absolute top-4 left-4 bg-[#cc0c39] text-white text-[11px] font-bold px-2 py-1 rounded-sm shadow-sm">-{discount}% Off</span>
                             )}
                         </div>
                     </div>
 
-                    {/* ── COL 2: CENTER INFO ── */}
+                    {/* â”€â”€ COL 2: CENTER INFO â”€â”€ */}
                     <div className="w-full lg:w-[35%] space-y-4">
                         <div className="border-b border-[#eee] pb-4 space-y-2">
                             <Link href="#" className="text-[14px] text-[#007185] hover:text-[#c45500] hover:underline font-medium block">
                                 Brand: {product.supplier_name || 'Al-Qavi Distributor'}
                             </Link>
                             <h1 className="text-[24px] font-medium leading-tight text-[#0f1111]">
-                                {product.product_name}
+                                {(product.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
                             </h1>
                             <div className="flex items-center gap-2">
                                 <AmazonStars count={4} reviews={145} />
@@ -171,7 +177,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                         </div>
                     </div>
 
-                    {/* ── COL 3: BUY BOX ── */}
+                    {/* â”€â”€ COL 3: BUY BOX â”€â”€ */}
                     <div className="w-full lg:w-[20%] lg:sticky lg:top-24">
                         <div className="bg-white border border-[#ddd] rounded-[8px] p-5 shadow-sm space-y-4">
                             <div className="space-y-1">
@@ -196,19 +202,50 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                             {inStock && (
                                 <div className="space-y-3 pt-2">
                                     <div className="flex items-center gap-2 mb-4 bg-[#f0f2f2] border border-[#d5d9d9] rounded-[7px] p-1 w-fit">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors"><Minus size={14} /></button>
+                                        <button 
+                                            onClick={() => setQuantity(Math.max(1, quantity - 1))} 
+                                            className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors disabled:opacity-30"
+                                            disabled={quantity <= 1}
+                                        >
+                                            <Minus size={14} />
+                                        </button>
                                         <span className="w-8 text-center text-[14px] font-bold">{quantity}</span>
-                                        <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors"><Plus size={14} /></button>
+                                        <button 
+                                            onClick={() => setQuantity(Math.min(product.total_quantity || 999, quantity + 1))} 
+                                            className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors disabled:opacity-30"
+                                            disabled={quantity >= (product.total_quantity || 0)}
+                                        >
+                                            <Plus size={14} />
+                                        </button>
                                     </div>
 
                                     <button
-                                        onClick={() => addToCart({ ...product, quantity, image: product.image, selling_price: price })}
+                                        onClick={() => addToCart({ 
+                                            id: String(product.id),
+                                            name: product.product_name || product.name,
+                                            price: price,
+                                            quantity: quantity,
+                                            image: product.image || product.catalog_image,
+                                            category: product.category_name || 'Cosmetics',
+                                            stock: product.total_quantity
+                                        })}
                                         className="w-full h-[35px] bg-[#ffd814] hover:bg-[#f7ca00] border border-[#fcd200] rounded-[20px] text-[13px] font-medium shadow-sm transition-all"
                                     >
                                         Add to Cart
                                     </button>
                                     <button
-                                        onClick={() => { addToCart({ ...product, quantity, image: product.image, selling_price: price }); router.push('/checkout'); }}
+                                        onClick={() => { 
+                                            addToCart({ 
+                                                id: String(product.id),
+                                                name: product.product_name || product.name,
+                                                price: price,
+                                                quantity: quantity,
+                                                image: product.image || product.catalog_image,
+                                                category: product.category_name || 'Cosmetics',
+                                                stock: product.total_quantity
+                                            }); 
+                                            router.push('/customer/checkout'); 
+                                        }}
                                         className="w-full h-[35px] bg-[#ffa41c] hover:bg-[#f3a847] border border-[#ff9900] rounded-[20px] text-[13px] font-medium shadow-sm transition-all"
                                     >
                                         Buy Now
@@ -228,7 +265,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     </div>
                 </div>
 
-                {/* ── TECHNICAL DETAILS ── */}
+                {/* â”€â”€ TECHNICAL DETAILS â”€â”€ */}
                 <div className="mt-16 pt-10 border-t border-[#eee]">
                     <h2 className="text-[20px] font-bold mb-6">Technical Details</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20">
@@ -275,7 +312,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     </div>
                 </div>
 
-                {/* ── RELATED PRODUCTS ── */}
+                {/* â”€â”€ RELATED PRODUCTS â”€â”€ */}
                 {relatedProducts.length > 0 && (
                     <div className="mt-20 pt-10 border-t border-[#eee]">
                         <h2 className="text-[20px] font-bold mb-6">Inspired by your shopping trend</h2>
@@ -285,7 +322,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                     <div className="aspect-square bg-[#f8f8f8] rounded-[4px] p-4 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-[#eee] transition-all">
                                         <img src={getImageUrl(p.image || p.catalog_image) || '/images/logo.png'} className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform" alt="" />
                                     </div>
-                                    <h3 className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline line-clamp-2 leading-snug font-medium">{p.product_name}</h3>
+                                    <h3 className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline line-clamp-2 leading-snug font-medium">
+                                        {(p.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                    </h3>
                                     <div className="text-[15px] font-bold text-[#B12704]">Rs. {parseFloat(p.selling_price || p.price).toLocaleString()}</div>
                                 </Link>
                             ))}

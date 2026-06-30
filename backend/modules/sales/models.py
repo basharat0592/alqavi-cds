@@ -13,6 +13,7 @@ class Order(models.Model):
         ('SHIPPED', 'Shipped'),
         ('DELIVERED', 'Delivered'),
         ('CANCELLED', 'Cancelled'),
+        ('REJECTED', 'Rejected'),
         ('CANCEL_REQUESTED', 'Cancel Requested'),
     ]
     PAYMENT_CHOICES = [
@@ -50,6 +51,18 @@ class Order(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    is_reserved = models.BooleanField(default=False)
+
+    # WhatsApp Integration
+    whatsapp_number = models.CharField(max_length=20, null=True, blank=True)
+    whatsapp_sent = models.BooleanField(default=False)
+    whatsapp_status = models.CharField(max_length=20, default='PENDING', choices=[
+        ('PENDING', 'Pending'),
+        ('SENT', 'Sent'),
+        ('FAILED', 'Failed')
+    ])
+    whatsapp_sent_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.tracking_id:

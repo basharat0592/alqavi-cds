@@ -4,32 +4,103 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { userService, roleService, AppRole } from '@/lib/api';
 import {
-    ArrowLeft, User, Mail, Phone, KeyRound,
-    Shield, CheckCircle, Save, Loader2, XCircle, Eye, EyeOff
+    User, CheckCircle, Save, Loader2, Eye, EyeOff, ShieldCheck
 } from 'lucide-react';
+import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
-// ─── Shared Utilities (Consistency with Company pages) ────────────────────────────────
 const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded text-sm outline-none transition-all
-    focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-gray-400
-    ${err ? 'border-red-600' : 'border-[#a6a6a6] dark:border-slate-700'}`;
+    `${ui.inputBase} ${err ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/10' : ''}`;
 
-const LABEL = 'block text-xs font-bold text-gray-900 dark:text-gray-200 mb-1';
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 border border-[#ddd] dark:border-slate-800 rounded shadow-sm overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
+const LABEL = 'block text-xs font-bold text-slate-700 mb-1.5';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: any }) => (
-    <div className="bg-[#f6f6f6] dark:bg-slate-800 px-4 py-2 border-b border-[#ddd] dark:border-slate-800 flex items-center">
+    <div className="bg-slate-50/60 px-5 py-3 border-b border-slate-100 flex items-center">
         <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
-            <span className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-tight">{title}</span>
+            {Icon && <Icon className="w-4 h-4 text-slate-400" />}
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{title}</span>
         </div>
     </div>
 );
+
+// All admin pages grouped exactly like the sidebar
+const PAGE_GROUPS = [
+    {
+        label: 'Main Dashboard',
+        items: [
+            { name: 'Dashboard', href: '/admin/dashboard' },
+            { name: 'Recent Activity', href: '/admin/sales/recent' },
+            { name: 'Order List', href: '/admin/orders' },
+            { name: 'All Sales', href: '/admin/sales' },
+            { name: 'Order Tracking', href: '/admin/tracking' },
+            { name: 'Website CMS', href: '/admin/website-settings' },
+        ],
+    },
+    {
+        label: 'Inventory & Stock',
+        items: [
+            { name: 'Product Categories', href: '/admin/products/categories' },
+            { name: 'Product List', href: '/admin/products' },
+            { name: 'Add Product', href: '/admin/products/add' },
+            { name: 'Product Sections', href: '/admin/products/sections' },
+            { name: 'Current Stocks', href: '/admin/inventory/list' },
+            { name: 'Warehouses', href: '/admin/inventory/warehouses' },
+        ],
+    },
+    {
+        label: 'Procurement',
+        items: [
+            { name: 'New Purchase', href: '/admin/purchases/add' },
+            { name: 'Purchase History', href: '/admin/purchases' },
+            { name: 'Supplier Catalog', href: '/admin/supplier-products' },
+            { name: 'Returns / Refunds', href: '/admin/purchases/returns' },
+        ],
+    },
+    {
+        label: 'Sales Console',
+        items: [
+            { name: 'Point of Sale', href: '/admin/sale' },
+            { name: 'Invoices', href: '/admin/invoices' },
+            { name: 'Global Payments', href: '/admin/payments' },
+            { name: 'Company Categories', href: '/admin/company/categories' },
+            { name: 'Sale Returns', href: '/admin/sale-returns' },
+        ],
+    },
+    {
+        label: 'Security & Logs',
+        items: [
+            { name: 'Supplier Registry', href: '/admin/company/suppliers' },
+            { name: 'Customer Registry', href: '/admin/company/customers' },
+            { name: 'Internal Users', href: '/admin/users' },
+            { name: 'Staff Roles', href: '/admin/users/roles' },
+            { name: 'Permissions', href: '/admin/users/permissions' },
+            { name: 'System Alerts', href: '/admin/alerts' },
+        ],
+    },
+    {
+        label: 'Detailed Reports',
+        items: [
+            { name: 'Reports Center', href: '/admin/reports' },
+            { name: 'Sales Reports', href: '/admin/reports/sales' },
+            { name: 'Purchase Reports', href: '/admin/reports/purchases' },
+            { name: 'Inventory Reports', href: '/admin/reports/inventory' },
+            { name: 'Customer Reports', href: '/admin/reports/customers' },
+            { name: 'Accounting Reports', href: '/admin/reports/accounting' },
+            { name: 'Returns Reports', href: '/admin/reports/sales-returns' },
+            { name: 'Data Hub', href: '/admin/reports/data-hub' },
+        ],
+    },
+    {
+        label: 'System',
+        items: [
+            { name: 'System Settings', href: '/admin/settings' },
+        ],
+    },
+];
+
+const ALL_HREFS = PAGE_GROUPS.flatMap(g => g.items.map(i => i.href));
+
+// Roles that always get full access (no restriction)
+const FULL_ACCESS_ROLES = ['super admin', 'admin', 'superadmin'];
 
 export default function AddUserPage() {
     const router = useRouter();
@@ -49,6 +120,7 @@ export default function AddUserPage() {
         is_active: true,
     });
 
+    const [selectedPages, setSelectedPages] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -57,10 +129,31 @@ export default function AddUserPage() {
         roleService.getAll().then(setRoles).catch(() => setRoles([]));
     }, []);
 
+    const selectedRoleName = roles.find(r => String(r.id) === String(form.role))?.name?.toLowerCase() || '';
+    const isFullAccess = FULL_ACCESS_ROLES.includes(selectedRoleName);
+
     const handle = (k: string, v: any) => {
         setForm(p => ({ ...p, [k]: v }));
         if (errors[k]) setErrors(p => ({ ...p, [k]: '' }));
     };
+
+    const togglePage = (href: string) => {
+        setSelectedPages(prev =>
+            prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href]
+        );
+    };
+
+    const toggleGroup = (hrefs: string[]) => {
+        const allSelected = hrefs.every(h => selectedPages.includes(h));
+        if (allSelected) {
+            setSelectedPages(prev => prev.filter(h => !hrefs.includes(h)));
+        } else {
+            setSelectedPages(prev => [...new Set([...prev, ...hrefs])]);
+        }
+    };
+
+    const selectAll = () => setSelectedPages([...ALL_HREFS]);
+    const clearAll = () => setSelectedPages([]);
 
     const validate = () => {
         const e: Record<string, string> = {};
@@ -87,6 +180,8 @@ export default function AddUserPage() {
             const payload: any = { ...form };
             if (payload.role === '') delete payload.role;
             if (!payload.business_name) delete payload.business_name;
+            // Full-access roles don't need page_permissions stored
+            payload.page_permissions = isFullAccess ? [] : selectedPages;
             await userService.create(payload);
             showToast('User created successfully.');
             setTimeout(() => router.push('/admin/users'), 1000);
@@ -102,31 +197,27 @@ export default function AddUserPage() {
     const sellerRoleId = roles.find(r => r.name.toLowerCase() === 'seller')?.id;
 
     return (
-        <div className="max-w-4xl mx-auto py-8 px-4">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-normal text-gray-900 dark:text-white uppercase tracking-tight">
-                    Register New User
-                </h1>
-                <button onClick={() => router.push('/admin/users')} className="text-sm text-gray-400 hover:text-[#F59E0B] hover:underline flex items-center gap-1 uppercase font-bold tracking-tighter">
-                    <ArrowLeft className="w-4 h-4" /> Back to list
-                </button>
-            </div>
+        <div className="max-w-4xl mx-auto">
+            <PageHeader
+                title="Add User"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Users', href: '/admin/users' }, { label: 'Add User' }]}
+            />
 
             <form onSubmit={handleSubmit}>
-                <SectionCard>
+                <Card className="overflow-hidden">
                     <SectionHeader title="Profile Details" icon={User} />
                     <div className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className={LABEL}>First Name <span className="text-red-700">*</span></label>
+                                <label className={LABEL}>First Name <span className="text-rose-600">*</span></label>
                                 <input value={form.first_name} onChange={e => handle('first_name', e.target.value)} className={INPUT(!!errors.first_name)} placeholder="First Name" />
                             </div>
                             <div>
-                                <label className={LABEL}>Last Name <span className="text-red-700">*</span></label>
+                                <label className={LABEL}>Last Name <span className="text-rose-600">*</span></label>
                                 <input value={form.last_name} onChange={e => handle('last_name', e.target.value)} className={INPUT(!!errors.last_name)} placeholder="Last Name" />
                             </div>
                             <div>
-                                <label className={LABEL}>Email Address <span className="text-red-700">*</span></label>
+                                <label className={LABEL}>Email Address <span className="text-rose-600">*</span></label>
                                 <input type="email" value={form.email} onChange={e => handle('email', e.target.value)} className={INPUT(!!errors.email)} placeholder="email@example.com" />
                             </div>
                             <div>
@@ -134,7 +225,7 @@ export default function AddUserPage() {
                                 <input value={form.phone_number} onChange={e => handle('phone_number', e.target.value)} className={INPUT()} placeholder="+92 ..." />
                             </div>
                             <div>
-                                <label className={LABEL}>User Role <span className="text-red-700">*</span></label>
+                                <label className={LABEL}>User Role <span className="text-rose-600">*</span></label>
                                 <select value={form.role} onChange={e => handle('role', e.target.value)} className={INPUT(!!errors.role)}>
                                     <option value="">Select Role</option>
                                     {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -148,42 +239,42 @@ export default function AddUserPage() {
                             )}
                         </div>
 
-                        <hr className="border-gray-100 dark:border-slate-800" />
-                        
+                        <hr className="border-slate-100" />
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className={LABEL}>Password <span className="text-red-700">*</span></label>
+                                <label className={LABEL}>Password <span className="text-rose-600">*</span></label>
                                 <div className="relative">
-                                    <input 
-                                        type={showPassword ? "text" : "password"} 
-                                        value={form.password} 
-                                        onChange={e => handle('password', e.target.value)} 
-                                        className={INPUT(!!errors.password)} 
-                                        placeholder="••••••••" 
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={form.password}
+                                        onChange={e => handle('password', e.target.value)}
+                                        className={INPUT(!!errors.password)}
+                                        placeholder="••••••••"
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F59E0B]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <label className={LABEL}>Confirm Password <span className="text-red-700">*</span></label>
+                                <label className={LABEL}>Confirm Password <span className="text-rose-600">*</span></label>
                                 <div className="relative">
-                                    <input 
-                                        type={showConfirmPassword ? "text" : "password"} 
-                                        value={form.password_confirm} 
-                                        onChange={e => handle('password_confirm', e.target.value)} 
-                                        className={INPUT(!!errors.password_confirm)} 
-                                        placeholder="••••••••" 
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={form.password_confirm}
+                                        onChange={e => handle('password_confirm', e.target.value)}
+                                        className={INPUT(!!errors.password_confirm)}
+                                        placeholder="••••••••"
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F59E0B]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
                                     >
                                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -192,34 +283,110 @@ export default function AddUserPage() {
                         </div>
                     </div>
 
-                    <div className="bg-gray-50/50 dark:bg-slate-800/50 px-8 py-4 flex justify-end gap-3 border-t border-gray-100 dark:border-slate-800">
-                        <button
+                    {/* Page Access Section — shown only when a non-full-access role is selected */}
+                    {form.role && !isFullAccess && (
+                        <>
+                            <SectionHeader title="Page Access" icon={ShieldCheck} />
+                            <div className="p-6 space-y-5">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-slate-500">Select which pages this user can access after login.</p>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={selectAll}
+                                            className="text-[11px] font-semibold text-indigo-600 hover:underline">
+                                            Select All
+                                        </button>
+                                        <span className="text-slate-300">|</span>
+                                        <button type="button" onClick={clearAll}
+                                            className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {PAGE_GROUPS.map(group => {
+                                        const groupHrefs = group.items.map(i => i.href);
+                                        const allChecked = groupHrefs.every(h => selectedPages.includes(h));
+                                        const someChecked = groupHrefs.some(h => selectedPages.includes(h));
+                                        return (
+                                            <div key={group.label} className="border border-slate-200 rounded-xl overflow-hidden">
+                                                {/* Group header with select-all toggle */}
+                                                <div
+                                                    className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 cursor-pointer select-none"
+                                                    onClick={() => toggleGroup(groupHrefs)}
+                                                >
+                                                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-indigo-600 border-indigo-600' : someChecked ? 'bg-indigo-200 border-indigo-400' : 'border-slate-300 bg-white'}`}>
+                                                        {allChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                                        {someChecked && !allChecked && <div className="w-2 h-0.5 bg-indigo-600 rounded" />}
+                                                    </div>
+                                                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{group.label}</span>
+                                                    <span className="ml-auto text-[10px] text-slate-400">{groupHrefs.filter(h => selectedPages.includes(h)).length}/{groupHrefs.length}</span>
+                                                </div>
+                                                {/* Individual items */}
+                                                <div className="divide-y divide-slate-100">
+                                                    {group.items.map(item => (
+                                                        <label key={item.href} className="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-slate-50 transition-colors">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedPages.includes(item.href)}
+                                                                onChange={() => togglePage(item.href)}
+                                                                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                            />
+                                                            <span className="text-[12px] text-slate-700">{item.name}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {selectedPages.length > 0 && (
+                                    <p className="text-[11px] text-indigo-600 font-medium">
+                                        {selectedPages.length} page{selectedPages.length !== 1 ? 's' : ''} selected
+                                    </p>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {form.role && isFullAccess && (
+                        <div className="px-6 pb-4">
+                            <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                                <p className="text-xs text-indigo-700 font-medium">
+                                    This role has full access to all pages — no restrictions apply.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-slate-50/60 px-8 py-4 flex justify-end gap-3 border-t border-slate-100">
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={() => router.push('/admin/users')}
-                            className="px-4 py-1.5 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-800 rounded text-sm hover:bg-gray-100 transition-colors"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
+                            variant="primary"
                             disabled={saving}
-                            className="px-6 py-1.5 bg-[#F59E0B] border border-[#a88734] rounded text-sm hover:bg-[#ebae1e] shadow-sm flex items-center gap-2 disabled:opacity-50 font-bold uppercase tracking-widest text-white"
                         >
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Commit Registration
-                        </button>
+                        </Button>
                     </div>
-                </SectionCard>
+                </Card>
             </form>
 
-            {/* Simple Toast */}
             {toast && (
-                <div className="fixed bottom-6 right-6 bg-[#131921] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-3 min-w-[240px] border-l-4 border-green-500 z-[100] animate-in slide-in-from-bottom-5">
-                    <CheckCircle className="h-5 w-5 text-green-400" />
-                    <span className="text-sm font-medium uppercase tracking-tight">{toast}</span>
+                <div className="fixed bottom-6 right-6 bg-white text-slate-700 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-[240px] border border-slate-200/70 border-l-4 border-l-emerald-500 z-[100] animate-in slide-in-from-bottom-5">
+                    <CheckCircle className="h-5 w-5 text-emerald-500" />
+                    <span className="text-sm font-medium">{toast}</span>
                 </div>
             )}
         </div>
     );
 }
-

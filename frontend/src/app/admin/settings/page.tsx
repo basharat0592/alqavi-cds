@@ -1,48 +1,43 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import {
-    User, Bell, Shield, Palette, Save, Camera, Sun, Moon,
-    RefreshCw, Lock, ChevronRight, Building2, ShieldCheck,
-    LayoutGrid, BellRing, UserCheck, ChevronLeft
+    User, Bell, Palette, Save, Camera, Sun, Moon,
+    RefreshCw, Lock, Building2, ShieldCheck,
+    LayoutGrid, ChevronLeft
 } from 'lucide-react';
 import { settingsService, companyService } from '@/lib/api';
 import { authService } from '@/lib/auth';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
 
-/* ─── Amazon Button ─── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4]',
-    };
-    return (
-        <button
-            type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium text-[#0f1111] border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}
-        >
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
+/* ─── Button (kit) ─── */
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
+    <Button
+        type={type} onClick={onClick} disabled={loading || disabled}
+        variant={variant === 'secondary' ? 'secondary' : 'primary'}
+        className={`whitespace-nowrap ${className}`}
+    >
+        {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+        {children}
+    </Button>
+);
 
-/* ─── Amazon Input ─── */
+/* ─── Form Field ─── */
 const Field = ({ label, required = false, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) => (
-    <div className="flex flex-col gap-1">
-        <label className="text-[13px] font-bold text-[#0f1111]">
-            {label} {required && <span className="text-red-600">*</span>}
+    <div className="flex flex-col gap-1.5">
+        <label className="text-[13px] font-semibold text-slate-700">
+            {label} {required && <span className="text-rose-600">*</span>}
         </label>
         {children}
-        {hint && <span className="text-[11px] text-[#565959]">{hint}</span>}
+        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
     </div>
 );
 
 const Input = ({ className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input
-        className={`w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] text-[#0f1111] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.07)] placeholder:text-[#aaa] ${className}`}
+        className={`${ui.inputBase} ${className}`}
         {...props}
     />
 );
@@ -52,7 +47,7 @@ const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${checked ? 'bg-[#e47911] border-[#c45500]' : 'bg-[#ddd] border-[#bbb]'}`}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${checked ? 'bg-indigo-600 border-indigo-700' : 'bg-slate-200 border-slate-300'}`}
     >
         <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
@@ -141,7 +136,7 @@ export default function SettingsPage() {
             fd.append('phone', profile.phone);
             if (selectedAvatar) fd.append('avatar', selectedAvatar);
             const updated = await settingsService.updateProfile(Number(currentUser.id), fd as any);
-            authService.setSession(updated, sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '');
+            authService.setSession(sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '', updated);
             window.dispatchEvent(new Event('profileUpdated'));
             toast.success('Profile updated');
         } catch { toast.error('Failed to update profile'); } finally { setProfileSaving(false); }
@@ -174,55 +169,45 @@ export default function SettingsPage() {
         notifications: 'Notifications', security: 'Login & Security', display: 'Display', 'all-pages': 'Sidebar Pages'
     };
 
-    if (pageLoading) return <div className="p-20 text-center text-[#565959] text-[13px]">Loading settings...</div>;
+    if (pageLoading) return <div className="p-20 text-center text-slate-400 text-[13px]">Loading settings...</div>;
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+        <div className="pb-20">
 
             {/* ── BREADCRUMB + TITLE ── */}
-            <div className="max-w-[1100px] mx-auto px-6 pt-5 pb-3">
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                    <ChevronRight size={10} />
-                    {activeTab !== 'main' ? (
-                        <>
-                            <button onClick={() => setActiveTab('main')} className="hover:text-[#c45500] hover:underline">Account Settings</button>
-                            <ChevronRight size={10} />
-                            <span className="text-[#c45500]">{tabLabel[activeTab]}</span>
-                        </>
-                    ) : (
-                        <span className="text-[#c45500]">Account Settings</span>
-                    )}
-                </div>
-                <div className="flex items-center justify-between">
-                    <h1 className="text-[22px] font-normal">{tabLabel[activeTab]}</h1>
-                    {activeTab !== 'main' && (
-                        <button onClick={() => setActiveTab('main')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1">
+            <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-2">
+                <PageHeader
+                    title={tabLabel[activeTab]}
+                    hideBack={activeTab !== 'main'}
+                    breadcrumbs={activeTab !== 'main'
+                        ? [{ label: 'Console', href: '/admin/dashboard' }, { label: 'Settings' }, { label: tabLabel[activeTab] }]
+                        : [{ label: 'Console', href: '/admin/dashboard' }, { label: 'Settings' }]}
+                    actions={activeTab !== 'main' ? (
+                        <Button variant="outline" size="sm" onClick={() => setActiveTab('main')}>
                             <ChevronLeft size={14} /> Back
-                        </button>
-                    )}
-                </div>
+                        </Button>
+                    ) : undefined}
+                />
             </div>
 
-            <div className="max-w-[1100px] mx-auto px-6">
-                <div className="border-b border-[#ddd] mb-6" />
+            <div className="max-w-[1100px] mx-auto px-0 sm:px-6">
 
                 {/* ── MAIN HUB ── */}
                 {activeTab === 'main' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {TABS.filter(t => !isSupplier || (t.id !== 'store' && t.id !== 'all-pages')).map(tab => (
-                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group">
-                                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 hover:border-[#e47911] transition-all shadow-sm">
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group w-full">
+                                <Card className="p-5 hover:border-indigo-300 transition-all">
                                     <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 p-2 bg-[#f0f2f2] rounded-[4px] group-hover:bg-amber-50 transition-colors">
-                                            <tab.icon size={20} className="text-[#565959] group-hover:text-[#e47911] transition-colors" />
+                                        <div className="mt-0.5 p-2 bg-slate-100 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                                            <tab.icon size={20} className="text-slate-500 group-hover:text-indigo-600 transition-colors" />
                                         </div>
                                         <div>
-                                            <h3 className="text-[14px] font-bold text-[#0f1111] group-hover:text-[#c45500] transition-colors">{tab.label}</h3>
-                                            <p className="text-[12px] text-[#565959] mt-0.5 leading-snug">{tab.desc}</p>
+                                            <h3 className="text-[14px] font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">{tab.label}</h3>
+                                            <p className="text-[12px] text-slate-600 mt-0.5 leading-snug">{tab.desc}</p>
                                         </div>
                                     </div>
-                                </div>
+                                </Card>
                             </button>
                         ))}
                     </div>
@@ -230,23 +215,23 @@ export default function SettingsPage() {
 
                 {/* ── PROFILE ── */}
                 {activeTab === 'profile' && (
-                    <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                        <div className="px-8 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                            <h2 className="text-[16px] font-bold">Profile Details</h2>
-                            <p className="text-[12px] text-[#565959]">Manage how you appear in the system.</p>
+                    <Card className="overflow-hidden">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
+                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Profile Details</h2>
+                            <p className="text-[12px] text-slate-600">Manage how you appear in the system.</p>
                         </div>
                         <div className="p-8">
                             <div className="flex flex-col sm:flex-row gap-8 items-start">
                                 {/* Avatar */}
                                 <div className="flex flex-col items-center gap-3 shrink-0">
                                     <div
-                                        className="w-28 h-28 rounded-full border-2 border-[#ddd] bg-[#f7f8fa] flex items-center justify-center overflow-hidden cursor-pointer group relative"
+                                        className="w-28 h-28 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer group relative"
                                         onClick={() => avatarRef.current?.click()}
                                     >
                                         {(avatarPreview || profile.avatar) ? (
                                             <img src={avatarPreview || getImageUrl(profile.avatar) || ''} className="w-full h-full object-cover" alt="Avatar" />
                                         ) : (
-                                            <User size={40} className="text-[#ccc]" />
+                                            <User size={40} className="text-slate-300" />
                                         )}
                                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <Camera size={20} className="text-white" />
@@ -256,7 +241,7 @@ export default function SettingsPage() {
                                         const f = e.target.files?.[0];
                                         if (f) { setSelectedAvatar(f); setAvatarPreview(URL.createObjectURL(f)); }
                                     }} />
-                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-[#007185] hover:text-[#c45500] hover:underline font-medium">Change photo</button>
+                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-indigo-600 hover:text-indigo-700 hover:underline font-medium">Change photo</button>
                                 </div>
 
                                 {/* Fields */}
@@ -276,21 +261,21 @@ export default function SettingsPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-8 pt-5 border-t border-[#eee] flex justify-end">
-                                <Btn loading={profileSaving} onClick={handleSaveProfile} className="w-[140px] h-[31px]">
+                            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+                                <Btn loading={profileSaving} onClick={handleSaveProfile} className="w-full sm:w-auto justify-center px-6">
                                     <Save size={13} /> Save changes
                                 </Btn>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 {/* ── BUSINESS INFO ── */}
                 {activeTab === 'store' && (
-                    <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                        <div className="px-8 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                            <h2 className="text-[16px] font-bold">Business Information</h2>
-                            <p className="text-[12px] text-[#565959]">Store profile and identification details.</p>
+                    <Card className="overflow-hidden">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
+                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Business Information</h2>
+                            <p className="text-[12px] text-slate-600">Store profile and identification details.</p>
                         </div>
                         <div className="p-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -310,7 +295,7 @@ export default function SettingsPage() {
                                     <Input value={store.tax_number} onChange={e => setStore({ ...store, tax_number: e.target.value })} placeholder="1234567-8" />
                                 </Field>
                                 <Field label="Currency" hint="Currency cannot be changed">
-                                    <Input value={store.currency} disabled className="bg-[#f7f8fa] cursor-not-allowed opacity-60" />
+                                    <Input value={store.currency} disabled className="bg-slate-50 cursor-not-allowed opacity-60" />
                                 </Field>
                                 <div className="sm:col-span-2">
                                     <Field label="Full Address">
@@ -318,21 +303,21 @@ export default function SettingsPage() {
                                     </Field>
                                 </div>
                             </div>
-                            <div className="mt-8 pt-5 border-t border-[#eee] flex justify-end">
-                                <Btn loading={storeSaving} onClick={handleSaveStore} className="w-[150px] h-[31px]">
+                            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+                                <Btn loading={storeSaving} onClick={handleSaveStore} className="w-full sm:w-auto justify-center px-6">
                                     <Save size={13} /> Save info
                                 </Btn>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 {/* ── SECURITY ── */}
                 {activeTab === 'security' && (
-                    <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                        <div className="px-8 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                            <h2 className="text-[16px] font-bold">Change Password</h2>
-                            <p className="text-[12px] text-[#565959]">Update your login credentials.</p>
+                    <Card className="overflow-hidden">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
+                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Change Password</h2>
+                            <p className="text-[12px] text-slate-600">Update your login credentials.</p>
                         </div>
                         <div className="p-8">
                             <div className="flex flex-col sm:flex-row gap-8">
@@ -347,12 +332,12 @@ export default function SettingsPage() {
                                         <Input type="password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} placeholder="Repeat new password" />
                                     </Field>
                                 </div>
-                                <div className="w-full sm:w-[220px] bg-[#f7f8fa] border border-[#ddd] rounded-[4px] p-5 text-[12px] text-[#565959] leading-relaxed self-start">
-                                    <p className="font-bold text-[#111] mb-2 text-[12px]">Security Tips</p>
+                                <div className="w-full sm:w-[220px] bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-[12px] text-slate-600 leading-relaxed self-start">
+                                    <p className="font-bold text-indigo-700 mb-2 text-[12px]">Security Tips</p>
                                     Use at least 8 characters with a mix of letters, numbers, and symbols. Never share your password with anyone.
                                 </div>
                             </div>
-                            <div className="mt-8 pt-5 border-t border-[#eee] flex justify-end">
+                            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
                                 <Btn loading={pwSaving} onClick={async () => {
                                     setPwSaving(true);
                                     try {
@@ -360,23 +345,23 @@ export default function SettingsPage() {
                                         toast.success('Password changed successfully');
                                         setPasswords({ old: '', new: '', confirm: '' });
                                     } catch { } finally { setPwSaving(false); }
-                                }} className="w-[150px] h-[31px]">
+                                }} className="w-full sm:w-auto justify-center px-6">
                                     <Lock size={13} /> Update password
                                 </Btn>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 {/* ── NOTIFICATIONS ── */}
                 {activeTab === 'notifications' && (
-                    <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                        <div className="px-8 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                            <h2 className="text-[16px] font-bold">Notification Preferences</h2>
-                            <p className="text-[12px] text-[#565959]">Select which alerts you want to receive.</p>
+                    <Card className="overflow-hidden">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
+                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Notification Preferences</h2>
+                            <p className="text-[12px] text-slate-600">Select which alerts you want to receive.</p>
                         </div>
                         <div className="p-8">
-                            <div className="divide-y divide-[#eee]">
+                            <div className="divide-y divide-slate-100">
                                 {[
                                     { k: 'notif_new_order', l: 'New Orders', d: 'Alert when a customer places a new order.' },
                                     { k: 'notif_low_stock', l: 'Low Stock', d: 'Alert when items fall below the safety level.' },
@@ -385,76 +370,76 @@ export default function SettingsPage() {
                                 ].map(f => (
                                     <div key={f.k} className="flex items-center justify-between py-4">
                                         <div>
-                                            <h4 className="text-[13px] font-bold text-[#0f1111]">{f.l}</h4>
-                                            <p className="text-[12px] text-[#565959] mt-0.5">{f.d}</p>
+                                            <h4 className="text-[13px] font-bold text-slate-900">{f.l}</h4>
+                                            <p className="text-[12px] text-slate-600 mt-0.5">{f.d}</p>
                                         </div>
                                         <Toggle checked={(notif as any)[f.k]} onChange={v => setNotif({ ...notif, [f.k]: v })} />
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-6 pt-5 border-t border-[#eee] flex justify-end">
+                            <div className="mt-6 pt-5 border-t border-slate-100 flex justify-end">
                                 <Btn loading={notifSaving} onClick={async () => {
                                     setNotifSaving(true);
                                     try { await settingsService.updateSettings(notif); toast.success('Preferences saved'); } catch { } finally { setNotifSaving(false); }
-                                }} className="w-[150px] h-[31px]">
+                                }} className="w-full sm:w-auto justify-center px-6">
                                     <Save size={13} /> Save preferences
                                 </Btn>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 {/* ── DISPLAY ── */}
                 {activeTab === 'display' && (
-                    <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                        <div className="px-8 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                            <h2 className="text-[16px] font-bold">Display Settings</h2>
-                            <p className="text-[12px] text-[#565959]">Customize your workspace appearance.</p>
+                    <Card className="overflow-hidden">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
+                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Display Settings</h2>
+                            <p className="text-[12px] text-slate-600">Customize your workspace appearance.</p>
                         </div>
                         <div className="p-8">
                             {/* Theme */}
-                            <p className="text-[13px] font-bold text-[#0f1111] mb-3">Theme</p>
+                            <p className="text-[13px] font-bold text-slate-900 mb-3">Theme</p>
                             <div className="flex gap-4 mb-8">
                                 {[{ id: 'light', label: 'Light', icon: Sun }, { id: 'dark', label: 'Dark', icon: Moon }].map(t => (
                                     <button
                                         key={t.id}
                                         onClick={() => { setTheme(t.id as any); handleSaveAppearance({ theme: t.id }); }}
-                                        className={`flex items-center gap-3 px-5 py-3 border rounded-[4px] text-[13px] font-bold transition-all ${theme === t.id ? 'border-[#e47911] bg-amber-50 text-[#c45500]' : 'border-[#ddd] bg-white text-[#565959] hover:border-[#aaa]'}`}
+                                        className={`flex items-center gap-3 px-5 py-3 border rounded-xl text-[13px] font-bold transition-all ${theme === t.id ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
                                     >
-                                        <t.icon size={16} className={theme === t.id ? 'text-[#e47911]' : 'text-[#888]'} />
+                                        <t.icon size={16} className={theme === t.id ? 'text-indigo-600' : 'text-slate-400'} />
                                         {t.label}
-                                        {theme === t.id && <span className="text-[11px] bg-[#e47911] text-white px-1.5 py-0.5 rounded-sm font-bold">Active</span>}
+                                        {theme === t.id && <Badge tone="indigo">Active</Badge>}
                                     </button>
                                 ))}
                             </div>
 
                             {/* Toggles */}
-                            <div className="border-t border-[#eee] divide-y divide-[#eee]">
+                            <div className="border-t border-slate-100 divide-y divide-slate-100">
                                 <div className="flex items-center justify-between py-4">
                                     <div>
-                                        <h4 className="text-[13px] font-bold">Interface Animations</h4>
-                                        <p className="text-[12px] text-[#565959]">Smooth transitions and micro-animations.</p>
+                                        <h4 className="text-[13px] font-bold text-slate-900">Interface Animations</h4>
+                                        <p className="text-[12px] text-slate-600">Smooth transitions and micro-animations.</p>
                                     </div>
                                     <Toggle checked={animations} onChange={v => { setAnimations(v); handleSaveAppearance({ animations: v }); }} />
                                 </div>
                                 <div className="flex items-center justify-between py-4">
                                     <div>
-                                        <h4 className="text-[13px] font-bold">Condensed Sidebar</h4>
-                                        <p className="text-[12px] text-[#565959]">Hide text labels, show icons only.</p>
+                                        <h4 className="text-[13px] font-bold text-slate-900">Condensed Sidebar</h4>
+                                        <p className="text-[12px] text-slate-600">Hide text labels, show icons only.</p>
                                     </div>
                                     <Toggle checked={sidebarCollapsed} onChange={v => { setSidebarCollapsed(v); handleSaveAppearance({ sidebarCollapsed: v }); }} />
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 {/* ── SIDEBAR PAGES ── */}
                 {activeTab === 'all-pages' && (
-                    <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                        <div className="px-8 py-5 border-b border-[#ddd] bg-[#f7f8fa]">
-                            <h2 className="text-[16px] font-bold">Sidebar Navigation</h2>
-                            <p className="text-[12px] text-[#565959]">Show or hide specific pages in the navigation sidebar. Changes apply immediately after saving.</p>
+                    <Card className="overflow-hidden">
+                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
+                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Sidebar Navigation</h2>
+                            <p className="text-[12px] text-slate-600">Show or hide specific pages in the navigation sidebar. Changes apply immediately after saving.</p>
                         </div>
                         <div className="p-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
@@ -463,6 +448,7 @@ export default function SettingsPage() {
                                         group: 'Main',
                                         items: [
                                             { n: 'Dashboard', h: '/admin/dashboard' },
+                                            { n: 'Customers', h: '/admin/company/customers' },
                                             { n: 'Recent Activity', h: '/admin/sales/recent' },
                                             { n: 'Order List', h: '/admin/orders' },
                                             { n: 'All Sales', h: '/admin/sales' },
@@ -472,9 +458,10 @@ export default function SettingsPage() {
                                     {
                                         group: 'Inventory',
                                         items: [
-                                            { n: 'Categories', h: '/admin/products/categories' },
-                                            { n: 'Products', h: '/admin/products' },
-                                            { n: 'Sections', h: '/admin/products/sections' },
+                                            { n: 'Product Categories', h: '/admin/products/categories' },
+                                            { n: 'Product List', h: '/admin/products' },
+                                            { n: 'Add Product', h: '/admin/products/add' },
+                                            { n: 'Product Sections', h: '/admin/products/sections' },
                                             { n: 'Current Stocks', h: '/admin/inventory/list' },
                                             { n: 'Warehouses', h: '/admin/inventory/warehouses' },
                                         ]
@@ -495,7 +482,7 @@ export default function SettingsPage() {
                                             { n: 'Point of Sale', h: '/admin/sale' },
                                             { n: 'Invoices', h: '/admin/invoices' },
                                             { n: 'Global Payments', h: '/admin/payments' },
-                                            { n: 'Account Holders', h: '/admin/company/customers' },
+                                            { n: 'Company Categories', h: '/admin/company/categories' },
                                             { n: 'Sale Returns', h: '/admin/sale-returns' },
                                         ]
                                     },
@@ -506,6 +493,7 @@ export default function SettingsPage() {
                                             { n: 'Staff Roles', h: '/admin/users/roles' },
                                             { n: 'Permissions', h: '/admin/users/permissions' },
                                             { n: 'System Alerts', h: '/admin/alerts' },
+                                            { n: 'Company Hub', h: '/admin/company' },
                                         ]
                                     },
                                     {
@@ -523,13 +511,13 @@ export default function SettingsPage() {
                                     },
                                 ].map(g => (
                                     <div key={g.group}>
-                                        <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider mb-3 pb-2 border-b border-[#eee]">{g.group}</p>
-                                        <div className="divide-y divide-[#f5f5f5]">
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">{g.group}</p>
+                                        <div className="divide-y divide-slate-100">
                                             {g.items.map(i => {
                                                 const vis = sidebarVisibility[i.h] !== false;
                                                 return (
                                                     <div key={i.h} className="flex items-center justify-between py-2.5">
-                                                        <span className={`text-[13px] ${!vis ? 'text-[#bbb] line-through' : 'text-[#0f1111]'}`}>{i.n}</span>
+                                                        <span className={`text-[13px] ${!vis ? 'text-slate-300 line-through' : 'text-slate-700'}`}>{i.n}</span>
                                                         <Toggle checked={vis} onChange={() => toggleSidebarItem(i.h)} />
                                                     </div>
                                                 );
@@ -539,18 +527,18 @@ export default function SettingsPage() {
                                 ))}
                             </div>
 
-                            <div className="mt-8 pt-5 border-t border-[#eee] flex items-center justify-between">
-                                <p className="text-[12px] text-[#565959]">Toggling off a page will hide it from the sidebar but not delete it.</p>
+                            <div className="mt-8 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                                <p className="text-[12px] text-slate-600 text-center sm:text-left">Toggling off a page will hide it from the sidebar but not delete it.</p>
                                 <Btn onClick={() => {
                                     localStorage.setItem('sidebar_visibility', JSON.stringify(sidebarVisibility));
                                     window.dispatchEvent(new Event('sidebar_visibility_change'));
                                     toast.success('Navigation layout saved');
-                                }} className="w-[140px] h-[31px]">
+                                }} className="w-full sm:w-auto justify-center px-6">
                                     <Save size={13} /> Save layout
                                 </Btn>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 )}
             </div>
         </div>

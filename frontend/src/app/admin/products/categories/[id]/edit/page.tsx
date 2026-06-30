@@ -2,29 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { categoryService } from '@/lib/api';
 import {
-    ArrowLeft, FolderTree, Save, Loader2, CheckCircle, XCircle, Grid, Type, Link as LinkIcon, Activity
+    Save, Loader2, CheckCircle, XCircle, Type, Link as LinkIcon, FolderTree, Activity
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
-import { ProductCategory } from '@/types';
+import { PageHeader, Card, Button } from '@/components/admin/ui';
 
 // ─── Shared Utilities ─────────────────────────────────────────────────────────
 const INPUT = (err?: boolean) =>
-    `w-full px-5 py-3.5 bg-white/60 border rounded-2xl text-sm font-medium outline-none transition-all
-    focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 placeholder:text-slate-300
+    `w-full px-3.5 py-2.5 bg-white border rounded-lg text-[13.5px] text-slate-800 outline-none transition-all
+    focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-400
     ${err
-        ? 'border-rose-300 ring-rose-200 text-rose-600'
-        : 'border-slate-200/60 text-slate-900'}`;
+        ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-500/10 text-rose-600'
+        : 'border-slate-200 text-slate-800'}`;
 
-const LABEL = 'block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1';
-
-const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`admin-card border-white/60 shadow-xl shadow-slate-200/50 overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
+const LABEL = 'block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2';
 
 export default function EditProductCategoryPage() {
     const router = useRouter();
@@ -93,7 +86,10 @@ export default function EditProductCategoryPage() {
         if (!validate()) return;
         setSaving(true);
         try {
-            await categoryService.update(categoryId, form);
+            await categoryService.update(categoryId, {
+                ...form,
+                status: form.status.toUpperCase() as 'ACTIVE' | 'INACTIVE',
+            });
             showToast('Logic configuration updated successfully!', 'success');
             setTimeout(() => router.push('/admin/products/categories'), 1500);
         } catch (err: any) {
@@ -106,127 +102,121 @@ export default function EditProductCategoryPage() {
     if (loading) return <PageLoader />;
 
     return (
-        <div className="max-w-[1000px] mx-auto pb-24 font-sans px-8 mt-12 relative z-0">
+        <div className="max-w-[1000px] mx-auto pb-24">
 
-            {/* Premium Toast */}
+            {/* Toast */}
             {toast && (
                 <div className="fixed bottom-12 right-12 z-[200] animate-in slide-in-from-right-10 duration-500">
-                    <div className="glass-effect px-8 py-5 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center gap-4 min-w-[320px] border-white/60">
-                        <div className={`w-10 h-10 ${toast.type === 'success' ? 'bg-emerald-50' : 'bg-rose-50'} rounded-2xl flex items-center justify-center`}>
-                            {toast.type === 'success' 
+                    <div className="bg-white border border-slate-200/70 px-6 py-4 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.12)] flex items-center gap-4 min-w-[320px]">
+                        <div className={`w-10 h-10 ${toast.type === 'success' ? 'bg-emerald-50' : 'bg-rose-50'} rounded-xl flex items-center justify-center`}>
+                            {toast.type === 'success'
                                 ? <CheckCircle className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
                                 : <XCircle className="h-5 w-5 text-rose-500" strokeWidth={2.5} />
                             }
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[.2em] mb-0.5">System Alert</p>
-                            <p className="text-sm font-black text-slate-900 tracking-tight leading-none">{toast.msg}</p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">System Alert</p>
+                            <p className="text-sm font-bold text-slate-900 tracking-tight leading-none">{toast.msg}</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ── GLASS HEADER ── */}
-            <div className="glass-effect p-8 rounded-[3rem] shadow-xl shadow-slate-200/50 flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12 border-white/60">
-                <div className="flex items-center gap-6">
-                    <Link href="/admin/products/categories" className="w-12 h-12 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-100 transition-all shadow-sm">
-                        <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
-                    </Link>
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight text-slate-900">Refine Node</h1>
-                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-[0.3em] mt-1.5 opacity-80">
-                            Maintenance Mode • <span className="underline decoration-indigo-200 underline-offset-4">{form.name}</span>
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <Link href="/admin/products/categories" className="px-8 py-4 text-slate-400 text-xs font-bold uppercase tracking-[.2em] hover:text-slate-900 transition-colors">
-                        Abort Mission
-                    </Link>
-                </div>
-            </div>
+            <PageHeader
+                title="Edit Category"
+                subtitle={form.name || undefined}
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Categories', href: '/admin/products/categories' },
+                    { label: 'Edit Category' },
+                ]}
+                actions={
+                    <Button variant="outline" onClick={() => router.push('/admin/products/categories')}>
+                        Cancel
+                    </Button>
+                }
+            />
 
             {/* ── Form Controls ── */}
             <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 <div className="lg:col-span-2 space-y-8">
-                    <SectionCard className="p-10 space-y-10">
-                        <div className="flex items-center gap-4 pb-6 border-b border-slate-50">
-                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
-                                <FolderTree className="w-6 h-6 text-indigo-500" />
+                    <Card className="p-8 space-y-8">
+                        <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
+                            <div className="w-11 h-11 bg-indigo-50 rounded-xl flex items-center justify-center">
+                                <FolderTree className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Logic Hub Sync</h3>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Maintenance Protocol Active</p>
+                                <h3 className="text-base font-bold text-slate-900 tracking-tight">Category Details</h3>
+                                <p className="text-[13px] text-slate-500 mt-0.5">Basic information for this category</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className={LABEL}>DIRECT LABEL <span className="text-rose-500">*</span></label>
+                                <label className={LABEL}>Name <span className="text-rose-500">*</span></label>
                                 <div className="relative">
-                                    <Type className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                                    <Type className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input type="text" value={form.name} onChange={e => handle('name', e.target.value)}
-                                        className={INPUT(!!errors.name) + ' pl-12'} placeholder="e.g. Skin Care" />
+                                        className={INPUT(!!errors.name) + ' pl-10'} placeholder="e.g. Skin Care" />
                                 </div>
-                                {errors.name && <p className="text-rose-500 text-[10px] font-bold mt-2 ml-1 uppercase tracking-widest">{errors.name}</p>}
+                                {errors.name && <p className="text-rose-500 text-[11px] font-semibold mt-1.5">{errors.name}</p>}
                             </div>
                             <div className="space-y-2">
-                                <label className={LABEL}>SOURCING IDENTITY (SLUG)</label>
+                                <label className={LABEL}>Slug</label>
                                 <div className="relative">
-                                    <LinkIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                                    <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input type="text" value={form.slug} onChange={e => handle('slug', e.target.value.toLowerCase().replace(/ /g, '-'))}
-                                        className={INPUT() + ' pl-12 font-mono lower-case'} placeholder="skin-care" />
+                                        className={INPUT() + ' pl-10 font-mono lowercase'} placeholder="skin-care" />
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className={LABEL}>DIRECTIVE SCOPE / DESCRIPTION</label>
+                            <label className={LABEL}>Description</label>
                             <textarea value={form.description} onChange={e => handle('description', e.target.value)}
-                                rows={5} className={INPUT() + ' resize-none min-h-[150px]'} placeholder="Log the logical boundaries for this classification..." />
+                                rows={5} className={INPUT() + ' resize-none min-h-[150px]'} placeholder="Describe this category..." />
                         </div>
-                    </SectionCard>
+                    </Card>
                 </div>
 
                 <div className="space-y-8">
-                    <SectionCard className="p-8 space-y-8">
-                        <div className="flex items-center gap-4 pb-6 border-b border-slate-50">
-                            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
-                                <Activity className="w-5 h-5 text-emerald-500" />
+                    <Card className="p-8 space-y-8">
+                        <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
+                            <div className="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center">
+                                <Activity className="w-5 h-5 text-emerald-600" />
                             </div>
-                            <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[.2em]">Operational State</h3>
+                            <h3 className="text-base font-bold text-slate-900 tracking-tight">Status</h3>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {(['active', 'inactive'] as const).map(s => (
                                 <button
                                     key={s}
                                     type="button"
                                     onClick={() => handle('status', s)}
-                                    className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all ${form.status === s
-                                        ? 'bg-indigo-500 border-transparent text-white shadow-xl shadow-indigo-100 ring-4 ring-indigo-500/10 scale-[1.02]'
-                                        : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200 hover:text-slate-600'
+                                    className={`w-full p-4 rounded-xl flex items-center justify-between border transition-all ${form.status === s
+                                        ? 'bg-indigo-600 border-transparent text-white shadow-sm shadow-indigo-600/20'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-slate-700'
                                     }`}
                                 >
-                                    <span className="text-[10px] font-black uppercase tracking-[.2em]">{s === 'active' ? 'Operational' : 'Disabled'}</span>
-                                    <div className={`w-2 h-2 rounded-full ${form.status === s ? 'bg-white text-indigo-500' : 'bg-slate-200'}`} />
+                                    <span className="text-[12px] font-bold uppercase tracking-wider">{s === 'active' ? 'Active' : 'Inactive'}</span>
+                                    <div className={`w-2 h-2 rounded-full ${form.status === s ? 'bg-white' : 'bg-slate-300'}`} />
                                 </button>
                             ))}
                         </div>
 
-                        <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed italic">
-                                Modifying historical parameters may affect downstream inheritance for all children nodes.
+                        <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
+                            <p className="text-[12px] text-slate-500 leading-relaxed">
+                                Changing the status may affect the visibility of products assigned to this category.
                             </p>
                         </div>
-                    </SectionCard>
+                    </Card>
 
-                    <button type="submit" disabled={saving}
-                        className="w-full py-6 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-[.3em] rounded-[2rem] shadow-2xl shadow-indigo-200 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-4">
-                        {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" strokeWidth={2.5} />}
-                        {saving ? 'SYNCING CHANGES...' : 'COMMIT CHANGES'}
-                    </button>
+                    <Button type="submit" size="lg" disabled={saving} className="w-full">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" strokeWidth={2.5} />}
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </Button>
                 </div>
 
             </form>

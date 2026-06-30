@@ -7,6 +7,6 @@ class SupplierViewSet(viewsets.ModelViewSet):
     ViewSet for Supplier operations.
     Points to the central supplier module for data consistency.
     """
-    queryset = Supplier.objects.all().order_by('name')
+    queryset = Supplier.objects.all().order_by('-created_at')
     serializer_class = SupplierSerializer
     permission_classes = [permissions.AllowAny] # Set to allow any for now to debug the 500

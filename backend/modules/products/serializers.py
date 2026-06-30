@@ -5,7 +5,7 @@ from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'description', 'status', 'created_at']
+        fields = ['id', 'name', 'slug', 'description', 'status', 'navbar_page', 'created_at']
         read_only_fields = ['id', 'slug', 'created_at']
 
 
@@ -18,24 +18,30 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     supplier_name = serializers.ReadOnlyField(source='supplier.name')
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
-    category_name = serializers.ReadOnlyField(source='category.name')
+    category_name = serializers.SerializerMethodField()
+    section_names = serializers.SerializerMethodField()
     additional_images = ProductImageSerializer(many=True, read_only=True)
     profit_margin = serializers.SerializerMethodField()
     catalog_image = serializers.SerializerMethodField()
-    total_quantity = serializers.IntegerField(source='live_stock_total', read_only=True)
+    total_quantity = serializers.SerializerMethodField() # Dynamic based on role
+    reserved_quantity = serializers.IntegerField(read_only=True)
+    available_quantity = serializers.ReadOnlyField()
     sku = serializers.CharField(required=False, allow_null=True)
     barcode = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Product
         fields = [
-            'id', 'stock', 'product_name', 'category', 'category_name',
+            'id', 'stock', 'product_name', 'category', 'category_name', 'sections', 'section_names',
             'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
-            'cost_price', 'total_quantity', 'image', 'additional_images', 'description', 'sku', 'barcode',
-            'selling_price', 'batch', 'badge', 'weight', 'size', 'status', 'profit_margin', 'created_at',
-            'catalog_image'
+            'cost_price', 'total_quantity', 'reserved_quantity', 'available_quantity', 'min_count', 'image', 'additional_images',
+            'description', 'sku', 'barcode', 'selling_price', 'batch', 'badge', 'weight', 'size', 'status',
+            'profit_margin', 'created_at', 'catalog_image'
         ]
-        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'profit_margin', 'catalog_image']
+        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'section_names', 'profit_margin', 'catalog_image']
+
+    def get_section_names(self, obj):
+        return [s.name for s in obj.sections.all()]
 
     def get_catalog_image(self, obj):
         if obj.image:
@@ -45,6 +51,17 @@ class ProductSerializer(serializers.ModelSerializer):
         if sp and sp.image:
             return sp.image.url
         return None
+
+    def get_category_name(self, obj):
+        if obj.category:
+            return obj.category.name
+        return "Uncategorized"
+
+    def get_total_quantity(self, obj):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_staff:
+            return obj.total_quantity
+        return obj.available_quantity
 
     def get_profit_margin(self, obj):
         if obj.selling_price and obj.cost_price and obj.selling_price > 0:

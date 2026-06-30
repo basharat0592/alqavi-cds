@@ -10,6 +10,8 @@ interface WishlistItem {
     price: number | string;
     image: string;
     category: string;
+    type?: string;
+    weight?: string;
     addedAt: string;
 }
 
@@ -45,9 +47,8 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         try {
             const response = await api.get('/v1/products/wishlist/');
-            console.log("Wishlist API Response:", response.data);
             const rawData = response.data.results || response.data || [];
-            
+
             if (!Array.isArray(rawData)) {
                 console.error("Wishlist API did not return an array", response.data);
                 setWishlist([]);
@@ -56,13 +57,14 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
             const backendItems = rawData.map((item: any) => ({
                 id: item.product_details?.id,
-                name: item.product_details?.product_name || 'Unknown Product',
+                name: (item.product_details?.product_name || 'Unknown Product').replace(/\s*\(.*?\)\s*$/, '').trim(),
                 price: item.product_details?.selling_price || 0,
                 image: item.product_details?.image,
                 category: item.product_details?.category_name,
+                type: item.product_details?.type,
+                weight: item.product_details?.weight,
                 addedAt: item.created_at || new Date().toISOString()
             }));
-            console.log("Mapped Wishlist Items:", backendItems);
             setWishlist(backendItems);
         } catch (err) {
             console.error("Failed to fetch wishlist from DB", err);
@@ -112,10 +114,10 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     const isInWishlist = (id: string) => wishlist.some(i => i.id === id);
 
     return (
-        <WishlistContext.Provider value={{ 
-            wishlist, 
-            addToWishlist, 
-            removeFromWishlist, 
+        <WishlistContext.Provider value={{
+            wishlist,
+            addToWishlist,
+            removeFromWishlist,
             isInWishlist,
             wishlistCount: wishlist.length,
             refreshWishlist,

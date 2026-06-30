@@ -33,8 +33,13 @@ export default function AddReturnPage() {
         salesService.getBoughtProducts()
             .then(data => {
                 const now = new Date();
-                const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-                const filtered = data.filter((item: any) => new Date(item.purchased_at) >= twentyFourHoursAgo);
+                // 30-Day Window from Delivery
+                const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                
+                const filtered = data.filter((item: any) => {
+                    const deliveryDate = new Date(item.delivered_at || item.purchased_at);
+                    return deliveryDate >= thirtyDaysAgo;
+                });
                 setBoughtProducts(filtered);
             })
             .catch(() => toast.error('Failed to load purchase history'))
@@ -94,7 +99,7 @@ export default function AddReturnPage() {
                 <div>
                     <h1 className="text-3xl font-normal text-[#111]">Request a Return</h1>
                     <p className="text-sm text-gray-600 mt-1 italic">
-                        Select an item purchased and <span className="font-bold text-[#111]">delivered</span> within the last 24 hours to initiate a return request.
+                        Select an item purchased and <span className="font-bold text-[#111]">delivered</span> within the last 30 days to initiate a return request.
                     </p>
                 </div>
             </div>
@@ -111,7 +116,7 @@ export default function AddReturnPage() {
                                 {boughtProducts.length === 0 ? (
                                     <div className="text-center py-10">
                                         <Package className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                                        <p className="text-gray-500 font-medium">No items purchased within the last 24 hours were found.</p>
+                                        <p className="text-gray-500 font-medium">No items purchased and delivered within the last 30 days were found.</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
@@ -129,7 +134,7 @@ export default function AddReturnPage() {
                                                             setSearchTerm(e.target.value);
                                                             setIsOpen(true);
                                                         }}
-                                                        className="w-full h-11 pl-10 pr-10 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
+                                                        className="w-full h-11 pl-10 pr-10 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#119AB8] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
                                                     />
                                                     <button 
                                                         type="button"
@@ -167,12 +172,12 @@ export default function AddReturnPage() {
                                                                         <div className="flex items-center gap-2">
                                                                             <p className="text-xs font-bold text-[#111] line-clamp-1">{item.product_name}</p>
                                                                             {(item.weight || item.size) && (
-                                                                                <span className="text-[9px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
-                                                                                    {item.weight}{item.weight && item.size ? ' • ' : ''}{item.size}
+                                                                                <span className="text-[9px] text-[#119AB8] font-black uppercase tracking-tight shrink-0">
+                                                                                    {item.weight}{item.weight && item.size ? ' â€¢ ' : ''}{item.size}
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                        <p className="text-[10px] text-gray-500">Order #{item.order_number} • {new Date(item.purchased_at).toLocaleDateString()}</p>
+                                                                        <p className="text-[10px] text-gray-500">Order #{item.order_number} â€¢ {new Date(item.purchased_at).toLocaleDateString()}</p>
                                                                     </div>
                                                                     <p className="text-xs font-bold text-[#111] shrink-0">Rs. {item.price.toLocaleString()}</p>
                                                                 </div>
@@ -184,7 +189,7 @@ export default function AddReturnPage() {
                                         </div>
 
                                         {selectedItem && (
-                                            <div className="p-4 bg-[#fdfaf5] border border-[#e77600]/30 rounded-lg flex items-center gap-4 animate-in fade-in zoom-in-95 duration-300">
+                                            <div className="p-4 bg-[#fdfaf5] border border-[#119AB8]/30 rounded-lg flex items-center gap-4 animate-in fade-in zoom-in-95 duration-300">
                                                 <div className="w-14 h-14 bg-white rounded border border-[#D5D9D9] flex items-center justify-center shrink-0 relative group">
                                                     {selectedItem.image ? (
                                                         <img src={selectedItem.image} alt={selectedItem.product_name} className="w-12 h-12 object-contain" />
@@ -197,12 +202,12 @@ export default function AddReturnPage() {
                                                     <div className="flex items-center gap-2">
                                                         <p className="text-sm font-bold text-[#111]">{selectedItem.product_name}</p>
                                                         {(selectedItem.weight || selectedItem.size) && (
-                                                            <span className="text-[10px] text-[#e77600] font-black uppercase tracking-tight border border-[#e77600]/20 px-1 rounded-sm bg-[#e77600]/5">
-                                                                {selectedItem.weight}{selectedItem.weight && selectedItem.size ? ' • ' : ''}{selectedItem.size}
+                                                            <span className="text-[10px] text-[#119AB8] font-black uppercase tracking-tight border border-[#119AB8]/20 px-1 rounded-sm bg-[#119AB8]/5">
+                                                                {selectedItem.weight}{selectedItem.weight && selectedItem.size ? ' â€¢ ' : ''}{selectedItem.size}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-xs text-gray-600">Unit Price: Rs. {selectedItem.price.toLocaleString()} • Purchased: {new Date(selectedItem.purchased_at).toLocaleDateString()}</p>
+                                                    <p className="text-xs text-gray-600">Unit Price: Rs. {selectedItem.price.toLocaleString()} â€¢ Purchased: {new Date(selectedItem.purchased_at).toLocaleDateString()}</p>
                                                     <p className="text-xs text-emerald-600 font-bold mt-0.5 flex items-center gap-1"><CheckCircle2 size={12} /> Order #{selectedItem.order_number}</p>
                                                 </div>
                                             </div>
@@ -224,7 +229,7 @@ export default function AddReturnPage() {
                                         <select 
                                             value={reason}
                                             onChange={(e) => setReason(e.target.value)}
-                                            className="w-full h-10 px-3 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
+                                            className="w-full h-10 px-3 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#119AB8] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
                                             required
                                         >
                                             <option value="">Select a reason</option>
@@ -244,7 +249,7 @@ export default function AddReturnPage() {
                                                 max={selectedItem?.quantity || 1}
                                                 value={quantity}
                                                 onChange={(e) => setQuantity(parseInt(e.target.value))}
-                                                className="w-24 h-10 px-3 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
+                                                className="w-24 h-10 px-3 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#119AB8] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
                                                 required
                                             />
                                             <span className="text-xs text-gray-500">Max: {selectedItem?.quantity || 1}</span>
@@ -259,7 +264,7 @@ export default function AddReturnPage() {
                                         value={notes}
                                         onChange={(e) => setNotes(e.target.value)}
                                         placeholder="Tell us more about the issue..."
-                                        className="w-full p-3 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
+                                        className="w-full p-3 bg-white border border-[#888C8C] rounded-[3px] text-sm focus:border-[#119AB8] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.5)] outline-none transition-all"
                                     />
                                 </div>
                             </div>

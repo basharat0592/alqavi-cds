@@ -22,43 +22,39 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """Dedicated Supplier creation logic - No User record created."""
-        from django.contrib.auth.hashers import make_password
+        """Supplier creation logic - Hashing handled by Serializer."""
         data = request.data.copy()
         
-        # Hash password if provided
-        if data.get('password'):
-            data['password'] = make_password(data['password'])
-            
         # Set default username if missing
         if not data.get('username') and data.get('email'):
             data['username'] = data.get('email').split('@')[0]
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(plain_password=request.data.get('password'))
+        serializer.save()
         
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
-        """Update supplier details, handling password hashing."""
+        """Update supplier details - Hashing handled by Serializer."""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         data = request.data.copy()
         
-        from django.contrib.auth.hashers import make_password
-        if data.get('password'):
-            data['password'] = make_password(data['password'])
-        else:
-            data.pop('password', None)
-
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        
-        if data.get('password'):
-            serializer.save(plain_password=request.data.get('password'))
-        else:
-            self.perform_update(serializer)
+        serializer.save()
 
         return Response(SupplierSerializer(instance).data)
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        """Delete supplier and its associated Shadow User record."""
+        instance = self.get_object()
+        email = instance.email
+        
+        from modules.users.models import User as ShadowUser
+        ShadowUser.objects.filter(email=email, is_supplier=True, real_id=instance.id).delete()
+        
+        return super().destroy(request, *args, **kwargs)

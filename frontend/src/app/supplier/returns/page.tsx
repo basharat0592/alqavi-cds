@@ -56,9 +56,11 @@ export default function SupplierReturns() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<string | null>(null);
 
-    // Modal States
     const [actionModal, setActionModal] = useState<{ open: boolean; type: 'accept' | 'reject' | null; ret: any | null }>({
         open: false, type: null, ret: null
+    });
+    const [deleteModal, setDeleteModal] = useState<{ open: boolean; ret: any | null }>({
+        open: false, ret: null
     });
 
     const fetchReturns = useCallback(async () => {
@@ -96,6 +98,21 @@ export default function SupplierReturns() {
             setActionModal({ open: false, type: null, ret: null });
         } catch (err: any) {
             toast.error(err.response?.data?.error || "Action failed");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteModal.ret) return;
+        setProcessingId(deleteModal.ret.id);
+        try {
+            await api.delete(`/v1/sales/purchase-returns/${deleteModal.ret.id}/`);
+            toast.success("Return record permanently removed");
+            fetchReturns();
+            setDeleteModal({ open: false, ret: null });
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || "Deletion failed");
         } finally {
             setProcessingId(null);
         }
@@ -252,8 +269,15 @@ export default function SupplierReturns() {
                                                             </>
                                                         )}
                                                         <button
+                                                            onClick={() => setDeleteModal({ open: true, ret })}
+                                                            className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-slate-400 rounded-lg hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all shadow-sm"
+                                                            title="Delete Record"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                        <button
                                                             onClick={() => setExpanded(isExpanded ? null : ret.id)}
-                                                            className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-slate-400 rounded-lg hover:text-[#F59E0B] hover:border-[#F59E0B] transition-all"
+                                                            className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-slate-400 rounded-lg hover:text-[#F59E0B] hover:border-[#F59E0B] transition-all shadow-sm"
                                                         >
                                                             <Eye size={14} />
                                                         </button>
@@ -375,6 +399,32 @@ export default function SupplierReturns() {
                                 className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-white shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${actionModal.type === 'accept' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
                             >
                                 {processingId ? <Loader2 size={16} className="animate-spin" /> : `Confirm ${actionModal.type}`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Modal */}
+            {deleteModal.open && (
+                <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-200 animate-in zoom-in-95 duration-300">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto bg-rose-50 text-rose-600">
+                            <Trash2 size={32} />
+                        </div>
+                        <h3 className="text-[18px] font-black text-slate-900 text-center tracking-tight mb-2 uppercase text-rose-600">Delete Record?</h3>
+                        <p className="text-[13px] text-slate-500 font-medium text-center leading-relaxed">
+                            Are you sure you want to permanently delete return <span className="font-bold text-slate-900">#{deleteModal.ret?.return_number}</span>?
+                            This action cannot be undone and will remove it from the audit registry.
+                        </p>
+                        <div className="mt-8 flex gap-3">
+                            <button onClick={() => setDeleteModal({ open: false, ret: null })} className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Discard</button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={!!processingId}
+                                className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-white shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700"
+                            >
+                                {processingId ? <Loader2 size={16} className="animate-spin" /> : "Delete Now"}
                             </button>
                         </div>
                     </div>

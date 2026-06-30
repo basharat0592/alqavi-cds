@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '') + '/';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/$/, '') + '/';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -34,43 +34,40 @@ api.interceptors.response.use(
         const isInvalidToken = error.response?.data?.code === 'token_not_valid';
         const status = error.response?.status;
 
+        // If the error is 401/403 or invalid token, and we haven't retried yet
         if ((status === 401 || status === 403 || isInvalidToken) && !originalRequest._retry) {
+            // If the error occurred while trying to refresh the token, we must logout
             if (originalRequest.url?.includes('/v1/users/token/refresh/')) {
-                return Promise.reject(error);
-            }
-            originalRequest._retry = true;
-
-            if (isInvalidToken) {
                 sessionStorage.removeItem('accessToken');
                 sessionStorage.removeItem('refreshToken');
                 sessionStorage.removeItem('cosmetic_distro_user');
                 window.location.href = '/login';
                 return Promise.reject(error);
             }
+
+            originalRequest._retry = true;
 
             try {
                 const refreshToken = sessionStorage.getItem('refreshToken');
                 if (refreshToken) {
-                    const response = await axios.post(`${API_URL}/v1/users/token/refresh/`, {
+                    const response = await axios.post(`${API_URL}v1/users/token/refresh/`, {
                         refresh: refreshToken
                     });
-                    sessionStorage.setItem('accessToken', response.data.access);
-                    api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+                    const newAccessToken = response.data.access;
+                    sessionStorage.setItem('accessToken', newAccessToken);
+                    api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+                    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
                     return api(originalRequest);
-                } else {
-                    // No refresh token available — force logout
-                    sessionStorage.removeItem('accessToken');
-                    sessionStorage.removeItem('refreshToken');
-                    sessionStorage.removeItem('cosmetic_distro_user');
-                    window.location.href = '/login';
                 }
             } catch (refreshError) {
-                // Handle refresh token failure (e.g., logout)
-                sessionStorage.removeItem('accessToken');
-                sessionStorage.removeItem('refreshToken');
-                sessionStorage.removeItem('cosmetic_distro_user');
-                window.location.href = '/login';
+                console.error("Token refresh failed:", refreshError);
             }
+
+            // If we reached here, it means refresh failed or no refresh token
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('refreshToken');
+            sessionStorage.removeItem('cosmetic_distro_user');
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

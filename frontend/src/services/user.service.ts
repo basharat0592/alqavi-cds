@@ -85,9 +85,17 @@ export const userService = {
         const { data } = await api.get(`v1/users/${id}/activity-logs/`, { params: { limit } });
         return data.results ?? data;
     },
-    getAllActivityLogs: async (limit = 50): Promise<ActivityLog[]> => {
-        const { data } = await api.get('v1/users/Admin/all-activity-logs/', { params: { limit } });
+    getAllActivityLogs: async (limit = 50, isRead?: boolean): Promise<ActivityLog[]> => {
+        const params: any = { limit };
+        if (isRead !== undefined) params.is_read = isRead;
+        const { data } = await api.get('v1/users/Admin/all-activity-logs/', { params });
         return data.results ?? data;
+    },
+    markActivityRead: async (logId: number | string): Promise<void> => {
+        await api.post(`v1/users/activity-logs/${logId}/mark-read/`);
+    },
+    markAllActivitiesRead: async (): Promise<void> => {
+        await api.post('v1/users/activity-logs/mark-all-read/');
     },
 };
 

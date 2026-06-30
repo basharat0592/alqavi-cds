@@ -8,6 +8,24 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-alkavi-dev-key-2025')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# Behind the nginx TLS-terminating proxy: trust X-Forwarded-Proto so Django builds
+# absolute URLs (e.g. media) with the https scheme instead of http (mixed content).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://alqavitraders.com',
+    'https://www.alqavitraders.com',
+    'http://74.208.242.204',
+]
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +49,7 @@ INSTALLED_APPS = [
     'modules.company',
     'modules.supplier.apps.SupplierConfig',
     'modules.customer.apps.CustomerConfig',
+    'modules.cms.apps.CmsConfig',
 ]
 
 MIDDLEWARE = [
@@ -129,8 +148,8 @@ DATABASES = {
 
 # SIMPLE JWT Configuration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -146,5 +165,10 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
+
+# WhatsApp Cloud API Settings
+WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '')
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+WHATSAPP_API_VERSION = os.environ.get('WHATSAPP_API_VERSION', 'v17.0')
 
 # Authors: Antigravity  

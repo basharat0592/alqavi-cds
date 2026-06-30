@@ -7,32 +7,31 @@ import {
     Edit, Trash2, X, Plus, CheckCircle,
     Mail, Calendar, AlertTriangle, Loader2, RefreshCw,
     UserCheck, MapPin, Phone, Building2, ShieldCheck,
-    Lock, MoreHorizontal, KeyRound, Eye, EyeOff, ChevronRight
+    Lock, MoreHorizontal, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 import { userService, roleService, AppUser, AppRole } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import Link from 'next/link';
+import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - USERS
+   INTERNAL USERS — ADMIN DESIGN SYSTEM (INDIGO / SLATE)
    ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
+    <Button
+        type={type}
+        onClick={onClick}
+        disabled={loading || disabled}
+        variant={variant === 'secondary' ? 'outline' : 'primary'}
+        className={`whitespace-nowrap ${className}`}
+    >
+        {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+        {children}
+    </Button>
+);
 
-const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[4px] text-[14px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const inputCls = ui.inputBase;
 
 export default function UsersPage() {
     const router = useRouter();
@@ -95,185 +94,177 @@ export default function UsersPage() {
     if (loading && users.length === 0) return <PageLoader />;
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            {/* Header */}
-            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-6 text-left">
-                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
-                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                        <ChevronRight size={10} />
-                        <span className="text-[#c45500]">Users</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-[22px] font-normal text-[#111]">Users</h1>
-                            <p className="text-[13px] text-[#565959] mt-0.5">Manage employees and system access</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={loadData} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                            </Btn>
-                            <Btn onClick={() => router.push('/admin/users/add')}>
-                                <Plus size={14} /> Add User
-                            </Btn>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div className="pb-12 text-left text-slate-800">
+            <div className="max-w-[1400px] mx-auto">
+                <PageHeader
+                    title="Internal Users"
+                    subtitle="Manage employees and system access"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Internal Users' }]}
+                    actions={
+                        <>
+                            <Button variant="outline" onClick={loadData} disabled={loading} className="whitespace-nowrap">
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Sync</span>
+                            </Button>
+                            <Button onClick={() => router.push('/admin/users/add')} className="whitespace-nowrap">
+                                <Plus size={16} /> Add User
+                            </Button>
+                        </>
+                    }
+                />
 
-            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-3 mb-6 shadow-sm flex flex-col md:flex-row gap-3 items-center">
+                <Card className="p-4 sm:p-5 mb-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     <div className="relative flex-1 w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search names or email..."
-                            className={inputCls}
+                            className={inputCls + ' pl-10'}
                         />
                     </div>
-                    <div className="flex items-center gap-4 bg-[#f3f3f3] p-1 rounded-[4px] border border-[#ddd] w-full md:w-auto overflow-x-auto">
-                        <div className="flex bg-white rounded-[3px] p-0.5 gap-1 shadow-sm shrink-0">
+                    <div className="flex items-center justify-center sm:justify-start gap-3 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto overflow-x-auto">
+                        <div className="flex bg-white rounded-lg p-0.5 gap-1 border border-slate-200/70 shrink-0">
                             {['all', 'admin'].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setActiveRole(r)}
-                                    className={`px-3 py-1 text-[10px] font-bold uppercase transition-all rounded-[2px]
-                                        ${activeRole === r ? 'bg-[#f0c14b] text-[#0f1111]' : 'text-[#565959] hover:bg-[#eee]'}`}
+                                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all rounded-md
+                                        ${activeRole === r ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                                 >
                                     {r}
                                 </button>
                             ))}
                         </div>
-                        <div className="h-4 w-px bg-[#ddd] shrink-0" />
-                        <div className="flex bg-white rounded-[3px] p-0.5 gap-1 shadow-sm shrink-0">
+                        <div className="h-4 w-px bg-slate-200 shrink-0" />
+                        <div className="flex bg-white rounded-lg p-0.5 gap-1 border border-slate-200/70 shrink-0">
                             {['all', 'active', 'inactive'].map(s => (
                                 <button
                                     key={s}
                                     onClick={() => setActiveStatus(s as any)}
-                                    className={`px-3 py-1 text-[10px] font-bold uppercase transition-all rounded-[2px]
-                                        ${activeStatus === s ? 'bg-[#27ae60] text-white' : 'text-[#565959] hover:bg-[#eee]'}`}
+                                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all rounded-md
+                                        ${activeStatus === s ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                                 >
                                     {s}
                                 </button>
                             ))}
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 {/* Table */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
-                                <th className="px-6 py-3">User</th>
-                                <th className="px-6 py-3">Role</th>
-                                <th className="px-6 py-3">Joined</th>
-                                <th className="px-6 py-3 text-center">Status</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#eee]">
-                            {filtered.length === 0 ? (
-                                <tr><td colSpan={5} className="py-24 text-center text-[13px] text-[#565959]">No users found.</td></tr>
-                            ) : (
-                                filtered.map(user => (
-                                    <tr key={user.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 bg-[#f0f2f2] border border-[#ddd] rounded-[4px] flex items-center justify-center font-bold text-[#565959] group-hover:bg-[#f0c14b] group-hover:text-[#111] transition-all">
-                                                    {(user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
+                <Card className="overflow-hidden text-left mb-6">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">User</th>
+                                    <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Role</th>
+                                    <th className="hidden sm:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Joined</th>
+                                    <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center whitespace-nowrap">Status</th>
+                                    <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan={5} className="py-24 text-center text-[14px] text-slate-500 font-medium">No users found.</td></tr>
+                                ) : (
+                                    filtered.map(user => (
+                                        <tr key={user.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
+                                                        {(user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-slate-900">{user.first_name} {user.last_name}</p>
+                                                        <p className="text-[11px] text-slate-400">{user.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-[#111]">{user.first_name} {user.last_name}</p>
-                                                    <p className="text-[11px] text-[#aaa]">{user.email}</p>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    <Badge tone={user.role_name?.toLowerCase().includes('admin') ? 'blue' : 'neutral'}>
+                                                        {user.role_name || 'Individual'}
+                                                    </Badge>
+                                                    {user.business_name && <p className="text-[10px] text-slate-400 font-bold uppercase">{user.business_name}</p>}
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
-                                                <span className={`inline-block px-2 py-0.5 rounded-[2px] border text-[10px] font-bold uppercase tracking-tight w-fit
-                                                    ${user.role_name?.toLowerCase().includes('admin')
-                                                        ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                                        : 'bg-white text-[#565959] border-[#ddd]'}`}>
-                                                    {user.role_name || 'Individual'}
-                                                </span>
-                                                {user.business_name && <p className="text-[10px] text-[#aaa] font-bold uppercase">{user.business_name}</p>}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-[#565959]">
-                                            {formatDate(user.date_joined || new Date().toISOString())}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <select
-                                                value={user.is_active ? 'active' : 'inactive'}
-                                                onChange={() => toggleUserStatus(user)}
-                                                className={`px-3 py-1 rounded-[3px] text-[10px] font-bold uppercase transition-all outline-none cursor-pointer border
-                                                    ${user.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                                            >
-                                                <option value="active">Active</option>
-                                                <option value="inactive">Inactive</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 transition-opacity">
-                                                <button onClick={() => setSelectedUserForView(user)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
-                                                <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-amber-50 text-amber-600"><Edit size={14} /></button>
-                                                <button onClick={() => setDeleteUser(user)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 text-slate-600 whitespace-nowrap tabular-nums">
+                                                {formatDate(user.date_joined || new Date().toISOString())}
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-center whitespace-nowrap">
+                                                <select
+                                                    value={user.is_active ? 'active' : 'inactive'}
+                                                    onChange={() => toggleUserStatus(user)}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all outline-none cursor-pointer border
+                                                        ${user.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                                >
+                                                    <option value="active">Active</option>
+                                                    <option value="inactive">Inactive</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setSelectedUserForView(user)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteUser(user)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
             </div>
 
             {/* Delete Modal */}
-            {deleteUser && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] max-w-sm w-full shadow-2xl p-8 text-center animate-in zoom-in-95">
-                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 border border-red-100"><AlertTriangle size={32} /></div>
-                        <h3 className="text-[18px] font-bold text-[#111]">Delete User?</h3>
-                        <p className="text-[13px] text-[#565959] mt-3 leading-relaxed">Delete <span className="font-bold text-[#111]">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This will revoke all system access.</p>
-                        <div className="flex gap-4 mt-8">
-                            <button onClick={() => setDeleteUser(null)} className="flex-1 py-2 text-[13px] font-bold text-[#565959] hover:underline">Cancel</button>
-                            <button onClick={confirmDelete} disabled={deleting} className="flex-1 py-2 bg-red-600 text-white rounded-[3px] text-[13px] font-bold flex items-center justify-center gap-2">
+            <Modal open={!!deleteUser} onClose={() => setDeleteUser(null)} size="sm">
+                {deleteUser && (
+                    <div className="text-center py-2">
+                        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600"><AlertTriangle size={32} /></div>
+                        <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Delete User?</h3>
+                        <p className="text-[13px] text-slate-600 mt-3 leading-relaxed mb-8">Delete <span className="font-bold text-slate-900">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This will revoke all system access.</p>
+                        <div className="flex gap-3">
+                            <Button variant="outline" onClick={() => setDeleteUser(null)} className="flex-1">Cancel</Button>
+                            <Button variant="danger" onClick={confirmDelete} disabled={deleting} className="flex-1">
                                 {deleting ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Delete'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
 
             {/* Password / Details Popup */}
             {selectedUserForView && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] max-w-md w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95">
-                        <div className="bg-[#f6f6f6] px-5 py-3 border-b border-[#ddd] flex items-center justify-between">
-                            <span className="text-[12px] font-bold text-[#111] uppercase">Full User Profile</span>
-                            <button onClick={() => setSelectedUserForView(null)} className="text-[#aaa] hover:text-[#111]"><X size={20} /></button>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
+                        <div className="bg-slate-50/60 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                            <span className="text-[12px] font-bold text-slate-900 uppercase tracking-wider">Full User Profile</span>
+                            <button onClick={() => setSelectedUserForView(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={16} /></button>
                         </div>
-                        <div className="p-8 space-y-6">
-                            <div className="flex items-center gap-4 pb-6 border-b border-[#eee]">
-                                <div className="w-12 h-12 bg-[#f0f2f2] border border-[#ddd] flex items-center justify-center rounded-[4px]">
-                                    <User size={24} className="text-[#ccc]" />
+                        <div className="p-4 sm:p-8 space-y-6">
+                            <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
+                                <div className="w-12 h-12 bg-slate-100 border border-slate-200 flex items-center justify-center rounded-xl">
+                                    <User size={24} className="text-slate-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[18px] font-bold text-[#111] leading-none">{selectedUserForView.first_name} {selectedUserForView.last_name}</h3>
-                                    <p className="text-[11px] text-[#565959] font-bold uppercase mt-1.5 tracking-widest">{selectedUserForView.role_name || 'Individual'}</p>
+                                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight leading-none">{selectedUserForView.first_name} {selectedUserForView.last_name}</h3>
+                                    <p className="text-[11px] text-indigo-600 font-bold uppercase mt-1.5 tracking-widest">{selectedUserForView.role_name || 'Individual'}</p>
                                 </div>
                             </div>
 
-                            <div className="bg-amber-50 border border-amber-200 p-5 rounded-[4px] text-center">
-                                <label className="text-[10px] font-bold text-[#565959] uppercase tracking-widest block mb-1">Security Key / Password</label>
+                            <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl text-center">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Security Key / Password</label>
                                 {selectedUserForView.plain_password ? (
-                                    <div className="text-[28px] font-bold text-[#e47911] tracking-wider font-mono">{selectedUserForView.plain_password}</div>
+                                    <div className="text-[28px] font-bold text-indigo-600 tracking-wider font-mono">{selectedUserForView.plain_password}</div>
                                 ) : (
                                     <div className="space-y-3">
-                                        <p className="text-[12px] text-red-600 font-bold uppercase">No Tracking</p>
+                                        <p className="text-[12px] text-rose-600 font-bold uppercase">No Tracking</p>
                                         <Btn onClick={async () => {
                                             const newKey = Math.random().toString(36).slice(-8);
                                             setResetting(true);
@@ -283,45 +274,45 @@ export default function UsersPage() {
                                                 setUsers(prev => prev.map(u => u.id === selectedUserForView.id ? { ...u, plain_password: newKey } : u));
                                                 toast.success("New password generated");
                                             } catch { toast.error("Failed to generate password"); } finally { setResetting(false); }
-                                        }} loading={resetting} className="w-full h-[31px]">Reset & Show Password</Btn>
+                                        }} loading={resetting} className="w-full">Reset & Show Password</Btn>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-6 text-[12px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-6 text-[12px]">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Email Address</p>
-                                    <p className="font-bold text-[#111] truncate">{selectedUserForView.email || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</p>
+                                    <p className="font-bold text-slate-900 truncate">{selectedUserForView.email || '—'}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Username</p>
-                                    <p className="font-bold text-[#111]">@{selectedUserForView.username}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Username</p>
+                                    <p className="font-bold text-slate-900">@{selectedUserForView.username}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Phone Number</p>
-                                    <p className="font-bold text-[#111]">{selectedUserForView.phone || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</p>
+                                    <p className="font-bold text-slate-900">{selectedUserForView.phone || '—'}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Postal Code</p>
-                                    <p className="font-bold text-[#111]">{selectedUserForView.postal_code || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Postal Code</p>
+                                    <p className="font-bold text-slate-900">{selectedUserForView.postal_code || '—'}</p>
                                 </div>
                                 <div className="col-span-full space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Physical Address</p>
-                                    <p className="font-bold text-[#111]">{selectedUserForView.address || 'No address provided'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Address</p>
+                                    <p className="font-bold text-slate-900">{selectedUserForView.address || 'No address provided'}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">City</p>
-                                    <p className="font-bold text-[#111]">{selectedUserForView.city || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City</p>
+                                    <p className="font-bold text-slate-900">{selectedUserForView.city || '—'}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-[#aaa] uppercase tracking-wider">Country</p>
-                                    <p className="font-bold text-[#111]">{selectedUserForView.country || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Country</p>
+                                    <p className="font-bold text-slate-900">{selectedUserForView.country || '—'}</p>
                                 </div>
                             </div>
                         </div>
-                        <div className="px-6 py-4 bg-[#f6f6f6] border-t border-[#ddd] flex gap-3">
-                            <Btn onClick={() => router.push(`/admin/users/edit/${selectedUserForView.id}`)} className="flex-1 h-[35px]">Edit User</Btn>
-                            <Btn variant="secondary" onClick={() => setSelectedUserForView(null)} className="px-8 h-[35px]">Close</Btn>
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
+                            <Btn onClick={() => router.push(`/admin/users/edit/${selectedUserForView.id}`)} className="flex-1">Edit User</Btn>
+                            <Btn variant="secondary" onClick={() => setSelectedUserForView(null)} className="px-8">Close</Btn>
                         </div>
                     </div>
                 </div>

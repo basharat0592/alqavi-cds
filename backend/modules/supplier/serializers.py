@@ -14,10 +14,32 @@ class SupplierSerializer(serializers.ModelSerializer):
             'email',
             'phone',
             'address',
+            'avatar',
             'status',
             'is_active',
             'created_at',
             'updated_at',
+            'first_name',
+            'last_name',
+            'password',
             'plain_password',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        """Hash password and sync with plain_password during creation."""
+        from django.contrib.auth.hashers import make_password
+        password = validated_data.get('password')
+        if password:
+            validated_data['password'] = make_password(password)
+            validated_data['plain_password'] = password
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        """Hash password and sync with plain_password during update."""
+        from django.contrib.auth.hashers import make_password
+        password = validated_data.get('password')
+        if password:
+            validated_data['password'] = make_password(password)
+            validated_data['plain_password'] = password
+        return super().update(instance, validated_data)

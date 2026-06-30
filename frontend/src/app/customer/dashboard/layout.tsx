@@ -11,7 +11,8 @@ import {
     User,
     Truck,
     LogOut,
-    RefreshCw
+    RefreshCw,
+    Undo2
 } from 'lucide-react';
 import { authService, User as AuthUser } from '@/lib/auth';
 import Navbar from '@/components/layout/Navbar';
@@ -25,17 +26,16 @@ const SIDEBAR_SECTIONS = [
         ]
     },
     {
-        title: "Orders & Lists",
+        title: "Orders & Tracking",
         links: [
             { href: '/customer/dashboard/orders', label: 'Your Orders', icon: Package, accent: '#F59E0B' },
-            { href: '/customer/dashboard/returns', label: 'Your Returns', icon: RefreshCw, accent: '#F59E0B' },
-            { href: '/customer/dashboard/wishlist', label: 'Your Wishlist', icon: Heart, accent: '#C45500' },
+            { href: '/customer/dashboard/track', label: 'Track Package', icon: Truck, accent: '#007185' },
+            { href: '/customer/dashboard/returns', label: 'Returns & Refunds', icon: Undo2, accent: '#EF4444' },
         ]
     },
     {
-        title: "Tracking & Security",
+        title: "Security & Profile",
         links: [
-            { href: '/customer/dashboard/track', label: 'Track Package', icon: Truck, accent: '#007185' },
             { href: '/customer/dashboard/profile', label: 'Login & Security', icon: User, accent: '#374151' },
         ]
     }
@@ -72,20 +72,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                                     <Link
                                                         key={link.href}
                                                         href={link.href}
-                                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all relative group ${
-                                                            isActive 
-                                                                ? 'bg-[#F0F2F2] font-bold text-[#111]' 
+                                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all relative group ${isActive
+                                                                ? 'bg-[#F0F2F2] font-bold text-[#111]'
                                                                 : 'text-gray-600 hover:bg-gray-50 hover:text-[#007185]'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {/* Accent Bar */}
-                                                        <div 
-                                                            className={`absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full transition-all ${
-                                                                isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                                            }`}
+                                                        <div
+                                                            className={`absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                                                }`}
                                                             style={{ backgroundColor: link.accent }}
                                                         />
-                                                        
+
                                                         <Icon className={`h-4 w-4 ${isActive ? 'text-[#111]' : 'text-gray-400'}`} />
                                                         {link.label}
                                                     </Link>
@@ -94,9 +92,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         </div>
                                     </div>
                                 ))}
-                                
+
                                 <div className="pt-4 border-t border-gray-100">
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             authService.logout();
                                             router.push('/');

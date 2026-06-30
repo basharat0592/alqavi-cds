@@ -37,6 +37,7 @@ class Category(BaseModel):
     ]
 
     main_category = models.ForeignKey(MainCategory, on_delete=models.CASCADE, related_name='categories', null=True)
+    navbar_page = models.ForeignKey('cms.NavbarPage', on_delete=models.SET_NULL, related_name='categories', null=True, blank=True)
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField(null=True, blank=True)
@@ -64,7 +65,9 @@ class Product(BaseModel):
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     cost_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
-    total_quantity = models.IntegerField(null=True, blank=True)
+    total_quantity = models.IntegerField(null=True, blank=True) # Physical Stock
+    reserved_quantity = models.IntegerField(default=0)          # Ordered but not delivered
+    min_count = models.IntegerField(default=10)                 # Low-stock alert threshold
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)
@@ -76,6 +79,11 @@ class Product(BaseModel):
     size = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, default='ACTIVE')
 
+    @property
+    def available_quantity(self):
+        """Net stock visible to customers"""
+        return max(0, (self.total_quantity or 0) - self.reserved_quantity)
+
     class Meta:
         db_table = 'products'
         verbose_name = 'Product'
@@ -86,19 +94,40 @@ class Product(BaseModel):
         if self.stock:
             if not self.product_name:
                 self.product_name = self.stock.product_name
-            self.category = self.stock.category
-            self.supplier = self.stock.supplier
-            self.warehouse = self.stock.warehouse
-            self.cost_price = self.stock.price_per_item
+            if not self.category:
+                self.category = self.stock.category
+            if not self.supplier:
+                self.supplier = self.stock.supplier
+            if not self.warehouse:
+                self.warehouse = self.stock.warehouse
+            if not self.cost_price:
+                self.cost_price = self.stock.price_per_item
             
-            # Fulfilling the 'not all' requirement: Only show the quantity of this specific product/batch
-            self.total_quantity = self.stock.total_quantity
-            
+            # Sync all metadata from linked stock
             if self.stock.product:
                 if not self.sku: self.sku = self.stock.product.sku
                 if not self.barcode: self.barcode = self.stock.product.barcode
+                if not self.description: self.description = self.stock.product.description
+            else:
+                # Fallback to name matching if no direct link
+                sp = SupplierProduct.objects.filter(name__iexact=self.product_name or self.stock.product_name).first()
+                if sp:
+                    if not self.sku: self.sku = sp.sku
+                    if not self.barcode: self.barcode = sp.barcode
+                    if not self.description: self.description = sp.description
             
-            # Sync weight and size from stock
+            # Aggregate total quantity across ALL warehouses/batches for this product identity
+            from django.db.models import Sum
+            total = Stock.objects.filter(
+                product_name__iexact=self.product_name or self.stock.product_name,
+                price_per_item=self.cost_price or self.stock.price_per_item,
+                weight=self.weight or self.stock.weight,
+                size=self.size or self.stock.size
+            ).aggregate(total=Sum('total_quantity'))['total'] or 0
+            
+            self.total_quantity = total
+            
+            # Sync weight and size from stock if not set
             if not self.weight: self.weight = self.stock.weight
             if not self.size: self.size = self.stock.size
         super().save(*args, **kwargs)

@@ -52,11 +52,11 @@ export function formatDate(
  */
 export function formatDateTime(
     dateStr: string | number | undefined | null,
-    options: Intl.DateTimeFormatOptions = { 
-        month: 'short', 
-        day: 'numeric', 
+    options: Intl.DateTimeFormatOptions = {
+        month: 'short',
+        day: 'numeric',
         year: 'numeric',
-        hour: '2-digit', 
+        hour: '2-digit',
         minute: '2-digit'
     }
 ): string {
@@ -100,31 +100,89 @@ export function truncate(str: string, maxLength: number): string {
 }
 
 /**
+ * Check if a media URL represents a video asset by normalizing and analyzing its path.
+ */
+export function checkIsVideo(url: string | null | undefined): boolean {
+    if (!url || typeof url !== 'string') return false;
+    const cleanUrl = url.split('?')[0].split('#')[0].toLowerCase();
+    return cleanUrl.endsWith('.mp4') || 
+           cleanUrl.endsWith('.webm') || 
+           cleanUrl.endsWith('.ogg') || 
+           cleanUrl.endsWith('.mov') || 
+           cleanUrl.includes('/video');
+}
+
+// Module-level cache buster, evaluated once per page load/import
+const CACHE_BUSTER = typeof window !== 'undefined' 
+    ? ((window as any).__CACHE_BUSTER || ((window as any).__CACHE_BUSTER = Date.now())) 
+    : Date.now();
+
+/**
  * Handle media URLs, prepending the API base URL if relative.
  * Robust against varied path formats (leading slashes, full URLs, etc.)
  */
 export function getImageUrl(url: string | null | undefined): string | undefined {
     if (!url || typeof url !== 'string') return undefined;
 
-    // If it's already a full URL or base64, return as is
-    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    // 1. If it's a data URL, return as is
+    if (url.startsWith('data:')) return url;
 
-    // Fallback to local API if no env provided
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
-    const domain = apiBase.replace('/api', '').replace(/\/$/, '');
-
-    // Ensure the path starts with a single slash
-    let path = url.startsWith('/') ? url : `/${url}`;
-
-    // Django specific: if path doesn't start with /media/, prepend it
-    if (!path.startsWith('/media/') && !path.startsWith('media/')) {
-        path = `/media${path}`;
+    // 2. Resolve the API/Media Domain
+    let apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    
+    // Normalize localhost vs 127.0.0.1
+    if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') {
+            apiBase = apiBase.replace(/localhost|127\.0\.0\.1/, host);
+        }
+    }
+    
+    let domain = '';
+    try {
+        domain = new URL(apiBase).origin;
+    } catch {
+        domain = apiBase.split('/api')[0].replace(/\/$/, '');
     }
 
-    // Join domain and path
-    const fullUrl = `${domain}${path}`;
+    // 3. Handle Absolute URLs
+    if (url.startsWith('http')) {
+        // Any backend media URL (regardless of scheme/host/port) is served same-origin
+        // by nginx at /media/. Stripping to the relative path avoids mixed-content (http
+        // on an https page) and unreachable internal hosts/ports (e.g. :8000 from SSR).
+        const mediaIdx = url.indexOf('/media/');
+        if (mediaIdx !== -1) {
+            const relPath = url.slice(mediaIdx).split('?')[0];
+            // In production the frontend and media share an origin (nginx serves /media/),
+            // so a relative path avoids mixed-content and unreachable internal hosts.
+            // In local dev the frontend (:3000) is a different origin than the media
+            // backend (:8000) with no /media proxy, so keep the absolute backend URL.
+            if (typeof window !== 'undefined' && window.location.origin !== domain &&
+                (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                return `${domain}${relPath}?v=${CACHE_BUSTER}`;
+            }
+            return `${relPath}?v=${CACHE_BUSTER}`;
+        }
+        // External absolute URL (CDN, social, etc.) — leave untouched
+        return url;
+    }
 
-    return fullUrl;
+    // 4. Handle Relative Paths
+    // IF it starts with /images/ or /assets/ and we are on frontend, it's a local public asset
+    if (url.startsWith('images/') || url.startsWith('assets/') || url.startsWith('/images/') || url.startsWith('/assets/') || url.startsWith('/next.svg')) {
+        return url.startsWith('/') ? url : `/${url}`;
+    }
+
+    // Clean leading slashes for backend media
+    let cleanPath = url.replace(/^\/+/, '');
+
+    // Ensure it goes through /media/
+    if (!cleanPath.startsWith('media/')) {
+        cleanPath = `media/${cleanPath}`;
+    }
+
+    // Join and return
+    return `${domain}/${cleanPath}?v=${CACHE_BUSTER}`;
 }
 
 /**

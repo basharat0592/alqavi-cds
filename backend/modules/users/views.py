@@ -43,6 +43,7 @@ def get_profile(request):
             'city': supplier.city,
             'country': supplier.country,
             'postal_code': supplier.postal_code,
+            'company': supplier.company,
             'avatar': supplier.avatar.url if supplier.avatar else None,
             'role_name': 'Supplier',
             'is_supplier': True
@@ -226,7 +227,8 @@ def create_user(request):
             company=request.data.get('business_name', ''),
             phone=request.data.get('phone', ''),
             address=request.data.get('address', ''),
-            contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip()
+            contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip(),
+            avatar=request.FILES.get('avatar') or request.data.get('avatar')
         )
         
         if request.user.is_authenticated:
@@ -265,23 +267,52 @@ def update_user(request, user_id):
     curr_user = request.user
     is_self = False
     if getattr(curr_user, 'is_supplier', False) or getattr(curr_user, 'is_customer', False):
-        is_self = (curr_user.real_id == user_id)
+        is_self = (str(curr_user.real_id) == str(user_id))
     else:
-        is_self = (curr_user.id == user_id)
+        is_self = (str(curr_user.id) == str(user_id))
     if not is_self and not curr_user.is_staff:
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     if getattr(curr_user, 'is_supplier', False) and is_self:
         from modules.supplier.models import Supplier
         obj = Supplier.objects.filter(id=user_id).first()
-        for attr, value in request.data.items():
-            if hasattr(obj, attr): setattr(obj, attr, value)
+        if not obj: return Response({'error': 'Supplier not found'}, status=404)
+        
+        # Handle regular data
+        data = request.data.copy()
+        
+        # Mapping for frontend consistency (contact -> phone)
+        if 'contact' in data and not 'phone' in data:
+            data['phone'] = data['contact']
+            
+        for attr, value in data.items():
+            if attr != 'avatar' and hasattr(obj, attr): 
+                setattr(obj, attr, value)
+        
+        # Auto-sync Name if first/last names are updated
+        if 'first_name' in data or 'last_name' in data:
+            f_name = data.get('first_name', obj.first_name or '')
+            l_name = data.get('last_name', obj.last_name or '')
+            obj.name = f"{(f_name or '').strip()} {(l_name or '').strip()}".strip() or obj.name
+            
+        # Handle files explicitly
+        if 'avatar' in request.FILES:
+            obj.avatar = request.FILES['avatar']
+        elif 'avatar' in data:
+            # Only set if it's not a string (to avoid setting a URL as a file)
+            if not isinstance(data['avatar'], str):
+                obj.avatar = data['avatar']
+                
         obj.save()
         return Response({'message': 'Supplier profile updated'})
     if getattr(curr_user, 'is_customer', False) and is_self:
         from modules.customer.models import Customer
         obj = Customer.objects.filter(id=user_id).first()
         for attr, value in request.data.items():
-            if hasattr(obj, attr): setattr(obj, attr, value)
+            if attr != 'avatar' and hasattr(obj, attr): setattr(obj, attr, value)
+        if 'avatar' in request.FILES:
+            obj.avatar = request.FILES['avatar']
+        elif 'avatar' in request.data:
+            obj.avatar = request.data['avatar']
         obj.save()
         return Response({'message': 'Customer profile updated'})
     user, err = get_or_404_response(User, id=user_id)
@@ -391,9 +422,9 @@ def change_password(request, user_id):
     from django.contrib.auth.hashers import check_password, make_password
     is_self = False
     if getattr(curr_user, 'is_supplier', False) or getattr(curr_user, 'is_customer', False):
-        is_self = (curr_user.real_id == user_id)
+        is_self = (str(curr_user.real_id) == str(user_id))
     else:
-        is_self = (curr_user.id == user_id)
+        is_self = (str(curr_user.id) == str(user_id))
     if not is_self and not curr_user.is_staff:
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     serializer = UserPasswordChangeSerializer(data=request.data)
@@ -468,7 +499,7 @@ def user_activity_log(request, user_id):
     # For Suppliers/Customers, user_id might be their real_id (Supplier PK)
     if not is_self_lookup:
         if (getattr(curr_user, 'is_supplier', False) or getattr(curr_user, 'is_customer', False)):
-            if getattr(curr_user, 'real_id', None) == user_id:
+            if str(getattr(curr_user, 'real_id', None)) == str(user_id):
                 is_self_lookup = True
 
     if is_self_lookup:
@@ -523,10 +554,35 @@ def all_activity_logs(request):
     if action:
         logs = logs.filter(action=action)
 
+    is_read = request.query_params.get('is_read')
+    if is_read is not None:
+        logs = logs.filter(is_read=is_read.lower() == 'true')
+
     limit = int(request.query_params.get('limit', 100))
     logs = logs[:limit]
     serializer = UserActivityLogSerializer(logs, many=True)
     return Response({'results': serializer.data, 'count': logs.count()})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_activity_read(request, log_id):
+    """Mark a specific activity log as read."""
+    log, err = get_or_404_response(UserActivityLog, id=log_id)
+    if err:
+        return err
+    
+    log.is_read = True
+    log.save()
+    return Response({'message': 'Log marked as read'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_all_activities_read(request):
+    """Mark all unread activity logs for the current user as read."""
+    UserActivityLog.objects.filter(is_read=False).update(is_read=True)
+    return Response({'message': 'All logs marked as read'})
 
 
 # ==================== ROLE MANAGEMENT ====================
@@ -639,7 +695,7 @@ def signup(request):
 
     # Create standalone Customer
     customer = Customer.objects.create(
-        username=email.split('@')[0],
+        username=email,
         email=email,
         password=make_password(password),
         plain_password=password,
@@ -649,7 +705,8 @@ def signup(request):
         address=request.data.get('address', ''),
         city=request.data.get('city', ''),
         country=request.data.get('country', ''),
-        postal_code=request.data.get('postal_code', '')
+        postal_code=request.data.get('postal_code', ''),
+        avatar=request.FILES.get('avatar')
     )
     
     return Response({
@@ -676,16 +733,22 @@ def signup_supplier(request):
         return Response({'email': ['Supplier with this email already exists']}, status=status.HTTP_400_BAD_REQUEST)
 
     # Create Supplier directly
+    company_name = request.data.get('company') or request.data.get('company_name') or email.split('@')[0]
+    full_name = f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip()
+    
     supplier = Supplier.objects.create(
-        username=email.split('@')[0],
+        username=request.data.get('username') or email.split('@')[0],
         email=email,
         password=make_password(password),
         plain_password=password,
-        name=request.data.get('company_name', email),
-        company=request.data.get('company_name', ''),
+        name=company_name,
+        company=company_name,
         phone=request.data.get('phone', ''),
         address=request.data.get('address', ''),
-        contact_person=f"{request.data.get('first_name', '')} {request.data.get('last_name', '')}".strip() or email
+        contact_person=full_name or company_name,
+        first_name=request.data.get('first_name', ''),
+        last_name=request.data.get('last_name', ''),
+        avatar=request.FILES.get('avatar') or request.data.get('avatar')
     )
     
     return Response({

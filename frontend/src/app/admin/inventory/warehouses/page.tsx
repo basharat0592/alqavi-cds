@@ -3,43 +3,37 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Plus, Search, Edit2, Trash2, MapPin,
+    Plus, Search, MapPin,
     Warehouse, Box, RefreshCw, Save, X,
-    ChevronRight, ChevronLeft, Trash, AlertTriangle,
-    ArrowRightLeft, Eye, History, Clock, ArrowUpRight, ArrowDownLeft
+    ChevronLeft, AlertTriangle,
+    History, Clock, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
 import { inventoryService } from '@/services/inventory.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { categoryService } from '@/services/category.service';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
+import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - WAREHOUSES
+   ADMIN DESIGN SYSTEM - WAREHOUSES
    ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
+// Thin wrapper over the kit <Button> that preserves the existing `loading` prop API.
+const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
+    <Button type={type} onClick={onClick} disabled={loading || disabled} variant={variant} className={className}>
+        {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+        {children}
+    </Button>
+);
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[13px] font-bold text-[#0f1111] mb-1">{label}{required && <span className="text-red-600 ml-0.5">*</span>}</label>
+        <label className="block text-[13px] font-bold text-slate-700 mb-1.5">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
 
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const inputCls = ui.inputBase;
 
 export default function WarehousesPage() {
     const router = useRouter();
@@ -320,95 +314,98 @@ export default function WarehousesPage() {
     }, [whInventory, prodSearch, prodSupplier]);
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
-            <div className="max-w-[1100px] mx-auto px-6 pt-5 text-left">
+        <div className="pb-20 text-left text-slate-800">
+            <div className="max-w-[1100px] mx-auto">
 
-                {/* Breadcrumb */}
-                <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-2">
-                    <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                    <ChevronRight size={10} />
-                    <span className="text-[#c45500]">Warehouses</span>
-                </div>
-
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-[22px] font-normal">
-                        {view === 'list' ? 'Warehouses List' :
+                <PageHeader
+                    hideBack={view !== 'list'}
+                    title={
+                        view === 'list' ? 'Warehouses' :
                             view === 'products' ? `Products in ${selectedWh?.name}` :
-                                (editWh ? 'Edit Warehouse' : 'Add Warehouse')}
-                    </h1>
-                    {view === 'list' ? (
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={load} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                            </Btn>
-                            <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }}><Plus size={14} /> Add Warehouse</Btn>
-                        </div>
-                    ) : (
-                        <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline flex items-center gap-1 font-bold">
-                            <ChevronLeft size={14} /> Back to Warehouses
-                        </button>
-                    )}
-                </div>
-                <div className="border-b border-[#ddd] mb-6" />
+                                (editWh ? 'Edit Warehouse' : 'Add Warehouse')
+                    }
+                    breadcrumbs={[
+                        { label: 'Console', href: '/admin/dashboard' },
+                        { label: 'Warehouses', href: view === 'list' ? undefined : '#' },
+                        ...(view !== 'list'
+                            ? [{ label: view === 'products' ? (selectedWh?.name || 'Products') : (editWh ? 'Edit' : 'Add') }]
+                            : []),
+                    ]}
+                    actions={
+                        view === 'list' ? (
+                            <>
+                                <Btn variant="secondary" onClick={load} loading={loading} className="justify-center">
+                                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                                </Btn>
+                                <Btn onClick={() => { setEditWh(null); setForm({ name: '', location: '', capacity: '' }); setView('form'); }} className="justify-center"><Plus size={14} /> Add Warehouse</Btn>
+                            </>
+                        ) : (
+                            <Button variant="ghost" onClick={() => setView('list')}>
+                                <ChevronLeft size={14} /> Back to Warehouses
+                            </Button>
+                        )
+                    }
+                />
 
                 {view === 'list' ? (
                     <div className="space-y-6">
                         {/* Search Area */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm">
+                        <Card className="p-5">
                             <div className="relative max-w-sm">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="Search warehouses..."
-                                    className={`${inputCls} pl-10 h-[35px]`}
+                                    className={`${inputCls} pl-10`}
                                 />
                             </div>
-                        </div>
+                        </Card>
 
                         {/* List Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                             {loading && warehouses.length === 0 ? (
-                                <div className="col-span-full py-20 text-center text-[13px] text-[#565959]">Loading...</div>
+                                <div className="col-span-full py-20 text-center text-[13px] text-slate-500">Loading...</div>
                             ) : filtered.length === 0 ? (
-                                <div className="col-span-full py-20 text-center text-[13px] text-[#565959]">No warehouses found.</div>
+                                <div className="col-span-full py-20 text-center text-[13px] text-slate-500">No warehouses found.</div>
                             ) : (
                                 filtered.map(wh => (
-                                    <div key={wh.id} className="bg-white border border-[#ddd] rounded-[4px] shadow-sm hover:shadow-md transition-all group overflow-hidden">
-                                        <div className="p-5 border-b border-[#eee] bg-[#fcfdff] flex items-center justify-between">
+                                    <Card key={wh.id} className="hover:shadow-md transition-all group overflow-hidden">
+                                        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white border border-[#ddd] rounded-full flex items-center justify-center text-[#007185]">
+                                                <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
                                                     <Warehouse size={20} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-[15px] group-hover:text-[#007185] truncate max-w-[150px]">{wh.name}</h3>
+                                                    <h3 className="font-bold text-[15px] text-slate-900 group-hover:text-indigo-600 truncate max-w-[150px]">{wh.name}</h3>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, capacity: wh.capacity || '' }); setView('form'); }} className="p-1.5 text-[#565959] hover:bg-[#f3f3f3] rounded border border-[#ddd] bg-white"><Edit2 size={14} /></button>
-                                                <button onClick={() => setDeleteWh(wh)} className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-[#ddd] bg-white"><Trash2 size={14} /></button>
+                                            <div className="flex items-center justify-end gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setEditWh(wh); setForm({ name: wh.name, location: wh.location, capacity: wh.capacity || '' }); setView('form'); }} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                <span className="text-slate-300">|</span>
+                                                <button onClick={() => setDeleteWh(wh)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </div>
                                         <div className="p-5 space-y-3">
-                                            <div className="flex items-start gap-2 text-[13px] text-[#565959] h-10 line-clamp-2">
-                                                <MapPin size={14} className="opacity-40 shrink-0 mt-0.5" /> {wh.location}
+                                            <div className="flex items-start gap-2 text-[13px] text-slate-600 h-10 line-clamp-2">
+                                                <MapPin size={14} className="text-slate-400 shrink-0 mt-0.5" /> {wh.location}
                                             </div>
-                                            <div className="pt-3 border-t border-[#f7f7f7] flex items-center justify-between">
+                                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                                                 <button
                                                     onClick={() => handleViewProducts(wh)}
-                                                    className="text-[11px] font-bold text-[#007185] hover:text-[#c45500] uppercase tracking-widest hover:underline"
+                                                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-widest hover:underline"
                                                 >
                                                     {wh.stock_count || 0} Products
                                                 </button>
                                                 <button
                                                     onClick={() => handleOpenAddProduct(wh)}
-                                                    className="text-[11px] font-bold text-[#007185] hover:text-[#c45500] flex items-center gap-1"
+                                                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
                                                 >
                                                     <Plus size={12} /> Add Product
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
+                                    </Card>
                                 ))
                             )}
                         </div>
@@ -417,35 +414,35 @@ export default function WarehousesPage() {
                     /* Products In Warehouse View */
                     <div className="space-y-6">
                         {/* Filters Bar */}
-                        <div className="bg-white border border-[#ddd] rounded-[4px] p-5 shadow-sm flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                            <div className="relative flex-1 min-w-[200px]">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                        <Card className="p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     value={prodSearch}
                                     onChange={e => setProdSearch(e.target.value)}
                                     placeholder="Search products..."
-                                    className={`${inputCls} pl-10 h-[35px]`}
+                                    className={`${inputCls} pl-10`}
+
                                 />
                             </div>
-                            <div className="h-8 w-px bg-[#eee] mx-2 hidden sm:block" />
-                            <div className="relative min-w-[200px]">
+                            <div className="relative w-full sm:w-[200px]">
                                 <select
                                     value={prodSupplier}
                                     onChange={e => setProdSupplier(e.target.value)}
-                                    className={`${inputCls} h-[35px] font-bold cursor-pointer pr-8`}
+                                    className={`${inputCls} font-bold cursor-pointer pr-8`}
                                 >
                                     <option value="">Select Supplier to Filter</option>
                                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.company || s.name}</option>)}
                                 </select>
                             </div>
-                            <Btn variant="secondary" onClick={handleExportCSV} className="ml-auto">
+                            <Btn variant="secondary" onClick={handleExportCSV} className="w-full sm:w-auto justify-center shrink-0">
                                 <Box size={14} /> Export CSV
                             </Btn>
-                        </div>
+                        </Card>
 
-                        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden animate-in fade-in duration-500">
-                            <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
-                                <h2 className="text-[14px] font-bold text-[#111]">Inventory Details ({
+                        <Card className="overflow-hidden animate-in fade-in duration-500">
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                                <h2 className="text-[14px] font-bold text-slate-900">Inventory Details ({
                                     whInventory.filter(item => {
                                         const ms = (item.product_name || '').toLowerCase().includes(prodSearch.toLowerCase());
                                         const msup = !prodSupplier || String(item.supplier) === String(prodSupplier);
@@ -464,70 +461,69 @@ export default function WarehousesPage() {
                                 ) : (
                                     <table className="w-full text-left text-[13px] border-collapse">
                                         <thead>
-                                            <tr className="border-b border-[#ddd] bg-[#f7f8fa] text-[11px] font-bold text-[#565959] uppercase tracking-wider">
-                                                <th className="px-6 py-3">Product Name</th>
-                                                <th className="px-6 py-3">Supplier</th>
-                                                <th className="px-6 py-3 text-right">Quantity</th>
-                                                <th className="px-6 py-3 text-right">Unit Price</th>
-                                                <th className="px-6 py-3 text-right">Received</th>
-                                                <th className="px-6 py-3 text-right">Actions</th>
+                                            <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3">Product Name</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3">Supplier</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Quantity</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Unit Price</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Received</th>
+                                                <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-[#eee]">
+                                        <tbody className="divide-y divide-slate-100">
                                             {groupedWhInventory.map((item: any) => (
-                                                <tr key={item.id} className="hover:bg-[#fcfdff] transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-baseline gap-1.5">
-                                                            <div className="font-bold text-[#007185]">{item.product_name}</div>
+                                                <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4">
+                                                        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                                                            <div className="font-bold text-indigo-600">{item.product_name}</div>
                                                             {(item.weight || item.size) && (
-                                                                <div className="text-[10px] text-[#e77600] font-black uppercase tracking-tight shrink-0">
+                                                                <div className="text-[10px] text-indigo-500 font-black uppercase tracking-tight shrink-0">
                                                                     — {item.weight}{item.weight && item.size ? ' • ' : ''}{item.size}
                                                                 </div>
                                                             )}
                                                         </div>
                                                         <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                                                            {item.category_name || 'No Category'} • SKU: {item.sku || '---'}
+                                                            {item.category_name || 'No Category'} <span className="hidden sm:inline">• SKU: {item.sku || '---'}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-[13px] text-[#111] font-medium">{item.supplier_name || 'Generic'}</div>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4">
+                                                        <div className="text-[13px] text-slate-700 font-medium">{item.supplier_name || 'Generic'}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="font-bold text-[15px] text-[#111]">{(item.total_quantity || item.current_stock || 0).toLocaleString()}</div>
-                                                        <div className="text-[10px] text-[#007600] font-bold uppercase tracking-tighter">{item.purchase_type === 'carton' ? `${item.cartons} Boxes` : 'Loose'}</div>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right tabular-nums">
+                                                        <div className="font-bold text-[14px] sm:text-[15px] text-slate-900">{(item.total_quantity || item.current_stock || 0).toLocaleString()}</div>
+                                                        <div className="hidden sm:block text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">{item.purchase_type === 'carton' ? `${item.cartons} Boxes` : 'Loose'}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right font-bold text-[#B12704]">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right font-bold text-slate-900 whitespace-nowrap tabular-nums">
                                                         Rs. {(item.price_per_item || item.unit_price || item.price || 0).toLocaleString()}
                                                     </td>
-                                                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                                                        <div className="text-[12px] text-[#565959] font-bold">{new Date(item.date).toLocaleDateString()}</div>
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap tabular-nums">
+                                                        <div className="text-[12px] text-slate-500 font-bold">{new Date(item.date).toLocaleDateString()}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
+                                                    <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-2.5">
                                                             <button
                                                                 onClick={() => handleViewMovements(item)}
-                                                                className="p-1.5 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all"
-                                                                title="View Movement History"
+                                                                className="text-[12px] font-bold text-slate-600 hover:underline"
                                                             >
-                                                                <Eye size={16} />
+                                                                History
                                                             </button>
+                                                            <span className="text-slate-300">|</span>
                                                             <button
                                                                 onClick={() => {
                                                                     setMoveStock(item);
                                                                     setTransferQty(item.total_quantity);
                                                                     setTransferDate(new Date().toISOString().slice(0, 10));
                                                                 }}
-                                                                className="p-1.5 text-[#007185] hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 transition-all"
-                                                                title="Move to another Warehouse"
+                                                                className="text-[12px] font-bold text-slate-600 hover:underline"
                                                             >
-                                                                <ArrowRightLeft size={16} />
+                                                                Move
                                                             </button>
+                                                            <span className="text-slate-300">|</span>
                                                             <button
                                                                 onClick={() => setRemoveStock(item)}
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-transparent hover:border-red-100 transition-all"
-                                                                title="Remove from Warehouse"
+                                                                className="text-[12px] font-bold text-[#c40000] hover:underline"
                                                             >
-                                                                <Trash2 size={16} />
+                                                                Remove
                                                             </button>
                                                         </div>
                                                     </td>
@@ -537,9 +533,9 @@ export default function WarehousesPage() {
                                     </table>
                                 )}
                             </div>
-                        </div>
+                        </Card>
                         <div className="flex justify-end">
-                            <button onClick={() => setView('list')} className="text-[13px] text-[#007185] hover:text-[#c45500] hover:underline font-bold">
+                            <button onClick={() => setView('list')} className="text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline font-bold">
                                 Close & Return to Warehouses
                             </button>
                         </div>
@@ -548,9 +544,9 @@ export default function WarehousesPage() {
                     /* Entry Form */
                     <div className="flex flex-col lg:flex-row gap-6 items-start">
                         <div className="flex-1 space-y-6">
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
-                                    <h2 className="text-[14px] font-bold">Details</h2>
+                            <Card className="overflow-hidden">
+                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+                                    <h2 className="text-[14px] font-bold text-slate-900">Details</h2>
                                 </div>
                                 <div className="p-6 space-y-5">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -569,171 +565,158 @@ export default function WarehousesPage() {
                                         </Field>
                                     </div>
                                 </div>
-                            </div>
+                            </Card>
                         </div>
 
                         <div className="w-full lg:w-[280px] shrink-0 space-y-4">
-                            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                                <div className="px-5 py-4 border-b border-[#ddd] bg-[#f7f8fa]">
-                                    <h3 className="text-[14px] font-bold text-center">Save</h3>
+                            <Card className="overflow-hidden">
+                                <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+                                    <h3 className="text-[14px] font-bold text-center text-slate-900">Save</h3>
                                 </div>
                                 <div className="p-5 space-y-4">
-                                    <Btn className="w-full h-[35px] text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
+                                    <Btn className="w-full text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
                                         <Save size={14} /> {editWh ? 'Update' : 'Save'}
                                     </Btn>
-                                    <button onClick={() => setView('list')} className="w-full text-[12px] text-[#565959] hover:text-[#c45500] hover:underline text-center">
+                                    <button onClick={() => setView('list')} className="w-full text-[12px] text-slate-500 hover:text-indigo-600 hover:underline text-center">
                                         Cancel
                                     </button>
                                 </div>
-                            </div>
+                            </Card>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Add Stock Modal */}
-            {quickAddWh && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-[8px] border border-[#ddd] overflow-hidden w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
-                            <h3 className="text-[16px] font-bold text-[#111]">Add Product to {quickAddWh.name}</h3>
-                            <button onClick={() => setQuickAddWh(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
-                        </div>
-                        <form onSubmit={handleAddStock} className="p-6 space-y-4 text-left">
-                            <Field label="Search & Select Product" required>
-                                <select
-                                    className={`${inputCls} h-[40px] font-bold text-[14px]`}
-                                    value={stockForm.product}
-                                    onChange={(e) => {
-                                        const p = allProducts.find(x => String(x.id) === e.target.value);
-                                        if (p) {
-                                            setStockForm(f => ({
-                                                ...f,
-                                                product: e.target.value,
-                                                product_name: p.name,
-                                                supplier: p.supplier_id || p.supplier || '',
-                                                category: p.category || '',
-                                                price_per_item: p.cost_price || p.price,
-                                                total_quantity: p.quantity || 1
-                                            }));
-                                        }
-                                    }}
-                                >
-                                    <option value="">-- Choose Product --</option>
-                                    {allProducts
-                                        .filter(p => !whProductIds.has(p.id))
-                                        .map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} ({p.sku || 'No SKU'}) - {p.supplier_name || 'Generic'}</option>
-                                        ))}
-                                </select>
-                            </Field>
+            <Modal open={!!quickAddWh} onClose={() => setQuickAddWh(null)} title={quickAddWh ? `Add Product to ${quickAddWh.name}` : ''}>
+                <form onSubmit={handleAddStock} className="space-y-4 text-left">
+                    <Field label="Search & Select Product" required>
+                        <select
+                            className={`${inputCls} font-bold text-[14px]`}
+                            value={stockForm.product}
+                            onChange={(e) => {
+                                const p = allProducts.find(x => String(x.id) === e.target.value);
+                                if (p) {
+                                    setStockForm(f => ({
+                                        ...f,
+                                        product: e.target.value,
+                                        product_name: p.name,
+                                        supplier: p.supplier_id || p.supplier || '',
+                                        category: p.category || '',
+                                        price_per_item: p.cost_price || p.price,
+                                        total_quantity: p.quantity || 1
+                                    }));
+                                }
+                            }}
+                        >
+                            <option value="">-- Choose Product --</option>
+                            {allProducts
+                                .filter(p => !whProductIds.has(p.id))
+                                .map(p => (
+                                    <option key={p.id} value={p.id}>{p.name} ({p.sku || 'No SKU'}) - {p.supplier_name || 'Generic'}</option>
+                                ))}
+                        </select>
+                    </Field>
 
-                            <div className="pt-4 flex gap-2">
-                                <Btn type="submit" className="flex-1 h-[45px] text-[15px] justify-center" loading={addingStock} disabled={!stockForm.product}>
-                                    <Plus size={18} /> Add Selected Product Now
-                                </Btn>
-                                <Btn variant="secondary" onClick={() => setQuickAddWh(null)} className="h-[45px]">Cancel</Btn>
-                            </div>
-                        </form>
+                    <div className="pt-4 flex gap-2">
+                        <Btn type="submit" className="flex-1 text-[15px] justify-center" loading={addingStock} disabled={!stockForm.product}>
+                            <Plus size={18} /> Add Selected Product Now
+                        </Btn>
+                        <Btn variant="secondary" onClick={() => setQuickAddWh(null)}>Cancel</Btn>
                     </div>
-                </div>
-            )}
+                </form>
+            </Modal>
 
             {/* Move Product Modal */}
-            {moveStock && (
-                <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] overflow-hidden w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
-                            <h3 className="text-[15px] font-bold text-[#111]">Move Product</h3>
-                            <button onClick={() => setMoveStock(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
+            <Modal open={!!moveStock} onClose={() => setMoveStock(null)} title="Move Product" size="sm">
+                {moveStock && (
+                    <div className="space-y-5">
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/70 mb-2">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Product to Move</div>
+                            <div className="text-[14px] font-bold text-slate-900">{moveStock.product_name}</div>
+                            <div className="text-[11px] text-indigo-600 font-medium mt-1">Available: {moveStock.total_quantity} Units</div>
                         </div>
-                        <div className="p-6 space-y-5">
-                            <div className="bg-slate-50 p-4 rounded border border-[#eee] mb-2">
-                                <div className="text-[10px] font-bold text-[#565959] uppercase tracking-wider mb-1">Product to Move</div>
-                                <div className="text-[14px] font-bold text-[#111]">{moveStock.product_name}</div>
-                                <div className="text-[11px] text-[#007185] font-medium mt-1">Available: {moveStock.total_quantity} Units</div>
-                            </div>
 
-                            <Field label="Units to Transfer" required>
-                                <input
-                                    type="number"
-                                    className={inputCls + " h-[38px] font-bold"}
-                                    value={transferQty}
-                                    onChange={e => setTransferQty(e.target.value)}
-                                    max={moveStock.total_quantity}
-                                    min={1}
-                                />
-                            </Field>
+                        <Field label="Units to Transfer" required>
+                            <input
+                                type="number"
+                                className={inputCls + " font-bold"}
+                                value={transferQty}
+                                onChange={e => setTransferQty(e.target.value)}
+                                max={moveStock.total_quantity}
+                                min={1}
+                            />
+                        </Field>
 
-                            <Field label="Transfer Date" required>
-                                <input
-                                    type="date"
-                                    className={inputCls + " h-[38px]"}
-                                    value={transferDate}
-                                    onChange={e => setTransferDate(e.target.value)}
-                                />
-                            </Field>
+                        <Field label="Transfer Date" required>
+                            <input
+                                type="date"
+                                className={inputCls}
+                                value={transferDate}
+                                onChange={e => setTransferDate(e.target.value)}
+                            />
+                        </Field>
 
-                            <Field label="Destination Warehouse" required>
-                                <select
-                                    className={`${inputCls} h-[38px] cursor-pointer`}
-                                    value={movingToWh}
-                                    onChange={e => setMovingToWh(e.target.value)}
-                                >
-                                    <option value="">-- Select Destination --</option>
-                                    {warehouses
-                                        .filter(w => String(w.id) !== String(selectedWh?.id))
-                                        .map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                                </select>
-                            </Field>
+                        <Field label="Destination Warehouse" required>
+                            <select
+                                className={`${inputCls} cursor-pointer`}
+                                value={movingToWh}
+                                onChange={e => setMovingToWh(e.target.value)}
+                            >
+                                <option value="">-- Select Destination --</option>
+                                {warehouses
+                                    .filter(w => String(w.id) !== String(selectedWh?.id))
+                                    .map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                            </select>
+                        </Field>
 
-                            <div className="pt-4 flex gap-2">
-                                <Btn
-                                    onClick={handleConfirmMove}
-                                    className="flex-1 h-[42px] justify-center text-[14px] font-bold"
-                                    loading={moving}
-                                    disabled={!movingToWh || !transferQty}
-                                >
-                                    Initialize Transfer
-                                </Btn>
-                                <Btn variant="secondary" onClick={() => setMoveStock(null)} className="h-[42px]">Cancel</Btn>
-                            </div>
+                        <div className="pt-4 flex gap-2">
+                            <Btn
+                                onClick={handleConfirmMove}
+                                className="flex-1 justify-center text-[14px] font-bold"
+                                loading={moving}
+                                disabled={!movingToWh || !transferQty}
+                            >
+                                Initialize Transfer
+                            </Btn>
+                            <Btn variant="secondary" onClick={() => setMoveStock(null)}>Cancel</Btn>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
 
             {/* Movements History Modal */}
             {viewMovements && (
-                <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-                    <div className="bg-white rounded-[8px] border border-[#ddd] overflow-hidden w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                <div className="fixed inset-0 z-[700] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewMovements(null)} />
+                    <div className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-white border border-[#ddd] rounded-full flex items-center justify-center text-[#007185]">
+                                <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
                                     <History size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="text-[16px] font-bold text-[#111]">Movement History in {selectedWh?.name}</h3>
-                                    <p className="text-[11px] text-[#565959] font-medium">{viewMovements.product_name} • {viewMovements.supplier_name}</p>
+                                    <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">Movement History in {selectedWh?.name}</h3>
+                                    <p className="text-[11px] text-slate-500 font-medium">{viewMovements.product_name} • {viewMovements.supplier_name}</p>
                                 </div>
                             </div>
-                            <button onClick={() => setViewMovements(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
+                            <button onClick={() => setViewMovements(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={16} /></button>
                         </div>
-                        <div className="p-6 max-h-[60vh] overflow-y-auto bg-[#F8F9FA]">
+                        <div className="p-6 max-h-[60vh] overflow-y-auto bg-[#F8FAFC]">
                             {loadingMovements ? (
                                 <div className="py-20 text-center">
-                                    <RefreshCw className="h-8 w-8 animate-spin mx-auto text-[#007185] mb-2" />
-                                    <p className="text-[13px] text-[#565959]">Fetching movement logs...</p>
+                                    <RefreshCw className="h-8 w-8 animate-spin mx-auto text-indigo-600 mb-2" />
+                                    <p className="text-[13px] text-slate-500">Fetching movement logs...</p>
                                 </div>
                             ) : movements.length === 0 ? (
-                                <div className="py-20 text-center text-[#565959] italic">No movement records found in this warehouse.</div>
+                                <div className="py-20 text-center text-slate-500 italic">No movement records found in this warehouse.</div>
                             ) : (
                                 <div className="space-y-4">
                                     {movements.map((m: any) => (
-                                        <div key={m.id} className="bg-white border border-[#ddd] rounded-[6px] p-4 shadow-sm flex items-start gap-4">
+                                        <div key={m.id} className="bg-white border border-slate-200/70 rounded-xl p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex items-start gap-4">
                                             <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                                                m.movement_type === 'PURCHASE' ? 'bg-green-50 text-green-600 border border-green-100' :
-                                                m.movement_type === 'TRANSFER_IN' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                                m.movement_type === 'PURCHASE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                                m.movement_type === 'TRANSFER_IN' ? 'bg-sky-50 text-sky-600 border border-sky-100' :
                                                 m.movement_type === 'TRANSFER_OUT' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                                                 'bg-slate-50 text-slate-600 border border-slate-100'
                                             }`}>
@@ -745,32 +728,32 @@ export default function WarehousesPage() {
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-[14px] text-[#111]">{m.movement_type_display}</span>
+                                                        <span className="font-bold text-[14px] text-slate-900">{m.movement_type_display}</span>
                                                     </div>
-                                                    <span className={`font-bold text-[15px] ${m.quantity > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                    <span className={`font-bold text-[15px] tabular-nums ${m.quantity > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                                                         {m.quantity > 0 ? '+' : ''}{m.quantity} Units
                                                     </span>
                                                 </div>
-                                                <div className="text-[12px] text-[#565959] flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
+                                                <div className="text-[12px] text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
                                                     <span className="flex items-center gap-1 font-medium"><Clock size={12} className="opacity-60" /> {new Date(m.created_at).toLocaleString()}</span>
                                                     {m.movement_type === 'PURCHASE' && m.supplier_name && (
                                                         <span className="flex items-center gap-1 font-medium italic">
-                                                            Supplier: <span className="text-[#007185] not-italic">{m.supplier_name}</span>
+                                                            Supplier: <span className="text-indigo-600 not-italic">{m.supplier_name}</span>
                                                         </span>
                                                     )}
                                                     {m.from_warehouse_name && (
                                                         <span className="flex items-center gap-1 font-medium italic">
-                                                            From: <span className="text-[#007185] not-italic">{m.from_warehouse_name}</span>
+                                                            From: <span className="text-indigo-600 not-italic">{m.from_warehouse_name}</span>
                                                         </span>
                                                     )}
                                                     {m.to_warehouse_name && (
                                                         <span className="flex items-center gap-1 font-medium italic">
-                                                            To: <span className="text-[#007185] not-italic">{m.to_warehouse_name}</span>
+                                                            To: <span className="text-indigo-600 not-italic">{m.to_warehouse_name}</span>
                                                         </span>
                                                     )}
                                                 </div>
                                                 {m.description && (
-                                                    <div className="text-[11px] bg-slate-50 p-2 rounded border border-[#eee] text-[#333] italic">
+                                                    <div className="text-[11px] bg-slate-50 p-2 rounded-lg border border-slate-100 text-slate-700 italic">
                                                         "{m.description}"
                                                     </div>
                                                 )}
@@ -780,7 +763,7 @@ export default function WarehousesPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="px-6 py-4 border-t border-[#ddd] bg-[#f7f8fa] flex justify-end">
+                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex justify-end">
                             <Btn variant="secondary" onClick={() => setViewMovements(null)}>Close History</Btn>
                         </div>
                     </div>
@@ -788,58 +771,59 @@ export default function WarehousesPage() {
             )}
 
             {/* Remove Product Confirmation Modal */}
-            {removeStock && (
-                <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-2xl text-center animate-in zoom-in-95 duration-200">
-                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
-                            <AlertTriangle size={24} className="text-red-600" />
+            <Modal open={!!removeStock} onClose={() => setRemoveStock(null)} size="sm">
+                {removeStock && (
+                    <div className="text-center py-2">
+                        <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                            <AlertTriangle size={24} className="text-rose-600" />
                         </div>
-                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Remove Product?</h3>
-                        <p className="text-[13px] text-[#565959]">
-                            Remove <span className="font-bold text-[#111]">"{removeStock.product_name}"</span> from this warehouse?
+                        <h3 className="text-[17px] font-bold text-slate-900 mb-2">Remove Product?</h3>
+                        <p className="text-[13px] text-slate-600">
+                            Remove <span className="font-bold text-slate-900">"{removeStock.product_name}"</span> from this warehouse?
                         </p>
                         <div className="mt-6 space-y-2">
-                            <button
+                            <Button
+                                variant="danger"
                                 onClick={handleConfirmRemove}
                                 disabled={removing}
-                                className="w-full h-[35px] bg-red-600 text-white border border-red-700 rounded-[3px] text-[13px] font-bold shadow-sm active:bg-red-800 disabled:opacity-50"
+                                className="w-full"
                             >
                                 {removing ? 'Removing...' : 'Yes, Remove Now'}
-                            </button>
+                            </Button>
                             <button
                                 onClick={() => setRemoveStock(null)}
                                 disabled={removing}
-                                className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline font-bold"
+                                className="w-full text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline font-bold"
                             >
                                 Cancel
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
 
             {/* Delete Modal */}
-            {deleteWh && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-xl text-center">
-                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
-                            <AlertTriangle size={24} className="text-red-600" />
+            <Modal open={!!deleteWh} onClose={() => setDeleteWh(null)} size="sm">
+                {deleteWh && (
+                    <div className="text-center py-2">
+                        <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                            <AlertTriangle size={24} className="text-rose-600" />
                         </div>
-                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Delete?</h3>
-                        <p className="text-[13px] text-[#565959]">
-                            Delete <span className="font-bold text-[#111]">"{deleteWh.name}"</span>?
+                        <h3 className="text-[17px] font-bold text-slate-900 mb-2">Delete?</h3>
+                        <p className="text-[13px] text-slate-600">
+                            Delete <span className="font-bold text-slate-900">"{deleteWh.name}"</span>?
                         </p>
                         <div className="mt-6 space-y-2">
-                            <button onClick={confirmDelete} className="w-full h-[31px] bg-red-600 text-white border border-red-700 rounded-[3px] text-[13px] font-medium shadow-sm active:bg-red-800">
+                            <Button variant="danger" onClick={confirmDelete} className="w-full">
                                 {deleting ? 'Deleting...' : 'Delete Now'}
-                            </button>
-                            <button onClick={() => setDeleteWh(null)} className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline">
+                            </Button>
+                            <button onClick={() => setDeleteWh(null)} className="w-full text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline">
                                 Cancel
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
         </div>
     );
 }

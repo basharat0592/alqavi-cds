@@ -1,0 +1,13 @@
+.venv
+venv
+requirements/venv
+__pycache__
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.git
+db.sqlite3
+scratch
+.env
+*.log
+media

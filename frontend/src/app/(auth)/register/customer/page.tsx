@@ -4,33 +4,52 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authService } from '@/lib/auth';
-import { Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import {
+    Loader2, AlertTriangle, ArrowLeft, Camera,
+    Phone, Mail, MapPin, Eye, EyeOff, Globe, X, UserCircle2
+} from 'lucide-react';
 
-const INPUT = (err?: boolean) =>
-    `w-full px-3 py-2 bg-white border rounded text-sm outline-none transition-all
-    focus:border-[#F59E0B] focus:shadow-[0_0_3px_2px_rgba(29,78,216,0.3)] placeholder:text-gray-400
-    ${err ? 'border-red-600' : 'border-[#a6a6a6]'}`;
+const inputCls = "w-full h-10 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/5 transition-all duration-300 outline-none font-medium";
 
-const LABEL = 'block text-xs font-bold text-gray-900 mb-1 text-left';
+const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+    <div className="w-full">
+        <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 text-left">
+            {label}{required && <span className="text-red-600 ml-0.5">*</span>}
+        </label>
+        {children}
+    </div>
+);
 
 export default function CustomerRegisterPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPw, setShowPw] = useState(false);
+    const [showConfirmPw, setShowConfirmPw] = useState(false);
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
         username: '',
         email: '',
         phone: '',
+        address: '',
+        city: '',
+        country: '',
+        postal_code: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        avatar: null as File | null
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(p => ({ ...p, [name]: value }));
         if (error) setError(null);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        setFormData(p => ({ ...p, avatar: file }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -46,11 +65,16 @@ export default function CustomerRegisterPage() {
             await authService.register({
                 first_name: formData.first_name,
                 last_name: formData.last_name,
-                username: formData.username || formData.email.split('@')[0],
+                username: formData.username || formData.email,
                 email: formData.email,
                 phone: formData.phone,
+                address: formData.address,
+                city: formData.city,
+                country: formData.country,
+                postal_code: formData.postal_code,
                 password: formData.password,
-                password_confirm: formData.password
+                password_confirm: formData.password,
+                avatar: formData.avatar
             });
             router.push('/login?registered=true');
         } catch (err: any) {
@@ -61,112 +85,157 @@ export default function CustomerRegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f1f1f1] flex flex-col font-sans">
-            <header className="bg-white border-b border-[#ddd] py-4 shadow-sm flex items-center justify-center">
-                <Link href="/" className="flex flex-col items-center">
-                    <span className="font-extrabold text-2xl text-[#F59E0B] tracking-tighter">AL-QAVI</span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Customer Registration</span>
-                </Link>
-            </header>
+        <div className="h-screen bg-white flex font-sans overflow-hidden">
+            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-6 md:py-8 relative z-10">
+                <div className="max-w-lg mx-auto w-full animate-in fade-in slide-in-from-left-4 duration-700">
+                    <div className="mb-8 text-left pt-4 pl-2">
+                        <div className="flex items-center justify-between mb-3">
+                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+                                <span className="relative inline-block pb-1 mr-2">
+                                    Customer
+                                    <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#13B0D1] rounded-full" />
+                                </span>
+                                <span className="text-[#13B0D1]">Register</span>
+                            </h1>
+                            <UserCircle2 className="text-[#13B0D1]" size={32} />
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
+                            Discover our premium cosmetic collection
+                        </p>
+                    </div>
 
-            <main className="flex-1 flex flex-col items-center py-12 px-4">
-                <div className="w-full max-w-sm">
-                    <div className="bg-white border border-[#ddd] rounded shadow-sm p-6 mb-4">
-                        <Link href="/register" className="text-xs text-[#0066c0] hover:text-[#F59E0B] hover:underline flex items-center gap-1 mb-4 text-left">
-                            <ArrowLeft className="h-3 w-3" /> All Options
-                        </Link>
-                        
-                        <h1 className="text-2xl font-bold text-slate-800 mb-5 tracking-tight text-left">Create Account</h1>
-
+                    <div className="bg-white px-2 py-4">
                         {error && (
-                            <div className="flex items-start gap-2 border border-[#c40000] bg-white rounded p-3 mb-5 text-sm text-left">
-                                <AlertTriangle className="h-4 w-4 text-[#c40000] flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-[#c40000] font-bold">There was a problem</p>
-                                    <p className="text-gray-800 text-xs mt-1 leading-relaxed">{error}</p>
-                                </div>
+                            <div className="mb-6 flex items-start gap-3 border border-red-100 bg-red-50/50 rounded-xl p-4 animate-in shake duration-500">
+                                <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                                <p className="text-gray-800 text-sm leading-relaxed">{error}</p>
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className={LABEL}>Your Name</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input
-                                        name="first_name" type="text" required
-                                        value={formData.first_name} onChange={handleChange}
-                                        placeholder="First Name"
-                                        className={INPUT()}
-                                    />
-                                    <input
-                                        name="last_name" type="text" required
-                                        value={formData.last_name} onChange={handleChange}
-                                        placeholder="Last Name"
-                                        className={INPUT()}
-                                    />
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                                <div className="md:col-span-1">
+                                    <div className="relative w-full aspect-square bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden group hover:border-[#13B0D1] transition-colors">
+                                        {formData.avatar ? (
+                                            <>
+                                                <img src={URL.createObjectURL(formData.avatar)} className="w-full h-full object-cover" alt="Avatar" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(p => ({ ...p, avatar: null }))}
+                                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
+                                                <Camera className="text-slate-300 group-hover:text-[#13B0D1]" size={18} />
+                                                <span className="text-[9px] font-bold uppercase text-slate-400 mt-2">Upload</span>
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <Field label="First Name" required>
+                                        <input name="first_name" className={inputCls} value={formData.first_name} onChange={handleChange} placeholder="Ali" required />
+                                    </Field>
+                                    <Field label="Last Name" required>
+                                        <input name="last_name" className={inputCls} value={formData.last_name} onChange={handleChange} placeholder="Khan" required />
+                                    </Field>
+                                    <div className="md:col-span-2">
+                                        <Field label="Phone Number">
+                                            <div className="relative">
+                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                                <input name="phone" className={`${inputCls} pl-10`} value={formData.phone} onChange={handleChange} placeholder="+92 3XX XXXXXXX" />
+                                            </div>
+                                        </Field>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className={LABEL}>Email</label>
-                                <input
-                                    name="email" type="email" required
-                                    value={formData.email} onChange={handleChange}
-                                    placeholder="example@mail.com"
-                                    className={INPUT()}
-                                />
-                            </div>
-
-                            <div>
-                                <label className={LABEL}>Mobile Number</label>
-                                <input
-                                    name="phone" type="text" required
-                                    value={formData.phone} onChange={handleChange}
-                                    placeholder="0300-1234567"
-                                    className={INPUT()}
-                                />
-                            </div>
-
-                            <div>
-                                <label className={LABEL}>Password</label>
-                                <input
-                                    name="password" type="password" required
-                                    value={formData.password} onChange={handleChange}
-                                    placeholder="At least 8 characters"
-                                    className={INPUT()}
-                                />
-                            </div>
-
-                            <div>
-                                <label className={LABEL}>Confirm Password</label>
-                                <input
-                                    name="confirmPassword" type="password" required
-                                    value={formData.confirmPassword} onChange={handleChange}
-                                    className={INPUT()}
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="md:col-span-2">
+                                    <Field label="Email Address" required>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                            <input name="email" type="email" className={`${inputCls} pl-10`} value={formData.email} onChange={handleChange} placeholder="customer@email.com" required />
+                                        </div>
+                                    </Field>
+                                </div>
+                                <Field label="Password" required>
+                                    <div className="relative">
+                                        <input name="password" type={showPw ? 'text' : 'password'} className={inputCls} value={formData.password} onChange={handleChange} required />
+                                        <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#13B0D1] transition-colors">{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                    </div>
+                                </Field>
+                                <Field label="Confirm" required>
+                                    <div className="relative">
+                                        <input name="confirmPassword" type={showConfirmPw ? 'text' : 'password'} className={inputCls} value={formData.confirmPassword} onChange={handleChange} required />
+                                        <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#13B0D1] transition-colors">{showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                    </div>
+                                </Field>
+                                <div className="md:col-span-2">
+                                    <Field label="Full Address">
+                                        <div className="relative">
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                            <input name="address" className={`${inputCls} pl-10`} value={formData.address} onChange={handleChange} placeholder="Street, Sector, Area..." />
+                                        </div>
+                                    </Field>
+                                </div>
+                                <Field label="City">
+                                    <input name="city" className={inputCls} value={formData.city} onChange={handleChange} placeholder="City" />
+                                </Field>
+                                <Field label="Country">
+                                    <div className="relative">
+                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                        <input name="country" className={`${inputCls} pl-10`} value={formData.country} onChange={handleChange} placeholder="PK" />
+                                    </div>
+                                </Field>
                             </div>
 
                             <button type="submit" disabled={loading}
-                                className="w-full py-1.5 bg-[#F59E0B] hover:bg-[#1E40AF] border border-[#1E3A8A] rounded shadow-sm text-sm font-bold text-white transition-colors mt-6">
-                                {loading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" /> : 'Continue'}
+                                className="w-full h-12 bg-[#13B0D1] hover:bg-[#119ab8] text-white rounded-xl text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#13B0D1]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60">
+                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : (
+                                    <>Register Account <ArrowLeft className="h-4 w-4 rotate-180" /></>
+                                )}
                             </button>
+
+                            <div className="text-center pt-4 border-t border-slate-50">
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
+                                    Already registered? <Link href="/login" className="text-[#13B0D1] hover:underline ml-1">Sign In</Link>
+                                </p>
+                            </div>
                         </form>
-
-                        <p className="text-[11px] text-gray-800 mt-6 leading-relaxed text-left">
-                            By creating an account, you agree to Al-Qavi's <span className="text-[#0066c0] hover:underline cursor-pointer">Conditions of Use</span> and <span className="text-[#0066c0] hover:underline cursor-pointer">Privacy Notice</span>.
-                        </p>
-
-                        <div className="flex items-center gap-2 my-6">
-                            <hr className="flex-1 border-[#eee]" />
-                        </div>
-
-                        <p className="text-xs text-gray-800 font-bold mb-2 text-left">Already have an account?</p>
-                        <Link href="/login" className="block w-full text-center py-1 border border-slate-200 bg-[#e7e9ec] hover:bg-[#d8dadd] rounded text-xs shadow-sm shadow-black/5 transition-all">
-                            Sign In
-                        </Link>
                     </div>
                 </div>
-            </main>
+
+                <footer className="mt-auto pt-6 text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center border-t border-slate-50">
+                    © 2026 Al-Qavi Hub Distribution
+                </footer>
+            </div>
+
+            <div className="hidden lg:block lg:flex-1 relative overflow-hidden">
+                <img
+                    src="/images/admin-security-bg.png.png"
+                    className="absolute inset-0 w-full h-full object-cover scale-105"
+                    alt="Branding"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#13B0D1]/80 via-transparent to-black/60" />
+                <div className="absolute inset-0 p-20 flex flex-col justify-end text-white z-20">
+                    <div className="max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        <div className="w-16 h-1 bg-white mb-8 rounded-full" />
+                        <h2 className="text-5xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-6">
+                            Luxury <br />
+                            <span className="text-[#13B0D1]">Unveiled.</span>
+                        </h2>
+                        <p className="text-xl font-medium text-white/90 leading-relaxed">
+                            Join our community of beauty enthusiasts. Access Pakistan's finest collection of premium cosmetics.
+                        </p>
+                    </div>
+                </div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/10 rounded-full animate-pulse" />
+            </div>
         </div>
     );
 }

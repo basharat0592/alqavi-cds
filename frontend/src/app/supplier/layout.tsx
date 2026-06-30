@@ -34,7 +34,6 @@ const SIDEBAR_LINKS = [
     { href: '/supplier/orders', label: 'Orders', icon: ShoppingCart },
     { href: '/supplier/products', label: 'Inventory', icon: Package },
     { href: '/supplier/returns', label: 'Returns', icon: RotateCcw },
-    { href: '/supplier/activity', label: 'Activity', icon: History },
     { href: '/supplier/sales', label: 'Transactions', icon: TrendingUp },
 ];
 
@@ -48,6 +47,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     const [profile, setProfile] = useState<any>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -63,24 +63,47 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
     useEffect(() => {
         setUser(authService.getUser());
         fetchLatestProfile();
+
+        // ── Auto-Sync ────────────────────────────────────────────────────────
+        // Refresh profile every 5 seconds to catch changes from other pages
+        const interval = setInterval(fetchLatestProfile, 5000);
+
+        // Listen for immediate update events from the profile page
+        const handleSync = () => fetchLatestProfile();
+        window.addEventListener('supplier_profile_updated', handleSync);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('supplier_profile_updated', handleSync);
+        };
     }, []);
 
     const renderAvatar = (size = "w-8 h-8") => {
-        const name = profile?.first_name || user?.name || 'P';
-        const initial = name.charAt(0).toUpperCase();
+        const fullName = profile?.first_name 
+            ? `${profile.first_name} ${profile.last_name || ''}`.trim() 
+            : user?.name || 'Partner';
+        
+        const initial = fullName.charAt(0).toUpperCase();
 
-        if (profile?.avatar) {
+        // Strict check for avatar existence and validity
+        const hasAvatar = profile?.avatar && typeof profile.avatar === 'string' && profile.avatar.length > 0;
+
+        if (hasAvatar) {
             return (
                 <img
                     src={getImageUrl(profile.avatar)}
                     alt=""
                     className={cn(size, "rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-100")}
+                    onError={(e) => {
+                        // Fallback on load error
+                        (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                 />
             );
         }
 
         return (
-            <div className={cn(size, "rounded-full bg-gradient-to-br from-[#00b4d8] to-[#0f172a] flex items-center justify-center font-bold text-white text-xs border-2 border-white shadow-sm")}>
+            <div className={cn(size, "rounded-full bg-gradient-to-br from-[#00b4d8] to-[#0f172a] flex items-center justify-center font-bold text-white text-[13px] border-2 border-white shadow-sm shrink-0")}>
                 {initial}
             </div>
         );
@@ -139,17 +162,74 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
 
                         <div className="h-8 w-px bg-slate-100 mx-2"></div>
 
-                        <Link href="/supplier/profile" className="flex items-center gap-4 p-1 rounded-2xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
-                            <div className="relative">
-                                {renderAvatar("w-10 h-10")}
-                                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
-                            </div>
-                            <div className="hidden lg:flex flex-col text-left overflow-hidden">
-                                <span className="text-[13px] font-black text-slate-900 leading-none truncate">{profile?.first_name || user?.name?.split(' ')[0] || 'Supplier'}</span>
-                                <span className="text-[10px] text-emerald-500 font-black mt-1.5 uppercase tracking-[0.2em] opacity-70">Active</span>
-                            </div>
-                            <ChevronDown size={14} className="text-slate-300 group-hover:text-slate-600 transition-colors hidden lg:block" />
-                        </Link>
+                        {/* Profile Dropdown */}
+                        <div className="relative profile-dropdown">
+                            <button 
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                className="flex items-center gap-4 p-1 pr-2 rounded-2xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100 outline-none"
+                            >
+                                <div className="relative">
+                                    {renderAvatar("w-10 h-10")}
+                                    <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-white"></div>
+                                </div>
+                                <div className="hidden lg:flex flex-col text-left overflow-hidden">
+                                    <span className="text-[13px] font-black text-slate-900 leading-none truncate">{profile?.first_name || user?.name?.split(' ')[0] || 'Supplier'}</span>
+                                    <span className="text-[10px] text-emerald-500 font-black mt-1.5 uppercase tracking-[0.2em] opacity-70">Active Account</span>
+                                </div>
+                                <ChevronDown size={14} className={cn("text-slate-300 transition-transform hidden lg:block", isProfileOpen && "rotate-180")} />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isProfileOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
+                                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 py-3 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="px-5 py-4 border-b border-slate-50 mb-2">
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Partner Information</p>
+                                            <p className="text-[14px] font-black text-slate-900 truncate">{profile?.company || 'Al-Qavi Partner'}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1 truncate">{user?.email}</p>
+                                        </div>
+
+                                        <div className="px-2 space-y-0.5">
+                                            <Link 
+                                                href="/supplier/profile" 
+                                                onClick={() => setIsProfileOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-[#00b4d8] transition-all group"
+                                            >
+                                                <User size={18} className="text-slate-400 group-hover:text-[#00b4d8]" />
+                                                <span className="text-[13px] font-bold">My Profile</span>
+                                            </Link>
+                                            <Link 
+                                                href="/supplier/settings" 
+                                                onClick={() => setIsProfileOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-[#00b4d8] transition-all group"
+                                            >
+                                                <Settings size={18} className="text-slate-400 group-hover:text-[#00b4d8]" />
+                                                <span className="text-[13px] font-bold">Account Settings</span>
+                                            </Link>
+                                            <Link 
+                                                href="/supplier/support" 
+                                                onClick={() => setIsProfileOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-[#00b4d8] transition-all group"
+                                            >
+                                                <HelpCircle size={18} className="text-slate-400 group-hover:text-[#00b4d8]" />
+                                                <span className="text-[13px] font-bold">Partner Help</span>
+                                            </Link>
+                                        </div>
+
+                                        <div className="mt-2 pt-2 border-t border-slate-50 px-2">
+                                            <button 
+                                                onClick={() => { authService.logout(); window.location.href = '/login'; }}
+                                                className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-all group font-bold"
+                                            >
+                                                <LogOut size={18} />
+                                                <span className="text-[13px]">Sign Out</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </header>
 
@@ -172,6 +252,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
                                                     className={cn(
                                                         "group flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-200",
                                                         isActive
@@ -196,6 +277,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
                                                     className={cn(
                                                         "group flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-200",
                                                         isActive

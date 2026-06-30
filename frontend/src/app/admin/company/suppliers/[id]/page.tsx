@@ -3,14 +3,14 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    User, Mail, Phone, MapPin, Building2, ShieldCheck, Play, ArrowLeft, Archive, AlertTriangle, X, RefreshCw
+    Mail, Phone, MapPin, Building2, ArrowLeft, Archive
 } from 'lucide-react';
 import { userService, AppUser, productService } from '@/lib/api';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import Link from 'next/link';
 import { getImageUrl } from '@/lib/utils';
 import { Product } from '@/types';
+import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
 export default function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -50,119 +50,119 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     const initials = `${supplier.first_name?.[0] || ''}${supplier.last_name?.[0] || ''}`.toUpperCase();
 
     return (
-        <div className="max-w-[1400px] mx-auto pb-20 px-4 mt-8 font-sans">
-            <button
-                onClick={() => router.push('/admin/company/suppliers')}
-                className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-[#F59E0B] transition-colors mb-6 uppercase tracking-widest"
-            >
-                <ArrowLeft className="h-4 w-4" /> Back to Registry
-            </button>
+        <div className="max-w-[1400px] mx-auto pb-20">
+            <PageHeader
+                title="Supplier Details"
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Suppliers', href: '/admin/company/suppliers' },
+                    { label: 'Supplier Details' },
+                ]}
+            />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* ── LEFT: PROFILE CARD ── */}
                 <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-black/5 overflow-hidden">
-                        <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-white/10">
-                            <h2 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Supplier Identity</h2>
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${supplier.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
-                                {supplier.is_active ? 'Active Node' : 'Offline Node'}
-                            </span>
+                    <Card className="overflow-hidden">
+                        <div className="bg-slate-50/60 px-6 py-4 flex items-center justify-between border-b border-slate-100">
+                            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supplier Identity</h2>
+                            <Badge tone={supplier.is_active ? 'green' : 'red'}>
+                                {supplier.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
                         </div>
-                        
-                        <div className="p-8 flex flex-col items-center border-b border-slate-100 dark:border-white/10">
-                            <div className="h-24 w-24 bg-[#F59E0B]/10 border-4 border-[#F59E0B] text-[#F59E0B] rounded-3xl flex items-center justify-center font-black text-3xl shadow-lg mb-4">
+
+                        <div className="p-8 flex flex-col items-center border-b border-slate-100">
+                            <div className="h-24 w-24 bg-indigo-50 border-4 border-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center font-bold text-3xl shadow-sm mb-4">
                                 {initials}
                             </div>
-                            <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{supplier.first_name} {supplier.last_name}</h1>
-                            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">{supplier.business_name || 'Individual Entity'}</p>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">{supplier.first_name} {supplier.last_name}</h1>
+                            <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-1">{supplier.business_name || 'Individual Entity'}</p>
                         </div>
 
                         <div className="p-6 space-y-4">
-                            <div className="flex items-start gap-4 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+                            <div className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl">
                                 <Mail className="h-5 w-5 text-slate-400 mt-0.5" />
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comm Link</p>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{supplier.email}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
+                                    <p className="text-sm font-semibold text-slate-700">{supplier.email}</p>
                                 </div>
                             </div>
-                            
-                            <div className="flex items-start gap-4 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+
+                            <div className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl">
                                 <Phone className="h-5 w-5 text-slate-400 mt-0.5" />
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Comms</p>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{supplier.phone_number || supplier.phone || 'Classified'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone</p>
+                                    <p className="text-sm font-semibold text-slate-700">{supplier.phone_number || supplier.phone || 'Not provided'}</p>
                                 </div>
                             </div>
-                            
-                            <div className="flex items-start gap-4 p-3 bg-slate-50 dark:bg-white/5 rounded-xl">
+
+                            <div className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl">
                                 <MapPin className="h-5 w-5 text-slate-400 mt-0.5" />
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Origin Point</p>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{supplier.address || 'Location Unknown'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Address</p>
+                                    <p className="text-sm font-semibold text-slate-700">{supplier.address || 'Not provided'}</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 </div>
 
                 {/* ── RIGHT: PRODUCTS SUPPLIED ── */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-black/5 overflow-hidden">
-                        <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 flex items-center justify-between border-b border-slate-100 dark:border-white/10">
+                    <Card className="overflow-hidden">
+                        <div className="bg-slate-50/60 px-6 py-4 flex items-center justify-between border-b border-slate-100">
                             <div className="flex items-center gap-3">
-                                <Building2 className="h-5 w-5 text-[#F59E0B]" />
-                                <h2 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Catalogs Managed</h2>
+                                <Building2 className="h-5 w-5 text-indigo-600" />
+                                <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Catalogs Managed</h2>
                             </div>
-                            <span className="text-[10px] font-black px-2 py-1 bg-white dark:bg-[#1a252f] border border-slate-200 dark:border-white/10 rounded-lg">
-                                {products.length} Assets
-                            </span>
+                            <Badge tone="indigo">{products.length} Assets</Badge>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-widest">Asset Details</th>
-                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-widest text-center">Acquisition Price</th>
-                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-widest text-center">Availability</th>
-                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 whitespace-nowrap uppercase tracking-widest text-right">Visibility</th>
+                                    <tr className="bg-slate-50/60 border-b border-slate-200">
+                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider">Asset Details</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-center">Acquisition Price</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-center">Availability</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-right">Visibility</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                <tbody className="divide-y divide-slate-100">
                                     {products.length === 0 ? (
                                         <tr>
                                             <td colSpan={4} className="px-6 py-16 text-center text-slate-400">
                                                 <Archive className="h-12 w-12 mx-auto opacity-20 mb-3" />
-                                                <p className="text-xs font-bold uppercase tracking-widest">No assets associated</p>
+                                                <p className="text-xs font-semibold uppercase tracking-wider">No assets associated</p>
                                             </td>
                                         </tr>
                                     ) : (
                                         products.map(p => (
-                                            <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                                            <tr key={p.id} className="hover:bg-slate-50">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-lg overflow-hidden shrink-0">
+                                                        <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden shrink-0">
                                                             <img src={getImageUrl((p.image_url || p.image || '') as string) || "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?w=800"} className="w-full h-full object-cover" alt="" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight leading-tight">{p.name}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{p.sku || 'N/A'}</p>
+                                                            <p className="text-sm font-semibold text-slate-800 leading-tight">{p.name}</p>
+                                                            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">{p.sku || 'N/A'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-sm font-black text-indigo-500">Rs. {Number(p.cost_price || p.cost || 0).toLocaleString()}</span>
+                                                    <span className="text-sm font-bold text-slate-900 tabular-nums">Rs. {Number(p.cost_price || p.cost || 0).toLocaleString()}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${p.quantity_in_stock && p.quantity_in_stock > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                                    <Badge tone={p.quantity_in_stock && p.quantity_in_stock > 0 ? 'green' : 'red'}>
                                                         {p.quantity_in_stock || 0} Units
-                                                    </span>
+                                                    </Badge>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     {p.is_supplier_only ? (
-                                                        <span className="px-2 py-1 bg-[#F59E0B]/10 text-[#F59E0B] rounded text-[9px] font-black uppercase tracking-widest border border-[#F59E0B]/20">Isolated</span>
+                                                        <Badge tone="indigo">Isolated</Badge>
                                                     ) : (
-                                                        <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded text-[9px] font-black uppercase tracking-widest border border-blue-200 dark:border-blue-800">Public</span>
+                                                        <Badge tone="blue">Public</Badge>
                                                     )}
                                                 </td>
                                             </tr>
@@ -171,7 +171,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    </Card>
                 </div>
             </div>
         </div>

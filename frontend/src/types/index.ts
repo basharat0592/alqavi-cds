@@ -62,6 +62,13 @@ export interface Product {
     /** Maps to quantity_in_stock on the backend */
     stock: number;
     quantity_in_stock?: number;
+    /** Virtual or computed fields for POS/Inventory */
+    product_name?: string;
+    weight?: string;
+    size?: string;
+    total_quantity?: number;
+    stock_quantity?: number;
+    
     category: number | string | { id: number; name: string };
     category_name?: string;
     sku?: string;

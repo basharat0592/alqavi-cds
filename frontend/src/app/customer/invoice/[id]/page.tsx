@@ -164,7 +164,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                                 return (
                                     <tr key={i}>
                                         <td className="py-4 px-1 text-center text-gray-400">{i + 1}</td>
-                                        <td className="py-4 px-2 font-bold text-[#111]">{item.product_name || item.name}</td>
+                                        <td className="py-4 px-2 font-bold text-[#111]">{(item.product_name || item.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</td>
                                         <td className="py-4 px-2 text-center">{qty}</td>
                                         <td className="py-4 px-2 text-right text-gray-600">{formatCurrency(price)}</td>
                                         <td className="py-4 px-1 text-right font-black text-[#111]">{formatCurrency(amt)}</td>

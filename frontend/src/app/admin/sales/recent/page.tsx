@@ -6,47 +6,32 @@ import { orderService } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
-    ShoppingBag, Search, X, RefreshCw, Printer, Plus,
-    Activity, Eye, ChevronDown, ChevronRight, Filter,
-    Trash2, AlertTriangle, Calendar, TrendingUp, Package,
-    CheckCircle2, User, Hash, Phone, MapPin
+    Search, RefreshCw, Printer, Plus,
+    Trash2, Calendar, Phone
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PrintSlip } from '@/components/admin/PrintSlip';
+import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   PURE AMAZON RETAIL DESIGN SYSTEM - RECENT ORDERS
+   ADMIN DESIGN SYSTEM — RECENT ORDERS
    ───────────────────────────────────────────────────────────────────────────── */
-const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
-    const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-    };
-    return (
-        <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
-            {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {children}
-        </button>
-    );
-};
-
-const MetricCard = ({ label, value, subtext, color = "#111", borderTop = "#e47911", alert = false }: any) => (
-    <div className={`bg-white border border-[#ddd] p-5 rounded-[4px] shadow-sm hover:shadow-md transition-all relative overflow-hidden group ${alert ? 'bg-amber-50/20' : ''}`}>
-        <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: borderTop }}></div>
-        <p className="text-[12px] font-bold text-[#565959] uppercase tracking-tight mb-2">{label}</p>
+const MetricCard = ({ label, value, subtext, accent = "bg-indigo-500", valueClass = "text-slate-900" }: any) => (
+    <Card className="p-5 hover:shadow-md transition-all relative overflow-hidden">
+        <div className={`absolute top-0 left-0 w-full h-[3px] ${accent}`}></div>
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">{label}</p>
         <div className="flex items-baseline gap-1">
-            <span className="text-[26px] font-medium leading-none" style={{ color: color }}>{value}</span>
+            <span className={`text-[26px] font-bold leading-none tracking-tight tabular-nums ${valueClass}`}>{value}</span>
         </div>
         {subtext && (
             <div className="flex items-center gap-1.5 mt-3">
-                <span className={`text-[11px] font-medium ${alert ? 'text-amber-700' : 'text-[#565959]'}`}>{subtext}</span>
+                <span className="text-[11px] font-medium text-slate-500">{subtext}</span>
             </div>
         )}
-    </div>
+    </Card>
 );
 
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2px_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
+const inputCls = ui.inputBase;
 
 const STATUS_LIST = [
     { value: 'ALL', label: 'All Status' },
@@ -124,226 +109,222 @@ export default function RecentOrdersPage() {
     });
 
     return (
-        <div className="bg-[#F8F9FA] min-h-screen pb-20 font-sans text-[#0f1111]">
+        <div className="pb-20 text-left">
 
             {/* hidden printable area */}
             <div className="hidden print:block">
                 <PrintSlip ref={printRef} order={selectedOrder} />
             </div>
 
-            {/* Header */}
-            <div className="bg-white border-b border-[#ddd] py-4 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-6 text-left">
-                    <div className="flex items-center gap-1 text-[12px] text-[#565959] mb-3">
-                        <Link href="/admin/dashboard" className="hover:text-[#c45500] hover:underline">Dashboard</Link>
-                        <ChevronRight size={10} />
-                        <span className="text-[#c45500]">Recent Orders</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-[22px] font-normal text-[#111]">Recent Orders</h1>
-                            <p className="text-[13px] text-[#565959] mt-0.5">Overview of latest transactions</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <Btn variant="secondary" onClick={loadData} loading={loading}>
-                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                            </Btn>
-                            <Link href="/admin/sales">
-                                <Btn><Plus size={14} /> New Order</Btn>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <PageHeader
+                title="Recent Activity"
+                subtitle="Overview of latest transactions"
+                breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Recent Activity' }]}
+                actions={
+                    <>
+                        <Button variant="secondary" onClick={loadData} disabled={loading}>
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                        </Button>
+                        <Link href="/admin/sales">
+                            <Button variant="primary"><Plus size={14} /> New Order</Button>
+                        </Link>
+                    </>
+                }
+            />
 
-            <div className="max-w-[1400px] mx-auto px-6 mt-8 text-left">
+            <div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <MetricCard label="Today's Orders" value={stats?.today_count || '0'} subtext={`${stats?.pending_count || 0} Pending`} borderTop="#3498db" />
-                    <MetricCard label="Today's Profit" value={`Rs. ${stats?.today_profit ? parseFloat(stats.today_profit).toLocaleString() : '0'}`} subtext="Daily gain" color="#067d62" borderTop="#067d62" />
-                    <MetricCard label="Monthly Profit" value={`Rs. ${stats?.month_profit ? parseFloat(stats.month_profit).toLocaleString() : '0'}`} subtext="Monthly total" color="#e47911" borderTop="#e47911" />
-                    <MetricCard label="Total Delivered" value={stats?.delivered_count || '0'} subtext="Completed sales" borderTop="#007185" />
+                    <MetricCard label="Today's Orders" value={stats?.today_count || '0'} subtext={`${stats?.pending_count || 0} Pending`} accent="bg-sky-500" />
+                    <MetricCard label="Today's Profit" value={`Rs. ${stats?.today_profit ? parseFloat(stats.today_profit).toLocaleString() : '0'}`} subtext="Daily gain" valueClass="text-emerald-600" accent="bg-emerald-500" />
+                    <MetricCard label="Monthly Profit" value={`Rs. ${stats?.month_profit ? parseFloat(stats.month_profit).toLocaleString() : '0'}`} subtext="Monthly total" valueClass="text-indigo-600" accent="bg-indigo-500" />
+                    <MetricCard label="Total Delivered" value={stats?.delivered_count || '0'} subtext="Completed sales" accent="bg-indigo-500" />
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-5 mb-6 shadow-sm flex flex-col xl:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
+                <Card className="p-4 sm:p-5 mb-6 flex flex-col md:flex-row items-stretch md:items-center gap-4">
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
                         <input
                             placeholder="Search by Phone, Tracking ID or Order #..."
-                            className={inputCls + " pl-10 h-[35px]"}
+                            className={inputCls + " pl-10"}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <div className="flex gap-3">
-                        <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#aaa]" />
-                            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={inputCls + " pl-10 h-[35px] w-[180px]"} />
+                    <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+                        <div className="relative w-full">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
+                            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={inputCls + " pl-10 w-full md:w-[180px]"} />
                         </div>
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls + " w-[160px] h-[35px] cursor-pointer"}>
+                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls + " w-full md:w-[160px] cursor-pointer"}>
                             {STATUS_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                     </div>
-                </div>
+                </Card>
 
                 {/* Orders List */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left mb-6">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#f7f8fa] border-b border-[#ddd] text-[12px] font-bold text-[#111]">
-                                <th className="px-6 py-3">Order Info</th>
-                                <th className="px-6 py-3">Customer</th>
-                                <th className="px-6 py-3">Total</th>
-                                <th className="px-6 py-3 text-center">Status</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#eee]">
-                            {loading && filtered.length === 0 ? (
-                                <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">Loading...</td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#565959]">No orders found.</td></tr>
-                            ) : (
-                                filtered.map((o) => (
-                                    <tr key={o.id} className="hover:bg-[#fcfdff] transition-colors group text-[13px]" onClick={() => setSelectedOrder(o)}>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#007185] group-hover:underline cursor-pointer">#{o.order_number}</div>
-                                            <div className="text-[11px] text-[#aaa] mt-0.5">{formatDate(o.created_at)}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#111]">{o.customer_name || 'Walk-in'}</div>
-                                            <div className="flex items-center gap-2 text-[11px] text-[#565959] mt-0.5">
-                                                <Phone size={10} className="text-[#aaa]" /> {o.phone_number || 'N/A'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#111]">{formatCurrency(o.total_amount)}</div>
-                                            <div className="text-[11px] text-green-600 font-bold uppercase">{o.items?.length || 0} Items</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <StatusBadge status={o.status || 'PENDING'} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                <button onClick={() => setSelectedOrder(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-[#565959]"><Eye size={14} /></button>
-                                                <button onClick={() => handlePrint(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-[#f7f8fa] text-blue-600"><Printer size={14} /></button>
-                                                <button onClick={() => setDeleteTarget(o)} className="p-1.5 border border-[#ddd] rounded bg-white hover:bg-red-50 text-red-600"><Trash2 size={14} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                <Card className="overflow-hidden text-left mb-6">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Order Info</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Customer</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap">Total</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-center whitespace-nowrap">Status</th>
+                                    <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-right whitespace-nowrap">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {loading && filtered.length === 0 ? (
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
+                                ) : filtered.length === 0 ? (
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">No orders found.</td></tr>
+                                ) : (
+                                    filtered.map((o) => (
+                                        <tr key={o.id} className="hover:bg-slate-50 transition-colors group text-[13px]" onClick={() => setSelectedOrder(o)}>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="font-bold text-indigo-600 group-hover:underline cursor-pointer tabular-nums">#{o.order_number}</div>
+                                                <div className="text-[11px] text-slate-400 mt-0.5">{formatDate(o.created_at)}</div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4">
+                                                <div className="font-bold text-slate-900">{o.customer_name || 'Walk-in'}</div>
+                                                <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                                    <Phone size={10} className="text-slate-400" /> {o.phone_number || 'N/A'}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                                                <div className="font-bold text-slate-900 tabular-nums">{formatCurrency(o.total_amount)}</div>
+                                                <div className="hidden sm:block text-[11px] text-emerald-600 font-bold uppercase">{o.items?.length || 0} Items</div>
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-center whitespace-nowrap">
+                                                <StatusBadge status={o.status || 'PENDING'} />
+                                            </td>
+                                            <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 text-right whitespace-nowrap">
+                                                <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                    <button onClick={() => setSelectedOrder(o)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => handlePrint(o)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                    <span className="text-slate-300">|</span>
+                                                    <button onClick={() => setDeleteTarget(o)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
             </div>
 
             {/* Order Detail Modal */}
-            {selectedOrder && (
-                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] max-w-2xl w-full shadow-2xl overflow-hidden text-left">
-                        <div className="px-6 py-4 border-b border-[#ddd] flex items-center justify-between bg-[#f7f8fa]">
-                            <h3 className="text-[15px] font-bold text-[#111]">Order #{selectedOrder.order_number}</h3>
-                            <button onClick={() => setSelectedOrder(null)} className="text-[#aaa] hover:text-[#565959]"><X size={20} /></button>
-                        </div>
-                        <div className="p-6 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-8 mb-8">
-                                <div>
-                                    <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3">Customer Details</p>
-                                    <div className="space-y-1">
-                                        <p className="text-[14px] font-bold text-[#111]">{selectedOrder.customer_name || 'Walk-in'}</p>
-                                        <p className="text-[13px] text-[#565959]">{selectedOrder.phone_number}</p>
-                                    </div>
-                                    <div className="mt-4">
-                                        <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-2">Shipping Address</p>
-                                        <p className="text-[13px] text-[#565959]">{selectedOrder.shipping_address || '—'}</p>
-                                    </div>
-                                </div>
-                                <div className="bg-[#fcfdff] p-4 border border-[#eee] rounded-[4px]">
-                                    <p className="text-[11px] font-bold text-[#aaa] uppercase tracking-widest mb-3 text-center">Update Status</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {STATUS_LIST.filter(s => s.value !== 'ALL').map((s) => (
-                                            <button
-                                                key={s.value}
-                                                onClick={() => handleUpdateStatus(selectedOrder.id, s.value)}
-                                                className={`px-3 py-1.5 text-[11px] font-bold border rounded-[3px] transition-all
-                                                    ${selectedOrder.status === s.value ? 'bg-[#007185] border-[#007185] text-white' : 'bg-white border-[#ddd] text-[#565959] hover:bg-[#f7f8fa]'}
-                                                `}
-                                            >
-                                                {s.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <p className="text-[11px] font-bold text-[#aaa] uppercase mb-3">Items</p>
-                            <div className="border border-[#eee] rounded-[4px] overflow-hidden">
-                                <table className="w-full text-left text-[13px]">
-                                    <thead className="bg-[#f9fafb]">
-                                        <tr>
-                                            <th className="px-4 py-2 border-b">Product</th>
-                                            <th className="px-4 py-2 border-b text-center">Qty</th>
-                                            <th className="px-4 py-2 border-b text-right">Price</th>
-                                            <th className="px-4 py-2 border-b text-right">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[#eee]">
-                                        {selectedOrder.items?.map((item: any) => (
-                                            <tr key={item.id}>
-                                                <td className="px-4 py-3">{item.product_name}</td>
-                                                <td className="px-4 py-3 text-center font-bold">{item.quantity}</td>
-                                                <td className="px-4 py-3 text-right">{parseFloat(item.price).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-right font-bold">{(item.quantity * parseFloat(item.price)).toLocaleString()}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot className="bg-[#0f1111] text-white">
-                                        <tr>
-                                            <td colSpan={3} className="px-4 py-3 text-right text-[11px] uppercase tracking-widest opacity-70">Total Amount</td>
-                                            <td className="px-4 py-3 text-right text-[16px] font-bold text-[#ffd814]">Rs. {parseFloat(selectedOrder.total_amount).toLocaleString()}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-
-                            {selectedOrder.notes && (
-                                <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-[4px]">
-                                    <p className="text-[11px] font-bold text-amber-800 uppercase mb-1">Notes</p>
-                                    <p className="text-[13px] text-amber-700 italic">"{selectedOrder.notes}"</p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="px-6 py-4 bg-[#f7f8fa] border-t border-[#ddd] flex gap-3">
-                            <button onClick={() => setSelectedOrder(null)} className="flex-1 h-[35px] text-[13px] font-bold text-[#565959] bg-white border border-[#ddd] rounded-[3px] hover:bg-[#fcfdff]">Close</button>
-                            <button onClick={() => handlePrint()} className="flex-1 h-[35px] text-[13px] font-bold text-[#111] bg-[#f0c14b] border border-[#a88734] rounded-[3px] hover:bg-[#f5d78e] flex items-center justify-center gap-2 shadow-sm">
-                                <Printer size={16} /> Print Logistics Slip
-                            </button>
-                        </div>
+            <Modal
+                open={!!selectedOrder}
+                onClose={() => setSelectedOrder(null)}
+                title={selectedOrder ? `Order #${selectedOrder.order_number}` : undefined}
+                size="lg"
+                footer={
+                    <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+                        <Button variant="outline" onClick={() => setSelectedOrder(null)} className="flex-1">Close</Button>
+                        <Button variant="primary" onClick={() => handlePrint()} className="flex-1">
+                            <Printer size={16} /> Print Logistics Slip
+                        </Button>
                     </div>
-                </div>
-            )}
+                }
+            >
+                {selectedOrder && (
+                    <div className="max-h-[70vh] overflow-y-auto text-left">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-8">
+                            <div>
+                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Customer Details</p>
+                                <div className="space-y-1">
+                                    <p className="text-[14px] font-bold text-slate-900">{selectedOrder.customer_name || 'Walk-in'}</p>
+                                    <p className="text-[13px] text-slate-600">{selectedOrder.phone_number}</p>
+                                </div>
+                                <div className="mt-4">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Shipping Address</p>
+                                    <p className="text-[13px] text-slate-600">{selectedOrder.shipping_address || '—'}</p>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
+                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">Update Status</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {STATUS_LIST.filter(s => s.value !== 'ALL').map((s) => (
+                                        <button
+                                            key={s.value}
+                                            onClick={() => handleUpdateStatus(selectedOrder.id, s.value)}
+                                            className={`px-3 py-1.5 text-[11px] font-bold border rounded-lg transition-all
+                                                ${selectedOrder.status === s.value ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}
+                                            `}
+                                        >
+                                            {s.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Items</p>
+                        <div className="border border-slate-200/70 rounded-xl overflow-x-auto">
+                            <table className="w-full text-left text-[13px]">
+                                <thead className="bg-slate-50/60">
+                                    <tr className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                        <th className="px-4 py-2 border-b border-slate-100 whitespace-nowrap">Product</th>
+                                        <th className="px-4 py-2 border-b border-slate-100 text-center whitespace-nowrap">Qty</th>
+                                        <th className="px-4 py-2 border-b border-slate-100 text-right whitespace-nowrap">Price</th>
+                                        <th className="px-4 py-2 border-b border-slate-100 text-right whitespace-nowrap">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {selectedOrder.items?.map((item: any) => (
+                                        <tr key={item.id}>
+                                            <td className="px-4 py-3 whitespace-nowrap text-slate-700">{item.product_name}</td>
+                                            <td className="px-4 py-3 text-center font-bold whitespace-nowrap tabular-nums text-slate-900">{item.quantity}</td>
+                                            <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums text-slate-700">{parseFloat(item.price).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-right font-bold whitespace-nowrap tabular-nums text-slate-900">{(item.quantity * parseFloat(item.price)).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot className="bg-slate-900 text-white">
+                                    <tr>
+                                        <td colSpan={3} className="px-4 py-3 text-right text-[11px] uppercase tracking-widest opacity-70 whitespace-nowrap">Total Amount</td>
+                                        <td className="px-4 py-3 text-right text-[16px] font-bold text-indigo-300 whitespace-nowrap tabular-nums">Rs. {parseFloat(selectedOrder.total_amount).toLocaleString()}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        {selectedOrder.notes && (
+                            <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                                <p className="text-[11px] font-bold text-amber-800 uppercase mb-1">Notes</p>
+                                <p className="text-[13px] text-amber-700 italic">"{selectedOrder.notes}"</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
 
             {/* Delete Modal */}
-            {deleteTarget && (
-                <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-[4px] border border-[#ddd] p-8 w-full max-w-sm shadow-xl text-center">
-                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
-                            <Trash2 size={24} className="text-red-600" />
+            <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} size="sm">
+                {deleteTarget && (
+                    <div className="text-center">
+                        <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                            <Trash2 size={24} className="text-rose-600" />
                         </div>
-                        <h3 className="text-[17px] font-bold text-[#111] mb-2">Delete Order?</h3>
-                        <p className="text-[13px] text-[#565959]">Delete order <span className="font-bold">#{deleteTarget.order_number}</span>? This cannot be undone.</p>
+                        <h3 className="text-[17px] font-bold text-slate-900 tracking-tight mb-2">Delete Order?</h3>
+                        <p className="text-[13px] text-slate-600">Delete order <span className="font-bold text-slate-900">#{deleteTarget.order_number}</span>? This cannot be undone.</p>
                         <div className="mt-6 space-y-2">
-                            <button onClick={handleDelete} className="w-full h-[31px] bg-red-600 text-white border border-red-700 rounded-[3px] text-[13px] font-medium shadow-sm">
+                            <Button variant="danger" onClick={handleDelete} disabled={isDeleting} className="w-full">
                                 {isDeleting ? 'Deleting...' : 'Confirm Delete'}
-                            </button>
-                            <button onClick={() => setDeleteTarget(null)} className="w-full text-[13px] text-[#007185] hover:text-[#c45500] hover:underline">Cancel</button>
+                            </Button>
+                            <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="w-full text-indigo-600 hover:text-indigo-700">Cancel</Button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
         </div>
     );
 }

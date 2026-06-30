@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Shield, Loader2 } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { roleService } from '@/lib/api';
+import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
 export default function EditRolePage() {
     const router = useRouter();
@@ -57,77 +58,76 @@ export default function EditRolePage() {
     if (fetching) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-[#1D4ED8]" />
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Role</p>
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading Role</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto pb-12 font-sans px-4 mt-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin/users/roles" className="p-2 border border-gray-200 dark:border-slate-800 rounded hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-500 transition-colors bg-white dark:bg-slate-900 shadow-sm">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Link>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-[#1D4ED8]" />
-                            Edit Role
-                        </h1>
-                        <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Update platform access privileges</p>
-                    </div>
-                </div>
-            </div>
+        <div className="max-w-4xl mx-auto pb-12 px-4 mt-6">
+            <PageHeader
+                title="Edit Role"
+                subtitle="Update platform access privileges"
+                breadcrumbs={[
+                    { label: 'Console', href: '/admin/dashboard' },
+                    { label: 'Roles', href: '/admin/users/roles' },
+                    { label: 'Edit Role' },
+                ]}
+            />
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded shadow-sm overflow-hidden">
+            <Card className="overflow-hidden">
+            <form onSubmit={handleSubmit}>
                 <div className="p-6 md:p-8 space-y-6">
                     {error && (
-                        <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded text-sm font-bold flex flex-col">
+                        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-sm font-bold flex flex-col">
                             {error}
                         </div>
                     )}
 
                     <div>
-                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Role Name <span className="text-red-500">*</span></label>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Role Name <span className="text-rose-500">*</span></label>
                         <input
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                             placeholder="e.g. Content Manager"
-                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] transition-all text-sm dark:text-white"
+                            className={ui.inputBase}
                             required
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Description</label>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Description</label>
                         <textarea
                             value={formData.description}
                             onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Provide a brief description of what this role entails..."
                             rows={4}
-                            className="w-full p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded outline-none focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] transition-all text-sm dark:text-white resize-none"
+                            className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 resize-none"
                         />
                     </div>
                 </div>
 
-                <div className="bg-gray-50/50 dark:bg-slate-800/50 p-6 flex items-center justify-end gap-3 border-t border-gray-100 dark:border-slate-800">
-                    <Link href="/admin/users/roles" className="px-6 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                <div className="bg-slate-50/60 p-6 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <Link
+                        href="/admin/users/roles"
+                        className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-[13.5px] font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
+                    >
                         Cancel
                     </Link>
-                    <button
+                    <Button
                         type="submit"
+                        variant="primary"
                         disabled={loading || !formData.name.trim()}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-[#1D4ED8] hover:bg-[#1D4ED8] disabled:bg-[#1D4ED8]/50 disabled:cursor-not-allowed text-[#131921] text-xs font-bold uppercase tracking-wider rounded transition-colors shadow-sm"
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Changes
-                    </button>
+                    </Button>
                 </div>
             </form>
+            </Card>
         </div>
     );
 }

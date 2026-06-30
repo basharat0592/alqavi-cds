@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-    Package, RefreshCw, Plus, Search, Edit, Barcode, Activity, ChevronLeft, ChevronRight, 
+import {
+    Package, RefreshCw, Plus, Search, Edit, Barcode, Activity, ChevronLeft, ChevronRight,
     Loader2, Trash2, LayoutGrid, List, Eye, X, AlertCircle, AlertTriangle, Archive, ChevronDown, Download, ExternalLink
 } from 'lucide-react';
 import { productService, categoryService } from '@/lib/api';
@@ -23,7 +23,7 @@ export default function SupplierProducts() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [categories, setCategories] = useState<any[]>([]);
-    
+
     // Modals
     const [viewProd, setViewProd] = useState<any>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -85,7 +85,7 @@ export default function SupplierProducts() {
         try {
             setLoading(true);
             await Promise.all(
-                Array.from(selectedIds).map(id => 
+                Array.from(selectedIds).map(id =>
                     productService.updateSupplier(id, { status: 'ARCHIVED' })
                 )
             );
@@ -131,7 +131,7 @@ export default function SupplierProducts() {
         try {
             setLoading(true);
             await Promise.all(
-                Array.from(selectedIds).map(id => 
+                Array.from(selectedIds).map(id =>
                     productService.updateSupplier(id, { status: 'ACTIVE' })
                 )
             );
@@ -196,7 +196,7 @@ export default function SupplierProducts() {
                                 className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-300 rounded focus:outline-none focus:border-[#F59E0B] transition-all"
                             />
                         </div>
-                        
+
                         <div className="flex gap-2">
                             <select
                                 value={category}
@@ -225,7 +225,7 @@ export default function SupplierProducts() {
                                 Deselect All
                             </button>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setShowBulkModal(true)}
@@ -233,7 +233,7 @@ export default function SupplierProducts() {
                             >
                                 <Trash2 size={14} /> Delete
                             </button>
-                            
+
                             {Array.from(selectedIds).every(id => products.find(p => p.id === id)?.status === 'ARCHIVED') ? (
                                 <button
                                     onClick={handleUnarchiveSelection}
@@ -249,7 +249,7 @@ export default function SupplierProducts() {
                                     <Archive size={14} /> Archive
                                 </button>
                             )}
-                            
+
                             <div className="relative" ref={dropdownRef}>
                                 <button
                                     onClick={() => setIsBulkDropdownOpen(!isBulkDropdownOpen)}
@@ -257,10 +257,10 @@ export default function SupplierProducts() {
                                 >
                                     More <ChevronDown size={14} />
                                 </button>
-                                
+
                                 {isBulkDropdownOpen && (
                                     <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden py-1 z-50 animate-in slide-in-from-top-2">
-                                        <button 
+                                        <button
                                             onClick={handleExportCSV}
                                             className="w-full px-4 py-2 text-left text-[10px] font-black text-slate-500 uppercase hover:bg-slate-50 hover:text-[#007185] transition-colors flex items-center gap-3"
                                         >
@@ -269,7 +269,7 @@ export default function SupplierProducts() {
                                         <button className="w-full px-4 py-2 text-left text-[10px] font-black text-slate-500 uppercase hover:bg-slate-50 hover:text-[#007185] transition-colors flex items-center gap-3">
                                             <Activity size={14} /> Mark as In Stock
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={handleShareSelection}
                                             className="w-full px-4 py-2 text-left text-[10px] font-black text-slate-500 uppercase hover:bg-slate-50 hover:text-[#007185] transition-colors flex items-center gap-3"
                                         >
@@ -301,8 +301,8 @@ export default function SupplierProducts() {
                             <thead>
                                 <tr className="bg-[#f0f2f2] border-b border-gray-300 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                                     <th className="px-5 py-4 w-10">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             className="h-3.5 w-3.5 accent-[#F59E0B] cursor-pointer rounded"
                                             checked={paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.has(p.id))}
                                             onChange={(e) => {
@@ -329,8 +329,8 @@ export default function SupplierProducts() {
                                 {paginatedProducts.map(prod => (
                                     <tr key={prod.id} className={cn("hover:bg-slate-50/50 transition-colors group", selectedIds.has(prod.id) && "bg-amber-50/40")}>
                                         <td className="px-5 py-4">
-                                            <input 
-                                                type="checkbox" 
+                                            <input
+                                                type="checkbox"
                                                 className="h-3.5 w-3.5 accent-[#F59E0B] cursor-pointer rounded"
                                                 checked={selectedIds.has(prod.id)}
                                                 onChange={() => {
@@ -352,7 +352,9 @@ export default function SupplierProducts() {
                                         </td>
                                         <td className="px-5 py-4">
                                             <div className="flex flex-col max-w-[200px]">
-                                                <span className="text-sm font-black text-slate-900 group-hover:text-[#F59E0B] transition-colors truncate">{prod.name}</span>
+                                                <span className="text-sm font-black text-slate-900 group-hover:text-[#F59E0B] transition-colors truncate">
+                                                    {prod.name.replace(/\s*\(.*?\)\s*$/, '')}
+                                                </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono">SKU: {prod.sku || 'N/A'}</span>
                                                     {(prod.weight || prod.size) && (
@@ -384,16 +386,16 @@ export default function SupplierProducts() {
                                             <span className={cn(
                                                 "text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-tighter",
                                                 prod.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-500 border-slate-200' :
-                                                prod.quantity > 20 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                prod.quantity > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                'bg-rose-50 text-rose-700 border-rose-200'
+                                                    prod.quantity > 20 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                        prod.quantity > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                            'bg-rose-50 text-rose-700 border-rose-200'
                                             )}>
-                                                {prod.status === 'ARCHIVED' ? 'Archived' : 
-                                                 prod.quantity > 20 ? 'Optimal' : 
-                                                 prod.quantity > 0 ? 'Low Stock' : 'Stock Out'}
+                                                {prod.status === 'ARCHIVED' ? 'Archived' :
+                                                    prod.quantity > 20 ? 'Optimal' :
+                                                        prod.quantity > 0 ? 'Low Stock' : 'Stock Out'}
                                             </span>
                                         </td>
-                                         <td className="px-5 py-4 text-right">
+                                        <td className="px-5 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => setViewProd(prod)}
@@ -417,7 +419,7 @@ export default function SupplierProducts() {
                                                     <Trash2 size={14} />
                                                 </button>
                                             </div>
-                                         </td>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -468,68 +470,63 @@ export default function SupplierProducts() {
             {/* ── View Detail Modal ── */}
             {viewProd && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                    <div className="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden border border-slate-200">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Package className="text-[#F59E0B]" size={20} />
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Product Intelligence</h3>
+                            <div className="flex items-center gap-2">
+                                <Package className="text-slate-400" size={18} />
+                                <h3 className="text-sm font-bold text-slate-900">Product Details</h3>
                             </div>
-                            <button onClick={() => setViewProd(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
-                                <X size={18} className="text-slate-400" />
+                            <button onClick={() => setViewProd(null)} className="p-1 hover:bg-white rounded-md transition-colors text-slate-400 hover:text-slate-900">
+                                <X size={18} />
                             </button>
                         </div>
-                        <div className="p-8 space-y-6">
+                        <div className="p-6 space-y-6">
                             <div className="flex gap-6">
-                                <div className="w-32 h-32 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                                <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
                                     {viewProd.image ? (
                                         <img src={getImageUrl(viewProd.image) || undefined} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <Package className="h-10 w-10 text-slate-200" />
+                                        <Package className="h-8 w-8 text-slate-200" />
                                     )}
                                 </div>
                                 <div className="flex flex-col justify-center">
-                                    <h4 className="text-2xl font-medium text-slate-900 mb-1">{viewProd.name}</h4>
-                                    <div className="flex flex-wrap items-center gap-y-1 gap-x-2">
-                                        <span className="text-xs font-bold text-[#F59E0B] uppercase tracking-widest">SKU: {viewProd.sku || 'N/A'}</span>
-                                        <span className="text-slate-300">|</span>
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">UID: {viewProd.id}</span>
-                                        {viewProd.weight && (
-                                            <>
-                                                <span className="text-slate-300">|</span>
-                                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{viewProd.weight}</span>
-                                            </>
-                                        )}
-                                        {viewProd.size && (
-                                            <>
-                                                <span className="text-slate-300">|</span>
-                                                <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">{viewProd.size}</span>
-                                            </>
-                                        )}
+                                    <h4 className="text-xl font-bold text-slate-900 mb-1">{viewProd.name}</h4>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                        <p><span className="font-semibold">SKU:</span> {viewProd.sku || 'N/A'}</p>
+                                        <p><span className="font-semibold">ID:</span> #{viewProd.id}</p>
+                                        {viewProd.weight && <p><span className="font-semibold">Weight:</span> {viewProd.weight}</p>}
+                                        {viewProd.size && <p><span className="font-semibold">Size:</span> {viewProd.size}</p>}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Market Valuation</span>
-                                    <span className="text-lg font-black text-slate-900">{formatCurrency(viewProd.retail_price)}</span>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Retail Price</span>
+                                    <span className="text-lg font-bold text-slate-900">{formatCurrency(viewProd.retail_price)}</span>
                                 </div>
-                                <div className="space-y-1 text-right">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Available Liquidity</span>
-                                    <span className={cn("text-lg font-black", viewProd.quantity <= 0 ? "text-rose-600" : "text-emerald-600")}>
-                                        {viewProd.quantity} UNITS
+                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Stock Level</span>
+                                    <span className={cn("text-lg font-bold", viewProd.quantity <= 0 ? "text-rose-600" : "text-emerald-600")}>
+                                        {viewProd.quantity} Units
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
-                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                                    <Barcode size={14} /> Product Description
-                                </div>
-                                <p className="text-[13px] text-slate-600 font-medium leading-relaxed italic">
-                                    {viewProd.description || "No official description indexed for this SKU."}
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Description</span>
+                                <p className="text-sm text-slate-600 leading-relaxed bg-white p-3 border border-slate-100 rounded-lg italic">
+                                    {viewProd.description || "No description provided."}
                                 </p>
                             </div>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+                            <button
+                                onClick={() => setViewProd(null)}
+                                className="px-6 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -549,7 +546,7 @@ export default function SupplierProducts() {
                             </p>
                         </div>
                         <div className="px-8 pb-8 flex flex-col gap-3">
-                            <button 
+                            <button
                                 onClick={async () => {
                                     try {
                                         setLoading(true);
@@ -566,7 +563,7 @@ export default function SupplierProducts() {
                             >
                                 DELETE SKU
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setDeleteConfirmId(null)}
                                 className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[13px] font-black uppercase tracking-widest rounded-xl transition-all"
                             >
@@ -590,7 +587,7 @@ export default function SupplierProducts() {
                             </p>
                         </div>
                         <div className="px-8 pb-8 flex flex-col gap-3">
-                            <button 
+                            <button
                                 onClick={async () => {
                                     try {
                                         setLoading(true);
@@ -609,7 +606,7 @@ export default function SupplierProducts() {
                             >
                                 CONFIRM MASS PURGE
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowBulkModal(false)}
                                 className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[13px] font-black uppercase tracking-widest rounded-xl transition-all"
                             >
@@ -622,7 +619,7 @@ export default function SupplierProducts() {
             {/* ── Full-Page Manifest Overlay (Same Tab) ── */}
             {showManifest && (
                 <div className="fixed inset-0 z-[1000] bg-white overflow-y-auto font-sans text-left">
-                    
+
                     {/* Official Action Bar (Integrated Style) */}
                     <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
                         <div className="flex items-center justify-between py-4 border-b border-[#eee]">
@@ -630,21 +627,21 @@ export default function SupplierProducts() {
                                 <span className="text-[#c45500]">Supplier Manifest Preview</span>
                             </div>
                             <div className="flex items-center gap-3">
-                                <button 
+                                <button
                                     onClick={() => setShowManifest(false)}
                                     className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm flex items-center gap-2"
                                 >
                                     <ChevronLeft size={14} /> Back
                                 </button>
                                 <div className="h-6 w-[1px] bg-[#eee] mx-1"></div>
-                                <button 
+                                <button
                                     onClick={async () => {
                                         const ids = Array.from(selectedIds).join(',');
                                         const baseUrl = window.location.origin + window.location.pathname;
                                         const shareUrl = `${baseUrl}?manifest_ids=${ids}`;
-                                        
+
                                         if (navigator.share) {
-                                            try { await navigator.share({ title: 'Stock Manifest', url: shareUrl }); } catch {}
+                                            try { await navigator.share({ title: 'Stock Manifest', url: shareUrl }); } catch { }
                                         } else {
                                             navigator.clipboard.writeText(shareUrl);
                                             toast.success('Manifest link copied!');
@@ -654,7 +651,7 @@ export default function SupplierProducts() {
                                 >
                                     <ExternalLink size={14} /> Share
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => window.print()}
                                     className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm flex items-center gap-2"
                                 >

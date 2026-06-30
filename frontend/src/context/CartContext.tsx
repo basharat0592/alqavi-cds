@@ -10,6 +10,9 @@ export interface CartItem {
     image: string;
     category: string;
     stock?: number;
+    weight?: string;
+    size?: string;
+    batch?: string;
 }
 
 interface CartContextType {
@@ -20,6 +23,12 @@ interface CartContextType {
     clearCart: () => void;
     cartCount: number;
     cartTotal: number;
+    // Drawer state
+    isCartOpen: boolean;
+    setIsCartOpen: (open: boolean) => void;
+    openCart: () => void;
+    closeCart: () => void;
+    refreshStock: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -28,6 +37,7 @@ const CART_KEY = 'qavi_cart';
 export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
     const [hydrated, setHydrated] = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     // Load cart from localStorage on first render
     useEffect(() => {
@@ -56,6 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             }
             return [...prevItems, newItem];
         });
+        setIsCartOpen(true); // Automatically open cart when adding items
     };
 
     const removeFromCart = (id: number | string) => {
@@ -64,13 +75,51 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const updateQuantity = (id: number | string, quantity: number) => {
         if (quantity < 1) { removeFromCart(id); return; }
-        setItems(prev => prev.map(i => i.id === id ? { ...i, quantity } : i));
+        setItems(prev => prev.map(i => {
+            if (i.id === id) {
+                // Strictly enforce stock limit if provided
+                const finalQty = i.stock !== undefined ? Math.min(quantity, i.stock) : quantity;
+                return { ...i, quantity: finalQty };
+            }
+            return i;
+        }));
+    };
+
+    const refreshStock = async () => {
+        try {
+            const { productService } = await import('@/services/product.service');
+            const updatedItems = await Promise.all(items.map(async (item) => {
+                try {
+                    const latest = await productService.getById(item.id);
+                    if (latest) {
+                        const newStock = latest.total_quantity || 0;
+                        return { 
+                            ...item, 
+                            stock: newStock,
+                            // Adjust quantity if current selection exceeds new stock
+                            quantity: Math.min(item.quantity, newStock)
+                        };
+                    }
+                } catch { /* skip if specific product fails */ }
+                return item;
+            }));
+            setItems(updatedItems);
+        } catch (err) {
+            console.error("Cart stock refresh failed", err);
+        }
     };
 
     const clearCart = () => {
         setItems([]);
         if (typeof window !== 'undefined') localStorage.removeItem(CART_KEY);
     };
+
+    const openCart = () => {
+        setIsCartOpen(true);
+        refreshStock(); // Refresh stock whenever the cart opens
+    };
+    
+    const closeCart = () => setIsCartOpen(false);
 
     const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
     const cartTotal = items.reduce((sum, i) => {
@@ -80,7 +129,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, 0);
 
     return (
-        <CartContext.Provider value={{ items, addToCart, removeFromCart, updateQuantity, clearCart, cartCount, cartTotal }}>
+        <CartContext.Provider value={{ 
+            items, addToCart, removeFromCart, updateQuantity, clearCart, cartCount, cartTotal,
+            isCartOpen, setIsCartOpen, openCart, closeCart, refreshStock
+        }}>
             {children}
         </CartContext.Provider>
     );

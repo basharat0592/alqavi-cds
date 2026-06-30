@@ -78,10 +78,32 @@ export const companyService = {
         return data;
     },
     createSupplier: async (payload: any): Promise<any> => {
+        const hasFile = Object.values(payload).some(v => v instanceof File);
+        if (hasFile) {
+            const fd = new FormData();
+            Object.entries(payload).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) fd.append(k, v as any);
+            });
+            const { data } = await api.post('/v1/company/suppliers/create/', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return data;
+        }
         const { data } = await api.post('/v1/company/suppliers/create/', payload);
         return data;
     },
     updateSupplier: async (id: number | string, payload: any): Promise<any> => {
+        const hasFile = Object.values(payload).some(v => v instanceof File);
+        if (hasFile) {
+            const fd = new FormData();
+            Object.entries(payload).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) fd.append(k, v as any);
+            });
+            const { data } = await api.patch(`/v1/company/suppliers/${id}/`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return data;
+        }
         const { data } = await api.patch(`/v1/company/suppliers/${id}/`, payload);
         return data;
     },
@@ -99,10 +121,36 @@ export const companyService = {
         return data;
     },
     createCustomer: async (payload: any): Promise<any> => {
+        const hasFile = Object.values(payload).some(v => v instanceof File);
+        if (hasFile) {
+            const fd = new FormData();
+            Object.entries(payload).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) {
+                    fd.append(k, v as any);
+                }
+            });
+            const { data } = await api.post('/v1/company/customers/', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return data;
+        }
         const { data } = await api.post('/v1/company/customers/', payload);
         return data;
     },
     updateCustomer: async (id: number | string, payload: any): Promise<any> => {
+        const hasFile = Object.values(payload).some(v => v instanceof File);
+        if (hasFile) {
+            const fd = new FormData();
+            Object.entries(payload).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) {
+                    fd.append(k, v as any);
+                }
+            });
+            const { data } = await api.patch(`/v1/company/customers/${id}/`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return data;
+        }
         const { data } = await api.patch(`/v1/company/customers/${id}/`, payload);
         return data;
     },

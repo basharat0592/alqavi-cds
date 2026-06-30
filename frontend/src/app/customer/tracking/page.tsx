@@ -11,12 +11,12 @@ import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
-/* ─────────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    PURE AMAZON RETAIL DESIGN SYSTEM - PUBLIC TRACKING VERSION 2.0
-   ───────────────────────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#FFD814] hover:bg-[#F7CA00] border-[#FCD200] text-[#0f1111] shadow-[0_2px_5px_0_rgba(213,217,217,0.5)]',
+        primary: 'bg-[#119AB8] hover:bg-[#13B0D1] border-[#119AB8] text-white shadow-[0_2px_5px_0_rgba(17,154,184,0.3)]',
         secondary: 'bg-white hover:bg-[#f7f8fa] border-[#D5D9D9] text-[#0f1111] shadow-[0_2px_5px_0_rgba(213,217,217,0.5)]',
         danger: 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700 shadow-sm'
     };
@@ -29,7 +29,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
     );
 };
 
-const inputCls = "w-full h-[45px] px-12 border border-[#D5D9D9] rounded-[8px] text-[16px] outline-none focus:border-[#e77600] focus:shadow-[0_0_0_3px_rgba(228,121,17,0.3)] placeholder:text-[#888] bg-white transition-all font-medium";
+const inputCls = "w-full h-[45px] px-12 border border-[#D5D9D9] rounded-[8px] text-[16px] outline-none focus:border-[#119AB8] focus:shadow-[0_0_0_3px_rgba(17,154,184,0.2)] placeholder:text-[#888] bg-white transition-all font-medium";
 
 export default function TrackingPage() {
     const router = useRouter();
@@ -125,7 +125,7 @@ export default function TrackingPage() {
                 {/* Search Bar */}
                 <div className="mb-12 group">
                     <form onSubmit={handleTrack} className="relative max-w-2xl mx-auto drop-shadow-sm hover:drop-shadow-md transition-all">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#888] group-focus-within:text-[#e77600]" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#888] group-focus-within:text-[#119AB8]" />
                         <input
                             type="text"
                             value={trackingId}
@@ -133,7 +133,7 @@ export default function TrackingPage() {
                             placeholder="Enter Tracking ID (e.g. ALQ-123456)"
                             className={inputCls}
                         />
-                        <button type="submit" disabled={loading} className="absolute right-1.5 top-1.5 bottom-1.5 px-8 rounded-[7px] bg-[#FFD814] hover:bg-[#F7CA00] text-[14px] font-bold transition-colors">
+                        <button type="submit" disabled={loading} className="absolute right-1.5 top-1.5 bottom-1.5 px-8 rounded-[7px] bg-[#119AB8] hover:bg-[#13B0D1] text-[14px] font-bold text-white transition-colors">
                             {loading ? <Loader2 size={16} className="animate-spin" /> : 'Track'}
                         </button>
                     </form>
@@ -175,7 +175,7 @@ export default function TrackingPage() {
                                         <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-[#F0F2F2] -translate-y-1/2 rounded-full" />
                                         {currentStepIndex >= 0 && order.status !== 'CANCELLED' && (
                                             <div 
-                                                className="absolute top-1/2 left-0 h-1.5 bg-[#007600] -translate-y-1/2 rounded-full transition-all duration-1000 ease-out" 
+                                                className="absolute top-1/2 left-0 h-1.5 bg-[#119AB8] -translate-y-1/2 rounded-full transition-all duration-1000 ease-out" 
                                                 style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
                                             />
                                         )}
@@ -189,8 +189,8 @@ export default function TrackingPage() {
                                                 return (
                                                     <div key={idx} className="flex flex-col items-center relative group">
                                                         <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center bg-white z-10 transition-all duration-500
-                                                            ${isCompleted ? 'border-[#007600] text-[#007600] scale-110 shadow-sm' : 'border-[#D5D9D9] text-[#888]'}`}>
-                                                            {isCompleted ? <CheckCircle2 size={20} fill="currentColor" className="text-white bg-[#007600] rounded-full" /> : <Icon size={18} />}
+                                                            ${isCompleted ? 'border-[#119AB8] text-[#119AB8] scale-110 shadow-sm' : 'border-[#D5D9D9] text-[#888]'}`}>
+                                                            {isCompleted ? <CheckCircle2 size={20} fill="currentColor" className="text-white bg-[#119AB8] rounded-full" /> : <Icon size={18} />}
                                                         </div>
                                                         <div className="absolute top-14 flex flex-col items-center min-w-[100px] text-center">
                                                             <p className={`text-[11px] font-bold uppercase tracking-tight leading-tight ${isCompleted ? 'text-[#007600]' : 'text-[#888]'}`}>{step.label}</p>
@@ -204,7 +204,7 @@ export default function TrackingPage() {
 
                                     {/* Latest Update Status */}
                                     <div className="flex items-center gap-4 pt-6 border-t border-[#F0F2F2]">
-                                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
+                                        <div className="w-12 h-12 bg-cyan-50 text-[#119AB8] rounded-full flex items-center justify-center shrink-0">
                                             <RefreshCw size={20} className="animate-spin duration-[4s]" />
                                         </div>
                                         <div>
@@ -229,7 +229,9 @@ export default function TrackingPage() {
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex justify-between items-start gap-4">
-                                                        <p className="text-[15px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer leading-tight">{item.product_name}</p>
+                                                        <p className="text-[15px] font-bold text-[#007185] hover:text-[#c45500] cursor-pointer leading-tight">
+                                                            {(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
+                                                        </p>
                                                         <p className="text-[15px] font-bold text-[#111]">{formatCurrency(item.price * item.quantity)}</p>
                                                     </div>
                                                     <div className="flex items-center gap-3 mt-2 text-[12px] text-[#565959] font-medium uppercase tracking-wider">
@@ -299,7 +301,7 @@ export default function TrackingPage() {
                     <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-[#D5D9D9] rounded-[16px] bg-[#F7F8FA] animate-in zoom-in duration-500">
                         <div className="relative mb-6">
                             <Box size={80} className="text-[#D5D9D9]" />
-                            <Search size={32} className="absolute -bottom-2 -right-2 text-[#e77600] bg-white rounded-full p-1.5 shadow-md" />
+                            <Search size={32} className="absolute -bottom-2 -right-2 text-[#119AB8] bg-white rounded-full p-1.5 shadow-md" />
                         </div>
                         <h2 className="text-[22px] font-bold text-[#111]">Track your parcel</h2>
                         <p className="text-[14px] text-[#565959] mt-2 mb-10 text-center max-w-sm">Enter the Tracking ID provided in your SMS or email to see its journey.</p>

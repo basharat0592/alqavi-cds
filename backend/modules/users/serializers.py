@@ -38,7 +38,7 @@ class UserActivityLogSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserActivityLog
-        fields = ['id', 'user', 'user_name', 'action', 'action_display', 'description', 'ip_address', 'timestamp']
+        fields = ['id', 'user', 'user_name', 'action', 'action_display', 'description', 'ip_address', 'timestamp', 'is_read']
         read_only_fields = ['id', 'timestamp']
 
 
@@ -51,9 +51,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name', 'phone', 
+            'id', 'username', 'email', 'first_name', 'last_name', 'phone',
             'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'permissions', 
+            'status', 'status_display', 'is_active', 'permissions', 'page_permissions',
             'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at']
@@ -87,8 +87,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'username', 'email', 'password', 'password_confirm', 'first_name', 
-            'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role'
+            'username', 'email', 'password', 'password_confirm', 'first_name',
+            'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role',
+            'page_permissions'
         ]
     
     def validate(self, data):
@@ -112,8 +113,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'first_name', 'last_name', 'email', 'phone', 'avatar', 'address', 
-            'city', 'country', 'postal_code', 'role'
+            'first_name', 'last_name', 'email', 'phone', 'avatar', 'address',
+            'city', 'country', 'postal_code', 'role', 'page_permissions'
         ]
 
 
@@ -156,98 +157,103 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         username = attrs.get('username')
         password = attrs.get('password')
-        
-        # 1. Try to find in standard User table (Employees/Admins/Customers)
-        user = None
+        from django.contrib.auth.hashers import check_password
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from django.utils import timezone
+        from modules.supplier.models import Supplier
+        from modules.customer.models import Customer
+        from rest_framework import serializers
+
+        # 1. Attempt Standard User Login (Admins, Employees, etc.)
+        user_obj = None
         if '@' in username:
-            user = User.objects.filter(email=username).first()
+            user_obj = User.objects.filter(email=username).first()
         else:
-            user = User.objects.filter(username=username).first()
+            user_obj = User.objects.filter(username=username).first()
 
-        # 2. If not in User table, try Supplier table (Physical separation requested)
-        if not user:
-            from django.contrib.auth.hashers import check_password
-            from rest_framework_simplejwt.tokens import RefreshToken
-            from django.utils import timezone
-
-            # Try Supplier
-            from modules.supplier.models import Supplier
-            supplier = None
-            if '@' in username:
-                supplier = Supplier.objects.filter(email=username, is_active=True).first()
-            else:
-                supplier = Supplier.objects.filter(username=username, is_active=True).first()
+        if user_obj:
+            try:
+                # Update attrs with actual username if email was provided
+                auth_attrs = attrs.copy()
+                auth_attrs['username'] = user_obj.username
+                data = super().validate(auth_attrs)
+                user = self.user
                 
-            if supplier and check_password(password, supplier.password):
-                supplier.last_login = timezone.now()
-                supplier.save()
-                refresh = RefreshToken()
-                refresh['user_id'] = f"sup_{supplier.id}"
-                refresh['role'] = 'supplier'
-                return {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                    'user': {
-                        'id': supplier.id,
-                        'name': supplier.name,
-                        'email': supplier.email,
-                        'role': 'supplier',
-                        'is_staff': False,
-                        'is_superuser': False,
-                    }
+                role = 'customer'
+                if user.is_superuser or user.is_staff:
+                    role = 'admin'
+                elif user.role:
+                    role = user.role.name.lower()
+
+                data['user'] = {
+                    'id': str(user.id),
+                    'name': user.get_full_name() or user.username,
+                    'email': user.email,
+                    'avatar': user.avatar.url if user.avatar else None,
+                    'role': role,
+                    'is_staff': user.is_staff,
+                    'is_superuser': user.is_superuser,
+                    'page_permissions': user.page_permissions or [],
                 }
+                return data
+            except Exception:
+                # If standard login fails, continue to check Supplier/Customer tables
+                pass
 
-            # Try Customer
-            from modules.customer.models import Customer
-            customer = None
-            if '@' in username:
-                customer = Customer.objects.filter(email=username, is_active=True).first()
-            else:
-                customer = Customer.objects.filter(username=username, is_active=True).first()
-
-            if customer and check_password(password, customer.password):
-                customer.last_login = timezone.now()
-                customer.save()
-                refresh = RefreshToken()
-                refresh['user_id'] = f"cus_{customer.id}"
-                refresh['role'] = 'customer'
-                return {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                    'user': {
-                        'id': customer.id,
-                        'name': customer.name,
-                        'email': customer.email,
-                        'role': 'customer',
-                        'is_staff': False,
-                        'is_superuser': False,
-                    }
-                }
-            
-            # If still nothing, let super().validate handle the standard failure
-            return super().validate(attrs)
-
-        # 3. Standard User Auth logic
-        if user and '@' in username:
-            attrs['username'] = user.username
-                
-        data = super().validate(attrs)
-        user = self.user
-
-        if user.is_superuser or user.is_staff:
-            role = 'admin'
-        elif user.role:
-            role = user.role.name.lower()
+        # 2. Attempt Direct Supplier Login
+        supplier = None
+        if '@' in username:
+            supplier = Supplier.objects.filter(email=username, is_active=True).first()
         else:
-            role = 'customer'
+            supplier = Supplier.objects.filter(username=username, is_active=True).first()
 
-        data['user'] = {
-            'id': str(user.id),
-            'name': user.get_full_name() or user.username,
-            'email': user.email,
-            'role': role,
-            'is_staff': user.is_staff,
-            'is_superuser': user.is_superuser,
-        }
-        
-        return data
+        if supplier and check_password(password, supplier.password):
+            supplier.last_login = timezone.now()
+            supplier.save()
+            refresh = RefreshToken()
+            # SimpleJWT tokens need a 'user_id' claim. Using a prefix for non-User models.
+            refresh['user_id'] = f"sup_{supplier.id}"
+            refresh['role'] = 'supplier'
+            return {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': {
+                    'id': supplier.id,
+                    'name': supplier.name,
+                    'email': supplier.email,
+                    'role': 'supplier',
+                    'is_staff': False,
+                    'is_superuser': False,
+                }
+            }
+
+        # 3. Attempt Direct Customer Login
+        customer = None
+        if '@' in username:
+            customer = Customer.objects.filter(email=username, is_active=True).first()
+        else:
+            customer = Customer.objects.filter(username=username, is_active=True).first()
+
+        if customer and check_password(password, customer.password):
+            customer.last_login = timezone.now()
+            customer.save()
+            refresh = RefreshToken()
+            refresh['user_id'] = f"cus_{customer.id}"
+            refresh['role'] = 'customer'
+            return {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': {
+                    'id': customer.id,
+                    'name': customer.name,
+                    'email': customer.email,
+                    'avatar': customer.avatar.url if customer.avatar else None,
+                    'role': 'customer',
+                    'is_staff': False,
+                    'is_superuser': False,
+                }
+            }
+
+        # 4. If all fail, raise standard error
+        raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})
+        raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})
