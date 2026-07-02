@@ -414,8 +414,8 @@ export default function AdminOrdersPage() {
         <div className="pb-20">
             <div className="max-w-[1440px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
                 <PageHeader
-                    title="Orders"
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Orders' }]}
+                    title="Recent Orders"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Recent Orders' }]}
                     actions={
                         <Button variant="outline" onClick={loadOrders} disabled={loading} className="w-full sm:w-auto">
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Pipeline
@@ -427,7 +427,7 @@ export default function AdminOrdersPage() {
                 <Card className="overflow-hidden mb-8">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Active Orders Pipeline</h2>
+                            <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Recent Orders</h2>
                             {activeOrders.filter(o => o.status === 'PENDING').length > 0 && (
                                 <Badge tone="amber" className="animate-pulse">
                                     {activeOrders.filter(o => o.status === 'PENDING').length} Pending Acceptance
@@ -577,173 +577,8 @@ export default function AdminOrdersPage() {
                     </div>
                 </Card>
 
-                {/* Order Table (with integrated Filter Bar header) */}
-                <Card className="overflow-hidden">
-                    {/* Integrated Filter Bar Header */}
-                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
-                        <div className="flex flex-wrap items-center gap-4">
-
-                            <div className="flex items-center gap-2">
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status Filter</label>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className={inputCls + " w-[160px] cursor-pointer"}
-                                >
-                                    <option value="ALL">All Orders</option>
-                                    {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                            <div className="h-6 w-[1px] bg-slate-200" />
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">
-                                Showing <span className="text-slate-900">{filtered.length}</span> Results
-                            </div>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                <SelectAllTh sel={sel} />
-                                <th className="px-5 py-3 w-[280px]">Customer & Tracking</th>
-                                <th className="px-5 py-3">Shipping Logistics</th>
-                                <th className="px-5 py-3 w-36">Value</th>
-                                <th className="px-5 py-3 w-40 text-center">Lifecycle Status</th>
-                                <th className="px-5 py-3 text-right w-32">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {paginatedData.length === 0 ? (
-                                <tr><td colSpan={6} className="py-24 text-center text-[12px] text-slate-400 font-medium italic">No active orders found in this pipeline.</td></tr>
-                            ) : (
-                                paginatedData.map((order) => {
-                                    const st = STATUS_OPTIONS.find(s => s.value === order.status);
-                                    return (
-                                        <tr key={order.id} className="hover:bg-slate-50 transition-colors group text-[11px]">
-                                            <RowCheckboxTd sel={sel} id={order.id} />
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4">
-                                                <div className="flex items-center gap-2 sm:gap-3">
-                                                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 group-hover:border-slate-300 group-hover:text-slate-700 transition-all flex-shrink-0">
-                                                        <Package size={14} className="sm:w-4 sm:h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[9px] sm:text-[10px] font-bold text-indigo-700 uppercase tracking-tighter bg-indigo-50 px-1 sm:px-1.5 py-0.5 rounded">#{order.tracking_id}</span>
-                                                        </div>
-                                                        <p className="font-bold text-slate-900 mt-1 text-[11px] sm:text-[12px]">{order.customer_name}</p>
-                                                        <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1 mt-1"><Phone size={9} /> {order.phone_number}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4">
-                                                <div className="flex items-start gap-1.5 max-w-[140px] sm:max-w-[300px]">
-                                                    <MapPin size={10} className="text-slate-400 shrink-0 mt-0.5" />
-                                                    <p className="line-clamp-2 text-slate-600 font-medium leading-relaxed text-[10px] sm:text-[11px]">{order.shipping_address}</p>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 mt-2 text-[8.5px] sm:text-[9.5px] text-slate-400 font-bold uppercase tracking-wide">
-                                                    <Clock size={9} /> Ordered on {formatDate(order.created_at)}
-                                                </div>
-                                            </td>
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4">
-                                                <div className="font-bold text-slate-900 text-[12px] sm:text-[13px] tabular-nums">{formatCurrency(order.total_amount)}</div>
-                                                <div className="text-[8.5px] sm:text-[9.5px] text-emerald-600 font-bold uppercase tracking-tighter mt-1">{order.items?.length || 0} ITEMS</div>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <StatusDropdown
-                                                        order={order}
-                                                        updating={updatingRow === order.id?.toString()}
-                                                        onSelect={(s) => handleStatusUpdateWithLoading(order.id?.toString(), s)}
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2.5 transition-all">
-                                                    <button
-                                                        onClick={() => { setSelectedOrder(order); setIsViewModalOpen(true); }}
-                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
-                                                    >
-                                                        View
-                                                    </button>
-                                                    <span className="text-slate-300">|</span>
-                                                    <Link
-                                                        href={`/admin/sales/${order.id}/invoice`}
-                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
-                                                    >
-                                                        Print
-                                                    </Link>
-                                                    <span className="text-slate-300">|</span>
-                                                    <button
-                                                        onClick={() => setDeleteTarget(order)}
-                                                        className="text-[12px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
-                                                    >
-                                                        <Trash2 size={12} /> Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-
-                    {/* Pagination */}
-                    <div className="bg-slate-50/60 border-t border-slate-100 px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-tight text-center sm:text-left">
-                            Showing <span className="text-slate-900">{filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to <span className="text-slate-900">{Math.min(currentPage * pageSize, filtered.length)}</span> of <span className="text-slate-900">{filtered.length}</span> Records
-                        </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                                className="flex-1 sm:flex-initial"
-                            >
-                                Previous
-                            </Button>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-3 py-1 rounded-lg whitespace-nowrap">
-                                Page {currentPage}
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages || 1))}
-                                disabled={currentPage >= (totalPages || 1)}
-                                className="flex-1 sm:flex-initial"
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
             </div>
 
-            <BulkBar
-                sel={sel}
-                entity="orders"
-                onDelete={bulkDelete}
-                statusActions={[
-                    { label: 'Mark Confirmed', apply: (ids) => bulkStatus(ids, 'CONFIRMED') },
-                    { label: 'Mark Processing', apply: (ids) => bulkStatus(ids, 'PROCESSING') },
-                    { label: 'Mark Shipped', apply: (ids) => bulkStatus(ids, 'SHIPPED') },
-                    { label: 'Mark Cancelled', apply: (ids) => bulkStatus(ids, 'CANCELLED') },
-                ]}
-                onExport={() => exportToCSV(
-                    sel.selectedItems.map((o: any) => ({
-                        tracking_id: o.tracking_id || o.id,
-                        customer_name: o.customer_name || '',
-                        phone_number: o.phone_number || '',
-                        shipping_address: o.shipping_address || '',
-                        status: o.status || '',
-                        total_amount: o.total_amount ?? 0,
-                        items: o.items?.length || 0,
-                        date: formatDate(o.created_at),
-                    })),
-                    'orders.csv',
-                )}
-            />
 
             {/* Order Details Modal */}
             <Modal

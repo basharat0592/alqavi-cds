@@ -62,7 +62,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             label: 'Main Dashboard',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Order List', href: '/admin/orders', icon: ShoppingBag },
+                { name: 'Recent Orders', href: '/admin/orders', icon: ShoppingBag },
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
                 { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },

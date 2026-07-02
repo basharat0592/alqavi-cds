@@ -36,6 +36,12 @@ class DeliveryPerson(models.Model):
     area = models.ForeignKey(
         'company.Area', on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_persons'
     )
+    # Branch (warehouse) this rider serves. The rider sees this branch's active
+    # orders in their notifications feed (not only orders explicitly assigned).
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='delivery_persons'
+    )
     avatar = models.ImageField(upload_to='delivery/avatars/', null=True, blank=True)
 
     # Admin who created this rider — drives per-admin data isolation.

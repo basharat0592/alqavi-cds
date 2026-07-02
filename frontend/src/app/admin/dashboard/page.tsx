@@ -338,8 +338,8 @@ export default function AdminDashboard() {
             keywords: ['refunds', 'damaged', 'shipback', 'purchase returns', 'supplier returns']
         },
         {
-            name: 'Order List',
-            desc: 'Manage online orders',
+            name: 'Recent Orders',
+            desc: 'Active orders in progress',
             href: '/admin/orders',
             icon: ClipboardList,
             theme: {
@@ -576,7 +576,7 @@ export default function AdminDashboard() {
                 { name: 'Sales History', href: '/admin/sales', icon: TrendingUp, keywords: ['sales list', 'transactions', 'revenue ledger'] },
                 { name: 'Invoices', href: '/admin/invoices', icon: Receipt, keywords: ['billing', 'receipts', 'print', 'invoice'] },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, keywords: ['returns', 'refunds', 'customer returns'] },
-                { name: 'Order List', href: '/admin/orders', icon: ClipboardList, keywords: ['orders', 'shipping', 'list'] },
+                { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, keywords: ['orders', 'shipping', 'list', 'recent', 'active'] },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, keywords: ['delivery', 'courier', 'dispatch'] },
                 { name: 'Delivery Persons', href: '/admin/delivery', icon: Bike, keywords: ['rider', 'riders', 'courier', 'driver', 'delivery boy'] },
             ]

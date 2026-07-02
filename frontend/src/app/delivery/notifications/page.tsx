@@ -13,11 +13,15 @@ export default function DeliveryNotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [notifs, setNotifs] = useState<Notif[]>([]);
 
+    const [branch, setBranch] = useState<string | null>(null);
+
     useEffect(() => {
         riderService.myDeliveries()
             .then((d) => {
-                const results: any[] = d?.results || [];
-                const items: Notif[] = results.map((o) => {
+                setBranch(d?.rider?.warehouse_name || null);
+                const assigned: any[] = d?.results || [];
+                const assignedIds = new Set(assigned.map((o: any) => String(o.id)));
+                const items: Notif[] = assigned.map((o) => {
                     const ref = o.order_number || o.tracking_id;
                     const cust = o.customer_display_name || o.customer_name || 'a customer';
                     if (isDelivered(o.status)) {
@@ -31,6 +35,22 @@ export default function DeliveryNotificationsPage() {
                     }
                     return { id: `${o.id}-a`, icon: Package, tint: 'bg-amber-50 text-amber-600', title: `New delivery assigned: #${ref}`, body: `Deliver to ${cust} — ${o.shipping_address || 'address on file'}.`, at: orderDate(o) };
                 });
+
+                // Branch feed: every active order in the rider's branch not already
+                // shown above (i.e. not yet assigned to this rider specifically).
+                const branchOrders: any[] = d?.branch_orders || [];
+                branchOrders.forEach((o: any) => {
+                    if (assignedIds.has(String(o.id))) return;
+                    const ref = o.order_number || o.tracking_id;
+                    const cust = o.customer_display_name || o.customer_name || 'a customer';
+                    items.push({
+                        id: `${o.id}-b`, icon: Package, tint: 'bg-indigo-50 text-indigo-600',
+                        title: `Branch order #${ref} (${upper(o.status)})`,
+                        body: `${cust} — ${o.shipping_address || 'address on file'}.`,
+                        at: orderDate(o),
+                    });
+                });
+
                 items.sort((a, b) => (b.at?.getTime() || 0) - (a.at?.getTime() || 0));
                 setNotifs(items);
             })
@@ -42,7 +62,9 @@ export default function DeliveryNotificationsPage() {
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="border-b border-gray-200 pb-4">
                 <h1 className="text-3xl font-normal text-[#111]">Notifications</h1>
-                <p className="text-sm text-gray-500 mt-1">Delivery alerts, order updates and announcements.</p>
+                <p className="text-sm text-gray-500 mt-1">
+                    Delivery alerts and active orders{branch ? <> for <span className="font-semibold text-[#111]">{branch}</span> branch</> : ''}.
+                </p>
             </div>
 
             {loading ? (

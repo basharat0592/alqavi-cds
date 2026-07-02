@@ -35,7 +35,7 @@ const PAGE_GROUPS = [
         label: 'Main Dashboard',
         items: [
             { name: 'Dashboard', href: '/admin/dashboard' },
-            { name: 'Order List', href: '/admin/orders' },
+            { name: 'Recent Orders', href: '/admin/orders' },
             { name: 'All Sales', href: '/admin/sales' },
             { name: 'Order Tracking', href: '/admin/tracking' },
             { name: 'Website CMS', href: '/admin/website-settings' },

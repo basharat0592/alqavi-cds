@@ -35,6 +35,61 @@ def track_order_by_id(request, tracking_id):
         return Response({'error': 'Invalid order ID format.'}, status=400)
 
 
+def complete_delivery_stock(order):
+    """Finalize a delivery from the RIDER path: release any reservation, deduct
+    physical stock from the order's own branch (tenant-scoped), settle fully-paid
+    balances, and log the purchase. POS sales assigned to a rider ship as SHIPPED
+    (which only RESERVES stock); when the rider marks DELIVERED this deducts it.
+
+    ``order.status`` must already be DELIVERED before calling — the final save fires
+    the sale→ledger signal that books the income.
+    """
+    from django.db import transaction
+    from django.db.models import F
+    from django.utils import timezone
+    from modules.inventory.models import Stock
+    from modules.payments.services import has_confirmed_installments
+    from .models import CustomerBoughtProduct
+
+    warehouse_id = order.warehouse_id
+    with transaction.atomic():
+        for item in order.items.all():
+            if not item.product:
+                continue
+            if order.is_reserved:
+                item.product.reserved_quantity = F('reserved_quantity') - item.quantity
+                item.product.save()
+            if warehouse_id:
+                sf = dict(
+                    product_name__iexact=item.product.product_name,
+                    weight=item.product.weight,
+                    size=item.product.size,
+                    warehouse_id=warehouse_id,
+                )
+                if getattr(order, 'tenant_id', None):
+                    sf['tenant_id'] = order.tenant_id
+                stock = Stock.objects.filter(**sf).first()
+                if stock:
+                    stock.total_quantity = F('total_quantity') - item.quantity
+                    stock.save()
+                    if hasattr(stock, 'product') and stock.product:
+                        stock.product.quantity = F('quantity') - item.quantity
+                        stock.product.save()
+            item.product.save()
+            CustomerBoughtProduct.objects.get_or_create(
+                order=order, product=item.product,
+                defaults={'customer': order.customer, 'user': order.user,
+                          'quantity': item.quantity, 'price': item.price},
+            )
+        if (str(order.payment_status).upper() == 'PAID'
+                and not has_confirmed_installments('order', order.id)):
+            order.amount_paid = order.total_amount
+        order.is_reserved = False
+        if not order.delivered_at:
+            order.delivered_at = timezone.now()
+        order.save()
+
+
 class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Order.objects.all()
     permission_classes = [HasModulePermission]

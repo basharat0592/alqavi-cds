@@ -9,6 +9,91 @@ import Logo from '@/components/ui/Logo';
 
 const inputCls = "w-full h-10 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/5 transition-all duration-300 outline-none font-medium";
 
+function BlinkingEye({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) {
+    const [blink, setBlink] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
+    useEffect(() => {
+        if (isOpen || !isHovered) return;
+
+        // Blink once immediately on hover
+        setBlink(true);
+        const timeout = setTimeout(() => setBlink(false), 180);
+
+        // Keep blinking every 1.6 seconds while hovered
+        const interval = setInterval(() => {
+            setBlink(true);
+            setTimeout(() => setBlink(false), 180);
+        }, 1600);
+
+        return () => {
+            clearTimeout(timeout);
+            clearInterval(interval);
+        };
+    }, [isOpen, isHovered]);
+
+    const isEyeOpen = isOpen || blink;
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                setBlink(false);
+            }}
+            className="p-1 text-slate-400 hover:text-[#13B0D1] hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none flex items-center justify-center shrink-0"
+            title={isOpen ? "Hide Password" : "Show Password"}
+        >
+            <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-all duration-300"
+            >
+                {/* Top Lid */}
+                <path
+                    className="transition-all duration-300 ease-in-out"
+                    d={isEyeOpen ? "M2 12C5 5.5 19 5.5 22 12" : "M2 12C5 18.5 19 18.5 22 12"}
+                />
+                {/* Bottom Lid */}
+                <path d="M2 12C5 18.5 19 18.5 22 12" />
+                
+                {/* Pupil Group with cute sparkle */}
+                <g
+                    className="transition-all duration-300 ease-in-out origin-center"
+                    style={{
+                        transform: isEyeOpen ? 'scale(1)' : 'scale(0)',
+                        opacity: isEyeOpen ? 1 : 0,
+                    }}
+                >
+                    <circle cx="12" cy="12" r="3.8" fill="currentColor" stroke="none" />
+                    <circle cx="13.2" cy="10.8" r="0.9" fill="white" stroke="none" />
+                </g>
+
+                {/* Lashes */}
+                <g 
+                    className="transition-all duration-300 ease-in-out"
+                    style={{ 
+                        opacity: isEyeOpen ? 0 : 1,
+                        transform: isEyeOpen ? 'translateY(1px)' : 'translateY(0px)'
+                    }}
+                >
+                    <line x1="6.5" y1="16" x2="5.2" y2="17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="12" y1="17.5" x2="12" y2="19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="17.5" y1="16" x2="18.8" y2="17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </g>
+            </svg>
+        </button>
+    );
+}
+
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div className="w-full">
         <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 text-left">{label}</label>
@@ -22,6 +107,7 @@ export default function LoginPage() {
     const [success, setSuccess] = useState(false);
     const [formData, setFormData] = useState({ username: '', password: '', rememberMe: false });
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -135,12 +221,17 @@ export default function LoginPage() {
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                 <input
-                                    name="password" type="password" required
+                                    name="password" type={showPassword ? "text" : "password"} required
                                     value={formData.password} onChange={handleChange}
-                                    className={`${inputCls} pl-10`}
+                                    className={`${inputCls} pl-10 pr-12`}
                                     placeholder="••••••••"
                                 />
-                                <Link href="/forgot-password" core-link="true" className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#13B0D1] uppercase tracking-widest hover:underline">
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10">
+                                    <BlinkingEye isOpen={showPassword} onClick={() => setShowPassword(!showPassword)} />
+                                </div>
+                            </div>
+                            <div className="text-right mt-2">
+                                <Link href="/forgot-password" core-link="true" className="text-[10px] font-bold text-[#13B0D1] uppercase tracking-widest hover:underline whitespace-nowrap">
                                     Forgot?
                                 </Link>
                             </div>

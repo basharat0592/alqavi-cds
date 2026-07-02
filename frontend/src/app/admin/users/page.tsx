@@ -34,6 +34,91 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const inputCls = ui.inputBase;
 
+function BlinkingEye({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) {
+    const [blink, setBlink] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
+    useEffect(() => {
+        if (isOpen || !isHovered) return;
+
+        // Blink once immediately on hover
+        setBlink(true);
+        const timeout = setTimeout(() => setBlink(false), 180);
+
+        // Keep blinking every 1.6 seconds while hovered
+        const interval = setInterval(() => {
+            setBlink(true);
+            setTimeout(() => setBlink(false), 180);
+        }, 1600);
+
+        return () => {
+            clearTimeout(timeout);
+            clearInterval(interval);
+        };
+    }, [isOpen, isHovered]);
+
+    const isEyeOpen = isOpen || blink;
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                setBlink(false);
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100/50 rounded-lg transition-colors focus:outline-none flex items-center justify-center shrink-0"
+            title={isOpen ? "Hide Password" : "Show Password"}
+        >
+            <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-all duration-300"
+            >
+                {/* Top Lid */}
+                <path
+                    className="transition-all duration-300 ease-in-out"
+                    d={isEyeOpen ? "M2 12C5 5.5 19 5.5 22 12" : "M2 12C5 18.5 19 18.5 22 12"}
+                />
+                {/* Bottom Lid */}
+                <path d="M2 12C5 18.5 19 18.5 22 12" />
+                
+                {/* Pupil Group with cute sparkle */}
+                <g
+                    className="transition-all duration-300 ease-in-out origin-center"
+                    style={{
+                        transform: isEyeOpen ? 'scale(1)' : 'scale(0)',
+                        opacity: isEyeOpen ? 1 : 0,
+                    }}
+                >
+                    <circle cx="12" cy="12" r="3.8" fill="currentColor" stroke="none" />
+                    <circle cx="13.2" cy="10.8" r="0.9" fill="white" stroke="none" />
+                </g>
+
+                {/* Lashes */}
+                <g 
+                    className="transition-all duration-300 ease-in-out"
+                    style={{ 
+                        opacity: isEyeOpen ? 0 : 1,
+                        transform: isEyeOpen ? 'translateY(1px)' : 'translateY(0px)'
+                    }}
+                >
+                    <line x1="6.5" y1="16" x2="5.2" y2="17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="12" y1="17.5" x2="12" y2="19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="17.5" y1="16" x2="18.8" y2="17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </g>
+            </svg>
+        </button>
+    );
+}
+
 export default function UsersPage() {
     const router = useRouter();
     const [users, setUsers] = useState<AppUser[]>([]);
@@ -50,6 +135,7 @@ export default function UsersPage() {
     const [deleteUser, setDeleteUser] = useState<AppUser | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [selectedUserForView, setSelectedUserForView] = useState<AppUser | null>(null);
+    const [showPasswordDetail, setShowPasswordDetail] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -360,7 +446,7 @@ export default function UsersPage() {
                     <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
                         <div className="bg-slate-50/60 px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                             <span className="text-[12px] font-bold text-slate-900 uppercase tracking-wider">Full User Profile</span>
-                            <button onClick={() => setSelectedUserForView(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={16} /></button>
+                            <button onClick={() => { setSelectedUserForView(null); setShowPasswordDetail(false); }} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={16} /></button>
                         </div>
                         <div className="p-4 sm:p-6 space-y-4">
                             <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
@@ -376,7 +462,16 @@ export default function UsersPage() {
                             <div className="bg-indigo-50 border border-indigo-100 p-3.5 rounded-xl text-center">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Security Key / Password</label>
                                 {selectedUserForView.plain_password ? (
-                                    <div className="text-[24px] font-bold text-indigo-600 tracking-wider font-mono">{selectedUserForView.plain_password}</div>
+                                    <div className="flex items-center justify-center gap-2">
+                                        {/* Spacer to balance the eye button for perfect centering */}
+                                        <div className="w-9 shrink-0" />
+                                        <div className="text-[24px] font-bold text-indigo-600 tracking-wider font-mono select-all flex-1 text-center">
+                                            {showPasswordDetail ? selectedUserForView.plain_password : '••••••••'}
+                                        </div>
+                                        <div className="w-9 shrink-0 flex items-center justify-center">
+                                            <BlinkingEye isOpen={showPasswordDetail} onClick={() => setShowPasswordDetail(!showPasswordDetail)} />
+                                        </div>
+                                    </div>
                                 ) : (
                                     <p className="text-[12px] text-slate-400 font-semibold">Not available</p>
                                 )}
@@ -407,7 +502,7 @@ export default function UsersPage() {
                         </div>
                         <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
                             <Btn onClick={() => router.push(`/admin/users/edit/${selectedUserForView.id}`)} className="flex-1">Edit User</Btn>
-                            <Btn variant="secondary" onClick={() => setSelectedUserForView(null)} className="px-8">Close</Btn>
+                            <Btn variant="secondary" onClick={() => { setSelectedUserForView(null); setShowPasswordDetail(false); }} className="px-8">Close</Btn>
                         </div>
                     </div>
                 </div>

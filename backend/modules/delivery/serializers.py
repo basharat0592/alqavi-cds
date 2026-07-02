@@ -4,6 +4,7 @@ from .models import DeliveryPerson
 
 class DeliveryPersonSerializer(serializers.ModelSerializer):
     area_name = serializers.ReadOnlyField(source='area.name')
+    warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     name = serializers.ReadOnlyField()
     active_deliveries = serializers.SerializerMethodField()
     completed_deliveries = serializers.SerializerMethodField()
@@ -13,7 +14,7 @@ class DeliveryPersonSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'name', 'phone',
             'vehicle_type', 'vehicle_number', 'cnic', 'address', 'city',
-            'area', 'area_name', 'avatar', 'status', 'is_active',
+            'area', 'area_name', 'warehouse', 'warehouse_name', 'avatar', 'status', 'is_active',
             'plain_password', 'created_at', 'updated_at',
             'active_deliveries', 'completed_deliveries',
         ]
@@ -32,6 +33,6 @@ class DeliveryPersonCreateSerializer(serializers.ModelSerializer):
         fields = [
             'username', 'email', 'password', 'first_name', 'last_name', 'phone',
             'vehicle_type', 'vehicle_number', 'cnic', 'address', 'city',
-            'area', 'avatar', 'status', 'is_active',
+            'area', 'warehouse', 'avatar', 'status', 'is_active',
         ]
         extra_kwargs = {'password': {'write_only': True}}

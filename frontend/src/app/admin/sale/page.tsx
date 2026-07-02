@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
 import { installmentService } from '@/services/payment.service';
+import { deliveryService } from '@/services/delivery.service';
 import { authService } from '@/lib/auth';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -251,6 +252,8 @@ export default function SaleEntryPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [riders, setRiders] = useState<any[]>([]);
+    const [selectedRider, setSelectedRider] = useState('');
     
     // Form and Items State
     const [orderNumber, setOrderNumber] = useState(`SAL-${Date.now().toString().slice(-6)}`);
@@ -325,6 +328,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     }, [warehouseId]); 
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    // Delivery riders for the optional "assign rider" step on the confirm popup.
+    useEffect(() => {
+        deliveryService.getAll().then((r) => setRiders(r.filter((x: any) => x.is_active !== false))).catch(() => setRiders([]));
+    }, []);
 
     // Source warehouse = the logged-in branch admin's own branch. There's no picker;
     // we auto-select their assigned warehouse (falling back to the first available).
@@ -442,7 +450,9 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 shipping_address: 'Walk-in Store Selection',
                 phone_number: 'N/A',
                 notes: `POS Gen: ${orderNumber}`,
-                status: 'DELIVERED',
+                // With a rider assigned the order goes out for delivery (SHIPPED) and
+                // shows in the rider's active orders; a counter sale completes at once.
+                status: selectedRider ? 'SHIPPED' : 'DELIVERED',
                 payment_method: paymentMethod === 'cash' ? 'SHOP' : 'ONLINE',
                 payment_status: settlementStatus,
                 amount_paid: paidNow,
@@ -455,6 +465,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 }))
             };
             const data = await orderService.create(payload);
+            // Optional: assign a delivery rider chosen on the confirm popup.
+            if (selectedRider && data?.id) {
+                try { await deliveryService.assignToOrder(String(data.id), selectedRider); } catch { /* non-blocking */ }
+            }
             // Record the amount collected now as an installment so it shows in the
             // payment history (full sales already book via delivery).
             let installmentOk = true;
@@ -520,7 +534,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </div>
                     <div className="flex gap-4">
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}><Printer size={18} /> View Invoice</Btn>
-                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); setPayMode('full'); setAmountPaidNow(''); setDueDate(''); }}><Plus size={18} /> New Bill</Btn>
+                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); setPayMode('full'); setAmountPaidNow(''); setDueDate(''); setSelectedRider(''); }}><Plus size={18} /> New Bill</Btn>
                     </div>
                 </Card>
             </div>
@@ -576,9 +590,12 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             }}
                                         />
                                     </Field>
-                                    <Field label="Walk-in Name">
-                                        <input className={inputCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
-                                    </Field>
+                                    {/* Walk-in name only applies when no registered account is chosen. */}
+                                    {!customerId && (
+                                        <Field label="Walk-in Name">
+                                            <input className={inputCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
+                                        </Field>
+                                    )}
                                 </div>
                             </Card>
 
@@ -685,20 +702,19 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 <div className="p-6 space-y-5">
                                     {/* Payment Method Selector */}
                                     <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Payment Mode</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => setPaymentMethod('cash')}
-                                                className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12.5px] font-bold transition-all ${paymentMethod === 'cash' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                                                className={`flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11px] font-bold transition-all ${paymentMethod === 'cash' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
                                             >
-                                                <Banknote size={15} className={paymentMethod === 'cash' ? 'text-indigo-600' : 'text-slate-400'} />
+                                                <Banknote size={13} className={paymentMethod === 'cash' ? 'text-indigo-600' : 'text-slate-400'} />
                                                 Cash
                                             </button>
                                             <button
                                                 onClick={() => setPaymentMethod('online')}
-                                                className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12.5px] font-bold transition-all ${paymentMethod === 'online' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                                                className={`flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11px] font-bold transition-all ${paymentMethod === 'online' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
                                             >
-                                                <CreditCard size={15} className={paymentMethod === 'online' ? 'text-indigo-600' : 'text-slate-400'} />
+                                                <CreditCard size={13} className={paymentMethod === 'online' ? 'text-indigo-600' : 'text-slate-400'} />
                                                 Online Transfer
                                             </button>
                                         </div>
@@ -857,6 +873,26 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     <p className="text-[13px] text-slate-600 leading-relaxed">
                         You are about to process a total of <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(totalBill)}</span> for {items.length} items.
                     </p>
+
+                    {/* Optional: assign a delivery rider */}
+                    <div className="mt-5 text-left">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                            Assign Rider <span className="text-slate-400 normal-case font-medium">(optional)</span>
+                        </label>
+                        <div className="relative">
+                            <select
+                                value={selectedRider}
+                                onChange={e => setSelectedRider(e.target.value)}
+                                className="w-full h-10 px-3 pr-9 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white appearance-none cursor-pointer"
+                            >
+                                <option value="">No rider — assign later</option>
+                                {riders.map((r: any) => (
+                                    <option key={r.id} value={r.id}>{r.name}{r.phone ? ` · ${r.phone}` : ''}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                        </div>
+                    </div>
                 </div>
             </Modal>
 

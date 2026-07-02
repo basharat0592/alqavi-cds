@@ -110,11 +110,27 @@ def my_deliveries(request):
         'in_progress': all_qs.exclude(status__in=['DELIVERED', 'CANCELLED', 'REJECTED']).count(),
         'cancelled': all_qs.filter(status__in=['CANCELLED', 'REJECTED']).count(),
     }
+
+    # Branch feed: every ACTIVE order of the rider's assigned branch (warehouse),
+    # scoped to their tenant, so they see all deliverable orders for their branch —
+    # not only the ones explicitly assigned to them.
+    branch_orders = []
+    if rider.warehouse_id:
+        branch_qs = (Order.objects
+                     .filter(warehouse_id=rider.warehouse_id)
+                     .exclude(status__in=['DELIVERED', 'CANCELLED', 'REJECTED'])
+                     .order_by('-created_at'))
+        if rider.tenant_id:
+            branch_qs = branch_qs.filter(tenant_id=rider.tenant_id)
+        branch_orders = OrderSerializer(branch_qs, many=True, context={'request': request}).data
+
     return Response({
         'rider': {'id': rider.id, 'name': rider.name, 'phone': rider.phone,
-                  'vehicle_type': rider.vehicle_type, 'vehicle_number': rider.vehicle_number},
+                  'vehicle_type': rider.vehicle_type, 'vehicle_number': rider.vehicle_number,
+                  'warehouse': rider.warehouse_id, 'warehouse_name': (rider.warehouse.name if rider.warehouse_id else None)},
         'stats': stats,
         'results': orders,
+        'branch_orders': branch_orders,
     })
 
 
@@ -141,9 +157,14 @@ def update_delivery_status(request, order_id):
         return Response({'error': f'Riders can only set: {", ".join(sorted(allowed))}'}, status=400)
 
     order.status = new_status
-    if new_status == 'DELIVERED' and not order.delivered_at:
-        order.delivered_at = timezone.now()
-    order.save()
+    if new_status == 'DELIVERED':
+        # Deduct branch stock + settle payment + book income (same completion the
+        # admin delivery runs). The order shipped as SHIPPED, so stock was reserved
+        # at POS create — this converts the reservation into a real deduction.
+        from modules.sales.views import complete_delivery_stock
+        complete_delivery_stock(order)
+    else:
+        order.save()
     return Response(OrderSerializer(order, context={'request': request}).data)
 
 

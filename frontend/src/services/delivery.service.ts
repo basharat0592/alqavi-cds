@@ -15,6 +15,8 @@ export interface DeliveryPerson {
     city?: string;
     area?: number | null;
     area_name?: string;
+    warehouse?: number | null;
+    warehouse_name?: string;
     status: string;
     is_active: boolean;
     plain_password?: string;
