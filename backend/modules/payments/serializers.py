@@ -32,10 +32,29 @@ class PaymentSerializer(serializers.ModelSerializer):
             return obj.user.get_full_name() or obj.user.username
         return 'System' if obj.is_auto else 'Admin'
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if ret.get('payer_payee') == 'Registered Customer' and instance.source_type == 'order' and instance.source_id:
+            from modules.sales.models import Order
+            try:
+                order = Order.objects.filter(id=instance.source_id).first()
+                if order and order.customer:
+                    fullname = f"{order.customer.first_name} {order.customer.last_name}".strip()
+                    if fullname:
+                        ret['payer_payee'] = fullname
+                    elif order.customer.username:
+                        ret['payer_payee'] = order.customer.username
+            except Exception:
+                pass
+        return ret
+
 
 class TransactionPaymentSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     slip_url = serializers.SerializerMethodField()
+    payer_name = serializers.SerializerMethodField()
+    source_number = serializers.SerializerMethodField()
+    warehouse_name = serializers.SerializerMethodField()
 
     class Meta:
         model = TransactionPayment
@@ -43,6 +62,7 @@ class TransactionPaymentSerializer(serializers.ModelSerializer):
             'id', 'source_type', 'source_id', 'amount', 'method', 'paid_at',
             'reference', 'slip', 'slip_url', 'note', 'status', 'direction',
             'created_by', 'created_by_name', 'created_at', 'warehouse', 'tenant',
+            'payer_name', 'source_number', 'warehouse_name',
         ]
         # Branch + tenant are copied from the parent transaction in the view,
         # never set by the client.
@@ -59,3 +79,43 @@ class TransactionPaymentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         url = obj.slip.url
         return request.build_absolute_uri(url) if request else url
+
+    def get_payer_name(self, obj):
+        from .services import _load_parent
+        parent = _load_parent(obj.source_type, obj.source_id)
+        if not parent:
+            return 'Unknown'
+        if obj.source_type == 'order':
+            if parent.customer:
+                fullname = f"{parent.customer.first_name} {parent.customer.last_name}".strip()
+                if fullname:
+                    return fullname
+                if parent.customer.username:
+                    return parent.customer.username
+            return parent.customer_name or 'Walk-in Customer'
+        elif obj.source_type == 'purchaseorder':
+            from .views import _supplier_name
+            return _supplier_name(parent.supplier)
+        elif obj.source_type == 'salereturn':
+            order = getattr(parent, 'order', None)
+            return getattr(order, 'customer_name', 'Customer') if order else 'Customer'
+        elif obj.source_type == 'purchasereturn':
+            from .views import _supplier_name
+            return _supplier_name(parent.supplier)
+        return 'Internal'
+
+    def get_source_number(self, obj):
+        from .services import _load_parent
+        parent = _load_parent(obj.source_type, obj.source_id)
+        if not parent:
+            return obj.source_id
+        if obj.source_type == 'order':
+            return parent.tracking_id or parent.order_number
+        elif obj.source_type == 'purchaseorder':
+            return parent.purchase_number
+        elif obj.source_type in ('salereturn', 'purchasereturn'):
+            return parent.return_number
+        return obj.source_id
+
+    def get_warehouse_name(self, obj):
+        return obj.warehouse.name if obj.warehouse else ''

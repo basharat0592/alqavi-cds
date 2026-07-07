@@ -106,7 +106,7 @@ class WishlistSerializer(serializers.ModelSerializer):
 
 class SupplierProductSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source='category.name')
-    supplier_name = serializers.ReadOnlyField(source='supplier.username')
+    supplier_name = serializers.ReadOnlyField(source='supplier.name')
 
     class Meta:
         model = SupplierProduct
@@ -116,7 +116,7 @@ class SupplierProductSerializer(serializers.ModelSerializer):
             'price', 'cost_price', 'retail_price', 'quantity', 
             'status', 'batch_number', 'weight', 'size', 'is_approved', 'created_at'
         ]
-        read_only_fields = ['id', 'supplier', 'supplier_name', 'category_name', 'is_approved', 'created_at']
+        read_only_fields = ['id', 'supplier_name', 'category_name', 'is_approved', 'created_at']
 
     def validate(self, attrs):
         print(f"DEBUG: Validating SupplierProduct data: {attrs}")

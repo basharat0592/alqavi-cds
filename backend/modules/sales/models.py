@@ -94,6 +94,8 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # Settlement — supports partial / on-credit sales. amount_paid is the sum of
     # confirmed installments (see payments.TransactionPayment); kept in sync by
@@ -223,7 +225,7 @@ class PurchaseOrder(models.Model):
     ]
 
     purchase_number = models.CharField(max_length=20, unique=True)
-    supplier = models.ForeignKey('supplier.Supplier', on_delete=models.CASCADE, related_name='purchase_orders')
+    supplier = models.ForeignKey('supplier.Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders')
     reference_number = models.CharField(max_length=50, null=True, blank=True)
     
     warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True)

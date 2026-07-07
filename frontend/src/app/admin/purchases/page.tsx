@@ -171,6 +171,19 @@ export default function PurchasesPage() {
     const [whModal, setWhModal] = useState<{ open: boolean, purchase: any | null }>({ open: false, purchase: null });
     const [assigningWh, setAssigningWh] = useState(false);
 
+    // Custom dropdown states
+    const [paymentDropdownOpen, setPaymentDropdownOpen] = useState(false);
+    const [supplierDropdownOpen, setSupplierDropdownOpen] = useState(false);
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset pagination to first page when search filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, paymentFilter, supplierFilter]);
+
     const load = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
@@ -281,6 +294,8 @@ export default function PurchasesPage() {
 
     const purchasesList: any[] = Array.isArray(purchases) ? purchases : (purchases as any)?.results ? (purchases as any).results : [];
     const filtered = purchasesList;
+    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
 
     const sel = useTableSelection(filtered);
 
@@ -329,27 +344,87 @@ export default function PurchasesPage() {
                             />
                         </div>
                     </div>
-                    <div className="flex flex-row gap-4 flex-1 md:flex-initial">
-                        <div className="flex-1 md:w-[160px]">
+                    <div className="flex flex-col sm:flex-row gap-4 flex-1 md:flex-initial">
+                        {/* Custom Payment Dropdown */}
+                        <div className="flex-1 md:w-[160px] relative">
                             <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Payment</label>
-                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " cursor-pointer"}>
-                                <option value="All">All Payments</option>
-                                <option value="unpaid">Unpaid</option>
-                                <option value="partial">Partial</option>
-                                <option value="paid">Paid</option>
-                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentDropdownOpen(!paymentDropdownOpen)}
+                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 transition-all cursor-pointer select-none text-left"
+                            >
+                                <span className="capitalize">{paymentFilter === 'All' ? 'All Payments' : paymentFilter}</span>
+                                <ChevronDown size={14} className="text-slate-400" />
+                            </button>
+                            {paymentDropdownOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-[100]" onClick={() => setPaymentDropdownOpen(false)} />
+                                    <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-[110] divide-y divide-slate-100 overflow-hidden text-[13px] font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                                        {['All', 'unpaid', 'partial', 'paid'].map(val => (
+                                            <div
+                                                key={val}
+                                                onClick={() => {
+                                                    setPaymentFilter(val);
+                                                    setPaymentDropdownOpen(false);
+                                                }}
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors capitalize ${paymentFilter === val ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                            >
+                                                {val === 'All' ? 'All Payments' : val}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
-                        <div className="flex-1 md:w-[180px]">
+
+                        {/* Custom Supplier Dropdown */}
+                        <div className="flex-1 md:w-[180px] relative">
                             <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Supplier</label>
-                            <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " cursor-pointer w-full"}>
-                                <option value="All">All Suppliers</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.company ? `${s.company} - ` : ''}{s.name}</option>
-                                ))}
-                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
+                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 transition-all cursor-pointer select-none text-left"
+                            >
+                                <span className="truncate block max-w-[140px]">
+                                    {supplierFilter === 'All' ? 'All Suppliers' : (() => {
+                                        const s = suppliers.find(sup => String(sup.id) === String(supplierFilter));
+                                        return s ? (s.company ? `${s.company} - ${s.name}` : s.name) : 'All Suppliers';
+                                    })()}
+                                </span>
+                                <ChevronDown size={14} className="text-slate-400" />
+                            </button>
+                            {supplierDropdownOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-[100]" onClick={() => setSupplierDropdownOpen(false)} />
+                                    <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg z-[110] divide-y divide-slate-100 text-[13px] font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                                        <div
+                                            onClick={() => {
+                                                setSupplierFilter('All');
+                                                setSupplierDropdownOpen(false);
+                                            }}
+                                            className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors ${supplierFilter === 'All' ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                        >
+                                            All Suppliers
+                                        </div>
+                                        {suppliers.map(s => (
+                                            <div
+                                                key={s.id}
+                                                onClick={() => {
+                                                    setSupplierFilter(s.id);
+                                                    setSupplierDropdownOpen(false);
+                                                }}
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors truncate ${String(supplierFilter) === String(s.id) ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                            >
+                                                {s.company ? `${s.company} - ` : ''}{s.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
+
                         <div className="flex items-end shrink-0">
-                            <Button variant="outline" onClick={() => load()} disabled={loading} className="px-3.5">
+                            <Button variant="outline" onClick={() => load()} disabled={loading} className="px-3.5 h-10">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                             </Button>
                         </div>
@@ -392,7 +467,7 @@ export default function PurchasesPage() {
                             <p className="text-[13px] text-slate-600 italic">No purchases found.</p>
                         </Card>
                     ) : (
-                        filtered.map((p: any) => (
+                        paginated.map((p: any) => (
                             <Card key={p.id} className="p-4 space-y-3 text-left">
                                 {/* Row 1: First Item Image + Order # & Date */}
                                 <div className="flex gap-3">
@@ -513,6 +588,27 @@ export default function PurchasesPage() {
                     )}
                 </div>
 
+                {/* Mobile Pagination Footer Controls */}
+                {totalPages > 1 && (
+                    <div className="md:hidden flex items-center justify-between gap-3 text-[11.5px] text-slate-500 bg-white p-3 rounded-xl border border-slate-150/60 shadow-sm mb-6 text-left">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
+                        >
+                            Previous
+                        </button>
+                        <span className="font-semibold text-slate-700">Page {currentPage} of {totalPages}</span>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
+
                 {/* Desktop Table */}
                 <Card className="hidden md:block text-left mb-6 relative z-10 overflow-hidden">
                     <table className="w-full text-left border-collapse">
@@ -531,7 +627,7 @@ export default function PurchasesPage() {
                             {loading && filtered.length === 0 ? <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">Loading purchases...</td></tr> : filtered.length === 0 ? (
                                 <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
                             ) : (
-                                filtered.map((p: any) => (
+                                paginated.map((p: any) => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
                                         <RowCheckboxTd sel={sel} id={p.id} />
                                         <td className="px-6 py-4">
@@ -644,6 +740,36 @@ export default function PurchasesPage() {
                             )}
                         </tbody>
                     </table>
+
+                    {/* Desktop Pagination Footer Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-100 text-[12px] text-slate-500 font-medium">
+                            <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                                <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
+                                <span className="font-semibold text-slate-700">{filtered.length}</span> purchases
+                            </div>
+                            <div className="flex items-center gap-2.5 order-1 sm:order-2 w-full sm:w-auto">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                >
+                                    Previous
+                                </button>
+                                <div className="text-[11.5px] font-extrabold text-slate-800 tracking-wider tabular-nums px-2">
+                                    {currentPage} / {totalPages}
+                                </div>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
 

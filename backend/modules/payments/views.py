@@ -128,15 +128,34 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
     branch_field = 'warehouse'
     # Tenant (owning Admin) is THE isolation axis.
     tenant_field = 'tenant'
+    shadow_safe = True
 
     def get_queryset(self):
         qs = TransactionPayment.objects.select_related('created_by').all()
+        user = self.request.user
+
+        if user and not getattr(user, 'is_staff', False):
+            from modules.sales.models import Order, PurchaseOrder
+            
+            # Check if customer
+            if getattr(user, 'is_customer', False) or user.__class__.__name__ == 'Customer':
+                order_ids = Order.objects.filter(Q(customer=user) | Q(customer_id=user.id) | Q(user=user) | Q(user_id=user.id)).values_list('id', flat=True)
+                qs = qs.filter(source_type='order', source_id__in=[str(o_id) for o_id in order_ids])
+            elif getattr(user, 'is_supplier', False) or user.__class__.__name__ == 'Supplier':
+                po_ids = PurchaseOrder.objects.filter(supplier_id=user.id).values_list('id', flat=True)
+                qs = qs.filter(source_type='purchaseorder', source_id__in=[str(po_id) for po_id in po_ids])
+            else:
+                qs = qs.none()
+
         st = self.request.query_params.get('source_type')
         sid = self.request.query_params.get('source_id')
+        status = self.request.query_params.get('status')
         if st:
             qs = qs.filter(source_type=st)
         if sid:
             qs = qs.filter(source_id=str(sid))
+        if status:
+            qs = qs.filter(status=status)
         return qs
 
     def paginate_queryset(self, queryset):
@@ -144,14 +163,22 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
         return None
 
     def perform_create(self, serializer):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
         user = self.request.user
-        user = user if getattr(user, 'pk', None) and user.__class__.__name__ == 'User' else None
+        if (getattr(user, 'is_customer', False) or 
+            getattr(user, 'is_supplier', False) or 
+            getattr(user, 'is_delivery', False) or
+            not getattr(user, 'pk', None) or 
+            user.__class__.__name__ != 'User' or
+            not User.objects.filter(pk=user.pk).exists()):
+            user = None
         tp = serializer.save(created_by=user)
         # Stamp the branch + owning tenant from the parent transaction so
         # installments (and the ledger rows they post) stay branch- and
         # tenant-scoped — authoritative even when the actor is a shadow user.
         update_fields = []
-        wh_id = services.parent_warehouse_id(tp.source_type, tp.source_id)
+        wh_id = tp.warehouse_id or services.parent_warehouse_id(tp.source_type, tp.source_id)
         if wh_id and tp.warehouse_id != wh_id:
             tp.warehouse_id = wh_id
             update_fields.append('warehouse')
@@ -230,14 +257,19 @@ def payments_due(request):
     if area_ids is not None:
         orders = orders.filter(customer__area_id__in=area_ids)
     orders = apply_report_scope(request, orders, 'warehouse', 'created_by', tenant_field='tenant')
-    for o in orders.prefetch_related('items__product'):
+    for o in orders.select_related('customer').prefetch_related('items__product'):
         rem = o.remaining_amount
         if rem and rem > 0:
             prods = ', '.join(
                 f"{(it.product.product_name if it.product else 'Item')}×{it.quantity}"
                 for it in o.items.all()
             )
-            rows.append(_due_row('sale', o.tracking_id, o.customer_name or 'Walk-in Customer',
+            cust_name = o.customer_name
+            if o.customer:
+                cust_name = f"{o.customer.first_name} {o.customer.last_name}".strip() or o.customer.username
+            if not cust_name or cust_name == 'Registered Customer':
+                cust_name = 'Registered Customer'
+            rows.append(_due_row('sale', o.tracking_id, cust_name,
                                  o.total_amount, o.amount_paid, rem, o.due_date, o.id, products=prods))
 
     # Purchases we still owe suppliers.

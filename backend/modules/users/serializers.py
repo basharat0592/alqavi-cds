@@ -249,14 +249,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         from django.utils import timezone
         from modules.supplier.models import Supplier
         from modules.customer.models import Customer
+        from django.db.models import Q
         from rest_framework import serializers
 
         # 1. Attempt Standard User Login (Admins, Employees, etc.)
-        user_obj = None
-        if '@' in username:
-            user_obj = User.objects.filter(email=username).first()
-        else:
-            user_obj = User.objects.filter(username=username).first()
+        user_obj = User.objects.filter(Q(email=username) | Q(username=username)).first()
 
         if user_obj:
             try:
@@ -295,11 +292,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 pass
 
         # 2. Attempt Direct Supplier Login
-        supplier = None
-        if '@' in username:
-            supplier = Supplier.objects.filter(email=username, is_active=True).first()
-        else:
-            supplier = Supplier.objects.filter(username=username, is_active=True).first()
+        supplier = Supplier.objects.filter(Q(email=username) | Q(username=username), is_active=True).first()
 
         if supplier and check_password(password, supplier.password):
             supplier.last_login = timezone.now()
@@ -322,11 +315,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             }
 
         # 3. Attempt Direct Customer Login
-        customer = None
-        if '@' in username:
-            customer = Customer.objects.filter(email=username, is_active=True).first()
-        else:
-            customer = Customer.objects.filter(username=username, is_active=True).first()
+        customer = Customer.objects.filter(Q(email=username) | Q(username=username), is_active=True).first()
 
         if customer and check_password(password, customer.password):
             customer.last_login = timezone.now()
@@ -350,11 +339,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # 4. Attempt Direct Delivery Rider Login
         from modules.delivery.models import DeliveryPerson
-        rider = None
-        if '@' in username:
-            rider = DeliveryPerson.objects.filter(email=username, is_active=True).first()
-        else:
-            rider = DeliveryPerson.objects.filter(username=username, is_active=True).first()
+        rider = DeliveryPerson.objects.filter(Q(email=username) | Q(username=username), is_active=True).first()
 
         if rider and check_password(password, rider.password):
             rider.last_login = timezone.now()
@@ -377,5 +362,4 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             }
 
         # 5. If all fail, raise standard error
-        raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})
         raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})

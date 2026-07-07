@@ -12,7 +12,8 @@ import {
     Truck,
     LogOut,
     RefreshCw,
-    Undo2
+    Undo2,
+    Wallet
 } from 'lucide-react';
 import { authService, User as AuthUser } from '@/lib/auth';
 import Navbar from '@/components/layout/Navbar';
@@ -31,6 +32,7 @@ const SIDEBAR_SECTIONS = [
             { href: '/customer/dashboard/orders', label: 'Your Orders', icon: Package, accent: '#F59E0B' },
             { href: '/customer/dashboard/track', label: 'Track Package', icon: Truck, accent: '#007185' },
             { href: '/customer/dashboard/returns', label: 'Returns & Refunds', icon: Undo2, accent: '#EF4444' },
+            { href: '/customer/dashboard/payments', label: 'Payments & Dues', icon: Wallet, accent: '#10B981' },
         ]
     },
     {
@@ -57,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="flex-1 flex max-w-[1240px] mx-auto w-full px-4 py-8 gap-8">
                     {/* Left Sidebar - Hidden on mobile for now or made simple */}
                     <aside className="hidden lg:block w-64 shrink-0">
-                        <div className="bg-white border border-[#D5D9D9] rounded-lg p-3 sticky top-8 shadow-sm">
+                        <div className="bg-white border border-[#D5D9D9] rounded-lg p-3 sticky top-[96px] shadow-sm">
                             <nav className="space-y-6">
                                 {SIDEBAR_SECTIONS.map((section, idx) => (
                                     <div key={idx}>
@@ -127,8 +129,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </main>
                     </div>
                 </div>
-
-                <Footer />
             </div>
         </AuthGuard>
     );

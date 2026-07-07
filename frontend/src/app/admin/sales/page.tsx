@@ -20,21 +20,21 @@ const STATUS_FILTERS = ['All', 'Delivered', 'Cancelled'];
 function PayStatusCell({ o }: { o: any }) {
     // Cancelled / rejected sales are void — no money was collected.
     if (['CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())) {
-        return <div className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-tighter">No payment</div>;
+        return <div className="text-[9.5px] text-slate-400 font-black uppercase mt-1 tracking-tighter">No payment</div>;
     }
     const status = (o.payment_status || 'PAID').toUpperCase();
     const remaining = Number(o.remaining_amount ?? 0);
     if (status === 'PAID' || remaining <= 0) {
-        return <div className="text-[10px] text-emerald-600 font-black uppercase mt-1 tracking-tighter">Paid in full</div>;
+        return <div className="text-[9.5px] text-emerald-600 font-black uppercase mt-1 tracking-tighter">Paid in full</div>;
     }
     const overdue = o.is_overdue;
     return (
         <div className="mt-1 space-y-0.5">
-            <div className={`text-[10px] font-black uppercase tracking-tighter ${status === 'PARTIAL' ? 'text-amber-600' : 'text-rose-600'}`}>
+            <div className={`text-[9.5px] font-black uppercase tracking-tighter ${status === 'PARTIAL' ? 'text-amber-600' : 'text-rose-600'}`}>
                 {status === 'PARTIAL' ? 'Partially paid' : 'Unpaid'} · {formatCurrency(remaining)} due
             </div>
             {o.due_date && (
-                <div className={`text-[9.5px] font-bold ${overdue ? 'text-rose-600' : 'text-slate-400'}`}>
+                <div className={`text-[8.5px] font-bold ${overdue ? 'text-rose-600' : 'text-slate-400'}`}>
                     {overdue ? `${o.days_overdue}d overdue` : `Due ${o.due_date}`}
                 </div>
             )}
@@ -59,6 +59,10 @@ export default function SalesPage() {
     const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
     const [payOrder, setPayOrder] = useState<any | null>(null);
     const [viewOrder, setViewOrder] = useState<any | null>(null);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // Channel (POS counter vs online store) + effective settlement status.
     const channelOf = (o: any) => (o.payment_method === 'SHOP' ? 'POS' : 'Online');
@@ -95,14 +99,28 @@ export default function SalesPage() {
         try {
             const data = await orderService.getAll();
             const rawOrders = Array.isArray(data) ? data : (data as any).results || [];
-            // Strictly enforce that Sales Registry only contains history (Delivered/Cancelled)
-            setOrders(rawOrders.filter((o: any) =>
-                ['DELIVERED', 'CANCELLED'].includes((o.status || '').toUpperCase())
-            ));
+            setOrders(rawOrders);
         } catch { toast.error('Connection failure'); } finally { setLoading(false); }
     }, []);
 
     useEffect(() => { loadOrders(); }, [loadOrders]);
+
+    // Auto-open order details modal if view parameter is present in URL
+    useEffect(() => {
+        if (typeof window === 'undefined' || orders.length === 0) return;
+        const params = new URLSearchParams(window.location.search);
+        const viewRef = params.get('view');
+        if (viewRef) {
+            const match = orders.find((o: any) => 
+                String(o.order_number) === String(viewRef) || 
+                String(o.id) === String(viewRef) || 
+                String(o.tracking_id) === String(viewRef)
+            );
+            if (match) {
+                router.replace(`/admin/sales/${match.id}`);
+            }
+        }
+    }, [orders]);
 
     // AUTO-SYNC (2s)
     useEffect(() => {
@@ -111,6 +129,11 @@ export default function SalesPage() {
         }, 2000);
         return () => clearInterval(interval);
     }, [loading, updatingRow, loadOrders]);
+
+    // Reset pagination to first page when search filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, channelFilter, payFilter]);
 
     const filtered = (orders || []).filter(o => {
         const q = searchTerm.toLowerCase();
@@ -124,6 +147,9 @@ export default function SalesPage() {
         const matchesPay = payFilter === 'All' || effectivePay(o) === payFilter.toUpperCase();
         return matchesSearch && matchesStatus && matchesChannel && matchesPay;
     });
+
+    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
     const getStatusTone = (status: string): 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue' => {
         const s = status.toLowerCase();
@@ -150,6 +176,7 @@ export default function SalesPage() {
             <div className="max-w-[1440px] mx-auto">
                 <PageHeader
                     title="Sales History"
+                    backUrl="/admin/dashboard"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Sales History' }]}
                     actions={
                         <>
@@ -254,68 +281,91 @@ export default function SalesPage() {
                             <div className="text-slate-200 mb-3"><ShoppingBag size={48} className="mx-auto" /></div>
                             <p className="text-[13px] text-slate-500 font-medium">No sales found.</p>
                         </Card>
-                    ) : filtered.map(o => (
-                        <Card key={o.id} className="p-4 space-y-3">
-                            {/* Row 1: Order # + Amount */}
-                            <div className="flex items-start justify-between gap-2">
-                                <div>
-                                    <button onClick={() => setViewOrder(o)} className="text-[13.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline">
-                                        #{o.order_number || o.id}
-                                    </button>
-                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 font-medium mt-0.5">
-                                        <Clock size={10} />
-                                        {formatDateTime(o.created_at)}
-                                    </div>
-                                    {(o as any).warehouse_name && (
-                                        <div className="text-[10px] text-indigo-600 font-black uppercase tracking-tighter mt-0.5 flex items-center gap-1">
-                                            <Warehouse size={10} className="opacity-60" />{(o as any).warehouse_name}
+                    ) : (
+                        <>
+                            {paginated.map(o => (
+                                <Card key={o.id} className="p-4 space-y-3">
+                                    {/* Row 1: Order # + Amount */}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[13.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline">
+                                                #{o.order_number || o.id}
+                                            </button>
+                                            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-medium mt-0.5">
+                                                <Clock size={10} />
+                                                {formatDateTime(o.created_at)}
+                                            </div>
+                                            {(o as any).warehouse_name && (
+                                                <div className="text-[10px] text-indigo-600 font-black uppercase tracking-tighter mt-0.5 flex items-center gap-1">
+                                                    <Warehouse size={10} className="opacity-60" />{(o as any).warehouse_name}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <div className="text-[13.5px] font-black text-slate-900 tabular-nums">{formatCurrency(o.total_amount)}</div>
-                                    <Badge tone={getStatusTone(o.status)} className="mt-1">
-                                        {o.status}
-                                    </Badge>
-                                </div>
-                            </div>
-
-                            {/* Row 2: Customer + Payment */}
-                            <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
-                                <div className="flex items-center gap-2">
-                                    <User size={13} className="text-slate-400" />
-                                    <div>
-                                        <div className="text-[12px] font-bold text-slate-900">{(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}</div>
-                                        {(o as any).customer_type === 'walkin'
-                                            ? <div className="text-[10px] text-slate-400 italic">Walk-in · POS</div>
-                                            : <div className="text-[10px] text-emerald-600/80 font-semibold">Registered account</div>}
+                                        <div className="text-right shrink-0">
+                                            <div className="text-[13.5px] font-black text-slate-900 tabular-nums">{formatCurrency(o.total_amount)}</div>
+                                            <Badge tone={getStatusTone(o.status)} className="mt-1">
+                                                {o.status}
+                                            </Badge>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-900 justify-end">
-                                        <CreditCard size={11} className="text-slate-400" />
-                                        {o.payment_method || 'Cash'}
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase ${channelOf(o) === 'POS' ? 'bg-violet-50 text-violet-600' : 'bg-sky-50 text-sky-600'}`}>{channelOf(o)}</span>
-                                    </div>
-                                    {(() => {
-                                        const ps = effectivePay(o);
-                                        const cls = ps === 'PAID' ? 'text-emerald-600' : ps === 'PARTIAL' ? 'text-amber-600' : ps === 'UNPAID' ? 'text-rose-600' : 'text-slate-400';
-                                        const label = ps === 'PAID' ? 'Paid in full' : ps === 'PARTIAL' ? 'Partially paid' : ps === 'UNPAID' ? 'Unpaid' : 'No payment';
-                                        return <div className={`text-[9px] font-black uppercase tracking-tighter mt-0.5 ${cls}`}>{label}</div>;
-                                    })()}
-                                </div>
-                            </div>
 
-                            {/* Row 3: Actions */}
-                            <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-2.5">
-                                <button onClick={() => setViewOrder(o)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
-                                <span className="text-slate-300">|</span>
-                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
-                                <span className="text-slate-300">|</span>
-                                <button onClick={() => setOrderToDelete(o as Order)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
-                            </div>
-                        </Card>
-                    ))}
+                                    {/* Row 2: Customer + Payment */}
+                                    <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <User size={13} className="text-slate-400" />
+                                            <div>
+                                                <div className="text-[12px] font-bold text-slate-900">{(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}</div>
+                                                {(o as any).customer_type === 'walkin'
+                                                    ? <div className="text-[10px] text-slate-400 italic">Walk-in · POS</div>
+                                                    : <div className="text-[10px] text-emerald-600/80 font-semibold">Registered account</div>}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-900 justify-end">
+                                                <CreditCard size={11} className="text-slate-400" />
+                                                {o.payment_method || 'Cash'}
+                                                <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase ${channelOf(o) === 'POS' ? 'bg-violet-50 text-violet-600' : 'bg-sky-50 text-sky-600'}`}>{channelOf(o)}</span>
+                                            </div>
+                                            {(() => {
+                                                const ps = effectivePay(o);
+                                                const cls = ps === 'PAID' ? 'text-emerald-600' : ps === 'PARTIAL' ? 'text-amber-600' : ps === 'UNPAID' ? 'text-rose-600' : 'text-slate-400';
+                                                const label = ps === 'PAID' ? 'Paid in full' : ps === 'PARTIAL' ? 'Partially paid' : ps === 'UNPAID' ? 'Unpaid' : 'No payment';
+                                                return <div className={`text-[9px] font-black uppercase tracking-tighter mt-0.5 ${cls}`}>{label}</div>;
+                                            })()}
+                                        </div>
+                                    </div>
+
+                                    {/* Row 3: Actions */}
+                                    <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-2.5">
+                                        <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                        <span className="text-slate-300">|</span>
+                                        <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                        <span className="text-slate-300">|</span>
+                                        <button onClick={() => setOrderToDelete(o as Order)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                    </div>
+                                </Card>
+                            ))}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500 bg-white p-3 rounded-xl border border-slate-150/60 shadow-sm">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-1 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span>Page {currentPage} of {totalPages}</span>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-1 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
 
                 {/* ── Desktop Table (hidden on mobile) ── */}
@@ -339,67 +389,68 @@ export default function SalesPage() {
                                     <p className="text-[14px] text-slate-500 font-medium">No sales found matching your criteria.</p>
                                 </td></tr>
                             ) : (
-                                filtered.map(o => (
-                                    <tr key={o.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                paginated.map(o => (
+                                    <tr key={o.id} className="hover:bg-slate-50 transition-colors group text-[12px]">
                                         <RowCheckboxTd sel={sel} id={o.id} />
                                         <td className="px-6 py-4">
-                                            <div className="text-[13px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer" onClick={() => setViewOrder(o)}>
+                                            <div className="text-[12px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer" onClick={() => router.push(`/admin/sales/${o.id}`)}>
                                                 #{o.order_number || o.id}
                                             </div>
                                             <div className="flex flex-col gap-1 mt-1">
-                                                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
-                                                    <Clock size={12} className="text-slate-400" /> {formatDateTime(o.created_at)}
+                                                <div className="text-[10px] text-slate-500 flex items-center gap-1.5 font-medium">
+                                                    <Clock size={11} className="text-slate-400" /> {formatDateTime(o.created_at)}
                                                 </div>
                                                 {(o as any).warehouse_name && (
-                                                    <div className="text-[10px] text-indigo-600 flex items-center gap-1.5 font-black uppercase tracking-tighter">
-                                                        <Warehouse size={10} className="opacity-60" /> {(o as any).warehouse_name}
+                                                    <div className="text-[9.5px] text-indigo-600 flex items-center gap-1.5 font-black uppercase tracking-tighter">
+                                                        <Warehouse size={9} className="opacity-60" /> {(o as any).warehouse_name}
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-slate-900 font-bold flex items-center gap-2">
-                                                <User size={14} className="text-slate-400" /> {(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}
+                                                <User size={13} className="text-slate-400" /> {(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}
                                             </div>
                                             {(o as any).customer_type === 'walkin'
-                                                ? <div className="text-[10.5px] text-slate-400 mt-1 font-medium italic">Walk-in · POS</div>
-                                                : <div className="text-[10.5px] text-emerald-600/80 mt-1 font-semibold">Registered account</div>}
+                                                ? <div className="text-[9.5px] text-slate-400 mt-1 font-medium italic">Walk-in · POS</div>
+                                                : <div className="text-[9.5px] text-emerald-600/80 mt-1 font-semibold">Registered account</div>}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2 text-slate-900 font-bold">
-                                                <CreditCard size={14} className="text-slate-400" /> {o.payment_method || 'Cash'}
-                                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tight ${channelOf(o) === 'POS' ? 'bg-violet-50 text-violet-600 border border-violet-100' : 'bg-sky-50 text-sky-600 border border-sky-100'}`}>
-                                                    {channelOf(o) === 'POS' ? <Store size={9} /> : <Globe size={9} />}{channelOf(o)}
+                                                <CreditCard size={13} className="text-slate-400" /> {o.payment_method || 'Cash'}
+                                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8.5px] font-black uppercase tracking-tight ${channelOf(o) === 'POS' ? 'bg-violet-50 text-violet-600 border border-violet-100' : 'bg-sky-50 text-sky-600 border border-sky-100'}`}>
+                                                    {channelOf(o) === 'POS' ? <Store size={8} /> : <Globe size={8} />}{channelOf(o)}
                                                 </span>
                                             </div>
                                             <PayStatusCell o={o} />
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-[12px] text-slate-900 font-bold tabular-nums">
+                                            <div className="text-[11px] text-slate-900 font-bold tabular-nums">
                                                 {new Date(o.updated_at || o.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}
                                             </div>
-                                            <div className="text-[10px] text-slate-400 font-black uppercase mt-0.5 tracking-tighter tabular-nums">
+                                            <div className="text-[9.5px] text-slate-400 font-black uppercase mt-0.5 tracking-tighter tabular-nums">
                                                 {new Date(o.updated_at || o.created_at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="text-[13.5px] font-black text-slate-900 tabular-nums">{formatCurrency(o.total_amount)}</div>
-                                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">Net Amount</div>
+                                            <div className="text-[12.5px] font-black text-slate-900 tabular-nums">{formatCurrency(o.total_amount)}</div>
+
+                                            <div className="text-[9.5px] text-slate-400 font-bold uppercase mt-1">Net Amount</div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2.5 transition-opacity">
                                                 {Number((o as any).remaining_amount ?? 0) > 0 &&
                                                   !['DELIVERED', 'CANCELLED'].includes((o.status || '').toUpperCase()) && (
                                                     <>
-                                                        <button onClick={() => setPayOrder(o)} className="text-[12px] font-bold text-indigo-600 hover:underline">Collect</button>
+                                                        <button onClick={() => setPayOrder(o)} className="text-[11px] font-bold text-indigo-600 hover:underline">Collect</button>
                                                         <span className="text-slate-300">|</span>
                                                     </>
                                                 )}
-                                                <button onClick={() => setViewOrder(o)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
+                                                <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[11px] font-bold text-slate-600 hover:underline">View</button>
                                                 <span className="text-slate-300">|</span>
-                                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                <button onClick={() => router.push(`/admin/sales/${o.id}/invoice`)} className="text-[11px] font-bold text-slate-600 hover:underline">Print</button>
                                                 <span className="text-slate-300">|</span>
-                                                <button onClick={() => setOrderToDelete(o as Order)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                <button onClick={() => setOrderToDelete(o as Order)} className="text-[11px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -407,6 +458,46 @@ export default function SalesPage() {
                             )}
                         </tbody>
                     </table>
+
+                    {/* Pagination Footer Controls */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-550 border-collapse">
+                            <div>
+                                Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                                <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
+                                <span className="font-semibold text-slate-700">{filtered.length}</span> entries
+                            </div>
+                            <div className="flex gap-1 flex-wrap justify-center">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3.5 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-[11.5px] text-slate-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Previous
+                                </button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border ${
+                                            currentPage === page 
+                                                ? 'bg-indigo-650 border-indigo-650 text-white font-extrabold bg-indigo-600' 
+                                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3.5 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-[11.5px] text-slate-655 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
                 <BulkBar
@@ -483,141 +574,7 @@ export default function SalesPage() {
                     />
                 )}
 
-                {/* ── SALE DETAILS (VIEW) MODAL ── */}
-                {viewOrder && (() => {
-                    const o: any = viewOrder;
-                    const ps = effectivePay(o);
-                    const voided = ps === 'VOID';
-                    const total = Number(o.total_amount || 0);
-                    const paid = voided ? 0 : (ps === 'PAID' ? total : Number(o.amount_paid ?? 0));
-                    const remaining = voided ? 0 : Math.max(0, Number(o.remaining_amount ?? (total - paid)));
-                    const psCls = ps === 'PAID' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : ps === 'PARTIAL' ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : ps === 'UNPAID' ? 'bg-rose-50 text-rose-700 border-rose-200'
-                        : 'bg-slate-100 text-slate-500 border-slate-200';
-                    const psLabel = ps === 'PAID' ? 'Paid in full' : ps === 'PARTIAL' ? 'Partially paid' : ps === 'UNPAID' ? 'Unpaid' : 'Cancelled · No payment';
-                    return (
-                        <Modal
-                            open={!!viewOrder}
-                            onClose={() => setViewOrder(null)}
-                            title={`Sale #${o.order_number || o.id}`}
-                            size="lg"
-                            footer={
-                                <div className="flex items-center justify-between w-full gap-2">
-                                    <span className={`px-2.5 py-1 rounded-lg border text-[11px] font-black uppercase tracking-tight ${psCls}`}>{psLabel}</span>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="outline" onClick={() => router.push(`/admin/sales/${o.id}/invoice`)}>
-                                            <Printer size={14} /> Print
-                                        </Button>
-                                        {remaining > 0 && (
-                                            <Button variant="primary" onClick={() => { setPayOrder(o); setViewOrder(null); }}>
-                                                <Wallet size={14} /> Collect Payment
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            }
-                        >
-                            <div className="space-y-5 text-left">
-                                {/* Meta row */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Badge tone={getStatusTone(o.status)}>{o.status}</Badge>
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${channelOf(o) === 'POS' ? 'bg-violet-50 text-violet-600 border border-violet-100' : 'bg-sky-50 text-sky-600 border border-sky-100'}`}>
-                                        {channelOf(o) === 'POS' ? <Store size={10} /> : <Globe size={10} />}{channelOf(o)}
-                                    </span>
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-semibold">
-                                        <Clock size={12} className="text-slate-400" /> {formatDateTime(o.created_at)}
-                                    </span>
-                                    {o.warehouse_name && (
-                                        <span className="inline-flex items-center gap-1 text-[11px] text-indigo-600 font-bold">
-                                            <Warehouse size={12} /> {o.warehouse_name}
-                                        </span>
-                                    )}
-                                </div>
 
-                                {/* Customer */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
-                                        <p className="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1"><User size={11} /> Customer</p>
-                                        <p className="text-[13px] font-bold text-slate-900">{o.customer_display_name || o.customer_name || 'Walk-in Customer'}</p>
-                                    </div>
-                                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
-                                        <p className="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1"><Phone size={11} /> Phone</p>
-                                        <p className="text-[13px] font-semibold text-slate-700">{o.customer_phone || (o.phone_number && o.phone_number !== 'N/A' ? o.phone_number : '—')}</p>
-                                    </div>
-                                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
-                                        <p className="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1"><CreditCard size={11} /> Method</p>
-                                        <p className="text-[13px] font-semibold text-slate-700">{o.payment_method || 'Cash'}</p>
-                                    </div>
-                                </div>
-                                {o.shipping_address && o.shipping_address !== 'Walk-in Store Selection' && (
-                                    <div className="flex items-start gap-2 text-[12px] text-slate-600">
-                                        <MapPin size={13} className="text-slate-400 mt-0.5 shrink-0" /> {o.shipping_address}
-                                    </div>
-                                )}
-
-                                {/* Items */}
-                                <div className="border border-slate-100 rounded-xl overflow-hidden">
-                                    <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                        <Package size={12} /> Items ({(o.items || []).length})
-                                    </div>
-                                    <table className="w-full text-[12px]">
-                                        <thead className="text-[9.5px] font-bold uppercase text-slate-400 bg-slate-50/50">
-                                            <tr>
-                                                <th className="px-4 py-2 text-left">Product</th>
-                                                <th className="px-3 py-2 text-center">Qty</th>
-                                                <th className="px-3 py-2 text-right">Unit</th>
-                                                <th className="px-4 py-2 text-right">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {(o.items || []).map((it: any, i: number) => (
-                                                <tr key={i}>
-                                                    <td className="px-4 py-2.5">
-                                                        <p className="font-semibold text-slate-800">{it.product_name}</p>
-                                                        {(it.weight || it.size) && <p className="text-[10px] text-indigo-600 font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center font-bold text-slate-600">{it.quantity}</td>
-                                                    <td className="px-3 py-2.5 text-right text-slate-600 tabular-nums">{formatCurrency(it.price)}</td>
-                                                    <td className="px-4 py-2.5 text-right font-bold text-slate-900 tabular-nums">{formatCurrency(Number(it.price) * Number(it.quantity))}</td>
-                                                </tr>
-                                            ))}
-                                            {(o.items || []).length === 0 && (
-                                                <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No items recorded.</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Totals */}
-                                <div className="ml-auto w-full sm:w-[280px] text-[12.5px] space-y-1.5">
-                                    <div className="flex justify-between items-center pt-1 border-t-2 border-slate-200">
-                                        <span className="font-black uppercase text-slate-900 text-[12px]">Total</span>
-                                        <span className="font-black text-indigo-600 text-[16px] tabular-nums">{formatCurrency(total)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-emerald-600 font-bold uppercase text-[11px]">Paid</span>
-                                        <span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paid)}</span>
-                                    </div>
-                                    {remaining > 0 && (
-                                        <div className="flex justify-between">
-                                            <span className="text-rose-600 font-black uppercase text-[11px]">Remaining</span>
-                                            <span className="font-black text-rose-600 tabular-nums">{formatCurrency(remaining)}</span>
-                                        </div>
-                                    )}
-                                    {remaining > 0 && o.due_date && (
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-500 font-bold uppercase text-[11px] flex items-center gap-1"><Calendar size={11} /> Due</span>
-                                            <span className={`font-bold tabular-nums ${o.is_overdue ? 'text-rose-600' : 'text-slate-700'}`}>
-                                                {formatDate(o.due_date)}{o.is_overdue ? ` · ${o.days_overdue}d late` : ''}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </Modal>
-                    );
-                })()}
             </div>
         </div>
     );

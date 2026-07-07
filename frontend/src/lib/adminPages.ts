@@ -30,7 +30,6 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
     '/admin/products/add',      // Add Listing
     '/admin/inventory/list',    // Current Stocks
     '/admin/users/roles',       // Staff Roles
-    '/admin/inventory/warehouses', // Warehouses
     '/admin/invoices',          // Invoices
 ];
 
@@ -43,7 +42,6 @@ export const SUPER_ONLY_HREFS: string[] = [
     '/admin/branches',                // Branches & Admins
     '/admin/users',                   // Internal Users
     '/admin/website-settings',        // Website CMS
-    '/admin/inventory/warehouses',    // Warehouses
     '/admin/company/areas',           // Areas / Territories
 ];
 
@@ -72,7 +70,6 @@ export const ADMIN_PAGE_GROUPS: { group: string; items: { n: string; h: string }
             { n: 'Product List', h: '/admin/products' },
             { n: 'Add Listing', h: '/admin/products/add' },
             { n: 'Current Stocks', h: '/admin/inventory/list' },
-            { n: 'Warehouses', h: '/admin/inventory/warehouses' },
         ],
     },
     {
@@ -136,7 +133,6 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Product List', href: '/admin/products', keywords: ['items', 'catalog', 'skus', 'edit', 'products'] },
     { name: 'Add Listing', href: '/admin/products/add', keywords: ['create', 'new item', 'upload', 'add product', 'add listing'] },
     { name: 'Current Stocks', href: '/admin/inventory/list', keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory'] },
-    { name: 'Warehouses', href: '/admin/inventory/warehouses', keywords: ['storage', 'depots', 'distribution', 'warehouse'] },
     { name: 'Branches & Admins', href: '/admin/branches', keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch', 'who manages'] },
     { name: 'Order Tracking', href: '/admin/tracking', keywords: ['delivery', 'courier', 'dispatch', 'tracking'] },
     { name: 'Supplier Registry', href: '/admin/company/suppliers', keywords: ['vendors', 'manufacturers', 'contacts', 'supplier'] },

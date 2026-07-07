@@ -71,18 +71,20 @@ class CustomerViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         data = request.data.copy()
         
-        if data.get('password'):
-            data['password'] = make_password(data['password'])
-        else:
-            data.pop('password', None) # Don't overwrite if empty
+        has_new_password = False
+        new_password = data.get('password')
+        if new_password:
+            has_new_password = True
+            data.pop('password', None)
 
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
         
-        if data.get('password'):
-            serializer.save(plain_password=request.data.get('password'))
-        else:
-            self.perform_update(serializer)
+        if has_new_password:
+            instance.password = make_password(new_password)
+            instance.plain_password = new_password
+            instance.save(update_fields=['password', 'plain_password'])
 
         return Response(CustomerSerializer(instance, context={'request': request}).data)
 

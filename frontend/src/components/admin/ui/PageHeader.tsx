@@ -18,6 +18,7 @@ export function PageHeader({
     actions,
     className,
     hideBack = false,
+    backUrl,
 }: {
     title: string;
     subtitle?: string;
@@ -26,6 +27,7 @@ export function PageHeader({
     className?: string;
     /** Hide the automatic desktop back button (e.g. when the page renders its own contextual back control). */
     hideBack?: boolean;
+    backUrl?: string;
 }) {
     const pathname = usePathname();
     const router = useRouter();
@@ -56,11 +58,12 @@ export function PageHeader({
                 </div>
                 {(actions || showBack) && (
                     <div className="flex items-center gap-2 shrink-0">
+                        {actions}
                         {/* Desktop back button — same line as page actions (mobile uses the top-bar back button) */}
                         {showBack && (
                             <button
                                 type="button"
-                                onClick={() => router.back()}
+                                onClick={() => backUrl ? router.push(backUrl) : router.back()}
                                 aria-label="Go back"
                                 className="hidden md:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-sm hover:shadow transition-all"
                             >
@@ -68,7 +71,6 @@ export function PageHeader({
                                 Back
                             </button>
                         )}
-                        {actions}
                     </div>
                 )}
             </div>

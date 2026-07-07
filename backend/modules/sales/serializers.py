@@ -47,7 +47,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
             'amount_paid', 'payment_status', 'due_date', 'remaining_amount', 'is_overdue', 'days_overdue',
             'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'customer_type', 'customer_phone', 'notes',
-            'delivery_person', 'delivery_person_name',
+            'delivery_person', 'delivery_person_name', 'discount', 'shipping_cost',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
         ]
@@ -99,7 +99,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date']
+        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date', 'discount', 'shipping_cost']
 
     def create(self, validated_data):
         from django.db import transaction, IntegrityError
@@ -164,6 +164,8 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     # Stamp the branch this sale was made from (drives multi-branch
                     # isolation). Falls back to null for legacy/online flows.
                     'warehouse_id': ((validated_data.get('warehouse_id') or '').strip() or None),
+                    'discount': validated_data.get('discount', 0) or 0,
+                    'shipping_cost': validated_data.get('shipping_cost', 0) or 0,
                 }
 
                 # Stamp the staff member who rang up this sale (POS) so a branch
@@ -294,13 +296,16 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     except (Product.DoesNotExist, ValueError, TypeError, KeyError):
                         continue
                 
-                order.total_amount = total_amount
+                from decimal import Decimal
+                dec_discount = Decimal(str(order.discount or 0))
+                dec_shipping = Decimal(str(order.shipping_cost or 0))
+                order.total_amount = Decimal(str(total_amount)) + dec_shipping - dec_discount
                 # Full (PAID) sales are settled in full at the counter — record the
                 # payment so the remaining balance is zero. POS sales are created
                 # already DELIVERED, so the delivery-time settlement never runs for
                 # them; partial / on-credit sales keep their provided amount_paid.
                 if str(order.payment_status).upper() == 'PAID':
-                    order.amount_paid = total_amount
+                    order.amount_paid = order.total_amount
                 order.save()
                 return order
                 

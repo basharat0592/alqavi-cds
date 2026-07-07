@@ -12,16 +12,24 @@ from core.permissions import HasModulePermission
 User = get_user_model()
 
 class SupplierViewSet(viewsets.ModelViewSet):
-    """ViewSet for Supplier CRUD operations"""
+    """ViewSet for Supplier CRUD operations (admin-facing).
+
+    NOTE: this viewset is shadowed at the URL layer by company.SupplierViewSet
+    (both register `suppliers` under /api/v1/company/, company included first).
+    Kept in sync for defence-in-depth. Public supplier self-registration is a
+    separate endpoint (/v1/users/register/supplier/), so requiring auth here is safe.
+    """
     queryset = Supplier.objects.all().order_by('-created_at')
     serializer_class = SupplierSerializer
-    permission_classes = [AllowAny, HasModulePermission]
+    permission_classes = [IsAuthenticated, HasModulePermission]
     perm_module = 'suppliers'
 
-    def get_permissions(self):
-        if self.action == 'create':
-            return [AllowAny()]
-        return super().get_permissions()
+    def get_queryset(self):
+        u = self.request.user
+        if (getattr(u, 'is_supplier', False) or getattr(u, 'is_customer', False)
+                or getattr(u, 'is_delivery', False)):
+            return Supplier.objects.none()
+        return Supplier.objects.all().order_by('-created_at')
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):

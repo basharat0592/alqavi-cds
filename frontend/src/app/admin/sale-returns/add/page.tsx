@@ -31,6 +31,8 @@ export default function AddSaleReturnPage() {
     const [reason, setReason] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
     // Recent sales = DELIVERED orders from the last 7 days (the returnable window).
     useEffect(() => {
         (async () => {
@@ -141,20 +143,76 @@ export default function AddSaleReturnPage() {
                     </div>
 
                     <div className="relative">
-                        <select
-                            value={orderId}
-                            onChange={e => selectOrder(e.target.value)}
+                        {/* Custom Dropdown Trigger */}
+                        <button
+                            type="button"
                             disabled={loading}
-                            className="w-full h-11 px-3 pr-9 rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 appearance-none cursor-pointer disabled:opacity-50"
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            className="w-full h-11 px-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer disabled:opacity-50 select-none text-left"
                         >
-                            <option value="">{loading ? 'Loading recent sales…' : visibleOrders.length ? 'Choose a sale to return…' : 'No delivered sales in the last 7 days'}</option>
-                            {visibleOrders.map((o: any) => (
-                                <option key={o.id} value={o.id}>
-                                    #{o.order_number} · {channelOf(o)} · {o.customer_display_name || o.customer_name || 'Walk-in'} · {new Date(o.created_at).toLocaleDateString()} · Paid {money(paidOf(o))}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                            <span>
+                                {loading ? 'Loading recent sales...' : order ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="text-indigo-600 font-extrabold">#{order.order_number}</span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className="text-slate-600 font-semibold">{order.customer_display_name || order.customer_name || 'Walk-in'}</span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className="text-emerald-600 font-extrabold">Paid {money(paid)}</span>
+                                    </span>
+                                ) : (
+                                    <span className="text-slate-400 font-medium">Choose a sale to return...</span>
+                                )}
+                            </span>
+                            <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {/* Custom Dropdown Options */}
+                        {dropdownOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                                <div className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-20 divide-y divide-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-1.5 duration-200">
+                                    {visibleOrders.length === 0 ? (
+                                        <div className="p-4 text-center text-slate-400 text-xs font-semibold">
+                                            {loading ? 'Loading recent sales...' : 'No recent sales found.'}
+                                        </div>
+                                    ) : (
+                                        visibleOrders.map((o: any) => {
+                                            const isSelected = String(o.id) === String(orderId);
+                                            const opaid = paidOf(o);
+                                            return (
+                                                <div
+                                                    key={o.id}
+                                                    onClick={() => {
+                                                        selectOrder(o.id);
+                                                        setDropdownOpen(false);
+                                                    }}
+                                                    className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50' : ''}`}
+                                                >
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[13px] font-black text-slate-900">#{o.order_number}</span>
+                                                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-wide border ${
+                                                                channelOf(o) === 'Online' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-purple-50 text-purple-700 border-purple-200'
+                                                            }`}>
+                                                                {channelOf(o)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2.5 text-slate-500 text-[11px] font-semibold">
+                                                            <span className="flex items-center gap-1"><User size={12} className="text-slate-400" /> {o.customer_display_name || o.customer_name || 'Walk-in'}</span>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span className="flex items-center gap-1"><Calendar size={12} className="text-slate-400" /> {new Date(o.created_at).toLocaleDateString()}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[12.5px] font-extrabold text-emerald-600 tabular-nums">Paid {money(opaid)}</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Selected sale summary */}

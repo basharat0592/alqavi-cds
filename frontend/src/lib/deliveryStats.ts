@@ -37,17 +37,19 @@ export function computeEarnings(results: any[], now: Date) {
     const week0 = today0 - ((now.getDay() + 6) % 7) * 86400000; // Monday start
     const month0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    let today = 0, week = 0, month = 0;
+    let today = 0, week = 0, month = 0, allTime = 0;
     delivered.forEach((o) => {
         const d = orderDate(o);
         const t = d ? d.getTime() : 0;
-        if (t >= today0) today += DELIVERY_FEE;
-        if (t >= week0) week += DELIVERY_FEE;
-        if (t >= month0) month += DELIVERY_FEE;
+        const fee = Number(o.shipping_cost ?? 0) > 0 ? Number(o.shipping_cost) : DELIVERY_FEE;
+        if (t >= today0) today += fee;
+        if (t >= week0) week += fee;
+        if (t >= month0) month += fee;
+        allTime += fee;
     });
     return {
         today, week, month,
-        allTime: delivered.length * DELIVERY_FEE,
+        allTime,
         count: delivered.length,
         deliveredOrders: delivered,
     };

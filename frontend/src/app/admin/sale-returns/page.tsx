@@ -139,6 +139,15 @@ export default function SaleReturnsPage() {
     const [payReturn, setPayReturn] = useState<any>(null);
     const [deleting, setDeleting] = useState(false);
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset pagination to first page when search filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
     const loadReturns = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
@@ -186,6 +195,9 @@ export default function SaleReturnsPage() {
         const matchesStatus = statusFilter === 'All' || (r.status || '').toLowerCase() === statusFilter.toLowerCase();
         return matchesSearch && matchesStatus;
     });
+
+    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
 
     const sel = useTableSelection(filtered);
 
@@ -267,7 +279,7 @@ export default function SaleReturnsPage() {
                                         <p className="text-[14px] text-slate-400 font-medium italic">No return requests found matching your criteria.</p>
                                     </td></tr>
                                 ) : (
-                                    filtered.map(r => (
+                                    paginated.map(r => (
                                         <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
                                             <RowCheckboxTd sel={sel} id={r.id} />
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
@@ -333,6 +345,36 @@ export default function SaleReturnsPage() {
                                 )}
                             </tbody>
                         </table>
+
+                        {/* Pagination Footer Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-100 text-[12px] text-slate-500 font-medium text-left">
+                                <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                    Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                                    <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
+                                    <span className="font-semibold text-slate-700">{filtered.length}</span> returns
+                                </div>
+                                <div className="flex items-center gap-2.5 order-1 sm:order-2 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="text-[11.5px] font-extrabold text-slate-800 tracking-wider tabular-nums px-2">
+                                        {currentPage} / {totalPages}
+                                    </div>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Card>
 

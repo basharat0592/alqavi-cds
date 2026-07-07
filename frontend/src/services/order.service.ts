@@ -3,7 +3,7 @@ import { Order, PaginatedResponse } from '@/types';
 
 export const orderService = {
     getAll: async (params?: any) => {
-        const response = await api.get('v1/sales/orders/', { params });
+        const response = await api.get('v1/sales/orders/', { params: { no_pagination: 'true', ...params } });
         return response.data.results || response.data || [];
     },
     getPaginated: async (params?: any): Promise<PaginatedResponse<Order>> => {

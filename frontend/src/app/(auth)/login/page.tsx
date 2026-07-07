@@ -96,7 +96,7 @@ function BlinkingEye({ isOpen, onClick }: { isOpen: boolean; onClick: () => void
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 text-left">{label}</label>
+        <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-1.5 text-left">{label}</label>
         {children}
     </div>
 );
@@ -173,22 +173,22 @@ export default function LoginPage() {
 
     return (
         <div className="h-screen bg-white flex font-sans overflow-hidden">
-            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-12 md:py-20 relative z-10 shadow-2xl">
-                <div className="max-w-md mx-auto w-full animate-in fade-in slide-in-from-left-4 duration-700">
-                    <div className="mb-6 text-center">
-                        <Link href="/" className="inline-block mb-6 opacity-80 hover:opacity-100 transition-opacity">
-                            <img src="/logo.png" alt="Logo" className="h-40 w-auto object-contain mx-auto" />
+            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-6 md:py-10 relative z-10 shadow-2xl">
+                <div className="max-w-md mx-auto w-full my-auto animate-in fade-in slide-in-from-left-4 duration-700">
+                    <div className="mb-4 text-center">
+                        <Link href="/" className="inline-block mb-3 opacity-80 hover:opacity-100 transition-opacity">
+                            <img src="/logo.png" alt="Logo" className="h-28 w-auto object-contain mx-auto" />
                         </Link>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-none mb-4">
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-2">
                             Welcome <span className="text-[#13B0D1]">Back</span>
                         </h1>
-                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
                             Sign in to your business dashboard
                         </p>
                     </div>
 
                     {success && (
-                        <div className="mb-6 flex items-start gap-3 border border-green-100 bg-green-50/50 rounded-2xl p-4">
+                        <div className="mb-4 flex items-start gap-3 border border-green-100 bg-green-50/50 rounded-2xl p-4">
                             <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
                             <div>
                                 <p className="text-green-700 font-bold text-sm">Account Ready</p>
@@ -198,13 +198,13 @@ export default function LoginPage() {
                     )}
 
                     {error && (
-                        <div className="mb-6 flex items-start gap-3 border border-red-100 bg-red-50/50 rounded-2xl p-4 animate-in shake duration-500">
+                        <div className="mb-4 flex items-start gap-3 border border-red-100 bg-red-50/50 rounded-2xl p-4 animate-in shake duration-500">
                             <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                             <p className="text-gray-800 text-sm leading-relaxed">{error}</p>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <Field label="Username or Email">
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -230,7 +230,7 @@ export default function LoginPage() {
                                     <BlinkingEye isOpen={showPassword} onClick={() => setShowPassword(!showPassword)} />
                                 </div>
                             </div>
-                            <div className="text-right mt-2">
+                            <div className="text-right mt-1.5">
                                 <Link href="/forgot-password" core-link="true" className="text-[10px] font-bold text-[#13B0D1] uppercase tracking-widest hover:underline whitespace-nowrap">
                                     Forgot?
                                 </Link>
@@ -249,13 +249,13 @@ export default function LoginPage() {
                         </div>
 
                         <button type="submit" disabled={loading}
-                            className="w-full h-12 bg-[#13B0D1] hover:bg-[#119ab8] text-white rounded-xl text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#13B0D1]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60">
+                            className="w-full h-11 bg-[#13B0D1] hover:bg-[#119ab8] text-white rounded-xl text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#13B0D1]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60">
                             {loading ? <Loader2 className="animate-spin h-5 w-5" /> : (
                                 <>Sign In <ArrowLeft className="h-4 w-4 rotate-180" /></>
                             )}
                         </button>
 
-                        <div className="text-center pt-6 border-t border-slate-50">
+                        <div className="text-center pt-4 border-t border-slate-50">
                             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
                                 New here? <Link href="/register" className="text-[#13B0D1] hover:underline ml-1">Join the Network</Link>
                             </p>
@@ -263,7 +263,7 @@ export default function LoginPage() {
                     </form>
                 </div>
 
-                <footer className="mt-auto pt-6 text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center border-t border-slate-50">
+                <footer className="mt-auto pt-4 text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center border-t border-slate-50">
                     © 2026 Al-Qavi Hub Distribution
                 </footer>
             </div>

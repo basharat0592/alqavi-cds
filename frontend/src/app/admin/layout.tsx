@@ -7,7 +7,7 @@ import NotificationPanel, { type ActivityItem } from '@/components/admin/Notific
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import ReadOnlyController from '@/components/admin/ReadOnlyController';
 import {
-    Menu, X, Bell, Search, Package, ShoppingCart,
+    Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Wallet, Building2
 } from 'lucide-react';

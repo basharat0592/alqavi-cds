@@ -183,9 +183,25 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                         <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{(order as any).notes || 'Thank you for your business.'}</p>
                     </div>
                     <div className="w-[280px] text-[12px] space-y-2">
-                        <div className="flex justify-between items-center pt-1 border-t-2 border-slate-300">
-                            <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
-                            <span className="font-black text-indigo-600 text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <div className="flex justify-between">
+                            <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
+                            <span className="font-bold text-slate-700 tabular-nums">{formatCurrency(items.reduce((s, i) => s + (parseFloat(i.price || i.unit_price || 0) * (i.quantity || 1)), 0))}</span>
+                        </div>
+                        {parseFloat((order as any).shipping_cost || '0') > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Delivery Charges</span>
+                                <span className="font-bold text-slate-700 tabular-nums">+{formatCurrency(parseFloat((order as any).shipping_cost))}</span>
+                            </div>
+                        )}
+                        {parseFloat((order as any).discount || '0') > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Discount</span>
+                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(parseFloat((order as any).discount))}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                            <span className="text-slate-900 font-black uppercase text-[12px]">Total Amount</span>
+                            <span className="font-black text-indigo-600 text-[16px] tabular-nums">{formatCurrency(totalAmount)}</span>
                         </div>
                         {paidAmount > 0 && (
                             <div className="flex justify-between pt-1">

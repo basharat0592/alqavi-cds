@@ -354,8 +354,8 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        
-        # Resolve the actual Supplier instance for Shadow Users
+
+        # Resolve the actual Supplier instance for Shadow Users (supplier portal)
         if hasattr(user, 'is_supplier') and user.is_supplier:
             from modules.supplier.models import Supplier
             supplier_instance = Supplier.objects.filter(id=user.real_id).first()
@@ -364,8 +364,22 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
                 return
             else:
                 print(f"DEBUG: Supplier instance NOT FOUND for real_id: {getattr(user, 'real_id', 'None')}")
-        
-        # Fallback for staff/admin
+
+        # Staff / Admin: 'supplier' field is writable; if it came through validated_data, just save.
+        # As a safety net, if 'supplier' was not in validated_data try to resolve from raw request.
+        if user.is_staff:
+            if 'supplier' in serializer.validated_data:
+                serializer.save()
+                return
+            supplier_id = self.request.data.get('supplier')
+            if supplier_id:
+                from modules.supplier.models import Supplier
+                supplier_instance = Supplier.objects.filter(id=supplier_id).first()
+                if supplier_instance:
+                    serializer.save(supplier=supplier_instance)
+                    return
+
+        # Final fallback
         try:
             serializer.save()
         except Exception as e:

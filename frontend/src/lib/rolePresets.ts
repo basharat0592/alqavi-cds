@@ -8,7 +8,7 @@ export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
     'operations manager': [
         '/admin/dashboard', '/admin/orders', '/admin/sales', '/admin/tracking',
         '/admin/products', '/admin/products/add',
-        '/admin/inventory/list', '/admin/inventory/warehouses',
+        '/admin/inventory/list',
         '/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns',
         '/admin/sale', '/admin/invoices', '/admin/payments', '/admin/sale-returns',
         '/admin/company/suppliers', '/admin/company/customers', '/admin/alerts',
@@ -23,7 +23,7 @@ export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
     'inventory manager': [
         '/admin/dashboard',
         '/admin/products', '/admin/products/add',
-        '/admin/inventory/list', '/admin/inventory/warehouses',
+        '/admin/inventory/list',
         '/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns',
         '/admin/company/suppliers',
         '/admin/reports',

@@ -20,6 +20,7 @@ urlpatterns = [
     path('register/', views.signup, name='user-register'),
     path('register/supplier/', views.signup_supplier, name='supplier-register'),
     path('register/admin/', views.signup_admin, name='admin-register'),
+    path('register/rider/', views.signup_rider, name='rider-register'),
 
     # User Management (literal)
     path('', views.list_users, name='user-list'),

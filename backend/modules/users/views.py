@@ -856,3 +856,47 @@ def signup_admin(request):
         
         return Response(UserDetailSerializer(user).data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup_rider(request):
+    """Public delivery rider self-registration."""
+    from django.contrib.auth.hashers import make_password
+    from modules.delivery.models import DeliveryPerson
+
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if DeliveryPerson.objects.filter(email=email).exists():
+        return Response({'email': ['Rider with this email already exists']}, status=status.HTTP_400_BAD_REQUEST)
+
+    username = request.data.get('username') or email.split('@')[0]
+    if DeliveryPerson.objects.filter(username=username).exists():
+        username = f"{username}_{DeliveryPerson.objects.count() + 1}"
+
+    rider = DeliveryPerson.objects.create(
+        username=username,
+        email=email,
+        password=make_password(password),
+        plain_password=password,
+        first_name=request.data.get('first_name', ''),
+        last_name=request.data.get('last_name', ''),
+        phone=request.data.get('phone', ''),
+        vehicle_type=request.data.get('vehicle_type', 'bike'),
+        vehicle_number=request.data.get('vehicle_number', ''),
+        cnic=request.data.get('cnic', ''),
+        address=request.data.get('address', ''),
+        city=request.data.get('city', ''),
+        status='active',
+        is_active=True
+    )
+
+    return Response({
+        'message': 'Rider registered successfully',
+        'id': rider.id,
+        'email': rider.email
+    }, status=status.HTTP_201_CREATED)
+

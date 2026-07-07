@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Trash2, X, CheckCircle, Package, ArrowLeft,
     RefreshCw, Save, Search, ChevronDown, User, Banknote, CreditCard,
-    Printer, Loader2, AlertTriangle, ShieldCheck
+    Printer, Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
 import { installmentService } from '@/services/payment.service';
@@ -269,9 +269,35 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     const [dueDate, setDueDate] = useState('');
     const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
     
+    // Discount and Shipping Charges state
+    const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat');
+    const [discountVal, setDiscountVal] = useState('');
+    const [shippingCharges, setShippingCharges] = useState('');
+    
     const [stockError, setStockError] = useState<string | null>(null);
     const [warehouseStock, setWarehouseStock] = useState<any[]>([]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
+
+    // Delivery fields for assigning rider
+    const [deliveryCustomerName, setDeliveryCustomerName] = useState('');
+    const [deliveryCustomerPhone, setDeliveryCustomerPhone] = useState('');
+    const [deliveryCustomerAddress, setDeliveryCustomerAddress] = useState('');
+
+    useEffect(() => {
+        if (customerId) {
+            const u = users.find(usr => String(usr.id) === String(customerId));
+            if (u) {
+                const name = u.name || u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Registered Customer';
+                setDeliveryCustomerName(name);
+                setDeliveryCustomerPhone(u.phone || '');
+                setDeliveryCustomerAddress(u.address || '');
+            }
+        } else {
+            setDeliveryCustomerName(guestName);
+            setDeliveryCustomerPhone('');
+            setDeliveryCustomerAddress('');
+        }
+    }, [customerId, guestName, users]);
 
     // Partial is registered-customer-only — revert to Full if the account is cleared.
     useEffect(() => {
@@ -307,7 +333,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 const stockData = Array.isArray(stockRes) ? stockRes : (stockRes as any)?.results || [];
                 setWarehouseStock(stockData);
 
-                const sumStock = (name: string, weight: string, size: string) =>
+                const sumStock = (name: string, weight?: string, size?: string) =>
                     stockData.reduce((acc: number, s: any) => {
                         const m = (s.product_name || '').toLowerCase().trim() === (name || '').toLowerCase().trim()
                             && (s.weight || '') === (weight || '') && (s.size || '') === (size || '');
@@ -398,13 +424,22 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         return sum + (qty * price);
     }, 0);
 
+    // Calculate discount amount
+    const enteredDiscount = parseFloat(discountVal) || 0;
+    const discountAmount = discountType === 'percent'
+        ? (totalBill * (enteredDiscount / 100))
+        : enteredDiscount;
+
+    const parsedShipping = parseFloat(shippingCharges) || 0;
+    const grandTotal = Math.max(0, totalBill + parsedShipping - discountAmount);
+
     // How much is collected at checkout, and the resulting settlement status.
     const paidNow = payMode === 'full'
-        ? totalBill
+        ? grandTotal
         : payMode === 'partial'
-            ? Math.min(Number(amountPaidNow) || 0, totalBill)
+            ? Math.min(Number(amountPaidNow) || 0, grandTotal)
             : 0;
-    const settlementStatus = paidNow >= totalBill ? 'PAID' : paidNow > 0 ? 'PARTIAL' : 'UNPAID';
+    const settlementStatus = paidNow >= grandTotal ? 'PAID' : paidNow > 0 ? 'PARTIAL' : 'UNPAID';
 
     // Products available in THIS branch's warehouse only, each carrying its real
     // stock count. The source warehouse is the branch admin's own (auto-selected),
@@ -434,21 +469,28 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 return toast.error('Partial / credit sales require a registered customer account.');
             }
             if (!dueDate) { setShowConfirm(false); return toast.error('Set a payment due date for the outstanding balance.'); }
-            if (payMode === 'partial' && (paidNow <= 0 || paidNow >= totalBill)) {
+            if (payMode === 'partial' && (paidNow < 0 || paidNow >= grandTotal)) {
                 setShowConfirm(false);
-                return toast.error('Enter an amount paid now that is more than 0 and less than the total.');
+                return toast.error('Enter an amount paid now that is less than the total.');
             }
         }
         setShowConfirm(false);
         setSaving(true);
         try {
+            const resolvedCustomerName = customerId
+                ? (() => {
+                    const u = users.find(usr => String(usr.id) === String(customerId));
+                    if (!u) return 'Registered Customer';
+                    if (u.first_name || u.last_name) return `${u.first_name || ''} ${u.last_name || ''}`.trim();
+                    return u.full_name || u.username || 'Registered Customer';
+                })()
+                : (guestName || 'Walk-in Customer');
+
             const payload = {
                 customer: customerId || null,
-                customer_name: customerId
-                    ? (users.find(u => String(u.id) === String(customerId))?.full_name || 'Registered Customer')
-                    : (guestName || 'Walk-in Customer'),
-                shipping_address: 'Walk-in Store Selection',
-                phone_number: 'N/A',
+                customer_name: selectedRider ? (deliveryCustomerName || resolvedCustomerName) : resolvedCustomerName,
+                shipping_address: selectedRider ? (deliveryCustomerAddress || 'Walk-in Store Selection') : 'Walk-in Store Selection',
+                phone_number: selectedRider ? (deliveryCustomerPhone || 'N/A') : 'N/A',
                 notes: `POS Gen: ${orderNumber}`,
                 // With a rider assigned the order goes out for delivery (SHIPPED) and
                 // shows in the rider's active orders; a counter sale completes at once.
@@ -458,6 +500,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 amount_paid: paidNow,
                 due_date: payMode !== 'full' && dueDate ? dueDate : null,
                 warehouse_id: warehouseId,
+                discount: discountAmount,
+                shipping_cost: parsedShipping,
                 items: items.map(i => ({
                     id: i.product,
                     quantity: i.quantity,
@@ -534,7 +578,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </div>
                     <div className="flex gap-4">
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}><Printer size={18} /> View Invoice</Btn>
-                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => { setSuccessOrder(null); setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]); setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`); setPayMode('full'); setAmountPaidNow(''); setDueDate(''); setSelectedRider(''); }}><Plus size={18} /> New Bill</Btn>
+                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => router.push('/admin/sales')}><History size={18} /> View Sales</Btn>
                     </div>
                 </Card>
             </div>
@@ -753,7 +797,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                         <div className="relative">
                                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
                                                             <input
-                                                                type="number" min={0} max={totalBill} value={amountPaidNow}
+                                                                type="number" min={0} max={grandTotal} value={amountPaidNow}
                                                                 onChange={e => setAmountPaidNow(e.target.value)} placeholder="0.00"
                                                                 className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 tabular-nums bg-white"
                                                             />
@@ -775,22 +819,83 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         )}
                                     </div>
 
+                                    {/* Shipping & Discount Controls */}
+                                    <div className="space-y-4 pt-2 border-t border-slate-100">
+                                        {/* Shipping Input */}
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block mb-1.5">Shipping / Delivery Charges</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
+                                                <input
+                                                    type="number" min={0} value={shippingCharges}
+                                                    onChange={e => setShippingCharges(e.target.value)} placeholder="0.00"
+                                                    className="w-full h-[38px] pl-8 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white transition-all font-medium"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Discount Input */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1.5">
+                                                <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">Discount</label>
+                                                <div className="flex bg-slate-100 rounded-md p-0.5 border border-slate-200/50">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDiscountType('flat')}
+                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'flat' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                                    >
+                                                        Rs
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDiscountType('percent')}
+                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'percent' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                                    >
+                                                        %
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">
+                                                    {discountType === 'flat' ? 'Rs' : '%'}
+                                                </span>
+                                                <input
+                                                    type="number" min={0} value={discountVal}
+                                                    onChange={e => setDiscountVal(e.target.value)} placeholder="0.00"
+                                                    className="w-full h-[38px] pl-8 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white transition-all font-medium"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Financial Breakdown */}
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between text-[14px] text-slate-600">
+                                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                                        <div className="flex justify-between text-[13px] text-slate-500">
                                             <span>Subtotal ({items.reduce((a,b)=>a+(b.product?b.quantity:0), 0)} items)</span>
                                             <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(totalBill)}</span>
                                         </div>
-                                        <div className="flex justify-between text-[14px] text-slate-600">
+                                        {parsedShipping > 0 && (
+                                            <div className="flex justify-between text-[13px] text-slate-500">
+                                                <span>Shipping Cost</span>
+                                                <span className="font-bold text-slate-900 tabular-nums">+{formatCurrency(parsedShipping)}</span>
+                                            </div>
+                                        )}
+                                        {discountAmount > 0 && (
+                                            <div className="flex justify-between text-[13px] text-slate-500">
+                                                <span>Discount {discountType === 'percent' ? `(${discountVal}%)` : ''}</span>
+                                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(discountAmount)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-[13px] text-slate-500">
                                             <span>Service Tax</span>
                                             <span className="text-slate-400 tabular-nums">{formatCurrency(0)}</span>
                                         </div>
                                         <div className="h-px bg-slate-100 my-2" />
-                                        <div className="flex justify-between items-center pt-2">
+                                        <div className="flex justify-between items-center pt-1">
                                             <div>
-                                                <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Grand Total</p>
-                                                <p className="text-[24px] font-bold text-slate-900 tabular-nums">
-                                                    {formatCurrency(totalBill)}
+                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Grand Total</p>
+                                                <p className="text-[24px] font-black text-slate-900 tabular-nums">
+                                                    {formatCurrency(grandTotal)}
                                                 </p>
                                             </div>
                                         </div>
@@ -803,7 +908,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         {payMode !== 'full' && (
                                             <div className="flex justify-between items-center text-[13px]">
                                                 <span className="font-semibold text-rose-600">Balance Due</span>
-                                                <span className="font-bold text-rose-700 tabular-nums">{formatCurrency(totalBill - paidNow)}</span>
+                                                <span className="font-bold text-rose-700 tabular-nums">{formatCurrency(grandTotal - paidNow)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -850,7 +955,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 open={showConfirm}
                 onClose={() => setShowConfirm(false)}
                 title="Confirm Sale"
-                size="sm"
+                size="md"
                 footer={
                     <div className="w-full space-y-3">
                         <Button variant="primary" onClick={handleSave} className="w-full">
@@ -893,6 +998,54 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
                         </div>
                     </div>
+
+                    {selectedRider && (
+                        <div className="mt-4 p-4 rounded-xl border border-indigo-100 bg-indigo-50/20 space-y-3.5 text-left animate-in fade-in duration-300">
+                            <h4 className="text-[12px] font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-100/50 pb-1.5">
+                                <User size={13} />
+                                Customer Delivery Info
+                            </h4>
+                            
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Customer Delivery Name</label>
+                                <div className="relative">
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={13} /></span>
+                                    <input
+                                        type="text" value={deliveryCustomerName}
+                                        onChange={e => setDeliveryCustomerName(e.target.value)}
+                                        placeholder="Customer Name"
+                                        className="w-full h-[34px] pl-8 pr-2.5 rounded-lg border border-slate-200 text-[12.5px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Contact Number</label>
+                                <div className="relative">
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"><Phone size={13} /></span>
+                                    <input
+                                        type="text" value={deliveryCustomerPhone}
+                                        onChange={e => setDeliveryCustomerPhone(e.target.value)}
+                                        placeholder="Phone Number"
+                                        className="w-full h-[34px] pl-8 pr-2.5 rounded-lg border border-slate-200 text-[12.5px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Delivery Address</label>
+                                <div className="relative">
+                                    <span className="absolute left-2.5 top-3 text-slate-400"><MapPin size={13} /></span>
+                                    <textarea
+                                        rows={2} value={deliveryCustomerAddress}
+                                        onChange={e => setDeliveryCustomerAddress(e.target.value)}
+                                        placeholder="Street Address, City..."
+                                        className="w-full pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-200 text-[12.5px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white resize-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Modal>
 

@@ -143,13 +143,32 @@ export default function MyDeliveriesPage() {
                                             <tr className="bg-gray-50 border-t border-[#D5D9D9]">
                                                 <td colSpan={6} className="px-12 py-6">
                                                     <div className="grid md:grid-cols-2 gap-8 text-sm animate-in slide-in-from-top-2 duration-300">
-                                                        <div className="space-y-3">
-                                                            <p className="text-xs text-gray-500 font-bold uppercase">Order Details</p>
-                                                            <p className="text-gray-700 flex items-start gap-2"><MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" /> {o.shipping_address || '—'}</p>
-                                                            {o.phone_number && o.phone_number !== 'N/A' && (
-                                                                <a href={`tel:${o.phone_number}`} className="text-[#007185] font-semibold flex items-center gap-2 hover:underline"><Phone size={14} /> {o.phone_number}</a>
+                                                        <div className="space-y-3.5">
+                                                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Customer & Delivery Details</p>
+                                                            <p className="text-slate-900 font-bold text-[14px]">
+                                                                {o.customer_display_name || o.customer_name || 'Walk-in Customer'}
+                                                            </p>
+                                                            <p className="text-slate-750 flex items-start gap-2 text-[13px] font-medium leading-relaxed">
+                                                                <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
+                                                                {o.shipping_address || 'Walk-in Store Selection'}
+                                                            </p>
+                                                            {((o.phone_number && o.phone_number !== 'N/A') || o.customer_phone) && (
+                                                                <a
+                                                                    href={`tel:${o.phone_number && o.phone_number !== 'N/A' ? o.phone_number : o.customer_phone}`}
+                                                                    className="text-indigo-600 font-bold flex items-center gap-1.5 hover:text-indigo-800 hover:underline w-max text-[13px]"
+                                                                >
+                                                                    <Phone size={13} />
+                                                                    {o.phone_number && o.phone_number !== 'N/A' ? o.phone_number : o.customer_phone}
+                                                                </a>
                                                             )}
-                                                            <p className="text-gray-500 text-xs uppercase tracking-wider">Payment: {o.payment_method || '—'}</p>
+                                                            <div className="h-px bg-slate-200/60 my-1" />
+                                                            <p className="text-slate-550 text-[11px] font-bold uppercase tracking-wider">
+                                                                Payment Method: <span className="text-slate-800">{o.payment_method || '—'}</span>
+                                                            </p>
+                                                            <p className="text-[#007600] text-[13.5px] font-extrabold flex items-center gap-1.5">
+                                                                <span>Delivery Cost (Your Earnings):</span>
+                                                                <span className="tabular-nums font-black">{formatCurrency(Number(o.shipping_cost ?? 0) > 0 ? Number(o.shipping_cost) : 150)}</span>
+                                                            </p>
                                                         </div>
                                                         <div className="space-y-3">
                                                             <p className="text-xs text-gray-500 font-bold uppercase">Proof of Delivery</p>

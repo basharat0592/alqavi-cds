@@ -50,6 +50,10 @@ export const installmentService = {
         });
         return data.results || data || [];
     },
+    listAll: async (params = {}) => {
+        const { data } = await api.get('v1/payments/installments/', { params });
+        return data.results || data || [];
+    },
     // payload may be a plain object or FormData (when a slip file is attached).
     create: async (payload: any) => {
         const isForm = typeof FormData !== 'undefined' && payload instanceof FormData;

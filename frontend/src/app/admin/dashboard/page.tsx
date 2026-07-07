@@ -81,6 +81,7 @@ export default function AdminDashboard() {
     // Pages this user may open (null = full access). Mirrors the sidebar so the
     // dashboard only shows cards for pages the user actually has access to.
     const [userPagePerms, setUserPagePerms] = useState<string[] | null>(null);
+    const [rightTab, setRightTab] = useState<'low_stock' | 'payments_due'>('low_stock');
     useEffect(() => {
         setIsSuperAdmin(authService.isSuperAdmin());
         const u: any = authService.getUser();
@@ -189,11 +190,13 @@ export default function AdminDashboard() {
     // A card/link is visible if it's not super-admin-only (or the viewer is a super
     // admin), it isn't an operational page hidden from the super admin, AND it isn't
     // toggled off in the sidebar-visibility settings.
-    const canSee = (href: string) =>
-        (isSuperAdmin || !SUPER_ONLY_HREFS.has(href)) &&
-        !(isSuperAdmin && SUPER_ADMIN_HIDDEN_HREFS.includes(href)) &&
-        sidebarVisibility[href] !== false &&
-        (userPagePerms === null || userPagePerms.includes(href));
+    const canSee = (href: string) => {
+        const base = href.split('?')[0];
+        return (isSuperAdmin || !SUPER_ONLY_HREFS.has(base)) &&
+            !(isSuperAdmin && SUPER_ADMIN_HIDDEN_HREFS.includes(base)) &&
+            sidebarVisibility[base] !== false &&
+            (userPagePerms === null || userPagePerms.includes(base));
+    };
 
     // ── CORE OPERATIONS & KEY PAGES (PROMINENT BUTTONS) ──
     const corePages: PageButton[] = [
@@ -420,6 +423,20 @@ export default function AdminDashboard() {
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(234,88,12,0.06)]'
             },
             keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory']
+        },
+        {
+            name: 'Add Stock',
+            desc: 'Record new stock arrivals',
+            href: '/admin/inventory/list?action=add',
+            icon: PackagePlus,
+            theme: {
+                border: 'hover:border-indigo-500',
+                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-indigo-600',
+                chevron: 'text-indigo-400 group-hover:text-indigo-600',
+                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(79,70,229,0.06)]'
+            },
+            keywords: ['add stock', 'new stock', 'incoming', 'inventory', 'receive']
         },
         {
             name: 'Website CMS',
@@ -729,7 +746,7 @@ export default function AdminDashboard() {
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
-                <div className="flex flex-col xl:flex-row gap-6 xl:gap-8 items-stretch">
+                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch">
 
                 {/* ── MAIN: DIRECTORY ── */}
                 <div className="flex-1 min-w-0 space-y-12 animate-in fade-in duration-300 text-left">
@@ -795,7 +812,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* ── RIGHT: SUPER ADMIN → BUSINESS OVERVIEW · BRANCH ADMIN → LOW STOCK ── */}
-                    <aside className="w-full xl:w-[340px] shrink-0">
+                    <aside className="w-full lg:w-[320px] xl:w-[340px] shrink-0">
                         {isSuperAdmin ? (
                         <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col xl:h-full">
                             <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
@@ -823,163 +840,156 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                         ) : (
-                        <div className="flex flex-col gap-5">
                         <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                                        <AlertTriangle size={16} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Low Stock Alert</h3>
-                                        <p className="text-[10.5px] text-slate-400 font-medium">At or below each product's min count</p>
-                                    </div>
-                                </div>
-                                <span className="text-[11px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full shrink-0">{lowStock.length}</span>
+                            {/* Tab Switcher at the top */}
+                            <div className="flex bg-slate-50 border-b border-slate-100 p-0.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setRightTab('low_stock')}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11.5px] font-bold transition-all ${rightTab === 'low_stock' ? 'bg-white text-rose-600 border border-slate-200/50 shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                                >
+                                    <AlertTriangle size={13} className={rightTab === 'low_stock' ? 'text-rose-500' : 'text-slate-400'} />
+                                    Low Stock ({lowStock.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setRightTab('payments_due')}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11.5px] font-bold transition-all ${rightTab === 'payments_due' ? 'bg-white text-amber-600 border border-slate-200/50 shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                                >
+                                    <CalendarClock size={13} className={rightTab === 'payments_due' ? 'text-amber-500' : 'text-slate-400'} />
+                                    Payments Due
+                                </button>
                             </div>
 
-                            <div className="flex items-center px-5 py-2 text-[9.5px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50/60">
-                                <span className="flex-1">Product</span>
-                                <span className="w-12 text-right">Qty</span>
-                                <span className="w-12 text-right">Min</span>
-                            </div>
-
-                            <div className="flex-1 max-h-[calc(100vh-150px)] overflow-y-auto divide-y divide-slate-50">
-                                {loading ? (
-                                    <div className="px-5 py-10 text-center text-[12px] text-slate-400">Loading…</div>
-                                ) : lowStock.length === 0 ? (
-                                    <div className="px-5 py-10 text-center text-[12px] text-slate-400">
-                                        <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
-                                        All products are well stocked.
+                            {/* Tab Content */}
+                            {rightTab === 'low_stock' ? (
+                                <div className="flex flex-col flex-1">
+                                    <div className="flex items-center px-5 py-2 text-[9.5px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50/60">
+                                        <span className="flex-1">Product</span>
+                                        <span className="w-12 text-right">Qty</span>
+                                        <span className="w-12 text-right">Min</span>
                                     </div>
-                                ) : (
-                                    lowStock.map((p: any) => {
-                                        // Clicking a low-stock product opens the New Purchase page
-                                        // pre-filled with its last supplier + the product itself.
-                                        const params = new URLSearchParams();
-                                        if (p.supplier) params.set('supplier', String(p.supplier));
-                                        if (p.sku) params.set('sku', String(p.sku));
-                                        const pName = p.product_name || p.name || '';
-                                        if (pName) params.set('product_name', pName);
-                                        const qs = params.toString();
-                                        return (
-                                            <Link
-                                                key={p.id}
-                                                href={`/admin/purchases/add${qs ? `?${qs}` : ''}`}
-                                                className="group flex items-center px-5 py-2.5 hover:bg-slate-50 transition-colors"
-                                            >
-                                                <span className="flex-1 min-w-0 truncate pr-2 text-[12px] font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
-                                                    {pName || 'Unnamed product'}
-                                                </span>
-                                                <span className={`w-12 text-right text-[12.5px] font-black tabular-nums ${p._qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                                                    {p._qty}
-                                                </span>
-                                                <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{p._min}</span>
-                                            </Link>
-                                        );
-                                    })
-                                )}
-                            </div>
 
-                            <Link
-                                href="/admin/inventory/list"
-                                className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
-                            >
-                                View full inventory <ChevronRight size={13} />
-                            </Link>
-                        </div>
-
-                        {/* ── PAYMENTS DUE (RECEIVABLES) ── */}
-                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                                        <CalendarClock size={16} />
+                                    <div className="flex-1 max-h-[380px] overflow-y-auto divide-y divide-slate-50">
+                                        {loading ? (
+                                            <div className="px-5 py-10 text-center text-[12px] text-slate-400">Loading…</div>
+                                        ) : lowStock.length === 0 ? (
+                                            <div className="px-5 py-10 text-center text-[12px] text-slate-400">
+                                                <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
+                                                All products are well stocked.
+                                            </div>
+                                        ) : (
+                                            lowStock.map((p: any) => {
+                                                const params = new URLSearchParams();
+                                                if (p.supplier) params.set('supplier', String(p.supplier));
+                                                if (p.sku) params.set('sku', String(p.sku));
+                                                const pName = p.product_name || p.name || '';
+                                                if (pName) params.set('product_name', pName);
+                                                const qs = params.toString();
+                                                return (
+                                                    <Link
+                                                        key={p.id}
+                                                        href={`/admin/purchases/add${qs ? `?${qs}` : ''}`}
+                                                        className="group flex items-center px-5 py-2.5 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <span className="flex-1 min-w-0 truncate pr-2 text-[12px] font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
+                                                            {pName || 'Unnamed product'}
+                                                        </span>
+                                                        <span className={`w-12 text-right text-[12.5px] font-black tabular-nums ${p._qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
+                                                            {p._qty}
+                                                        </span>
+                                                        <span className="w-12 text-right text-[12px] font-semibold text-slate-400 tabular-nums">{p._min}</span>
+                                                    </Link>
+                                                );
+                                            })
+                                        )}
                                     </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Payments Due</h3>
-                                        <p className="text-[10.5px] text-slate-400 font-medium">Receivables by due window</p>
-                                    </div>
-                                </div>
-                                {dueOverdueCount > 0 ? (
-                                    <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full shrink-0">{dueOverdueCount} overdue</span>
-                                ) : (
-                                    <span className="text-[11px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full shrink-0">{dueRows.length}</span>
-                                )}
-                            </div>
 
-                            {/* Filters: search + due-window dropdown */}
-                            <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
-                                <div className="relative flex-1 min-w-0">
-                                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input
-                                        value={dueSearch}
-                                        onChange={(e) => setDueSearch(e.target.value)}
-                                        placeholder="Search…"
-                                        className="w-full h-8 pl-7 pr-2 rounded-lg border border-slate-200 text-[11.5px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
-                                    />
-                                </div>
-                                <div className="relative shrink-0">
-                                    <select
-                                        value={dueWindow}
-                                        onChange={(e) => setDueWindow(e.target.value)}
-                                        className="h-8 pl-2.5 pr-7 rounded-lg border border-slate-200 text-[11.5px] font-semibold text-slate-700 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white appearance-none cursor-pointer"
+                                    <Link
+                                        href="/admin/inventory/list"
+                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
                                     >
-                                        {DUE_WINDOWS.map((w) => (
-                                            <option key={w.k} value={w.k}>{w.label}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronRight size={12} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-slate-400" />
+                                        View full inventory <ChevronRight size={13} />
+                                    </Link>
                                 </div>
-                            </div>
-
-                            <div className="flex-1 max-h-[380px] overflow-y-auto divide-y divide-slate-50">
-                                {loading ? (
-                                    <div className="px-5 py-8 text-center text-[12px] text-slate-400">Loading…</div>
-                                ) : dueRows.length === 0 ? (
-                                    <div className="px-5 py-8 text-center text-[12px] text-slate-400">
-                                        <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
-                                        Nothing due in this window.
-                                    </div>
-                                ) : (
-                                    dueRows.map((d: any) => {
-                                        const n = daysUntilDue(d);
-                                        const overdue = n < 0;
-                                        const urgent = n >= 0 && n <= 1;
-                                        const dot = overdue ? 'bg-rose-500' : urgent ? 'bg-amber-500' : 'bg-slate-300';
-                                        const dueColor = overdue ? 'text-rose-600' : urgent ? 'text-amber-600' : 'text-slate-500';
-                                        return (
-                                            <Link
-                                                key={`${d.source_type}-${d.source_id}`}
-                                                href={`/admin/sales?search=${encodeURIComponent(d.ref || '')}`}
-                                                className="group flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                            ) : (
+                                <div className="flex flex-col flex-1">
+                                    {/* Filters: search + due-window dropdown */}
+                                    <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+                                        <div className="relative flex-1 min-w-0">
+                                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input
+                                                value={dueSearch}
+                                                onChange={(e) => setDueSearch(e.target.value)}
+                                                placeholder="Search…"
+                                                className="w-full h-8 pl-7 pr-2 rounded-lg border border-slate-200 text-[11.5px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
+                                            />
+                                        </div>
+                                        <div className="relative shrink-0">
+                                            <select
+                                                value={dueWindow}
+                                                onChange={(e) => setDueWindow(e.target.value)}
+                                                className="h-8 pl-2.5 pr-7 rounded-lg border border-slate-200 text-[11.5px] font-semibold text-slate-700 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white appearance-none cursor-pointer"
                                             >
-                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-[12px] font-bold text-slate-800 truncate group-hover:text-slate-900">{d.party || 'Walk-in Customer'}</p>
-                                                    <p className="text-[10px] text-slate-400 truncate">{d.products || `#${d.ref}`}</p>
-                                                    <p className="text-[9.5px] font-semibold text-slate-400">
-                                                        Paid <span className="text-emerald-600">{money(d.paid)}</span> · #{d.ref}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <p className="text-[12.5px] font-black text-rose-600 tabular-nums leading-tight">{money(d.remaining)}</p>
-                                                    <p className={`text-[9.5px] font-bold tabular-nums ${dueColor}`}>{dueLabel(d)}</p>
-                                                    <p className="text-[8.5px] text-slate-400 tabular-nums">{new Date(d.due_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
-                                                </div>
-                                            </Link>
-                                        );
-                                    })
-                                )}
-                            </div>
+                                                {DUE_WINDOWS.map((w) => (
+                                                    <option key={w.k} value={w.k}>{w.label}</option>
+                                                ))}
+                                            </select>
+                                            <ChevronRight size={12} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-slate-400" />
+                                        </div>
+                                    </div>
 
-                            <Link
-                                href="/admin/alerts"
-                                className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
-                            >
-                                View all dues <ChevronRight size={13} />
-                            </Link>
-                        </div>
+                                    <div className="flex-1 max-h-[340px] overflow-y-auto divide-y divide-slate-50">
+                                        {loading ? (
+                                            <div className="px-5 py-8 text-center text-[12px] text-slate-400">Loading…</div>
+                                        ) : dueRows.length === 0 ? (
+                                            <div className="px-5 py-8 text-center text-[12px] text-slate-400">
+                                                <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
+                                                Nothing due in this window.
+                                            </div>
+                                        ) : (
+                                            dueRows.map((d: any) => {
+                                                const n = daysUntilDue(d);
+                                                const overdue = n < 0;
+                                                const urgent = n >= 0 && n <= 1;
+                                                const dot = overdue ? 'bg-rose-500' : urgent ? 'bg-amber-500' : 'bg-slate-300';
+                                                const dueColor = overdue ? 'text-rose-600' : urgent ? 'text-amber-600' : 'text-slate-500';
+                                                const targetUrl = d.source_type === 'order'
+                                                    ? `/admin/sales/${d.source_id}`
+                                                    : `/admin/sales?search=${encodeURIComponent(d.ref || '')}`;
+                                                return (
+                                                    <Link
+                                                        key={`${d.source_type}-${d.source_id}`}
+                                                        href={targetUrl}
+                                                        className="group flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[12px] font-bold text-slate-800 truncate group-hover:text-slate-900">{d.party || 'Walk-in Customer'}</p>
+                                                            <p className="text-[10px] text-slate-400 truncate">{d.products || `#${d.ref}`}</p>
+                                                            <p className="text-[9.5px] font-semibold text-slate-400">
+                                                                Paid <span className="text-emerald-600">{money(d.paid)}</span> · #{d.ref}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-[12.5px] font-black text-rose-600 tabular-nums leading-tight">{money(d.remaining)}</p>
+                                                            <p className={`text-[9.5px] font-bold tabular-nums ${dueColor}`}>{dueLabel(d)}</p>
+                                                            <p className="text-[8.5px] text-slate-400 tabular-nums">{new Date(d.due_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                                                        </div>
+                                                    </Link>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+
+                                    <Link
+                                        href="/admin/alerts"
+                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
+                                    >
+                                        View all dues <ChevronRight size={13} />
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                         )}
                     </aside>

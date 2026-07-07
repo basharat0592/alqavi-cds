@@ -45,10 +45,7 @@ export const inventoryService = {
         if (!id) return;
         await api.delete(`v1/inventory/stocks/${id}/`);
     },
-    transferStock: async (id: string | number, payload: { destination_warehouse: string | number; quantity: number; date?: string }): Promise<any> => {
-        const { data } = await api.post(`v1/inventory/stocks/${id}/transfer/`, payload);
-        return data;
-    },
+
     getStockMovements: async (stockId: string | number): Promise<any[]> => {
         const { data } = await api.get(`v1/inventory/stocks/${stockId}/movements/`);
         return data;

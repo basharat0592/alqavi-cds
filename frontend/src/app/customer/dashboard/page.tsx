@@ -9,7 +9,8 @@ import {
     Heart,
     ShieldCheck,
     ChevronRight,
-    Clock
+    Clock,
+    AlertTriangle
 } from 'lucide-react';
 import { authService, User as AuthUser } from '@/lib/auth';
 import { salesService } from '@/lib/api';
@@ -19,6 +20,7 @@ import PageLoader from '@/components/ui/PageLoader';
 export default function CustomerDashboard() {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [orders, setOrders] = useState<any[]>([]);
+    const [outstandingBalance, setOutstandingBalance] = useState<number>(0);
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
@@ -27,6 +29,16 @@ export default function CustomerDashboard() {
         setUser(authService.getUser());
         salesService.getOrders()
             .then(data => {
+                // Calculate outstanding balance across all non-cancelled orders
+                const outstanding = data.reduce((sum: number, o: any) => {
+                    if (o.status.toUpperCase() === 'CANCELLED') return sum;
+                    const total = Number(o.total_amount || 0);
+                    const paid = Number(o.amount_paid || 0);
+                    const remaining = Number(o.remaining_amount ?? (total - paid));
+                    return sum + remaining;
+                }, 0);
+                setOutstandingBalance(outstanding);
+
                 const activeOrders = data.filter((o: any) =>
                     !['DELIVERED', 'CANCELLED'].includes(o.status.toUpperCase())
                 );
@@ -40,12 +52,33 @@ export default function CustomerDashboard() {
     return (
         <div className="w-full py-4 sm:py-8 animate-in fade-in duration-500">
             {/* Header Area */}
-            <div className="mb-10">
+            <div className="mb-8">
                 <h1 className="text-3xl font-normal text-[#111]">Your Account</h1>
                 <p className="text-sm text-gray-600 mt-2">
                     Hello, <span className="font-bold text-gray-900">{user?.name}</span>. View your recent orders and manage your account settings from the sidebar.
                 </p>
             </div>
+
+            {/* Outstanding Balance Banner */}
+            {outstandingBalance > 0 && (
+                <div className="mb-8 border border-amber-200 bg-amber-50/40 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-800">Outstanding Balance Due</h3>
+                            <p className="text-xs text-gray-600 mt-1">
+                                You have an outstanding balance of <span className="font-bold text-rose-600">Rs. {outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> on your account. Please review your billing ledger.
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/customer/dashboard/payments"
+                        className="inline-flex items-center justify-center px-4 py-2 bg-white hover:bg-gray-50 border border-[#D5D9D9] hover:border-[#B5B9B9] rounded-md text-xs font-bold text-gray-700 shadow-sm transition-all whitespace-nowrap"
+                    >
+                        View Payments & Dues
+                    </Link>
+                </div>
+            )}
 
             {/* Recent Orders Section */}
             <section className="mb-12">

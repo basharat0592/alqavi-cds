@@ -66,6 +66,7 @@ export default function CheckoutPage() {
     const [showReview, setShowReview] = useState(false);
     const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
 
     // Payment Specific State
     const [selectedEasypaisaNum, setSelectedEasypaisaNum] = useState('');
@@ -95,7 +96,8 @@ export default function CheckoutPage() {
 
         settingsService.getProfile().then((profile: any) => {
             if (profile) {
-                setShippingInfo({
+                setShippingInfo(prev => ({
+                    ...prev,
                     firstName: profile.first_name || '',
                     lastName: profile.last_name || '',
                     email: profile.email || '',
@@ -103,7 +105,7 @@ export default function CheckoutPage() {
                     whatsapp: profile.whatsapp || profile.phone || profile.phone_number || '',
                     address: profile.address || '',
                     city: profile.city || '',
-                });
+                }));
             }
         }).catch(() => { });
     }, [isLoggedIn]);
@@ -267,26 +269,48 @@ export default function CheckoutPage() {
                                 </div>
                                 <AmazonField label="Select Branch" id="branch" required>
                                     <div className="relative">
-                                        <select
+                                        <button
+                                            type="button"
                                             id="branch"
-                                            className={selectCls}
-                                            required
-                                            value={shippingInfo.branchId}
-                                            onChange={(e: any) => {
-                                                const b = branches.find((x: any) => String(x.id) === e.target.value);
-                                                setShippingInfo({ ...shippingInfo, branchId: e.target.value, city: b?.area || b?.name || shippingInfo.city });
-                                            }}
+                                            onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
+                                            className="w-full h-[46px] px-4 flex items-center justify-between rounded-[8px] border border-[#D5D9D9] bg-white text-[14px] font-medium text-slate-700 outline-none hover:border-[#119AB8] focus:border-[#119AB8] transition-all cursor-pointer select-none text-left"
                                         >
-                                            <option value="">Select Branch</option>
-                                            {branches.map((b: any) => (
-                                                <option key={b.id} value={String(b.id)}>
-                                                    {b.name}{b.area ? ` - ${b.area}` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                            <ChevronDown size={18} />
-                                        </div>
+                                            <span className="truncate">
+                                                {shippingInfo.branchId ? (() => {
+                                                    const b = branches.find((x: any) => String(x.id) === shippingInfo.branchId);
+                                                    return b ? (b.name + (b.area ? ` - ${b.area}` : '')) : 'Select Branch';
+                                                })() : 'Select Branch'}
+                                            </span>
+                                            <ChevronDown size={18} className="text-slate-400" />
+                                        </button>
+                                        {branchDropdownOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-[100]" onClick={() => setBranchDropdownOpen(false)} />
+                                                <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-[#D5D9D9] rounded-[8px] shadow-lg z-[110] divide-y divide-slate-100 text-[14px] font-medium text-[#0f1111] animate-in fade-in slide-in-from-top-1 duration-150">
+                                                    <div
+                                                        onClick={() => {
+                                                            setShippingInfo({ ...shippingInfo, branchId: '' });
+                                                            setBranchDropdownOpen(false);
+                                                        }}
+                                                        className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!shippingInfo.branchId ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                                    >
+                                                        Select Branch
+                                                    </div>
+                                                    {branches.map((b: any) => (
+                                                        <div
+                                                            key={b.id}
+                                                            onClick={() => {
+                                                                setShippingInfo({ ...shippingInfo, branchId: String(b.id), city: b.area || b.name || shippingInfo.city });
+                                                                setBranchDropdownOpen(false);
+                                                            }}
+                                                            className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors truncate ${String(shippingInfo.branchId) === String(b.id) ? 'bg-indigo-50 text-indigo-700 font-bold' : ''}`}
+                                                        >
+                                                            {b.name}{b.area ? ` - ${b.area}` : ''}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </AmazonField>
                             </div>

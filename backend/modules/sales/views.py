@@ -126,6 +126,11 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     raise PermissionDenied('You cannot sell from a branch you are not assigned to.')
         serializer.save()
 
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
     def get_permissions(self):
         if self.action in ['create', 'track']:
             return [permissions.AllowAny()]

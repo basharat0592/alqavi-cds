@@ -76,6 +76,15 @@ export const authService = {
         }
     },
 
+    registerRider: async (userData: any): Promise<User> => {
+        try {
+            const { data } = await api.post('/v1/users/register/rider/', userData);
+            return data as User;
+        } catch (error: any) {
+            throw authService.handleAuthError(error, "Rider registration failed.");
+        }
+    },
+
     handleAuthError: (error: any, defaultMsg: string): Error => {
         const detail = error.response?.data;
         let errorMessage = defaultMsg;

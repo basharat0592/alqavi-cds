@@ -19,8 +19,8 @@ export const WarehouseSelectionModal = ({
     onClose,
     onConfirm,
     loading = false,
-    title = "Select Warehouse",
-    description = "Please select the warehouse where this stock will be received. The inventory will be updated only for the selected location."
+    title = "Select Branch",
+    description = "Please select the branch where this stock will be received. The inventory will be updated only for the selected branch."
 }: WarehouseSelectionModalProps) => {
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [selectedId, setSelectedId] = useState<string>('');
@@ -44,7 +44,7 @@ export const WarehouseSelectionModal = ({
             }
         } catch (error) {
             console.error(error);
-            toast.error("Failed to load warehouses");
+            toast.error("Failed to load branches");
         } finally {
             setFetching(false);
         }
@@ -87,7 +87,7 @@ export const WarehouseSelectionModal = ({
                     <div className="relative">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
-                            placeholder="Search warehouse by name or location..."
+                            placeholder="Search branch by name or location..."
                             className="w-full h-[38px] pl-9 pr-3 border border-slate-300 rounded-[4px] text-[13px] outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600]/20 transition-all"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -101,15 +101,15 @@ export const WarehouseSelectionModal = ({
                     {fetching ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3">
                             <Loader2 className="h-8 w-8 text-[#e77600] animate-spin" />
-                            <p className="text-[13px] text-slate-500 font-medium">Fetching available locations...</p>
+                            <p className="text-[13px] text-slate-500 font-medium">Fetching available branches...</p>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center px-10">
                             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                                 <AlertCircle size={32} className="text-slate-200" />
                             </div>
-                            <p className="text-[15px] font-bold text-[#0f1111]">No warehouses found</p>
-                            <p className="text-[13px] text-slate-500 mt-1">We couldn't find any warehouses matching your search or in the system.</p>
+                            <p className="text-[15px] font-bold text-[#0f1111]">No branches found</p>
+                            <p className="text-[13px] text-slate-500 mt-1">We couldn't find any branches matching your search or in the system.</p>
                         </div>
                     ) : (
                         filtered.map((w) => (
@@ -180,7 +180,7 @@ export const WarehouseSelectionModal = ({
                         `}
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}
-                        Receive Stock in Warehouse
+                        Receive Stock in Branch
                     </button>
                 </div>
             </div>

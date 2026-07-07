@@ -1,10 +1,19 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
 from modules.supplier.models import Supplier
 from modules.supplier.serializers import SupplierSerializer
 from .models import Area
 from .serializers import AreaSerializer
 from core.permissions import HasModulePermission
 from core.scoping import tenant_id_for
+
+
+def _is_portal_login(user):
+    """Supplier / customer / delivery shadow logins — never allowed into the
+    admin-facing supplier registry."""
+    return bool(getattr(user, 'is_supplier', False)
+                or getattr(user, 'is_customer', False)
+                or getattr(user, 'is_delivery', False))
 
 
 class AreaViewSet(viewsets.ModelViewSet):
@@ -38,14 +47,31 @@ class AreaViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(tenant=tenant_id_for(self.request.user))
+        # tenant is a FK — assign via *_id so an int/None binds correctly (a bare
+        # `tenant=<int>` raises ValueError on save for non-super creators).
+        serializer.save(tenant_id=tenant_id_for(self.request.user))
 
 
 class SupplierViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for Supplier operations.
-    Points to the central supplier module for data consistency.
+    """Admin-facing Supplier registry.
+
+    Suppliers are shared across all Admins by design (each Admin's *ledger* with a
+    supplier is still tenant-scoped, see supplier ledger). Access is therefore
+    limited to authenticated internal staff; portal/shadow logins and anonymous
+    requests are denied — the endpoint previously ran `AllowAny`, which exposed
+    supplier PII (and passwords) to the public.
     """
     queryset = Supplier.objects.all().order_by('-created_at')
     serializer_class = SupplierSerializer
-    permission_classes = [permissions.AllowAny] # Set to allow any for now to debug the 500
+    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    perm_module = 'suppliers'
+
+    def get_queryset(self):
+        if _is_portal_login(self.request.user):
+            return Supplier.objects.none()
+        return Supplier.objects.all().order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        if _is_portal_login(request.user):
+            return Response({'detail': 'Not allowed.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
