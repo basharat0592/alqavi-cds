@@ -45,7 +45,8 @@ def complete_delivery_stock(order):
     the sale→ledger signal that books the income.
     """
     from django.db import transaction
-    from django.db.models import F
+    from django.db.models import F, Value
+    from django.db.models.functions import Greatest
     from django.utils import timezone
     from modules.inventory.models import Stock
     from modules.payments.services import has_confirmed_installments
@@ -57,23 +58,26 @@ def complete_delivery_stock(order):
             if not item.product:
                 continue
             if order.is_reserved:
-                item.product.reserved_quantity = F('reserved_quantity') - item.quantity
+                # Release the reservation (never below zero).
+                item.product.reserved_quantity = Greatest(F('reserved_quantity') - item.quantity, Value(0))
                 item.product.save()
             if warehouse_id:
+                # Identity is NAME + warehouse (+ tenant) only — NOT weight/size — so a
+                # Stock row whose weight/size drifted from the Product's is still found
+                # and deducted (matches the storefront quantity + sync-signal identity).
                 sf = dict(
                     product_name__iexact=item.product.product_name,
-                    weight=item.product.weight,
-                    size=item.product.size,
                     warehouse_id=warehouse_id,
                 )
                 if getattr(order, 'tenant_id', None):
                     sf['tenant_id'] = order.tenant_id
-                stock = Stock.objects.filter(**sf).first()
+                stock = Stock.objects.filter(**sf).order_by('-total_quantity').first()
                 if stock:
-                    stock.total_quantity = F('total_quantity') - item.quantity
+                    # Deduct physical stock, clamped at zero (no negative stock).
+                    stock.total_quantity = Greatest(F('total_quantity') - item.quantity, Value(0))
                     stock.save()
                     if hasattr(stock, 'product') and stock.product:
-                        stock.product.quantity = F('quantity') - item.quantity
+                        stock.product.quantity = Greatest(F('quantity') - item.quantity, Value(0))
                         stock.product.save()
             item.product.save()
             CustomerBoughtProduct.objects.get_or_create(
@@ -143,6 +147,15 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
+            # Return any still-reserved stock before deleting, so a reserved order
+            # that never delivered doesn't permanently leak reserved_quantity.
+            if getattr(instance, 'is_reserved', False):
+                from django.db.models import F, Value
+                from django.db.models.functions import Greatest
+                for item in instance.items.all():
+                    if item.product:
+                        item.product.reserved_quantity = Greatest(F('reserved_quantity') - item.quantity, Value(0))
+                        item.product.save()
             self.perform_destroy(instance)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
@@ -212,11 +225,20 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'])
     def assign_delivery(self, request, pk=None):
-        """Assign (or clear) the delivery rider for an order."""
+        """Assign (or clear) the delivery rider for an order, and optionally set the
+        rider's payout (delivery_fee) for this delivery."""
         order = self.get_object()
         rider_id = request.data.get('delivery_person')
         order.delivery_person_id = rider_id or None
-        order.save(update_fields=['delivery_person'])
+        update_fields = ['delivery_person']
+        if 'delivery_fee' in request.data:
+            from decimal import Decimal, InvalidOperation
+            try:
+                order.delivery_fee = Decimal(str(request.data.get('delivery_fee') or 0))
+                update_fields.append('delivery_fee')
+            except (InvalidOperation, TypeError, ValueError):
+                pass
+        order.save(update_fields=update_fields)
         return Response(OrderSerializer(order, context={'request': request}).data)
 
     def get_queryset(self):
@@ -298,13 +320,10 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         tracking_id = request.query_params.get('tid')
         if not tracking_id:
             return Response({"error": "Tracking ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            order = Order.objects.get(tracking_id=tracking_id)
-            serializer = OrderSerializer(order)
-            return Response(serializer.data)
-        except Order.DoesNotExist:
-            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        # Delegate to the canonical tracker (track_order_by_id) so the public
+        # ?tid= entry point and the /track/<id>/ entry point return an identical
+        # payload — one source of truth, no drift, with UUID fallback for free.
+        return track_order_by_id(request, tracking_id)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def bought_products(self, request):
@@ -521,11 +540,13 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     order.warehouse_id = warehouse_id
 
                     from modules.inventory.models import Stock
+                    from django.db.models import Value
+                    from django.db.models.functions import Greatest
                     for item in order.items.all():
                         if item.product:
-                            # Release Reserved first if it was reserved
+                            # Release Reserved first if it was reserved (never below 0)
                             if order.is_reserved:
-                                item.product.reserved_quantity = F("reserved_quantity") - item.quantity
+                                item.product.reserved_quantity = Greatest(F("reserved_quantity") - item.quantity, Value(0))
                                 item.product.save()
 
                             # Actual Deduction from Physical Stock (Master Stock Table).
@@ -543,13 +564,14 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             stock = Stock.objects.filter(**stock_filter).first()
 
                             if stock:
-                                stock.total_quantity = F("total_quantity") - item.quantity
+                                # Clamp at zero so a delivery can never drive stock negative.
+                                stock.total_quantity = Greatest(F("total_quantity") - item.quantity, Value(0))
                                 stock.save()
-                                
+
                                 # Update Linked Supplier Product quantity if exists
                                 if hasattr(stock, "product") and stock.product:
                                     sp_prod = stock.product
-                                    sp_prod.quantity = F("quantity") - item.quantity
+                                    sp_prod.quantity = Greatest(F("quantity") - item.quantity, Value(0))
                                     sp_prod.save()
                             
                             # Trigger re-aggregation of total_quantity in Admin Product record
@@ -584,9 +606,11 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 # 3. RELEASE RESERVED on Cancellation or Rejection
                 release_statuses = ["CANCELLED", "REJECTED"]
                 if new_status in release_statuses and order.is_reserved:
+                    from django.db.models import Value
+                    from django.db.models.functions import Greatest
                     for item in order.items.all():
                         if item.product:
-                            item.product.reserved_quantity = F("reserved_quantity") - item.quantity
+                            item.product.reserved_quantity = Greatest(F("reserved_quantity") - item.quantity, Value(0))
                             item.product.save()
                     order.is_reserved = False
                     order.save()
@@ -938,27 +962,45 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     sp.quantity = F('quantity') - units
                     sp.save()
                     
-                    # 2. Always create a NEW Stock entry for every purchase (Batch Tracking)
-                    # This fulfills the requirement to keep every purchase entry separate
-                    stock = Stock.objects.create(
-                        product_name=sp.name,
-                        product=sp,
-                        category=sp.category,
-                        supplier=purchase.supplier,
+                    # 2. Merge into the existing stock line for this product in this
+                    # branch — matched by NAME (not price, weight or size). A changed
+                    # purchase cost never creates a duplicate: the quantity is added to
+                    # the same line and the LATEST cost becomes the stock's cost. The
+                    # matching Product is repriced too (cost + margin-kept sale price).
+                    existing = Stock.objects.filter(
+                        product_name__iexact=sp.name,
                         warehouse=warehouse,
-                        purchase_type='single',
-                        total_quantity=units,
-                        price_per_item=item.price,
-                        weight=item.weight,
-                        size=item.size,
-                        date=timezone.now().date(),
-                        # Attribute the stock to whoever created the purchase, so a
-                        # branch admin sees only the stock from purchases they made.
-                        created_by=purchase.created_by,
-                        # Owning Admin (tenant) — inherit from the purchase order so
-                        # synced stock stays inside the same tenant.
                         tenant_id=purchase.tenant_id,
-                    )
+                    ).first()
+                    if existing:
+                        # Reprice the Admin Product(s) to the new cost BEFORE saving the
+                        # stock, so the stock->product sum signal lands on the right row.
+                        self._reprice_product(sp.name, warehouse, purchase.tenant_id, item.price)
+                        existing.price_per_item = item.price   # latest cost wins
+                        existing.total_quantity = F('total_quantity') + units
+                        existing.save()  # fires signal → re-sums qty into Product
+                        existing.refresh_from_db()
+                        stock = existing
+                    else:
+                        stock = Stock.objects.create(
+                            product_name=sp.name,
+                            product=sp,
+                            category=sp.category,
+                            supplier=purchase.supplier,
+                            warehouse=warehouse,
+                            purchase_type='single',
+                            total_quantity=units,
+                            price_per_item=item.price,
+                            weight=item.weight,
+                            size=item.size,
+                            date=timezone.now().date(),
+                            # Attribute the stock to whoever created the purchase, so a
+                            # branch admin sees only the stock from purchases they made.
+                            created_by=purchase.created_by,
+                            # Owning Admin (tenant) — inherit from the purchase order so
+                            # synced stock stays inside the same tenant.
+                            tenant_id=purchase.tenant_id,
+                        )
 
                     # 3. Record the movement history
                     StockMovement.objects.create(
@@ -979,9 +1021,101 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             print(f"CRITICAL SYNC ERROR: {str(e)}")
             return False, str(e)
 
+    def _reprice_product(self, name, warehouse, tenant_id, new_cost):
+        """Received stock at a new cost → reprice the matching Admin Product(s) in
+        this branch (matched by name): cost_price becomes the latest cost, and the
+        sale price moves proportionally so the profit margin is preserved
+        (selling = new_cost × old_sale/old_cost). profit_margin is derived, so it
+        updates automatically."""
+        from decimal import Decimal
+        from modules.products.models import Product
+        nc = Decimal(str(new_cost or 0))
+        if nc <= 0:
+            return
+        prods = Product.objects.filter(
+            product_name__iexact=name,
+            warehouse=warehouse,
+            tenant_id=tenant_id,
+        )
+        for p in prods:
+            old_cost = Decimal(str(p.cost_price or 0))
+            old_sale = Decimal(str(p.selling_price or 0))
+            if old_cost > 0 and old_sale > 0:
+                new_sale = (nc * (old_sale / old_cost)).quantize(Decimal('0.01'))
+            else:
+                new_sale = old_sale
+            Product.objects.filter(id=p.id).update(cost_price=nc, selling_price=new_sale)
+
+    _PM_MAP = {'CASH': 'cash', 'BANK_TRANSFER': 'bank_transfer', 'CHEQUE': 'check',
+               'ONLINE': 'mobile_wallet', 'CREDIT': 'other'}
+
+    def _record_purchase_payment(self, purchase, old_paid):
+        """Turn a purchase's paid-amount change into individual installment records
+        so each payment is listed separately with its own date/time. Backfills any
+        legacy directly-entered amount as one 'opening' entry the first time."""
+        from decimal import Decimal
+        from django.utils import timezone
+        from modules.payments.models import TransactionPayment
+        from modules.payments.services import confirmed_paid_total, record_installment
+
+        new_paid = Decimal(str(purchase.paid_amount or 0))
+        prior = Decimal(str(confirmed_paid_total('purchaseorder', purchase.id) or 0))
+
+        actor = getattr(self.request, 'user', None)
+        real = actor if (getattr(actor, 'pk', None) and actor.__class__.__name__ == 'User'
+                         and not getattr(actor, 'is_supplier', False)
+                         and not getattr(actor, 'is_customer', False)) else None
+        method = self._PM_MAP.get(str(purchase.payment_method or '').upper(), 'cash')
+
+        def _make(amount, paid_at, note):
+            if amount <= 0:
+                return
+            tp = TransactionPayment.objects.create(
+                source_type='purchaseorder', source_id=str(purchase.id),
+                amount=amount, method=method, status='confirmed', direction='outbound',
+                paid_at=(paid_at or timezone.now()), reference=(purchase.transaction_id or ''),
+                note=note, created_by=real,
+                warehouse_id=purchase.warehouse_id, tenant_id=purchase.tenant_id,
+            )
+            record_installment(tp)  # posts ledger + recompute_parent (keeps paid_amount correct)
+
+        # Backfill the legacy directly-paid balance as one opening entry.
+        if prior < old_paid:
+            _make(old_paid - prior, getattr(purchase, 'order_date', None), 'Opening balance (recorded on order)')
+            prior = old_paid
+        # This save's new payment.
+        _make(new_paid - prior, getattr(purchase, 'payment_date', None), 'Payment')
+
     def perform_update(self, serializer):
+        from decimal import Decimal
+        # Capture the paid amount BEFORE the update so we can tell how much of this
+        # save is a NEW payment vs. what was already on the order.
+        old_paid = Decimal(str(getattr(serializer.instance, 'paid_amount', 0) or 0))
         instance = serializer.save()
-        
+
+        # Record each purchase payment as its own installment, so the payment
+        # history shows separate entries (amount + date/time + method). We keep the
+        # installment sum equal to paid_amount: any pre-existing directly-entered
+        # paid amount is backfilled once as an "opening" entry, then this save's
+        # increment is added as its own record.
+        try:
+            self._record_purchase_payment(instance, old_paid)
+        except Exception as e:
+            print(f"purchase payment history record failed: {e}")
+
+        # Keep payment_status authoritative from the final paid vs total (after any
+        # installment recompute), so it can never disagree with the amounts.
+        try:
+            instance.refresh_from_db()
+            _paid = Decimal(str(instance.paid_amount or 0))
+            _total = Decimal(str(instance.total_amount or 0))
+            _st = 'PAID' if (_paid >= _total and _total > 0) else 'PARTIAL' if _paid > 0 else 'UNPAID'
+            if instance.payment_status != _st:
+                instance.payment_status = _st
+                instance.save(update_fields=['payment_status'])
+        except Exception:
+            pass
+
         # Mapping 'ORDERED' -> 'PENDING' for external/legacy compatibility
         if instance.status == 'ORDERED':
             instance.status = 'PENDING'
@@ -1224,6 +1358,12 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
                 # Grand total = items + shipping + tax (so the stored total matches the order summary).
                 purchase.total_amount = calculated_total + (purchase.shipping_cost or Decimal('0.00')) + (purchase.tax_amount or Decimal('0.00'))
+                # Authoritatively derive payment status from paid vs total, so it can
+                # never disagree with the amounts (client value is not trusted).
+                _paid = purchase.paid_amount or Decimal('0.00')
+                _total = purchase.total_amount or Decimal('0.00')
+                purchase.payment_status = ('PAID' if _paid >= _total and _total > 0
+                                           else 'PARTIAL' if _paid > 0 else 'UNPAID')
                 purchase.save()
 
                 if str(purchase.status).upper() == 'RECEIVED':
@@ -1355,6 +1495,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     # Grand total = items + shipping + tax (header values already applied above).
                     purchase.total_amount = calculated_total + (purchase.shipping_cost or Decimal('0.00')) + (purchase.tax_amount or Decimal('0.00'))
 
+                # Re-derive payment status from paid vs total so edits stay consistent.
+                _paid = purchase.paid_amount or Decimal('0.00')
+                _total = purchase.total_amount or Decimal('0.00')
+                purchase.payment_status = ('PAID' if _paid >= _total and _total > 0
+                                           else 'PARTIAL' if _paid > 0 else 'UNPAID')
                 purchase.save()
 
             return Response(PurchaseOrderSerializer(purchase).data)
@@ -1534,28 +1679,32 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response({"error": "Only pending returns can be accepted"}, status=400)
             
         from django.db import transaction
-        from django.db.models import F
+        from django.db.models import F, Value
+        from django.db.models.functions import Greatest
         from modules.inventory.models import Stock
         from modules.products.models import SupplierProduct, Product
         from modules.users.models import UserActivityLog
-        from modules.users.models import UserActivityLog
-        
+
+        # Scope the deduction to the return's own branch when known, so a purchase
+        # return only ever depletes the branch it was purchased into.
+        _wh = getattr(getattr(ret, 'purchase_order', None), 'warehouse_id', None)
+        _branch = {'warehouse_id': _wh} if _wh else {}
+
         try:
             with transaction.atomic():
                 for item in ret.items.all():
                     sp = item.product
                     if not sp: continue
-                    
-                    # 1. Deduct from Admin Stock (Matching by product name) — scoped
-                    # to THIS return's tenant so one Admin's return cannot touch
-                    # another Admin's stock of the same product.
-                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id).update(
-                        total_quantity=F('total_quantity') - item.quantity
+
+                    # 1. Deduct from Admin Stock — tenant + branch scoped, clamped at
+                    # zero so a return can never drive stock negative.
+                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id, **_branch).update(
+                        total_quantity=Greatest(F('total_quantity') - item.quantity, Value(0))
                     )
 
-                    # 1b. Deduct from Admin Product Catalog to sync Admin UI (tenant-scoped)
-                    Product.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id).update(
-                        total_quantity=F('total_quantity') - item.quantity
+                    # 1b. Deduct from Admin Product Catalog to sync Admin UI (tenant + branch scoped)
+                    Product.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id, **_branch).update(
+                        total_quantity=Greatest(F('total_quantity') - item.quantity, Value(0))
                     )
                     
                     # 2. Add back to Supplier Product stock

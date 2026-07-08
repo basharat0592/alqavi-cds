@@ -7,7 +7,7 @@ import {
     LogOut, Package, LayoutDashboard, ChevronRight, ChevronLeft,
     Heart, Truck, HelpCircle, LogIn, UserPlus, Store,
     FileText, Map as MapIcon, Newspaper, Briefcase,
-    RotateCcw, Cookie, ShieldCheck
+    RotateCcw, Cookie, ShieldCheck, Check
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCart } from "@/context/CartContext";
@@ -43,6 +43,9 @@ export default function Navbar({ settings }: { settings?: any }) {
     const [cities, setCities] = useState<string[]>([]);
     const [selectedCity, setSelectedCity] = useState('');
     const [cityOpen, setCityOpen] = useState(false);
+    // Compact prompt that auto-drops from "Deliver to" on load (once per browser
+    // session). Shows "Choose your city" first time, then the saved city afterwards.
+    const [cityPromptOpen, setCityPromptOpen] = useState(false);
     // Active branches the Super Admin created (used to derive the cities list).
     const [branches, setBranches] = useState<any[]>([]);
     const [branchOpen, setBranchOpen] = useState(false);
@@ -91,8 +94,22 @@ export default function Navbar({ settings }: { settings?: any }) {
             const cityNames = Array.from(new Set(arr.map((b: any) => b.area).filter(Boolean))).sort() as string[];
             setCities(cityNames);
             const saved = (typeof window !== 'undefined' && localStorage.getItem('deliver_to_city')) || '';
-            // '' = All Cities (every branch). Keep a saved city only if it still has a branch.
-            setSelectedCity(saved && cityNames.includes(saved) ? saved : '');
+            // '' = All Cities (every branch). Keep a saved city only if it still has a
+            // branch. Match case-insensitively (the backend filters with iexact) and
+            // re-canonicalise so the picker label always agrees with what's filtered.
+            const match = saved ? cityNames.find(c => c.toLowerCase() === saved.toLowerCase()) : '';
+            if (saved && !match) { try { localStorage.removeItem('deliver_to_city'); } catch { } }
+            else if (match && match !== saved) { try { localStorage.setItem('deliver_to_city', match); } catch { } }
+            setSelectedCity(match || '');
+            // Auto-drop the compact prompt once per browser session (sessionStorage
+            // clears on browser close, so a fresh session re-shows it — now carrying
+            // the previously-saved city).
+            try {
+                if (sessionStorage.getItem('city_prompt_seen') !== '1' && cityNames.length > 0) {
+                    setCityPromptOpen(true);
+                    sessionStorage.setItem('city_prompt_seen', '1');
+                }
+            } catch { }
         }).catch(() => { setBranches([]); setCities([]); });
     }, [settings]);
 
@@ -127,6 +144,13 @@ export default function Navbar({ settings }: { settings?: any }) {
             else localStorage.removeItem('deliver_to_city');
         } catch { }
         if (typeof window !== 'undefined') window.location.reload();
+    };
+
+    // From the compact prompt → open the simple city dropdown.
+    const openCityDropdown = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCityPromptOpen(false);
+        setCityOpen(true);
     };
 
     useEffect(() => {
@@ -277,31 +301,106 @@ export default function Navbar({ settings }: { settings?: any }) {
 
                     {/* Deliver To — city picker driven by the dashboard's Areas */}
                     <div ref={cityRef} className="relative hidden lg:flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight hover:bg-white/5"
-                        onClick={() => setCityOpen(o => !o)}>
+                        onClick={() => { setCityPromptOpen(false); setCityOpen(o => !o); }}>
                         <span className="text-[12px] text-slate-300 ml-4">Deliver to</span>
                         <div className="flex items-center gap-1">
                             <MapPin size={15} className="text-white" />
                             <span className="text-sm font-bold uppercase tracking-tighter">{selectedCity || 'All Cities'}</span>
                             <ChevronDown size={14} className={`text-white transition-transform ${cityOpen ? 'rotate-180' : ''}`} />
                         </div>
-                        {cityOpen && (
-                            <div className="absolute top-full left-0 mt-1 z-[60] bg-white text-slate-800 rounded-lg shadow-xl border border-slate-200 py-1 min-w-[200px] max-h-72 overflow-auto">
-                                <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Choose your city</div>
-                                <button type="button" onClick={(e) => { e.stopPropagation(); selectCity(''); }}
-                                    className={`flex w-full items-center gap-2 text-left px-4 py-2 text-[13px] hover:bg-slate-50 transition-colors ${!selectedCity ? 'font-bold text-indigo-600' : 'text-slate-700'}`}>
-                                    <Store size={13} className={!selectedCity ? 'text-indigo-600' : 'text-slate-400'} /> All Cities
-                                </button>
-                                {cities.length === 0 ? (
-                                    <div className="px-4 py-3 text-[12px] text-slate-400">No cities available yet.</div>
-                                ) : cities.map(c => (
-                                    <button key={c} type="button" onClick={(e) => { e.stopPropagation(); selectCity(c); }}
-                                        className={`flex w-full items-center gap-2 text-left px-4 py-2 text-[13px] hover:bg-slate-50 transition-colors ${c === selectedCity ? 'font-bold text-indigo-600' : 'text-slate-700'}`}>
-                                        <MapPin size={13} className={c === selectedCity ? 'text-indigo-600' : 'text-slate-400'} />
-                                        {c}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {/* ── Simple city dropdown (opens on click of "Deliver to") ── */}
+                        <AnimatePresence>
+                            {cityOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.15 }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute top-full left-0 mt-2 z-[9995] w-[230px] cursor-default"
+                                >
+                                    <div className="bg-white text-slate-800 rounded-xl shadow-[0_16px_40px_-12px_rgba(2,15,35,0.35)] ring-1 ring-slate-900/[0.08] overflow-hidden">
+                                        <div className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Choose your city</div>
+                                        <div className="py-1 max-h-72 overflow-y-auto">
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); selectCity(''); }}
+                                                className={`flex w-full items-center gap-2.5 text-left px-3.5 py-2 text-[13px] hover:bg-slate-50 transition-colors ${!selectedCity ? 'font-bold text-[#0891B2]' : 'text-slate-700'}`}>
+                                                <Store size={14} className={!selectedCity ? 'text-[#0891B2]' : 'text-slate-400'} />
+                                                All Cities
+                                                {!selectedCity && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                                            </button>
+                                            {cities.length === 0 ? (
+                                                <div className="px-3.5 py-3 text-[12px] text-slate-400">No cities available yet.</div>
+                                            ) : cities.map(c => (
+                                                <button key={c} type="button" onClick={(e) => { e.stopPropagation(); selectCity(c); }}
+                                                    className={`flex w-full items-center gap-2.5 text-left px-3.5 py-2 text-[13px] hover:bg-slate-50 transition-colors ${c === selectedCity ? 'font-bold text-[#0891B2]' : 'text-slate-700'}`}>
+                                                    <MapPin size={14} className={c === selectedCity ? 'text-[#0891B2]' : 'text-slate-400'} />
+                                                    {c}
+                                                    {c === selectedCity && <Check size={14} className="ml-auto text-[#0891B2]" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* ── Compact prompt (auto-drops on load; shows the saved city after choosing) ── */}
+                        <AnimatePresence>
+                            {cityPromptOpen && !cityOpen && (
+                                <>
+                                {/* Slight full-page blur while the prompt is open */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="fixed inset-0 z-[9993] bg-slate-900/20 backdrop-blur-[3px] cursor-default"
+                                    onClick={(e) => { e.stopPropagation(); setCityPromptOpen(false); }}
+                                />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.92, y: -10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.94, y: -6 }}
+                                    transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                                    style={{ transformOrigin: 'top left' }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute top-full left-0 mt-3 z-[9994] w-[300px] max-w-[92vw] cursor-default"
+                                >
+                                    <div className="absolute -top-[6px] left-9 w-3.5 h-3.5 bg-white rotate-45 rounded-[2px] ring-1 ring-slate-900/[0.06]" />
+                                    <div className="relative rounded-2xl overflow-hidden bg-white ring-1 ring-slate-900/[0.08] shadow-[0_24px_60px_-18px_rgba(2,15,35,0.45)] text-slate-800">
+                                        <div className="h-[3px] w-full bg-gradient-to-r from-[#0e7d95] via-[#14b8d4] to-[#0e7d95]" />
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setCityPromptOpen(false); }}
+                                            aria-label="Close"
+                                            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                                        >
+                                            <X size={15} />
+                                        </button>
+                                        <div className="p-4">
+                                            <div onClick={openCityDropdown} className="flex items-center gap-3 cursor-pointer pr-6">
+                                                <span className="w-10 h-10 rounded-2xl bg-[#119AB8]/[0.1] text-[#0891B2] flex items-center justify-center shrink-0">
+                                                    <MapPin size={19} />
+                                                </span>
+                                                <div className="min-w-0">
+                                                    <h3 className="text-[15px] font-bold tracking-tight text-slate-900 leading-tight truncate">{selectedCity || 'Choose your city'}</h3>
+                                                    <p className="text-[11.5px] text-slate-400 mt-0.5 leading-snug">See only what&apos;s available near you</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={openCityDropdown}
+                                                className="mt-3.5 w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#119AB8] hover:bg-[#0e88a3] text-white text-[12.5px] font-bold tracking-tight transition-colors shadow-sm shadow-[#119AB8]/30"
+                                            >
+                                                {selectedCity ? 'Change your city' : 'Choose your city'}
+                                                <ChevronDown size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     {/* Mobile right icons (User & Cart) */}

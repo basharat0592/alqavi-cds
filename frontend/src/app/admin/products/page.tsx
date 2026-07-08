@@ -82,13 +82,14 @@ export default function ProductsPage() {
         return () => clearTimeout(t);
     }, [loadData]);
 
-    // Live Telemetry: Auto-update every 2 seconds
+    // Auto-refresh (30s). A 2s poll re-pulled the entire inventory + supplier
+    // catalog every tick — far too heavy for the value it added.
     useEffect(() => {
         const timer = setInterval(() => {
             if (!loading && !syncing && !deleting) {
                 loadData();
             }
-        }, 2000);
+        }, 30000);
         return () => clearInterval(timer);
     }, [loading, syncing, deleting, loadData]);
 
@@ -206,17 +207,18 @@ export default function ProductsPage() {
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
                                     <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Cost Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Sale Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Net Profit</th>
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">Status</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Current Units</th>
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && products.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
                                 ) : products.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
                                 ) : (
                                     groupedProducts.map(prod => {
                                         return (
@@ -256,14 +258,25 @@ export default function ProductsPage() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
-                                                    <div className="text-[14px] sm:text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(prod.selling_price)}</div>
-                                                    <div className="flex items-center gap-1 mt-0.5">
-                                                        <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
-                                                        <span className="text-[10px] font-bold text-emerald-700 leading-none tabular-nums">
-                                                            {Number(prod.profit_margin).toFixed(1)}% <span className="hidden sm:inline">profit</span>
-                                                        </span>
-                                                    </div>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    <div className="text-[13px] sm:text-[14px] font-bold text-slate-600 tabular-nums">{formatCurrency(prod.cost_price)}</div>
+                                                </td>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    <div className="text-[13px] sm:text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(prod.selling_price)}</div>
+                                                </td>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    {(() => {
+                                                        const np = Number(prod.selling_price || 0) - Number(prod.cost_price || 0);
+                                                        return (
+                                                            <>
+                                                                <div className={`text-[13px] sm:text-[14px] font-black tabular-nums ${np >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(np)}</div>
+                                                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                                                    <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
+                                                                    <span className="text-[10px] font-bold text-emerald-700 leading-none tabular-nums">{Number(prod.profit_margin).toFixed(1)}%</span>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-center">
                                                     <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold uppercase border ${
@@ -275,12 +288,6 @@ export default function ProductsPage() {
                                                     }`} title={prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}>
                                                         <span className="max-sm:hidden">{prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}</span>
                                                     </span>
-                                                </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className={`text-[14px] sm:text-[16px] font-black tabular-nums ${(prod.current_units || 0) < 10 ? 'text-rose-600' : 'text-slate-900'}`}>
-                                                        {(prod.current_units || 0).toLocaleString()}
-                                                    </div>
-                                                    <div className="hidden sm:block text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Unit Balance</div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
                                                     <div className="flex items-center justify-end gap-2.5 transition-opacity">

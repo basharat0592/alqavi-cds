@@ -37,7 +37,14 @@ export const paymentService = {
     getStats: async () => {
         const { data } = await api.get('v1/payments/stats/summary/');
         return data;
-    }
+    },
+    // Super-admin only: payments aggregated per branch (warehouse) + the operator's
+    // own ledger + an unassigned bucket + grand totals.
+    // Returns { branches: [{warehouse_id, warehouse_name, income, expense, net, count}], own, unassigned, totals }.
+    getByBranch: async (params: { date_from?: string; date_to?: string } = {}) => {
+        const { data } = await api.get('v1/payments/by-branch/', { params });
+        return data;
+    },
 };
 
 export type InstallmentSourceType = 'order' | 'purchaseorder' | 'salereturn' | 'purchasereturn';

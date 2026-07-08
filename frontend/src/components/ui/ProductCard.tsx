@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus, Sparkles } from 'lucide-react';
+import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus, Sparkles, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -24,6 +24,7 @@ interface ProductCardProps {
     weight?: string;
     size?: string;
     stock?: number;
+    branch?: string;
     onAddToCart?: (qty: number) => void;
     onWishlist?: () => void;
     layout?: 'vertical' | 'horizontal';
@@ -44,6 +45,7 @@ export default function ProductCard({
     weight,
     size,
     stock,
+    branch,
     onAddToCart,
     onWishlist,
     layout = 'vertical',
@@ -228,6 +230,13 @@ export default function ProductCard({
                                 </span>
                             </div>
                         )}
+                        {/* Branch/city — so identical products from different branches are distinguishable */}
+                        {branch && (
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-100 px-1.5 py-0.5">
+                                <MapPin size={9} className="text-slate-400 shrink-0" />
+                                <span className="text-[8.5px] font-bold uppercase tracking-widest text-slate-500 truncate max-w-[120px]">{branch}</span>
+                            </div>
+                        )}
 
                         {/* Description */}
                         {!isMinimal && description && (
@@ -279,7 +288,7 @@ export default function ProductCard({
                                     <span className="text-[12px] font-bold">{quantityInCart}</span>
                                     <button
                                         onClick={(e) => handleUpdateQuantity(e, 1)}
-                                        disabled={stock !== undefined && quantityInCart >= stock}
+                                        disabled={quantityInCart >= (stock ?? 999)}
                                         className="w-5 h-5 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         <Plus className="h-2.5 w-2.5 stroke-[4]" />

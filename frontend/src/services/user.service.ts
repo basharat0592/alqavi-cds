@@ -64,8 +64,11 @@ export const userService = {
         const { data } = await api.patch(`v1/users/${id}/update/`, payload);
         return data;
     },
-    delete: async (id: number): Promise<void> => {
-        await api.delete(`v1/users/${id}/delete/`);
+    delete: async (id: number): Promise<{ deactivated?: boolean; message?: string }> => {
+        const { data } = await api.delete(`v1/users/${id}/delete/`);
+        // 204 (hard delete) has no body; 200 with { deactivated } means the user owned
+        // records and was deactivated instead.
+        return data || {};
     },
     activate: async (id: number): Promise<AppUser> => {
         const { data } = await api.post(`v1/users/${id}/activate/`);

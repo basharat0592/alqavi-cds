@@ -31,6 +31,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     supplier_name = serializers.ReadOnlyField(source='supplier.name')
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
+    warehouse_area = serializers.ReadOnlyField(source='warehouse.area.name')
     category_name = serializers.SerializerMethodField()
     section_names = serializers.SerializerMethodField()
     additional_images = ProductImageSerializer(many=True, read_only=True)
@@ -46,12 +47,12 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'stock', 'product_name', 'category', 'category_name', 'sections', 'section_names',
-            'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 
+            'supplier', 'supplier_name', 'warehouse', 'warehouse_name', 'warehouse_area',
             'cost_price', 'total_quantity', 'reserved_quantity', 'available_quantity', 'min_count', 'image', 'additional_images',
-            'description', 'sku', 'barcode', 'selling_price', 'batch', 'badge', 'weight', 'size', 'status',
+            'description', 'sku', 'barcode', 'selling_price', 'original_price', 'batch', 'badge', 'weight', 'size', 'status',
             'profit_margin', 'created_at', 'catalog_image', 'tenant'
         ]
-        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'category_name', 'section_names', 'profit_margin', 'catalog_image', 'tenant']
+        read_only_fields = ['id', 'created_at', 'supplier_name', 'warehouse_name', 'warehouse_area', 'category_name', 'section_names', 'profit_margin', 'catalog_image', 'tenant']
 
     def get_section_names(self, obj):
         return [s.name for s in obj.sections.all()]

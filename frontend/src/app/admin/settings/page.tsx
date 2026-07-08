@@ -203,7 +203,12 @@ export default function SettingsPage() {
                 {/* ── MAIN HUB ── */}
                 {activeTab === 'main' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {TABS.filter(t => !isSupplier || (t.id !== 'store' && t.id !== 'all-pages')).map(tab => (
+                        {TABS.filter(t => {
+                            // Business Info edits the single shared Company record — Super Admin only.
+                            if (t.id === 'store' && !isSuperAdmin) return false;
+                            if (isSupplier && (t.id === 'store' || t.id === 'all-pages')) return false;
+                            return true;
+                        }).map(tab => (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group w-full">
                                 <Card className="p-5 hover:border-indigo-300 transition-all">
                                     <div className="flex items-start gap-3">
@@ -279,7 +284,7 @@ export default function SettingsPage() {
                 )}
 
                 {/* ── BUSINESS INFO ── */}
-                {activeTab === 'store' && (
+                {activeTab === 'store' && isSuperAdmin && (
                     <Card className="overflow-hidden">
                         <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
                             <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Business Information</h2>

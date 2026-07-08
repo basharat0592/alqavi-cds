@@ -737,7 +737,7 @@ export default function AdminDashboard() {
     // from overviewCounts. `value` is null while that count is still loading.
     const businessOverview: { label: string; value: number | null; icon: any; color: string }[] = [
         { label: 'Total Branches', value: overviewCounts.branches, icon: Building2, color: 'bg-indigo-50 text-indigo-600' },
-        { label: 'Total Employees', value: stats?.activeUsers ?? null, icon: User, color: 'bg-violet-50 text-violet-600' },
+        { label: 'Total Admins', value: stats?.activeUsers ?? null, icon: User, color: 'bg-violet-50 text-violet-600' },
         { label: 'Total Products', value: stats?.totalProducts ?? null, icon: Package, color: 'bg-teal-50 text-teal-600' },
         { label: 'Total Customers', value: overviewCounts.customers, icon: Users, color: 'bg-sky-50 text-sky-600' },
         { label: 'Active Suppliers', value: overviewCounts.suppliers, icon: Truck, color: 'bg-amber-50 text-amber-600' },

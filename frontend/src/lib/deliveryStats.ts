@@ -3,9 +3,13 @@
  * One place so the Dashboard, Earnings, and Rating pages stay consistent.
  */
 
-// Flat fee a rider earns per completed (delivered) order. Adjust to your payout
-// model, or wire to a real backend field when available.
-export const DELIVERY_FEE = 150;
+// A rider's earning for a delivery is the admin-set per-order delivery_fee.
+// Legacy orders (no fee set) fall back to the order's shipping_cost. No synthetic
+// default — if neither is set, the delivery earns nothing.
+export const riderEarning = (o: any) => {
+    const fee = Number(o?.delivery_fee ?? 0) || 0;
+    return fee > 0 ? fee : Math.max(0, Number(o?.shipping_cost ?? 0) || 0);
+};
 
 // A perfect 5-star rating is reached at this many completed deliveries.
 export const DELIVERIES_FOR_FULL = 50;
@@ -41,7 +45,7 @@ export function computeEarnings(results: any[], now: Date) {
     delivered.forEach((o) => {
         const d = orderDate(o);
         const t = d ? d.getTime() : 0;
-        const fee = Number(o.shipping_cost ?? 0) > 0 ? Number(o.shipping_cost) : DELIVERY_FEE;
+        const fee = riderEarning(o);
         if (t >= today0) today += fee;
         if (t >= week0) week += fee;
         if (t >= month0) month += fee;

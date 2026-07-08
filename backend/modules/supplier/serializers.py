@@ -22,9 +22,11 @@ class SupplierSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'password',
-            'plain_password',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        # Never serialize credentials back out. `password` is write-only (hashed on
+        # save); `plain_password` is not exposed at all through this serializer.
+        extra_kwargs = {'password': {'write_only': True, 'required': False}}
 
     def create(self, validated_data):
         """Hash password and sync with plain_password during creation."""

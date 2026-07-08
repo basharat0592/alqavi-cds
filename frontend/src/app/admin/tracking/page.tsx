@@ -100,11 +100,12 @@ export default function OrderTrackingPage() {
             <div className="max-w-[1100px] mx-auto">
 
                 <PageHeader
-                    title="Order Tracking"
+                    title="Purchase Order Tracking"
+                    subtitle="Look up a purchase order by its number to view and update its status."
                     breadcrumbs={[
                         { label: 'Console', href: '/admin/dashboard' },
                         { label: 'Purchases', href: '/admin/purchases' },
-                        { label: 'Order Tracking' },
+                        { label: 'Purchase Order Tracking' },
                     ]}
                     actions={
                         <Button variant="secondary" size="sm" onClick={() => query && handleSearch(query)} disabled={loading}>

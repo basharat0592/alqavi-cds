@@ -7,15 +7,17 @@ import { riderService } from '@/services/delivery.service';
 import { formatDateTime } from '@/lib/utils';
 import { upper, isDelivered, isCancelled, orderDate } from '@/lib/deliveryStats';
 
-type Notif = { id: string; icon: any; tint: string; title: string; body: string; at: Date | null };
+type Notif = { id: string; icon: any; tint: string; title: string; body: string; at: Date | null; acceptId?: string };
 
 export default function DeliveryNotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [notifs, setNotifs] = useState<Notif[]>([]);
+    const [accepting, setAccepting] = useState<string | null>(null);
 
     const [branch, setBranch] = useState<string | null>(null);
 
-    useEffect(() => {
+    const load = () => {
+        setLoading(true);
         riderService.myDeliveries()
             .then((d) => {
                 setBranch(d?.rider?.warehouse_name || null);
@@ -48,6 +50,7 @@ export default function DeliveryNotificationsPage() {
                         title: `Branch order #${ref} (${upper(o.status)})`,
                         body: `${cust} — ${o.shipping_address || 'address on file'}.`,
                         at: orderDate(o),
+                        acceptId: String(o.id), // unassigned → rider can claim it
                     });
                 });
 
@@ -56,7 +59,22 @@ export default function DeliveryNotificationsPage() {
             })
             .catch(() => toast.error('Failed to load notifications'))
             .finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const handleAccept = async (orderId: string) => {
+        setAccepting(orderId);
+        try {
+            await riderService.accept(orderId);
+            toast.success('Order accepted — it\'s now yours.');
+            load();
+        } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Could not accept this order.');
+        } finally {
+            setAccepting(null);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -83,6 +101,16 @@ export default function DeliveryNotificationsPage() {
                             <div className="min-w-0 flex-1">
                                 <p className="text-[14px] font-bold text-[#111]">{n.title}</p>
                                 <p className="text-[12.5px] text-gray-500 mt-0.5">{n.body}</p>
+                                {n.acceptId && (
+                                    <button
+                                        onClick={() => handleAccept(n.acceptId!)}
+                                        disabled={accepting === n.acceptId}
+                                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#131921] hover:bg-black text-white text-[12px] font-bold rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {accepting === n.acceptId ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                                        Accept this order
+                                    </button>
+                                )}
                             </div>
                             <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{n.at ? formatDateTime(n.at.toISOString()) : ''}</span>
                         </div>

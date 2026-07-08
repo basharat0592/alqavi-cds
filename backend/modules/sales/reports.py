@@ -310,3 +310,49 @@ def report_returns_summary(request):
         'status_counts': status_counts,
         'reasons': reason_rows,
     })
+
+
+# ── Delivery (per-rider) ──────────────────────────────────────────────────────
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def report_delivery(request):
+    """Per-rider delivery performance: orders assigned, delivered, still pending,
+    and rider earnings (each order's delivery_fee, falling back to shipping_cost).
+    Tenant/branch scoped like the other reports."""
+    qs = (Order.objects
+          .exclude(delivery_person__isnull=True)
+          .select_related('delivery_person'))
+    qs = _date_range(request, qs)
+    qs = apply_report_scope(request, qs, 'warehouse', 'created_by', tenant_field='tenant')
+
+    rows = {}
+    for o in qs:
+        rid = o.delivery_person_id
+        r = rows.get(rid)
+        if r is None:
+            r = rows[rid] = {
+                'delivery_person': (o.delivery_person.name if o.delivery_person else 'Unassigned'),
+                'phone': (getattr(o.delivery_person, 'phone', '') or ''),
+                'total_orders': 0, 'delivered': 0, 'pending': 0, 'earnings': 0.0,
+            }
+        r['total_orders'] += 1
+        st = str(o.status).upper()
+        fee = float(o.delivery_fee or 0) or float(o.shipping_cost or 0)
+        if st == 'DELIVERED':
+            r['delivered'] += 1
+            r['earnings'] += fee
+        elif st not in ('CANCELLED', 'REJECTED'):
+            r['pending'] += 1
+
+    results = sorted(rows.values(), key=lambda x: x['earnings'], reverse=True)
+    for r in results:
+        r['earnings'] = round(r['earnings'], 2)
+    return Response({
+        'results': results,
+        'totals': {
+            'riders': len(results),
+            'total_orders': sum(r['total_orders'] for r in results),
+            'delivered': sum(r['delivered'] for r in results),
+            'earnings': round(sum(r['earnings'] for r in results), 2),
+        },
+    })

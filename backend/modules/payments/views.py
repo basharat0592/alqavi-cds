@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 
 from . import services
 from .models import Payment, PaymentCategory, TransactionPayment
@@ -137,12 +137,16 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
         if user and not getattr(user, 'is_staff', False):
             from modules.sales.models import Order, PurchaseOrder
             
-            # Check if customer
+            # Shadow logins carry the real entity PK in `real_id`. Filter ONLY by the
+            # matching entity FK — never by Order.user/user_id (a real-User FK), whose
+            # id-space overlaps Customer/Supplier PKs and would match unrelated rows.
             if getattr(user, 'is_customer', False) or user.__class__.__name__ == 'Customer':
-                order_ids = Order.objects.filter(Q(customer=user) | Q(customer_id=user.id) | Q(user=user) | Q(user_id=user.id)).values_list('id', flat=True)
+                cid = getattr(user, 'real_id', None) or user.id
+                order_ids = Order.objects.filter(customer_id=cid).values_list('id', flat=True)
                 qs = qs.filter(source_type='order', source_id__in=[str(o_id) for o_id in order_ids])
             elif getattr(user, 'is_supplier', False) or user.__class__.__name__ == 'Supplier':
-                po_ids = PurchaseOrder.objects.filter(supplier_id=user.id).values_list('id', flat=True)
+                sid_ = getattr(user, 'real_id', None) or user.id
+                po_ids = PurchaseOrder.objects.filter(supplier_id=sid_).values_list('id', flat=True)
                 qs = qs.filter(source_type='purchaseorder', source_id__in=[str(po_id) for po_id in po_ids])
             else:
                 qs = qs.none()
@@ -344,4 +348,60 @@ def payment_stats(request):
         'total_outbound': float(outbound),
         'total_expenses': float(internal),
         'net_balance': float(inbound) - float(outbound),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def payments_by_branch(request):
+    """Super-admin only: payments aggregated per branch (warehouse), PLUS the
+    operator's OWN ledger (tenant NULL, no warehouse) and an 'unassigned' bucket
+    (a tenant's rows not tagged to a warehouse).
+
+    Backs the global Payments view where the super admin must see EACH branch
+    separately AND their own. Optional ?date_from / ?date_to filter on Payment.date.
+    """
+    from rest_framework.exceptions import PermissionDenied
+    if not is_platform_operator(request.user):
+        raise PermissionDenied('Only the super admin can view the per-branch payments overview.')
+
+    qs = Payment.objects.all()
+    df = request.query_params.get('date_from')
+    dt = request.query_params.get('date_to')
+    if df:
+        qs = qs.filter(date__gte=df)
+    if dt:
+        qs = qs.filter(date__lte=dt)
+
+    def agg(subqs):
+        inc = float(subqs.filter(payment_type='inbound').aggregate(t=Sum('amount'))['t'] or 0)
+        exp = float(subqs.filter(payment_type='outbound').aggregate(t=Sum('amount'))['t'] or 0)
+        return {'income': inc, 'expense': exp, 'net': round(inc - exp, 2), 'count': subqs.count()}
+
+    branch_rows = (qs.filter(warehouse__isnull=False)
+                   .values('warehouse', 'warehouse__name')
+                   .annotate(
+                       income=Sum('amount', filter=Q(payment_type='inbound')),
+                       expense=Sum('amount', filter=Q(payment_type='outbound')),
+                       count=Count('id'),
+                   )
+                   .order_by('warehouse__name'))
+    branches = []
+    for r in branch_rows:
+        inc = float(r['income'] or 0)
+        exp = float(r['expense'] or 0)
+        branches.append({
+            'warehouse_id': r['warehouse'],
+            'warehouse_name': r['warehouse__name'] or 'Unnamed branch',
+            'income': inc,
+            'expense': exp,
+            'net': round(inc - exp, 2),
+            'count': r['count'],
+        })
+
+    return Response({
+        'branches': branches,
+        'own': agg(qs.filter(tenant__isnull=True, warehouse__isnull=True)),
+        'unassigned': agg(qs.filter(tenant__isnull=False, warehouse__isnull=True)),
+        'totals': agg(qs),
     })

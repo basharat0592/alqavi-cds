@@ -75,12 +75,19 @@ export default function SystemUsersPage() {
         if (!deleteTarget) return;
         setDeleting(true);
         try {
-            await userService.delete(deleteTarget.id);
-            setUsers(prev => prev.filter(x => x.id !== deleteTarget.id));
+            const res = await userService.delete(deleteTarget.id);
+            if (res?.deactivated) {
+                // User owns records — the backend deactivated them instead of deleting.
+                setUsers(prev => prev.map(x => x.id === deleteTarget.id
+                    ? { ...x, is_active: false, status: 'inactive' } : x));
+                toast(res.message || 'User owns records and was deactivated instead of deleted.', { icon: '⚠️' });
+            } else {
+                setUsers(prev => prev.filter(x => x.id !== deleteTarget.id));
+                toast.success('User removed');
+            }
             setDeleteTarget(null);
-            toast.success('User removed');
-        } catch {
-            toast.error('Failed to remove user');
+        } catch (e: any) {
+            toast.error(e?.response?.data?.error || e?.response?.data?.message || 'Failed to remove user');
         } finally {
             setDeleting(false);
         }

@@ -335,7 +335,7 @@ export default function SaleReturnsPage() {
                                                     )}
                                                     <button onClick={() => setSelectedReturn(r)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
-                                                    <button className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                    <button onClick={() => { setSelectedReturn(r); setTimeout(() => window.print(), 350); }} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => setReturnToDelete(r)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>

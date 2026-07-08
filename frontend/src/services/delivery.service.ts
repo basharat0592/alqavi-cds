@@ -28,7 +28,8 @@ export interface DeliveryPerson {
 /** Admin-side CRUD for delivery riders. */
 export const deliveryService = {
     getAll: async (params?: any): Promise<DeliveryPerson[]> => {
-        const { data } = await api.get('v1/delivery/persons/', { params });
+        // Rider list paginates client-side, so pull the full set (not just page 1).
+        const { data } = await api.get('v1/delivery/persons/', { params: { no_pagination: 'true', ...params } });
         return data.results || data || [];
     },
     getById: async (id: number | string): Promise<DeliveryPerson> => {
@@ -46,9 +47,11 @@ export const deliveryService = {
     remove: async (id: number | string): Promise<void> => {
         await api.delete(`v1/delivery/persons/${id}/`);
     },
-    // Assign / clear a rider on an order (admin).
-    assignToOrder: async (orderId: string, riderId: number | string | null): Promise<any> => {
-        const { data } = await api.patch(`v1/sales/orders/${orderId}/assign_delivery/`, { delivery_person: riderId });
+    // Assign / clear a rider on an order (admin), optionally setting the rider's payout.
+    assignToOrder: async (orderId: string, riderId: number | string | null, deliveryFee?: number | string): Promise<any> => {
+        const payload: any = { delivery_person: riderId };
+        if (deliveryFee !== undefined && deliveryFee !== '') payload.delivery_fee = deliveryFee;
+        const { data } = await api.patch(`v1/sales/orders/${orderId}/assign_delivery/`, payload);
         return data;
     },
 };
@@ -61,6 +64,11 @@ export const riderService = {
     },
     updateStatus: async (orderId: string, status: string): Promise<any> => {
         const { data } = await api.patch(`v1/delivery/orders/${orderId}/status/`, { status });
+        return data;
+    },
+    // Rider claims an unassigned order from their branch feed.
+    accept: async (orderId: string): Promise<any> => {
+        const { data } = await api.post(`v1/delivery/orders/${orderId}/accept/`, {});
         return data;
     },
     changePassword: async (oldPassword: string, newPassword: string): Promise<any> => {

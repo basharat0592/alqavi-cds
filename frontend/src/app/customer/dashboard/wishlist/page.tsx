@@ -32,7 +32,7 @@ export default function WishlistDashboard() {
             category: item.category
         });
         if (isBuyNow) {
-            router.push('/checkout');
+            router.push('/customer/checkout');
         }
     };
 

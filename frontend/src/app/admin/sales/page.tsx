@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, useSort, SortableTh } from '@/components/admin/ui';
 import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 const STATUS_FILTERS = ['All', 'Delivered', 'Cancelled'];
@@ -122,11 +122,11 @@ export default function SalesPage() {
         }
     }, [orders]);
 
-    // AUTO-SYNC (2s)
+    // AUTO-SYNC (30s) — was 2s.
     useEffect(() => {
         const interval = setInterval(() => {
             if (!loading && !updatingRow) loadOrders(true);
-        }, 2000);
+        }, 30000);
         return () => clearInterval(interval);
     }, [loading, updatingRow, loadOrders]);
 
@@ -148,7 +148,13 @@ export default function SalesPage() {
         return matchesSearch && matchesStatus && matchesChannel && matchesPay;
     });
 
-    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    // Sortable columns (customer, payment status, date, grand total).
+    const sort = useSort(filtered, null, 'desc', (o: any, key: string) => {
+        if (key === 'date') return o.updated_at || o.created_at;
+        if (key === 'total') return Number(o.total_amount || 0);
+        return o[key];
+    });
+    const paginated = sort.sorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
     const getStatusTone = (status: string): 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue' => {
@@ -375,10 +381,10 @@ export default function SalesPage() {
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                                 <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3">Order Details</th>
-                                <th className="px-6 py-3">Customer</th>
-                                <th className="px-6 py-3">Payment</th>
-                                <th className="px-6 py-3">Modified</th>
-                                <th className="px-6 py-3 text-right">Grand Total</th>
+                                <SortableTh label="Customer" sortKey="customer_name" sort={sort} className="px-6 py-3" />
+                                <SortableTh label="Payment" sortKey="payment_status" sort={sort} className="px-6 py-3" />
+                                <SortableTh label="Modified" sortKey="date" sort={sort} className="px-6 py-3" />
+                                <SortableTh label="Grand Total" sortKey="total" sort={sort} className="px-6 py-3 text-right" align="right" />
                                 <th className="px-6 py-3 text-right">Controls</th>
                             </tr>
                         </thead>

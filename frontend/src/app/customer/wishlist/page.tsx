@@ -6,12 +6,27 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { ShoppingCart, Trash2, ShoppingBag, ArrowLeft, Heart, Sparkles, ShieldCheck, Truck, Star, Info } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from 'react-hot-toast';
 
 export default function WishlistPage() {
+    const router = useRouter();
     const { wishlist, removeFromWishlist, wishlistCount } = useWishlist();
     const { addToCart } = useCart();
+
+    const handleCheckoutAll = () => {
+        if (!wishlist.length) return;
+        wishlist.forEach((item: any) => addToCart({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: 1,
+            image: item.image,
+            category: item.category,
+        }));
+        router.push('/customer/checkout');
+    };
 
     const sanitizeName = (name: string) => {
         return (name || '').replace(/\s*\(.*?\)\s*$/, '').trim();
@@ -137,7 +152,11 @@ export default function WishlistPage() {
                                     <span className="text-[16px] font-bold">Total Value</span>
                                     <span className="font-bold text-[18px] text-[#B12704]">Rs. {wishlist.reduce((acc, item) => acc + Number(item.price), 0).toLocaleString()}</span>
                                 </div>
-                                <button className="w-full py-2.5 bg-[#131921] text-white rounded-[8px] text-[13px] font-bold hover:bg-black transition-colors mt-4">
+                                <button
+                                    onClick={handleCheckoutAll}
+                                    disabled={!wishlistCount}
+                                    className="w-full py-2.5 bg-[#131921] text-white rounded-[8px] text-[13px] font-bold hover:bg-black transition-colors mt-4 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
                                     Checkout Now
                                 </button>
                             </div>

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
 import { installmentService } from '@/services/payment.service';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
-import { computeEarnings, DELIVERY_FEE, orderDate } from '@/lib/deliveryStats';
+import { computeEarnings, riderEarning, orderDate } from '@/lib/deliveryStats';
 
 export default function DeliveryEarningsPage() {
     const [loading, setLoading] = useState(true);
@@ -107,7 +107,7 @@ export default function DeliveryEarningsPage() {
                                                             {status === 'PARTIAL' ? 'Partial' : status.toLowerCase()}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-[#007600] text-right tabular-nums">+ {formatCurrency(Number(o.shipping_cost ?? 0) > 0 ? Number(o.shipping_cost) : DELIVERY_FEE)}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-[#007600] text-right tabular-nums">+ {formatCurrency(riderEarning(o))}</td>
                                                     <td className="px-6 py-4 text-right whitespace-nowrap">
                                                         {!isPaid && remaining > 0 ? (
                                                             <button
@@ -134,7 +134,7 @@ export default function DeliveryEarningsPage() {
                     </div>
 
                     <p className="text-[11.5px] text-gray-400 px-1">
-                        Earnings are calculated from completed deliveries based on the order's shipping/delivery cost (falling back to {formatCurrency(DELIVERY_FEE)} if not set).
+                        Earnings are calculated from completed deliveries based on the order's actual shipping/delivery cost.
                     </p>
                 </>
             )}

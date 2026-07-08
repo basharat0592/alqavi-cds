@@ -9,7 +9,7 @@ import { deliveryService } from '@/services/delivery.service';
 import { authService } from '@/lib/auth';
 import PageLoader from '@/components/ui/PageLoader';
 import { Modal } from '@/components/ui/Modal';
-import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
 import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
@@ -136,7 +136,7 @@ function StatusDropdown({ order, updating, onSelect }: { order: any; updating: b
 export default function AdminOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ACTIVE');
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -158,6 +158,7 @@ export default function AdminOrdersPage() {
     // Ship → assign rider (optional) modal
     const [shipModal, setShipModal] = useState<{ orderId: string; order?: any } | null>(null);
     const [shipRiderId, setShipRiderId] = useState<string>('');
+    const [shipFee, setShipFee] = useState<string>('');
     const [shippingNow, setShippingNow] = useState(false);
 
     // Delete States
@@ -238,6 +239,7 @@ export default function AdminOrdersPage() {
         // Shipping out → ask which rider delivers it (optional).
         if (newStatus.toLowerCase() === 'shipped') {
             setShipRiderId(order?.delivery_person ? String(order.delivery_person) : '');
+            setShipFee(order?.delivery_fee && Number(order.delivery_fee) > 0 ? String(order.delivery_fee) : '');
             setShipModal({ orderId: id, order });
             return;
         }
@@ -257,11 +259,12 @@ export default function AdminOrdersPage() {
         setUpdatingRow(shipModal.orderId);
         try {
             if (shipRiderId) {
-                await deliveryService.assignToOrder(shipModal.orderId, shipRiderId);
+                await deliveryService.assignToOrder(shipModal.orderId, shipRiderId, shipFee);
             }
             await handleStatusUpdate(shipModal.orderId, 'SHIPPED');
             setShipModal(null);
             setShipRiderId('');
+            setShipFee('');
         } catch {
             toast.error('Failed to ship order');
         } finally {
@@ -384,8 +387,12 @@ export default function AdminOrdersPage() {
     const deliveryWarehouseOptions = isSuperAdmin ? warehouses : myWarehouses;
 
     const filtered = (orders || []).filter(o => {
-        const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
-        return matchesStatus;
+        const st = (o.status || '').toUpperCase();
+        // 'ACTIVE' = the fulfilment pipeline (everything except finished orders).
+        // Selecting DELIVERED / CANCELLED makes completed orders reachable here too.
+        if (statusFilter === 'ACTIVE') return st !== 'DELIVERED' && st !== 'CANCELLED';
+        if (statusFilter === 'ALL') return true;
+        return st === statusFilter;
     });
 
     // Reset to page 1 when filters change
@@ -393,20 +400,6 @@ export default function AdminOrdersPage() {
 
     const totalPages = Math.ceil(filtered.length / pageSize);
     const paginatedData = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-    const sel = useTableSelection(paginatedData);
-
-    const bulkDelete = async (ids: string[]) => {
-        await Promise.allSettled(ids.map(id => orderService.delete(id)));
-        toast.success(`${ids.length} order(s) deleted`);
-        loadOrders();
-    };
-
-    const bulkStatus = async (ids: string[], status: string) => {
-        await Promise.allSettled(ids.map(id => salesService.updateOrderStatus(id, status)));
-        toast.success(`Marked ${ids.length} order(s) ${status}`);
-        loadOrders();
-    };
 
     if (loading && orders.length === 0) return <PageLoader />;
 
@@ -434,9 +427,25 @@ export default function AdminOrdersPage() {
                                 </Badge>
                             )}
                         </div>
-                        <span className="text-[12px] text-slate-500 font-semibold">
-                            Showing {activeOrders.length} active orders
-                        </span>
+                        <div className="flex items-center gap-3">
+                            <select
+                                value={statusFilter}
+                                onChange={e => setStatusFilter(e.target.value)}
+                                className="h-9 px-3 text-[12px] font-semibold bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer"
+                            >
+                                <option value="ACTIVE">Active pipeline</option>
+                                <option value="ALL">All orders</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="CONFIRMED">Confirmed</option>
+                                <option value="PROCESSING">Processing</option>
+                                <option value="SHIPPED">Shipped</option>
+                                <option value="DELIVERED">Delivered</option>
+                                <option value="CANCELLED">Cancelled</option>
+                            </select>
+                            <span className="text-[12px] text-slate-500 font-semibold whitespace-nowrap">
+                                {filtered.length} order{filtered.length === 1 ? '' : 's'}
+                            </span>
+                        </div>
                     </div>
 
 
@@ -453,8 +462,8 @@ export default function AdminOrdersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {activeOrders.length > 0 ? (
-                                    activeOrders.map((order: any) => (
+                                {paginatedData.length > 0 ? (
+                                    paginatedData.map((order: any) => (
                                         <tr key={order.id} className={`transition-colors duration-200 ${(order.status || '').toUpperCase() === 'CANCEL_REQUESTED' ? 'bg-rose-50/30 border-l-4 border-l-rose-400' : 'hover:bg-slate-50'}`}>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
@@ -515,7 +524,7 @@ export default function AdminOrdersPage() {
                                 ) : (
                                     <tr>
                                         <td colSpan={4} className="py-12 text-center text-[12px] text-slate-400 italic">
-                                            No active orders in the pipeline right now.
+                                            No orders match this filter.
                                         </td>
                                     </tr>
                                 )}
@@ -525,8 +534,8 @@ export default function AdminOrdersPage() {
 
                     {/* Mobile View Card List */}
                     <div className="block md:hidden divide-y divide-slate-100">
-                        {activeOrders.length > 0 ? (
-                            activeOrders.map((order: any) => {
+                        {paginatedData.length > 0 ? (
+                            paginatedData.map((order: any) => {
                                 const status = (order.status || '').toUpperCase();
                                 return (
                                     <div key={order.id} className="py-3 px-4 hover:bg-slate-50 transition-colors">
@@ -572,9 +581,35 @@ export default function AdminOrdersPage() {
                                 );
                             })
                         ) : (
-                            <div className="py-8 text-center text-[12px] text-slate-400 italic">No active orders.</div>
+                            <div className="py-8 text-center text-[12px] text-slate-400 italic">No orders match this filter.</div>
                         )}
                     </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between text-[12px]">
+                            <span className="text-slate-500">
+                                Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                                >
+                                    Prev
+                                </button>
+                                <span className="text-slate-500 font-semibold">Page {currentPage} / {totalPages}</span>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
             </div>
@@ -747,6 +782,20 @@ export default function AdminOrdersPage() {
                                     <p className="text-[10.5px] text-slate-400 mt-1.5">The rider will see this order on their delivery dashboard.</p>
                                 )}
                             </div>
+
+                            {shipRiderId && (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Rider Payout for this delivery (Rs)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                        <input type="number" min="0" step="0.01" value={shipFee}
+                                            onChange={e => setShipFee(e.target.value)}
+                                            placeholder="0.00 (leave blank for your in-house rider)"
+                                            className={inputCls + ' pl-9'} />
+                                    </div>
+                                    <p className="text-[10.5px] text-slate-400 mt-1.5">What you'll pay the rider for delivering this order — counts toward their earnings. Leave 0 for a branch's own salaried rider.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">

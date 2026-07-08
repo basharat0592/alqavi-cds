@@ -85,6 +85,9 @@ class Product(BaseModel):
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     selling_price = models.DecimalField(max_digits=15, decimal_places=2)
+    # Optional compare-at / "was" price. When set and greater than selling_price the
+    # storefront shows a strikethrough + discount %, and the item qualifies for Deals.
+    original_price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     # Not globally unique: the same product can exist in multiple branches with the
     # same sku/barcode. Uniqueness is enforced per-warehouse via Meta.unique_together.
     sku = models.CharField(max_length=100, null=True, blank=True)
@@ -141,14 +144,16 @@ class Product(BaseModel):
                     if not self.description: self.description = sp.description
             
             # Sum stock for THIS branch only, so each branch's product shows its own
-            # quantity (not the combined total across every branch).
+            # quantity (not the combined total across every branch). Quantity identity
+            # is NAME within a branch (tenant + warehouse) ONLY — weight/size/cost are
+            # NOT part of it (matches the sync_product_stock signal + the merge/reprice
+            # policy). Including them here made total_quantity collapse to 0 whenever a
+            # Stock row's weight/size/cost drifted from the Product's, wrongly hiding an
+            # in-stock item from the city-filtered storefront.
             from django.db.models import Sum
             _wh = self.warehouse_id or (self.stock.warehouse_id if self.stock else None)
             total = Stock.objects.filter(
                 product_name__iexact=self.product_name or self.stock.product_name,
-                price_per_item=self.cost_price or self.stock.price_per_item,
-                weight=self.weight or self.stock.weight,
-                size=self.size or self.stock.size,
                 warehouse_id=_wh,
                 tenant_id=self.tenant_id,
             ).aggregate(total=Sum('total_quantity'))['total'] or 0

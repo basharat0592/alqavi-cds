@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { paymentService, paymentCategoryService, inventoryService, installmentService, orderService } from '@/lib/api';
+import { paymentsDueService } from '@/services/payment.service';
 import { authService } from '@/lib/auth';
+import Link from 'next/link';
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import {
     DollarSign, Search, RefreshCw, Plus, ArrowUpRight, ArrowDownLeft,
     X, Loader2, CheckCircle2, LayoutGrid, AlertTriangle, Eye, FileText, Download, ExternalLink
 } from 'lucide-react';
-import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, Modal } from '@/components/admin/ui';
 
 interface Payment {
     id: number;
@@ -52,6 +54,12 @@ export default function PaymentsPage() {
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [myWarehouses, setMyWarehouses] = useState<any[]>([]);
+
+    // Super-admin per-branch payments overview (each branch separately + own).
+    const [branchOverview, setBranchOverview] = useState<any | null>(null);
+    const [branchLoading, setBranchLoading] = useState(false);
+    // Outstanding receivables/payables (dues) summary.
+    const [dues, setDues] = useState<{ total_outstanding?: number; overdue_amount?: number; overdue?: number } | null>(null);
     const [toastState, setToastState] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
     // Review Modal State
@@ -69,16 +77,18 @@ export default function PaymentsPage() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [pData, sData, cData, pendingData] = await Promise.all([
-                paymentService.getAll(),
+            const [pData, sData, cData, pendingData, duesData] = await Promise.all([
+                paymentService.getAll({ no_pagination: 'true' }),
                 paymentService.getStats(),
                 paymentCategoryService.getAll(),
-                installmentService.listAll({ status: 'pending' })
+                installmentService.listAll({ status: 'pending' }),
+                paymentsDueService.get('all').catch(() => null),
             ]);
             setPayments(Array.isArray(pData) ? pData : []);
             setStats(sData);
             setCategories(cData);
             setPendingPayments(Array.isArray(pendingData) ? pendingData : []);
+            setDues(duesData?.summary || null);
         } catch (error) {
             console.error("Failed to load payment data:", error);
             showToast("Failed to reload data", "error");
@@ -93,6 +103,16 @@ export default function PaymentsPage() {
         setIsSuperAdmin(authService.isSuperAdmin());
         setMyWarehouses((authService.getUser() as any)?.warehouses || []);
     }, []);
+
+    // Load the per-branch overview once we know the user is the super admin.
+    useEffect(() => {
+        if (!isSuperAdmin) return;
+        setBranchLoading(true);
+        paymentService.getByBranch()
+            .then(setBranchOverview)
+            .catch(() => setBranchOverview(null))
+            .finally(() => setBranchLoading(false));
+    }, [isSuperAdmin]);
 
     // Reset pagination to first page when search filters change
     useEffect(() => {
@@ -246,6 +266,24 @@ export default function PaymentsPage() {
         loadData();
     };
 
+    // Single-row delete now goes through a confirmation dialog (was one-click).
+    const [deleteTarget, setDeleteTarget] = useState<any>(null);
+    const [deleting, setDeleting] = useState(false);
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleting(true);
+        try {
+            await paymentService.delete(String(deleteTarget.id));
+            showToast('Payment entry deleted');
+            setDeleteTarget(null);
+            loadData();
+        } catch {
+            showToast('Failed to delete entry', 'error');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     return (
         <div className="pb-20 text-left">
             <PageHeader
@@ -280,6 +318,96 @@ export default function PaymentsPage() {
                         <StatCard label="Internal" val={stats.total_expenses} icon={LayoutGrid} color="text-indigo-600" bg="#eef2ff" bar="#6366f1" />
                         <StatCard label="Net Balance" val={stats.net_balance} icon={DollarSign} color="text-slate-900" bg="#f1f5f9" bar="#64748b" />
                     </div>
+
+                    {/* Outstanding balance (receivables/payables due) */}
+                    {dues && (dues.total_outstanding || 0) > 0 && (
+                        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-amber-200/60 bg-amber-50/60">
+                            <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+                                <div>
+                                    <p className="text-[10px] font-bold text-amber-700/80 uppercase tracking-wider">Outstanding Balance</p>
+                                    <p className="text-[18px] font-black text-amber-800 tabular-nums">{formatCurrency(dues.total_outstanding || 0)}</p>
+                                </div>
+                                {(dues.overdue || 0) > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-bold text-rose-600/80 uppercase tracking-wider">Overdue ({dues.overdue})</p>
+                                        <p className="text-[18px] font-black text-rose-700 tabular-nums">{formatCurrency(dues.overdue_amount || 0)}</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Link href="/admin/alerts" className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition-colors shrink-0">
+                                View all dues
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Super-admin: per-branch payments overview (each branch separately + own) */}
+                    {isSuperAdmin && (
+                        <Card className="overflow-hidden text-left mb-8 shadow-sm border border-slate-100">
+                            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-[13.5px] font-bold text-slate-900">Per-Branch Payments</h3>
+                                    <p className="text-[11.5px] text-slate-500">Income, expense and net for every branch, plus your own ledger.</p>
+                                </div>
+                                {branchLoading && <RefreshCw size={14} className="animate-spin text-slate-400" />}
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-[12.5px]">
+                                    <thead>
+                                        <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                            <th className="text-left font-bold px-5 py-2.5">Branch</th>
+                                            <th className="text-right font-bold px-5 py-2.5">Income</th>
+                                            <th className="text-right font-bold px-5 py-2.5">Expense</th>
+                                            <th className="text-right font-bold px-5 py-2.5">Net</th>
+                                            <th className="text-right font-bold px-5 py-2.5">Entries</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {(branchOverview?.branches || []).map((b: any) => (
+                                            <tr key={b.warehouse_id} className="hover:bg-slate-50/60">
+                                                <td className="px-5 py-2.5 font-semibold text-slate-800">{b.warehouse_name}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-emerald-700">{formatCurrency(b.income)}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-rose-600">{formatCurrency(b.expense)}</td>
+                                                <td className={`px-5 py-2.5 text-right tabular-nums font-bold ${b.net >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatCurrency(b.net)}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-slate-500">{b.count}</td>
+                                            </tr>
+                                        ))}
+                                        {branchOverview?.own && (
+                                            <tr className="bg-indigo-50/30 hover:bg-indigo-50/50">
+                                                <td className="px-5 py-2.5 font-bold text-indigo-700">My Own Ledger</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.own.income)}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.own.expense)}</td>
+                                                <td className={`px-5 py-2.5 text-right tabular-nums font-bold ${branchOverview.own.net >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatCurrency(branchOverview.own.net)}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-slate-500">{branchOverview.own.count}</td>
+                                            </tr>
+                                        )}
+                                        {branchOverview?.unassigned && branchOverview.unassigned.count > 0 && (
+                                            <tr className="hover:bg-slate-50/60">
+                                                <td className="px-5 py-2.5 font-semibold text-slate-500 italic">Unassigned (no branch)</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.unassigned.income)}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.unassigned.expense)}</td>
+                                                <td className={`px-5 py-2.5 text-right tabular-nums font-bold ${branchOverview.unassigned.net >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatCurrency(branchOverview.unassigned.net)}</td>
+                                                <td className="px-5 py-2.5 text-right tabular-nums text-slate-500">{branchOverview.unassigned.count}</td>
+                                            </tr>
+                                        )}
+                                        {!branchLoading && !(branchOverview?.branches || []).length && !branchOverview?.own?.count && (
+                                            <tr><td colSpan={5} className="px-5 py-8 text-center text-slate-400 text-[12px]">No payments recorded yet.</td></tr>
+                                        )}
+                                    </tbody>
+                                    {branchOverview?.totals && (
+                                        <tfoot>
+                                            <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold">
+                                                <td className="px-5 py-3 text-slate-900">All Branches Total</td>
+                                                <td className="px-5 py-3 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.totals.income)}</td>
+                                                <td className="px-5 py-3 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.totals.expense)}</td>
+                                                <td className={`px-5 py-3 text-right tabular-nums ${branchOverview.totals.net >= 0 ? 'text-indigo-700' : 'text-rose-600'}`}>{formatCurrency(branchOverview.totals.net)}</td>
+                                                <td className="px-5 py-3 text-right tabular-nums text-slate-500">{branchOverview.totals.count}</td>
+                                            </tr>
+                                        </tfoot>
+                                    )}
+                                </table>
+                            </div>
+                        </Card>
+                    )}
 
                     {/* Pending Review Alert Banner */}
                     {pendingPayments.length > 0 && typeFilter !== 'pending' && (
@@ -476,8 +604,8 @@ export default function PaymentsPage() {
                                                                     View
                                                                 </button>
                                                                 <span className="text-slate-200">|</span>
-                                                                <button 
-                                                                    onClick={() => bulkDelete([String(payment.id)])}
+                                                                <button
+                                                                    onClick={() => setDeleteTarget(payment)}
                                                                     className="text-[11px] font-bold text-[#c40000] hover:underline"
                                                                 >
                                                                     Delete
@@ -555,6 +683,23 @@ export default function PaymentsPage() {
                     />
                 </>
             )}
+
+            {/* Delete confirmation */}
+            <Modal open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} size="sm">
+                <div className="py-2 text-center">
+                    <h2 className="text-[17px] font-bold text-slate-900 mb-1">Delete this payment entry?</h2>
+                    <p className="text-[13px] text-slate-500 mb-5">
+                        {deleteTarget ? `${deleteTarget.payment_type === 'inbound' ? 'Income' : 'Expense'} · ${formatCurrency(Number(deleteTarget.amount || 0))} · ${deleteTarget.category_name || ''}` : ''}
+                        <br />This permanently removes the ledger entry and cannot be undone.
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+                        <Button onClick={confirmDelete} disabled={deleting} className="!bg-rose-600 hover:!bg-rose-700">
+                            {deleting ? 'Deleting…' : 'Delete'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             {/* Review / Detail Modal */}
             {reviewModalOpen && selectedPayment && (

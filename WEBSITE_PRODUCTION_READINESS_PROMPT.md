@@ -12,6 +12,39 @@
 
 ---
 
+## ✅ STATUS (updated 2026-07-07) — 8-phase execution complete
+
+Validated: `next build` compiled successfully; Django `check` clean; live unauthenticated curls
+confirm the security boundary (suppliers / payments / by-branch all return 403).
+
+> **🔴 DEPLOY-CRITICAL:** run `python manage.py migrate` on production when deploying. Migration
+> `products.0022_product_original_price` is **required** — without it the storefront + admin
+> product pages 500 with `Unknown column 'products.original_price'`. It's a nullable column add
+> (zero-downtime, no backfill). Order: deploy code → `migrate`.
+
+**DONE**
+- **§2 P0 security:** supplier API auth-gated (was `AllowAny`); `plain_password` hidden (serializer + `list_users` gated to super-admin); `list_users` MySQL crash fixed; payments shadow-PK reuse fixed; Area `tenant_id` fixed.
+- **§5 backend foundation:** `GET /v1/payments/by-branch/` (super-admin aggregation); `Product.original_price` + migration `0022`; unified order-tracking endpoints.
+- **§3 role hardening:** Areas + Settings Business-Info gated to super-admin; `WarehouseViewSet` shows branch admins their assigned branches (round-trip fixed, queryset-only).
+- **§4 super-admin:** per-branch Payments UI; assign additional admins on `/admin/branches`.
+- **§9 pagination:** un-capped truncated lists (warehouses/suppliers/riders/payments) via `no_pagination` opt-out (matches the site's client-pager pattern).
+- **§6 customer:** deals wired (+ admin "Compare-at price" input); checkout receipt uploads to verification queue; `/checkout` 404, product/wishlist buttons, profile Edit buttons all fixed.
+- **§8 supplier:** `/supplier/inventory` repointed to supplier-scoped endpoint; dead `/supplier/settings` link fixed.
+- **§7 delivery:** removed fake `Rs.150` earnings fallback (uses real `shipping_cost`); rating kept as-is per user.
+- **§10-11 wiring/perf:** `/admin/orders` filter + pagination (completed orders reachable); alerts link fixed; pollers toned down (home 1s→60s, admin 2s→30s); Urdu string removed; dashboard/tracking relabels.
+
+**RESOLVED BY DECISION**
+- **P0-2** supplier tenant-isolation → **decided: keep suppliers SHARED GLOBALLY** (2026-07-08). Current behaviour is correct and stays: any authenticated admin sees the full supplier list; only the purchase *ledger* is per-tenant. Verified live (super-admin & branch admin both see all 4 suppliers; unauth/portal → 403). No further work.
+
+**DEFERRED (product call / a human)**
+- **P0-6** within-tenant branch reads: by design (`core/scoping.py`), a documented deferred phase-2 filter — left unchanged.
+- **P0-4** the `plain_password` *column* still exists (exposure removed, storage not yet dropped).
+- Delivery **customer-rating** feature; **2FA** (no backend); **true server-side pagination** for 10k+ scale; **live per-role click-through QA** (§12 — needs a human at a browser).
+
+**Everything below is the original spec, kept for reference / the deferred items.**
+
+---
+
 ## 0. Architecture recap (so nothing is misunderstood)
 
 - **Backend:** Django + DRF, MySQL/MariaDB. Multi-tenant. Isolation engine lives in

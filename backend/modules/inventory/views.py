@@ -9,7 +9,7 @@ from .serializers import WarehouseSerializer, StockSerializer, StockMovementSeri
 from core.permissions import HasModulePermission
 from core.scoping import (
     BranchScopedQuerysetMixin, scope_to_tenant, scope_queryset, tenant_id_for,
-    user_can_use_warehouse,
+    user_can_use_warehouse, user_warehouse_ids,
 )
 
 
@@ -77,15 +77,48 @@ def public_branches(request):
     return Response(data)
 
 
-class WarehouseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
+class WarehouseViewSet(viewsets.ModelViewSet):
+    """Branch (warehouse) registry.
+
+    Visibility is by ASSIGNMENT, not by tenant: a branch is created by the Super
+    Admin (tenant NULL) and then assigned to one or more Admins via the
+    ``User.warehouses`` M2M. A branch Admin must therefore see the branches
+    assigned to them even though those branches carry tenant NULL — scoping by
+    ``tenant`` alone would hide them (the round-trip bug). We scope by the user's
+    assigned warehouse ids instead:
+
+    * Super Admin / superuser  -> every branch.
+    * Branch Admin / staff     -> only their assigned branch(es).
+    * Portal/shadow logins      -> none (they use the public_branches endpoint).
+    """
     queryset = Warehouse.objects.all().order_by('name')
     serializer_class = WarehouseSerializer
     permission_classes = [IsAuthenticated, HasModulePermission]
     perm_module = 'inventory'
-    # The model *is* the branch, so scope by its own id.
-    branch_field = 'id'
-    # Tenant (owning-Admin) isolation is the primary axis.
-    tenant_field = 'tenant'
+
+    def get_queryset(self):
+        from django.db.models import Q
+        user = self.request.user
+        qs = Warehouse.objects.all().order_by('name')
+        if (getattr(user, 'is_supplier', False) or getattr(user, 'is_customer', False)
+                or getattr(user, 'is_delivery', False)):
+            return qs.none()
+        ids = user_warehouse_ids(user)  # None => unscoped (Super Admin); set => assigned branches
+        if ids is None:
+            return qs
+        # A branch Admin sees branches ASSIGNED to them (M2M — covers Super-Admin-
+        # created, tenant-NULL branches) OR owned by their tenant (legacy safety).
+        cond = Q(id__in=ids) if ids else Q(pk__in=[])
+        tid = tenant_id_for(user)
+        if tid is not None:
+            cond = cond | Q(tenant_id=tid)
+        return qs.filter(cond)
+
+    def paginate_queryset(self, queryset):
+        # Branch dropdowns need EVERY branch, not just the first page.
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def perform_create(self, serializer):
         serializer.save(tenant_id=tenant_id_for(self.request.user))

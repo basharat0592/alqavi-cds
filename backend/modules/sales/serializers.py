@@ -47,7 +47,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
             'amount_paid', 'payment_status', 'due_date', 'remaining_amount', 'is_overdue', 'days_overdue',
             'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'customer_type', 'customer_phone', 'notes',
-            'delivery_person', 'delivery_person_name', 'discount', 'shipping_cost',
+            'delivery_person', 'delivery_person_name', 'discount', 'shipping_cost', 'delivery_fee',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
         ]
@@ -218,14 +218,13 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         )
                         total_amount += (price * quantity)
                         
-                        # 3. Handle Reservation / Deduction based on initial status
-                        acceptance_statuses = ["CONFIRMED", "PROCESSING", "SHIPPED"]
-                        if status_val in acceptance_statuses:
-                            product.reserved_quantity = F("reserved_quantity") + quantity
-                            product.save()
-                            order.is_reserved = True
-                        
-                        elif status_val == 'DELIVERED':
+                        # 3. Handle Reservation / Deduction based on initial status.
+                        # DELIVERED deducts physical stock immediately; every other
+                        # ACTIVE status (PENDING included) RESERVES it the moment the
+                        # order is placed so available_quantity drops right away;
+                        # CANCELLED/REJECTED hold nothing.
+                        released_statuses = ["CANCELLED", "REJECTED"]
+                        if status_val == 'DELIVERED':
                             warehouse_id = validated_data.get('warehouse_id')
                             if warehouse_id and warehouse_id.strip():
                                 from modules.inventory.models import Stock
@@ -237,14 +236,18 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                                 except ValueError:
                                     raise serializers.ValidationError(f"Invalid warehouse ID format: {warehouse_id}")
 
-                                # Deduct from Stock entry in SELECTED warehouse (Matching ALL specs)
+                                # Deduct from the SELECTED branch's stock line for this
+                                # product. Identity is NAME + warehouse only (NOT weight/
+                                # size) — the same identity the storefront quantity and the
+                                # sync signal use. Matching on weight/size here made valid
+                                # orders fail with "not registered" whenever a Stock row's
+                                # weight/size drifted from the Product's. Pick the line with
+                                # the most stock so the deduction lands where the units are.
                                 stock = Stock.objects.filter(
                                     product_name__iexact=product.product_name,
-                                    weight=product.weight,
-                                    size=product.size,
                                     warehouse_id=warehouse_id
-                                ).first()
-                                
+                                ).order_by('-total_quantity').first()
+
                                 if not stock:
                                     raise drf_serializers.ValidationError(f"Product '{product.product_name}' is not registered in the selected warehouse.")
                                 
@@ -292,7 +295,14 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                                     'price': price
                                 }
                             )
-                            
+
+                        elif status_val not in released_statuses:
+                            # Reserve on placement (PENDING + every active status).
+                            # available_quantity (max(0, total - reserved)) drops now.
+                            product.reserved_quantity = F("reserved_quantity") + quantity
+                            product.save()
+                            order.is_reserved = True
+
                     except (Product.DoesNotExist, ValueError, TypeError, KeyError):
                         continue
                 

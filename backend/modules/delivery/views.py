@@ -35,6 +35,12 @@ class DeliveryPersonViewSet(viewsets.ModelViewSet):
             )
         return qs
 
+    def paginate_queryset(self, queryset):
+        # Rider lists + dropdowns load the full set and paginate client-side.
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return DeliveryPersonCreateSerializer
@@ -111,13 +117,15 @@ def my_deliveries(request):
         'cancelled': all_qs.filter(status__in=['CANCELLED', 'REJECTED']).count(),
     }
 
-    # Branch feed: every ACTIVE order of the rider's assigned branch (warehouse),
-    # scoped to their tenant, so they see all deliverable orders for their branch —
-    # not only the ones explicitly assigned to them.
+    # Branch feed: ACTIVE orders of the rider's branch that are still UP FOR GRABS
+    # (unassigned) OR already theirs. Once the admin (or another rider) claims an
+    # order, it disappears from every other rider's feed — assignment is exclusive.
+    from django.db.models import Q
     branch_orders = []
     if rider.warehouse_id:
         branch_qs = (Order.objects
                      .filter(warehouse_id=rider.warehouse_id)
+                     .filter(Q(delivery_person__isnull=True) | Q(delivery_person=rider))
                      .exclude(status__in=['DELIVERED', 'CANCELLED', 'REJECTED'])
                      .order_by('-created_at'))
         if rider.tenant_id:
@@ -165,6 +173,35 @@ def update_delivery_status(request, order_id):
         complete_delivery_stock(order)
     else:
         order.save()
+    return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_order(request, order_id):
+    """A rider CLAIMS an unassigned order from their branch feed. Succeeds only if
+    the order is still unassigned (or already theirs); once claimed it belongs to
+    this rider and drops off every other rider's feed."""
+    from modules.sales.models import Order
+    from modules.sales.serializers import OrderSerializer
+
+    rider = _current_rider(request)
+    if not rider:
+        return Response({'error': 'Not a delivery account'}, status=403)
+
+    qs = Order.objects.filter(id=order_id, warehouse_id=rider.warehouse_id)
+    if rider.tenant_id:
+        qs = qs.filter(tenant_id=rider.tenant_id)
+    order = qs.first()
+    if not order:
+        return Response({'error': 'Order not found in your branch.'}, status=404)
+    if order.delivery_person_id and order.delivery_person_id != rider.id:
+        return Response({'error': 'This order has already been assigned to another rider.'}, status=400)
+    if str(order.status).upper() in ('DELIVERED', 'CANCELLED', 'REJECTED'):
+        return Response({'error': 'This order is already completed.'}, status=400)
+
+    order.delivery_person = rider
+    order.save()
     return Response(OrderSerializer(order, context={'request': request}).data)
 
 

@@ -76,6 +76,7 @@ export default function AlertsPage() {
                     remaining: qty,
                     min: p.min,
                     supplierName: p.supplier || 'Al-Qavi Hub',
+                    supplierId: p.supplier || '',
                     sku: p.sku || 'No Identifier',
                     time: 'Live',
                     href: `/admin/products?search=${encodeURIComponent(p.product_name || '')}`,
@@ -279,7 +280,11 @@ export default function AlertsPage() {
                                         </div>
                                     </div>
                                     <div className="p-4 pt-0">
-                                        <Link href={`/admin/purchases/add?product_id=${a.productId}&product_name=${encodeURIComponent(a.product)}&quantity=0`} className="block w-full">
+                                        <Link href={`/admin/purchases/add?${new URLSearchParams({
+                                            ...(a.supplierId ? { supplier: String(a.supplierId) } : {}),
+                                            ...(a.sku && a.sku !== 'No Identifier' ? { sku: a.sku } : {}),
+                                            product_name: a.product || '',
+                                        }).toString()}`} className="block w-full">
                                             <Button variant="outline" size="sm" className="w-full uppercase tracking-wider text-[11px]">
                                                 <Plus size={13} /> Order Stock
                                             </Button>

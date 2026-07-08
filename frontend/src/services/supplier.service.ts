@@ -7,7 +7,8 @@ import api from '@/lib/axios';
 export const supplierService = {
     getAll: async (params?: any): Promise<any[]> => {
         try {
-            const { data } = await api.get('v1/company/suppliers/', { params });
+            // Registry + purchase-order picker load all suppliers and page client-side.
+            const { data } = await api.get('v1/company/suppliers/', { params: { no_pagination: 'true', ...params } });
             return Array.isArray(data) ? data : data.results || [];
         } catch (error) {
             console.error("Failed to fetch suppliers", error);

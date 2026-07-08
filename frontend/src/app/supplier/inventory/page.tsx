@@ -9,6 +9,7 @@ import {
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { productService } from '@/services/product.service';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PURE AMAZON RETAIL DESIGN SYSTEM - INVENTORY REGISTRY
@@ -42,8 +43,19 @@ export default function SupplierInventory() {
 
     const fetchInventory = useCallback(async () => {
         try {
-            const { data } = await api.get('/v1/inventory/', { params: { no_pagination: 'true' } });
-            const items = Array.isArray(data) ? data : data.results || [];
+            // The supplier's stock IS their supplier-product catalog (scoped server-side
+            // to this supplier). The old '/v1/inventory/' call hit the router root and
+            // always returned empty; this uses the correct supplier-scoped endpoint.
+            const raw = await productService.getAllSupplier({ no_pagination: 'true' });
+            const list = Array.isArray(raw) ? raw : (raw?.results || []);
+            const items = list.map((p: any) => ({
+                ...p,
+                product_name: p.name,
+                quantity_available: p.quantity ?? 0,
+                reorder_level: p.reorder_level ?? p.min_count ?? 0,
+                batch_number: p.batch_number || '',
+                status: p.status || 'ACTIVE',
+            }));
             setInventory(items);
         } catch {
             setInventory([]);
@@ -54,7 +66,7 @@ export default function SupplierInventory() {
 
     const handleDelete = async (id: number) => {
         try {
-            await api.delete(`/v1/inventory/${id}/`);
+            await productService.deleteSupplier(id);
             toast.success("Inventory record purged.");
             setDeleteConfirmId(null);
             fetchInventory();
@@ -118,7 +130,7 @@ export default function SupplierInventory() {
             setLoading(true);
             await Promise.all(
                 Array.from(selectedIds).map(id =>
-                    api.patch(`/v1/inventory/${id}/`, { status: 'ARCHIVED' })
+                    productService.updateSupplier(id, { status: 'ARCHIVED' })
                 )
             );
             toast.success(`${selectedIds.size} records archived successfully.`);
@@ -135,7 +147,7 @@ export default function SupplierInventory() {
             setLoading(true);
             await Promise.all(
                 Array.from(selectedIds).map(id =>
-                    api.patch(`/v1/inventory/${id}/`, { status: 'ACTIVE' })
+                    productService.updateSupplier(id, { status: 'ACTIVE' })
                 )
             );
             toast.success(`${selectedIds.size} records restored.`);

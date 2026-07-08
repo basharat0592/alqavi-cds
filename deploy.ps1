@@ -138,7 +138,8 @@ chain = ('$buildCmd'
          + ' && ' + _be + ' backfill_tenants'
          + ' && ' + _be + ' seed_roles'
          + ' && ' + _be + ' seed_permissions'
-         + ' && ' + _be + ' seed_areas')
+         + ' && ' + _be + ' seed_areas'
+         + ' && ' + _be + ' resync_product_quantities')
 script = '#!/bin/bash\n( ' + chain + ' ) && echo DEPLOY_OK || echo DEPLOY_FAIL\n'
 
 def connect():

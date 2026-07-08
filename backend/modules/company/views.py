@@ -5,7 +5,7 @@ from modules.supplier.serializers import SupplierSerializer
 from .models import Area
 from .serializers import AreaSerializer
 from core.permissions import HasModulePermission
-from core.scoping import tenant_id_for
+from core.scoping import tenant_id_for, is_platform_operator
 
 
 def _is_portal_login(user):
@@ -46,6 +46,23 @@ class AreaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(is_active=True)
         return qs
 
+    def _ensure_super(self):
+        from rest_framework.exceptions import PermissionDenied
+        if not is_platform_operator(self.request.user):
+            raise PermissionDenied('Only the super admin can manage areas / territories.')
+
+    def create(self, request, *args, **kwargs):
+        self._ensure_super()
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self._ensure_super()
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self._ensure_super()
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         # tenant is a FK — assign via *_id so an int/None binds correctly (a bare
         # `tenant=<int>` raises ValueError on save for non-super creators).
@@ -70,6 +87,13 @@ class SupplierViewSet(viewsets.ModelViewSet):
         if _is_portal_login(self.request.user):
             return Supplier.objects.none()
         return Supplier.objects.all().order_by('-created_at')
+
+    def paginate_queryset(self, queryset):
+        # The supplier registry + purchase-order supplier picker load the full list
+        # and paginate client-side, so honour an explicit opt-out.
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def create(self, request, *args, **kwargs):
         if _is_portal_login(request.user):

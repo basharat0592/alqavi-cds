@@ -96,6 +96,10 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # The payout the branch admin offers the delivery rider for THIS order — set
+    # dynamically per order, separate from the customer-facing shipping_cost. Drives
+    # the rider's earnings. 0 = no payout (e.g. the branch's own in-house rider).
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # Settlement — supports partial / on-credit sales. amount_paid is the sum of
     # confirmed installments (see payments.TransactionPayment); kept in sync by

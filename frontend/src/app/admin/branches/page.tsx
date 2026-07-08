@@ -295,12 +295,10 @@ export default function BranchesPage() {
                                                             ))}
                                                         </div>
                                                     )}
-                                                    {admins.length === 0 && (
-                                                        <Link href={`/admin/users/add?warehouse=${wh.id}`}
-                                                            className="flex items-center justify-center gap-1.5 mt-1 text-[11.5px] font-bold text-indigo-600 hover:bg-indigo-50 border border-dashed border-indigo-200 rounded-lg py-2 transition-colors">
-                                                            <Plus size={13} /> Assign an admin
-                                                        </Link>
-                                                    )}
+                                                    <Link href={`/admin/users/add?warehouse=${wh.id}`}
+                                                        className="flex items-center justify-center gap-1.5 mt-1 text-[11.5px] font-bold text-indigo-600 hover:bg-indigo-50 border border-dashed border-indigo-200 rounded-lg py-2 transition-colors">
+                                                        <Plus size={13} /> {admins.length === 0 ? 'Assign an admin' : 'Assign another admin'}
+                                                    </Link>
                                                 </div>
                                             </Card>
                                         );

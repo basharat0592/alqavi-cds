@@ -15,4 +15,6 @@ export {
     BulkBar,
 } from './BulkActions';
 export type { TableSelection, BulkStatusAction } from './BulkActions';
+export { useSort, SortableTh } from './Sort';
+export type { SortDir, SortState } from './Sort';
 export { ui, adminColors } from './tokens';

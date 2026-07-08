@@ -38,6 +38,7 @@ export default function AreasPage() {
     const [togglingId, setTogglingId] = useState<number | null>(null);
 
     const [form, setForm] = useState({ ...emptyForm });
+    const [allowed, setAllowed] = useState<boolean | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -51,7 +52,10 @@ export default function AreasPage() {
         }
     }, []);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        setAllowed(authService.isSuperAdmin());
+        load();
+    }, [load]);
 
     const openAdd = () => {
         setEditTarget(null);
@@ -161,6 +165,18 @@ export default function AreasPage() {
 
     // Possible parents (exclude the area being edited to avoid self-parenting)
     const parentOptions = areas.filter(a => !editTarget || a.id !== editTarget.id);
+
+    if (allowed === false) {
+        return (
+            <div className="max-w-xl mx-auto py-20 text-center">
+                <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                    <ShieldCheck size={26} />
+                </div>
+                <h2 className="text-[18px] font-bold text-slate-900">Super Admin only</h2>
+                <p className="text-[13px] text-slate-500 mt-2">Areas / territories can only be managed by a Super Admin.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="pb-12 text-left text-slate-800">

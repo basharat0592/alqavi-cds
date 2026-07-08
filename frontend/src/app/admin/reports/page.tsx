@@ -16,7 +16,7 @@ import {
 import { inventoryService } from '@/services/inventory.service';
 import { companyService } from '@/services/company.service';
 import { authService } from '@/lib/auth';
-import { exportToCSV, formatCurrency, formatDate } from '@/lib/utils';
+import { exportToCSV, exportToExcel, formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
@@ -43,6 +43,8 @@ const CATEGORIES = [
     { id: 'customers', label: 'Customers' },
     // Finance
     { id: 'payments', label: 'Payments' },
+    // Delivery
+    { id: 'delivery', label: 'Delivery' },
 ];
 
 // When the "Personal" branch is selected, the report covers the Super Admin's own
@@ -61,6 +63,7 @@ const SUB_OPTIONS: Record<string, string[]> = {
     customers: ['Walk-in Customer', 'Registered Customer'],
     returns: ['Sales Returns', 'Purchase Returns'],
     payments: ['Sales Payment', 'Purchase Payment', 'Net Profit'],
+    delivery: ['By Date Range'],
     suppliers: ['All Suppliers', 'By Category', 'Outstanding Balance'],
     products: ['All Products', 'By Category', 'By Supplier', 'By Price Range'],
     stock: ['By Date Range', 'Stock Status', 'By Product Name', 'By Supplier', 'By Price Range', 'By Brand'],
@@ -124,6 +127,10 @@ const rowSubtitle = (r: any, category: string) => {
     // System users: surface the role (Sales Manager, etc.) + a contact.
     if (category === 'system_users') {
         return [r.role_name, r.email || r.phone].filter(Boolean).join(' · ') || 'Staff';
+    }
+    // Delivery: rider performance summary.
+    if (category === 'delivery') {
+        return `${r.delivered || 0} delivered · ${r.pending || 0} pending · ${r.total_orders || 0} orders`;
     }
     return r.return_number || r.order_number || r.purchase_number ||
         (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
@@ -582,6 +589,17 @@ function ReportsEngineInner() {
                 const res: any = await purchaseService.getAll(branchAll);
                 result = (Array.isArray(res) ? res : res.results || [])
                     .map((r: any) => ({ ...r, total_amount: r.paid_amount ?? r.total_amount }));
+            } else if (filters.category === 'delivery') {
+                // Per-rider delivery performance (orders, delivered, pending, earnings).
+                const params: any = { ...branchParam };
+                if (filters.dateFrom) params.date_from = filters.dateFrom;
+                if (filters.dateTo) params.date_to = filters.dateTo;
+                const res: any = await axiosClient.get('v1/sales/reports/delivery/', { params });
+                result = (res.data?.results || []).map((r: any) => ({
+                    ...r,
+                    name: r.delivery_person,
+                    total_amount: r.earnings,
+                }));
             }
 
             const filtered = applyClientFilters(Array.isArray(result) ? result : []);
@@ -594,6 +612,19 @@ function ReportsEngineInner() {
         } finally {
             setGenerating(false);
         }
+    };
+
+    // Quick date presets for reports (Daily / Weekly / Monthly / Yearly).
+    const applyPreset = (preset: 'today' | 'week' | 'month' | 'year') => {
+        const now = new Date();
+        const iso = (d: Date) => d.toISOString().split('T')[0];
+        let from = new Date(now);
+        if (preset === 'today') from = now;
+        else if (preset === 'week') from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+        else if (preset === 'month') from = new Date(now.getFullYear(), now.getMonth(), 1);
+        else if (preset === 'year') from = new Date(now.getFullYear(), 0, 1);
+        setFilters(f => ({ ...f, dateFrom: iso(from), dateTo: iso(now) }));
+        setHasGenerated(false);
     };
 
     const resetFilters = () => {
@@ -631,7 +662,7 @@ function ReportsEngineInner() {
                             <>
                                 <Button variant="outline" size="sm"
                                     onClick={() => profitSummary
-                                        ? exportToCSV([
+                                        ? exportToExcel([
                                             { metric: 'Total Sales', amount: profitSummary.totalSales },
                                             { metric: 'Sales Returns', amount: profitSummary.salesReturns },
                                             { metric: 'Net Sales', amount: profitSummary.netSales },
@@ -639,13 +670,13 @@ function ReportsEngineInner() {
                                             { metric: 'Purchase Returns', amount: profitSummary.purchaseReturns },
                                             { metric: 'Net Purchases', amount: profitSummary.netPurchases },
                                             { metric: 'Net Profit', amount: profitSummary.netProfit },
-                                        ], 'net-profit.csv')
-                                        : exportToCSV(reportResult, 'Report.csv')}
+                                        ], 'net-profit', 'Net Profit')
+                                        : exportToExcel(reportResult, 'report', 'Report')}
                                     disabled={reportResult.length === 0 && !profitSummary}>
-                                    <FileSpreadsheet size={14} /> Export CSV
+                                    <FileSpreadsheet size={14} /> Export Excel
                                 </Button>
                                 <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0 && !profitSummary}>
-                                    <Printer size={14} /> Print Report
+                                    <Printer size={14} /> Print / PDF
                                 </Button>
                             </>
                         }
@@ -756,6 +787,14 @@ function ReportsEngineInner() {
                                             <input type="date" value={filters.dateFrom} onChange={e => { setFilters({ ...filters, dateFrom: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1 px-2"} />
                                             <span className="text-[12px] font-bold text-slate-400 shrink-0">to</span>
                                             <input type="date" value={filters.dateTo} onChange={e => { setFilters({ ...filters, dateTo: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1 px-2"} />
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                            {([['today', 'Today'], ['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year']] as const).map(([key, label]) => (
+                                                <button key={key} type="button" onClick={() => applyPreset(key)}
+                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors">
+                                                    {label}
+                                                </button>
+                                            ))}
                                         </div>
                                     </>
                                 )}

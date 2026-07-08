@@ -6,6 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.contrib.auth.hashers import check_password
+from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError
 from .models import User, Role, Permission, UserActivityLog, UserSettings
 from core.scoping import tenant_id_for, scope_to_tenant, is_platform_operator
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -90,6 +92,9 @@ def list_users(request):
     role_filter = request.query_params.get('role', '').lower()
     search = request.query_params.get('search', '')
 
+    # Only the platform operator (Super Admin) may see stored plaintext passwords.
+    reveal_pw = is_platform_operator(request.user)
+
     # 1. Handle Customer Classification
     if role_filter == 'customer' or user_type:
         if user_type == 'guest':
@@ -99,16 +104,22 @@ def list_users(request):
             if search:
                 pos_orders = pos_orders.filter(customer_name__icontains=search)
             
-            # Use unique names as the primary identity for walk-ins
-            walk_in_names = pos_orders.values('customer_name', 'phone_number', 'created_at').distinct('customer_name')
-            
+            # Unique walk-in names. NB: `.distinct('field')` (DISTINCT ON) is
+            # PostgreSQL-only and raises NotSupportedError on MySQL/MariaDB — dedupe
+            # in Python instead so this works on the production DB.
+            rows = pos_orders.values('customer_name', 'phone_number', 'created_at').order_by('customer_name', '-created_at')
+            seen = set()
             results = []
-            for item in walk_in_names:
+            for item in rows:
+                name = item['customer_name']
+                if name in seen:
+                    continue
+                seen.add(name)
                 results.append({
-                    'id': f"guest_{item['customer_name']}",
-                    'username': item['customer_name'],
+                    'id': f"guest_{name}",
+                    'username': name,
                     'email': 'N/A',
-                    'full_name': item['customer_name'],
+                    'full_name': name,
                     'phone': item['phone_number'],
                     'role_name': 'customer',
                     'is_active': True,
@@ -144,7 +155,7 @@ def list_users(request):
                 'role_name': 'customer',
                 'is_active': c.is_active,
                 'date_joined': c.created_at,
-                'plain_password': c.plain_password
+                'plain_password': c.plain_password if reveal_pw else None
             })
         return Response({'results': results, 'count': len(results)})
 
@@ -170,7 +181,7 @@ def list_users(request):
                 'role_name': 'supplier',
                 'is_active': s.is_active,
                 'date_joined': s.created_at,
-                'plain_password': s.plain_password
+                'plain_password': s.plain_password if reveal_pw else None
             })
         return Response({'results': results, 'count': len(results)})
 
@@ -380,16 +391,41 @@ def delete_user(request, user_id):
 
     if request.user.is_authenticated and not request.user.is_staff:
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-    
+
+    if request.user.is_authenticated and str(request.user.id) == str(user.id):
+        return Response({'error': 'You cannot delete your own account.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
     username = user.username
-    user.delete()
+    # Hard-delete when the user owns no protected records. Users referenced as the
+    # `tenant`/owner of branches, payments, stock, deliveries, etc. (on_delete=PROTECT)
+    # cannot be hard-deleted without destroying that data — deactivate them instead so
+    # they can no longer sign in, which is what the "remove" action really needs.
+    try:
+        with transaction.atomic():
+            user.delete()
+        deactivated = False
+    except (ProtectedError, IntegrityError):
+        user.is_active = False
+        user.status = 'inactive'
+        user.save(update_fields=['is_active', 'status'])
+        deactivated = True
+
     if request.user.is_authenticated:
         UserActivityLog.objects.create(
             user=request.user,
             action='delete',
-            description=f'Deleted user: {username}',
+            description=(f'Deactivated user (owns records): {username}' if deactivated
+                        else f'Deleted user: {username}'),
             tenant_id=tenant_id_for(request.user)
         )
+
+    if deactivated:
+        return Response(
+            {'deactivated': True,
+             'message': 'This user owns branches or transaction records and cannot be '
+                        'permanently deleted. They have been deactivated and can no longer sign in.'},
+            status=status.HTTP_200_OK)
     return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
 

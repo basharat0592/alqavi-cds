@@ -14,6 +14,7 @@ import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/utils';
 import { salesService, settingsService } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
+import { installmentService } from '@/services/payment.service';
 
 const STORAGE_KEY = 'alqavi_checkout_info';
 
@@ -164,6 +165,31 @@ export default function CheckoutPage() {
             };
 
             const response = await salesService.createOrder(payload);
+
+            // Attach the Easypaisa transaction receipt as a PENDING payment against
+            // the new order, so it lands in the admin's receipt-verification queue
+            // (same slip flow as the customer dashboard). Previously the uploaded
+            // receipt image was captured but silently discarded.
+            if (payMethod === 'easypaisa' && receiptImage && response?.id) {
+                try {
+                    const fd = new FormData();
+                    fd.append('source_type', 'order');
+                    fd.append('source_id', String(response.id));
+                    fd.append('amount', String(total));
+                    fd.append('method', 'mobile_wallet');
+                    if (shippingInfo.branchId) fd.append('warehouse', String(shippingInfo.branchId));
+                    fd.append('reference', selectedEasypaisaNum || '');
+                    fd.append('note', 'Easypaisa receipt uploaded at checkout');
+                    fd.append('direction', 'inbound');
+                    fd.append('status', 'pending');
+                    fd.append('slip', receiptImage);
+                    await installmentService.create(fd);
+                } catch (slipErr) {
+                    // Order is already placed — don't fail checkout if the slip upload hiccups.
+                    console.warn('Receipt upload failed (order still placed):', slipErr);
+                }
+            }
+
             setPlacedOrderNumber(response.tracking_id);
             clearCart();
             setShowReview(false);
@@ -232,7 +258,7 @@ export default function CheckoutPage() {
             <div className="max-w-[1100px] mx-auto px-6 py-8">
                 <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-5 min-w-0 w-full">
-                        <div className={cardCls}>
+                        <div className={cardCls + ' !overflow-visible'}>
                             <div className={headerCls}>
                                 <h3 className="text-[14px] font-bold text-[#0f1111]">1. Shipping Address</h3>
                                 <p className="text-[12px] text-[#565959]">Please enter the delivery destination.</p>

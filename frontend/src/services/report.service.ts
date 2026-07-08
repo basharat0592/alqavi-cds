@@ -26,4 +26,8 @@ export const reportService = {
         const { data } = await api.get('v1/sales/reports/returns-summary/', { params });
         return data; // { totals, status_counts, reasons }
     },
+    delivery: async (params: ReportRange = {}) => {
+        const { data } = await api.get('v1/sales/reports/delivery/', { params });
+        return data; // { results: [{delivery_person, phone, total_orders, delivered, pending, earnings}], totals }
+    },
 };

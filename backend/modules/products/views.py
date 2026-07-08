@@ -194,50 +194,27 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset())
-        # Storefront (customers / guests — not staff) get a DEDUPLICATED catalog:
-        # the same product (name+price+size+weight) from different branches shows
-        # once, with quantities summed. Staff see the branch-scoped list as-is.
+        # Storefront (customers / guests — not staff): Amazon-style, every branch lists
+        # its OWN products separately. There is NO cross-branch merge — two branches
+        # selling the same name/price/weight/type each show their own entry (identified
+        # by their own warehouse). A selected city narrows to that city's active
+        # branches; "all"/blank shows every branch's products. Only in-stock items are
+        # listed (consistently, in both All-Cities and a specific city).
         if not getattr(request.user, 'is_staff', False):
-            # City scope: when a city is selected, keep only products stocked in an
-            # active branch of that city. "all"/blank = every branch (merged).
             city = (request.query_params.get('city') or '').strip()
-            city_scoped = bool(city and city.lower() != 'all')
-            if city_scoped:
+            if city and city.lower() != 'all':
                 qs = qs.filter(warehouse__area__name__iexact=city, warehouse__is_active=True)
-
-            seen = {}
-            for p in qs:
-                key = (p.product_name, str(p.selling_price), p.weight or '', p.size or '')
-                if key in seen:
-                    seen[key].total_quantity = (seen[key].total_quantity or 0) + (p.total_quantity or 0)
-                else:
-                    seen[key] = p
-            items = list(seen.values())
-            # In a selected city, hide products that have no stock there.
-            if city_scoped:
-                items = [p for p in items if (p.total_quantity or 0) > 0]
-            qs = items
+            qs = qs.filter(total_quantity__gt=0)
         page = self.paginate_queryset(qs)
         if page is not None:
             return self.get_paginated_response(self.get_serializer(page, many=True).data)
         return Response(self.get_serializer(qs, many=True).data)
 
     def retrieve(self, request, *args, **kwargs):
+        # No cross-branch merge: each product ID is one branch's own row, so the detail
+        # page simply shows that branch's product and its own stock.
         instance = self.get_object()
-        data = self.get_serializer(instance).data
-        # Storefront product detail shows the selected city's stock (or the sum
-        # across all branches when no city is chosen) for this exact item.
-        if not getattr(request.user, 'is_staff', False):
-            city = (request.query_params.get('city') or '').strip()
-            ident = Product.objects.exclude(status='ARCHIVED').filter(
-                product_name=instance.product_name,
-                selling_price=instance.selling_price,
-                weight=instance.weight, size=instance.size,
-            )
-            if city and city.lower() != 'all':
-                ident = ident.filter(warehouse__area__name__iexact=city, warehouse__is_active=True)
-            data['total_quantity'] = ident.aggregate(t=Sum('total_quantity'))['t'] or 0
-        return Response(data)
+        return Response(self.get_serializer(instance).data)
 
     def destroy(self, request, *args, **kwargs):
         """Perform a soft-delete by marking the product as ARCHIVED"""

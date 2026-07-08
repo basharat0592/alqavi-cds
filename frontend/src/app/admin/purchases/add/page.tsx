@@ -8,7 +8,6 @@ import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
 import { userService } from '@/services/user.service';
 import { inventoryService } from '@/services/inventory.service';
-import { supplierService } from '@/services/supplier.service';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
@@ -59,98 +58,6 @@ type LineItem = {
     items_per_carton: number;
     quantity: number;
     unit_price: number;
-};
-
-const CustomSupplierInput = ({ value, onChange, suppliers, inputCls }: any) => {
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (value) {
-            if (String(value).startsWith('__custom__:')) {
-                setSearch(String(value).replace('__custom__:', ''));
-            } else {
-                const s = suppliers.find((x: any) => String(x.id) === String(value));
-                setSearch(s ? s.name : '');
-            }
-        } else {
-            setSearch('');
-        }
-    }, [value, suppliers]);
-
-    const filtered = suppliers.filter((s: any) => (s.name || '').toLowerCase().includes(search.toLowerCase()));
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    return (
-        <div className="relative w-full" ref={containerRef}>
-            <div className="relative flex items-center">
-                <input
-                    className={inputCls + " font-bold text-slate-800 bg-white pr-8"}
-                    value={search}
-                    onChange={e => {
-                        const val = e.target.value;
-                        setSearch(val);
-                        onChange(val ? `__custom__:${val}` : '');
-                        setOpen(true);
-                    }}
-                    onFocus={() => setOpen(true)}
-                    placeholder="Type custom or select supplier..."
-                />
-                <button
-                    type="button"
-                    onClick={() => setOpen(!open)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                >
-                    <ChevronDown size={14} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-                </button>
-            </div>
-            {open && (
-                <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                        {filtered.map((s: any) => (
-                            <div
-                                key={s.id}
-                                className="px-4 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 text-[12px] text-slate-700 font-medium transition-colors"
-                                onClick={() => {
-                                    onChange(s.id);
-                                    setSearch(s.name);
-                                    setOpen(false);
-                                }}
-                            >
-                                {s.name}
-                            </div>
-                        ))}
-                        {search.trim() && (
-                            <div
-                                className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-[12px] text-indigo-650 font-bold border-t border-slate-100 bg-indigo-50/10 flex items-center gap-1.5 transition-colors"
-                                onClick={() => {
-                                    onChange(`__custom__:${search.trim()}`);
-                                    setOpen(false);
-                                }}
-                            >
-                                <Plus size={14} /> Use Custom Supplier: "{search.trim()}"
-                            </div>
-                        )}
-                        {filtered.length === 0 && !search.trim() && (
-                            <div className="px-4 py-6 text-center text-slate-400 text-[11px]">
-                                No suppliers found. Type to use custom supplier.
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
 };
 
 /* ─── Pure Amazon Style Product Selector ─── */
@@ -324,16 +231,14 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     );
 };
 
-/* ─── Supplier Selector ─── */
+/* ─── Supplier Selector (registered suppliers only — no free-text/new supplier) ─── */
 const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const filtered = suppliers.filter((s: any) => s.name.toLowerCase().includes(search.toLowerCase()));
-    const selected = String(selectedId).startsWith('__custom__:')
-        ? { id: selectedId, name: selectedId.replace('__custom__:', ''), isCustom: true }
-        : suppliers.find((s: any) => String(s.id) === String(selectedId));
+    const filtered = suppliers.filter((s: any) => (s.name || '').toLowerCase().includes(search.toLowerCase()));
+    const selected = suppliers.find((s: any) => String(s.id) === String(selectedId));
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -347,28 +252,20 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
         <div className="relative w-full" ref={containerRef}>
             <button type="button" onClick={() => setOpen(!open)} className={inputCls + " flex items-center justify-between text-left"}>
                 <span className={selected ? 'text-slate-900 font-bold' : 'text-slate-400'}>
-                    {selected ? (
-                        selected.isCustom ? `${selected.name} (New Supplier)` : selected.name
-                    ) : 'Select Supplier...'}
+                    {selected ? selected.name : 'Select a registered supplier...'}
                 </span>
                 <ChevronDown size={14} className="text-slate-400" />
             </button>
             {open && (
                 <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all bg-white text-slate-800" placeholder="Search or type a new supplier..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                        <div className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-rose-600 font-bold border-b border-slate-100" onClick={() => { onSelect(''); setOpen(false); }}>
-                            No Supplier (Internal)
-                        </div>
                         {filtered.map((s: any) => (
                             <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
                         ))}
-                        {search.trim() && (
-                            <div
-                                className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-[12px] text-indigo-650 font-bold border-t border-slate-100 bg-indigo-50/10 flex items-center gap-1.5"
-                                onClick={() => { onSelect(`__custom__:${search.trim()}`); setOpen(false); }}
-                            >
-                                <Plus size={14} /> Use New Supplier: "{search.trim()}"
+                        {filtered.length === 0 && (
+                            <div className="px-4 py-6 text-center text-slate-400 text-[11px]">
+                                No registered suppliers{search.trim() ? ' match your search' : ''}. Add one in the Supplier Registry first.
                             </div>
                         )}
                     </div>
@@ -380,7 +277,7 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
 
 export default function AddPurchasePage() {
     const router = useRouter();
-    const [purchaseMode, setPurchaseMode] = useState<'supplier' | 'custom'>('supplier');
+    const [purchaseMode, setPurchaseMode] = useState<'supplier' | 'custom'>('custom');
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [products, setProducts] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -417,8 +314,8 @@ export default function AddPurchasePage() {
             unit_price: 0,
         }]);
     };
-    // Prefill (supplier + product) coming from the dashboard low-stock alert links.
-    const [prefill, setPrefill] = useState<{ supplier: string; sku: string; product_name: string } | null>(null);
+    // Prefill (supplier + product) coming from low-stock links / Current Stock "Reorder".
+    const [prefill, setPrefill] = useState<{ supplier: string; sku: string; product_name: string; price: string } | null>(null);
     const supplierPrefillApplied = useRef(false);
     const prefillApplied = useRef(false);
 
@@ -492,7 +389,13 @@ export default function AddPurchasePage() {
         const supplier = sp.get('supplier') || '';
         const sku = sp.get('sku') || '';
         const product_name = sp.get('product_name') || '';
-        if (supplier || sku || product_name) setPrefill({ supplier, sku, product_name });
+        const price = sp.get('price') || '';
+        if (supplier || sku || product_name) {
+            setPrefill({ supplier, sku, product_name, price });
+            // A reorder comes with a real supplier + product → use supplier mode so
+            // the product loads from that supplier's catalog and can be matched.
+            if (supplier) setPurchaseMode('supplier');
+        }
     }, []);
 
     // Apply the prefilled supplier once (after suppliers load) — never override a later manual change.
@@ -519,7 +422,10 @@ export default function AddPurchasePage() {
                 ...next[0],
                 product: String(match.id),
                 product_name: match.name || '',
-                unit_price: match.retail_price ? parseFloat(match.retail_price) : next[0].unit_price,
+                // Prefer the exact cost passed from Reorder so the received stock
+                // merges into the same batch; otherwise fall back to the catalog price.
+                unit_price: prefill.price ? parseFloat(prefill.price)
+                    : match.retail_price ? parseFloat(match.retail_price) : next[0].unit_price,
             };
             return next;
         });
@@ -564,36 +470,15 @@ export default function AddPurchasePage() {
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
-        if (purchaseMode === 'supplier' && !form.supplier) {
-            return toast.error('Please select a supplier');
+        // A registered supplier is required in BOTH modes (custom + select-from-supplier).
+        if (!form.supplier || String(form.supplier).startsWith('__custom__:')) {
+            return toast.error('Please select a registered supplier');
         }
         if (items.some(i => !i.product)) return toast.error('Please select a product for all items');
 
         setSaving(true);
-        let finalSupplier = form.supplier;
-        let finalSupplierName = form.supplier_name;
-
-        // 1. If supplier is custom written, register them on the fly
-        if (form.supplier.startsWith('__custom__:')) {
-            try {
-                const newSuppName = form.supplier.replace('__custom__:', '');
-                const rand = Date.now().toString().slice(-6) + Math.floor(Math.random() * 100).toString();
-                const newSupp = await supplierService.create({
-                    name: newSuppName,
-                    company: newSuppName,
-                    username: `supp_${rand}`,
-                    email: `supplier_${rand}@alqavi.com`,
-                    password: `pass_${rand}`,
-                    is_active: true
-                });
-                finalSupplier = String(newSupp.id);
-                finalSupplierName = newSupp.name;
-                setForm(f => ({ ...f, supplier: String(newSupp.id), supplier_name: newSupp.name }));
-            } catch (err: any) {
-                setSaving(false);
-                return toast.error('Failed to create new supplier');
-            }
-        }
+        const finalSupplier = form.supplier;
+        const finalSupplierName = form.supplier_name;
 
         // 2. Register custom products if any exist
         let finalItems = [...items];
@@ -855,7 +740,7 @@ export default function AddPurchasePage() {
                 <Field label="Order Number" required>
                     <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
                 </Field>
-                <Field label="Supplier" required={purchaseMode === 'supplier'}>
+                <Field label="Supplier" required>
                     {supplierField}
                 </Field>
                 <Field label="Order Date" required>
@@ -946,26 +831,14 @@ export default function AddPurchasePage() {
         </Card>
     );
 
-    const supplierField = purchaseMode === 'supplier' ? (
+    // Both modes require a REGISTERED supplier chosen from the dropdown. The two
+    // modes differ only in how PRODUCTS are entered (custom = typed by hand;
+    // supplier = picked from the selected supplier's catalog).
+    const supplierField = (
         <SupplierSelector selectedId={form.supplier} suppliers={suppliers} inputCls={selectCls} onSelect={(val: any) => {
             const matched = suppliers.find(c => String(c.id) === String(val));
             setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
         }} />
-    ) : (
-        <CustomSupplierInput
-            value={form.supplier}
-            suppliers={suppliers}
-            inputCls={selectCls}
-            onChange={(val: any) => {
-                if (String(val).startsWith('__custom__:')) {
-                    const name = String(val).replace('__custom__:', '');
-                    setForm(f => ({ ...f, supplier: val, supplier_name: name }));
-                } else {
-                    const matched = suppliers.find(c => String(c.id) === String(val));
-                    setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
-                }
-            }}
-        />
     );
 
     return (

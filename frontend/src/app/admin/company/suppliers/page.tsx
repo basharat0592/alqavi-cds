@@ -60,12 +60,12 @@ export default function SuppliersPage() {
         setCurrentPage(1);
     }, [search]);
 
-    // AUTO-SYNC (2s)
+    // AUTO-SYNC (30s) — was 2s.
     useEffect(() => {
         if (view !== 'list') return;
         const interval = setInterval(() => {
             if (!loading && !saving) loadData(true);
-        }, 2000);
+        }, 30000);
         return () => clearInterval(interval);
     }, [view, loading, saving, loadData]);
 

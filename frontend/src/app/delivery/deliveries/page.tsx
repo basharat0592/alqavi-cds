@@ -167,7 +167,7 @@ export default function MyDeliveriesPage() {
                                                             </p>
                                                             <p className="text-[#007600] text-[13.5px] font-extrabold flex items-center gap-1.5">
                                                                 <span>Delivery Cost (Your Earnings):</span>
-                                                                <span className="tabular-nums font-black">{formatCurrency(Number(o.shipping_cost ?? 0) > 0 ? Number(o.shipping_cost) : 150)}</span>
+                                                                <span className="tabular-nums font-black">{formatCurrency(Math.max(0, Number(o.shipping_cost ?? 0) || 0))}</span>
                                                             </p>
                                                         </div>
                                                         <div className="space-y-3">

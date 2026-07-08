@@ -49,6 +49,9 @@ export default function PurchaseReturnsPage() {
     const [returns, setReturns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10;
 
     const [viewRow, setViewRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
@@ -88,12 +91,21 @@ export default function PurchaseReturnsPage() {
         }
     };
 
-    const filtered = returns.filter(r =>
-        (r.return_number?.toLowerCase() || '').includes(search.toLowerCase()) ||
-        (r.supplier_name?.toLowerCase() || '').includes(search.toLowerCase())
-    );
+    const filtered = returns.filter(r => {
+        const matchesSearch = (r.return_number?.toLowerCase() || '').includes(search.toLowerCase()) ||
+            (r.supplier_name?.toLowerCase() || '').includes(search.toLowerCase());
+        if (!matchesSearch) return false;
+        if (statusFilter === 'ALL') return true;
+        const s = (r.status || '').toUpperCase();
+        if (statusFilter === 'PENDING') return s === 'PENDING' || s === 'WAITING_FOR_SUPPLIER';
+        return s === statusFilter;
+    });
 
-    const sel = useTableSelection(filtered);
+    useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
+    const totalPages = Math.ceil(filtered.length / pageSize);
+    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const sel = useTableSelection(paginated);
 
     const bulkDelete = async (ids: string[]) => {
         await Promise.allSettled(ids.map(id => purchaseService.deleteReturn(id)));
@@ -148,9 +160,20 @@ export default function PurchaseReturnsPage() {
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
+                    <select
+                        value={statusFilter}
+                        onChange={e => setStatusFilter(e.target.value)}
+                        className={ui.inputBase + ' w-full sm:w-[190px] cursor-pointer'}
+                    >
+                        <option value="ALL">All statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="ACCEPTED">Accepted</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
                     <div className="h-5 w-px bg-slate-200 hidden sm:block" />
                     <span className="text-[13px] text-slate-600 text-center sm:text-left">
-                        Showing {filtered.length} records
+                        Showing {filtered.length} record{filtered.length === 1 ? '' : 's'}
                     </span>
                 </Card>
 
@@ -176,7 +199,7 @@ export default function PurchaseReturnsPage() {
                                             <td colSpan={7} className="px-2.5 sm:px-4 py-4 h-14 bg-slate-50/50" />
                                         </tr>
                                     ))
-                                ) : filtered.length === 0 ? (
+                                ) : paginated.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="px-2.5 sm:px-4 py-20 text-center">
                                             <div className="flex flex-col items-center text-slate-400">
@@ -186,7 +209,7 @@ export default function PurchaseReturnsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filtered.map(row => (
+                                    paginated.map(row => (
                                         <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50 transition-all group">
                                             <RowCheckboxTd sel={sel} id={row.id} />
                                             <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
@@ -248,6 +271,20 @@ export default function PurchaseReturnsPage() {
                             </tbody>
                         </table>
                     </div>
+                    {totalPages > 1 && (
+                        <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-[12px]">
+                            <span className="text-slate-500">
+                                Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Prev</button>
+                                <span className="text-slate-500 font-semibold">Page {currentPage} / {totalPages}</span>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Next</button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
 

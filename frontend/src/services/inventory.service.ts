@@ -7,7 +7,8 @@ import api from '@/lib/axios';
 export const inventoryService = {
     // ── Warehouses ───────────────────────────────────────────────────────────
     getWarehouses: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/warehouses/', { params });
+        // Branch pickers/lists need EVERY branch — never just the first page.
+        const { data } = await api.get('v1/inventory/warehouses/', { params: { no_pagination: 'true', ...params } });
         return data.results || data || [];
     },
     // Public list of active branches (no auth) — used by the storefront branch picker.
