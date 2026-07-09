@@ -157,9 +157,19 @@ export default function AdminOrdersPage() {
 
     // Ship → assign rider (optional) modal
     const [shipModal, setShipModal] = useState<{ orderId: string; order?: any } | null>(null);
+    const [shipMode, setShipMode] = useState<'specific' | 'all'>('all');
     const [shipRiderId, setShipRiderId] = useState<string>('');
     const [shipFee, setShipFee] = useState<string>('');
     const [shippingNow, setShippingNow] = useState(false);
+
+    // Pickup point for an order = its branch (warehouse) address.
+    const pickupOf = (order: any) => {
+        const wid = order?.warehouse || order?.warehouse_id;
+        const wh = warehouses.find((w: any) => String(w.id) === String(wid));
+        const name = wh?.name || order?.warehouse_name || 'Branch';
+        const loc = wh?.location || wh?.address || '';
+        return { name, loc };
+    };
 
     // Delete States
     const [deleteTarget, setDeleteTarget] = useState<any>(null);
@@ -170,7 +180,6 @@ export default function AdminOrdersPage() {
 
     // Delivery riders (for assigning an order to a rider)
     const [riders, setRiders] = useState<any[]>([]);
-    const [assigningRider, setAssigningRider] = useState(false);
 
     useEffect(() => {
         loadOrders();
@@ -180,21 +189,11 @@ export default function AdminOrdersPage() {
         // Resolve the admin's branch context (client-only — reads sessionStorage).
         setIsSuperAdmin(authService.isSuperAdmin());
         setMyWarehouses((authService.getUser() as any)?.warehouses || []);
+        // Live sync: silently refresh so a rider's "reported delivered" (and any other
+        // status change) shows up without a manual refresh.
+        const id = setInterval(() => loadOrders(true), 12000);
+        return () => clearInterval(id);
     }, []);
-
-    const assignRider = async (riderId: string) => {
-        if (!selectedOrder) return;
-        setAssigningRider(true);
-        try {
-            await deliveryService.assignToOrder(selectedOrder.id, riderId || null);
-            const name = riders.find(r => String(r.id) === String(riderId))?.name || null;
-            const patch = { delivery_person: riderId || null, delivery_person_name: riderId ? name : null };
-            setSelectedOrder((p: any) => ({ ...p, ...patch }));
-            setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, ...patch } : o));
-            toast.success(riderId ? 'Rider assigned' : 'Rider unassigned');
-        } catch { toast.error('Failed to assign rider'); }
-        finally { setAssigningRider(false); }
-    };
 
     const activeOrders = useMemo(() => {
         // Active orders are PENDING, CONFIRMED, PROCESSING, SHIPPED, CANCEL_REQUESTED (not DELIVERED/CANCELLED)
@@ -236,9 +235,11 @@ export default function AdminOrdersPage() {
             }
             return;
         }
-        // Shipping out → ask which rider delivers it (optional).
+        // Shipping out → dispatch modal: assign a specific rider OR offer to all riders.
         if (newStatus.toLowerCase() === 'shipped') {
-            setShipRiderId(order?.delivery_person ? String(order.delivery_person) : '');
+            const hasRider = !!order?.delivery_person;
+            setShipMode(hasRider ? 'specific' : 'all');
+            setShipRiderId(hasRider ? String(order.delivery_person) : '');
             setShipFee(order?.delivery_fee && Number(order.delivery_fee) > 0 ? String(order.delivery_fee) : '');
             setShipModal({ orderId: id, order });
             return;
@@ -252,15 +253,20 @@ export default function AdminOrdersPage() {
         }
     };
 
-    // Confirm "Shipped": optionally assign a rider, then move the order to SHIPPED.
+    // Confirm "Shipped": either assign to ONE rider, or offer to ALL riders (rider left
+    // unassigned so it shows in every branch rider's feed to claim). The offered price
+    // (delivery_fee) is saved either way so riders see what's on offer.
     const confirmShip = async () => {
         if (!shipModal) return;
+        if (shipMode === 'specific' && !shipRiderId) { toast.error('Pick a rider, or switch to "Offer to all riders".'); return; }
         setShippingNow(true);
         setUpdatingRow(shipModal.orderId);
         try {
-            if (shipRiderId) {
-                await deliveryService.assignToOrder(shipModal.orderId, shipRiderId, shipFee);
-            }
+            // specific → assign that rider; all → clear rider (null) so it broadcasts.
+            const riderId = shipMode === 'specific' ? shipRiderId : null;
+            // System (salaried) riders carry no per-delivery charge.
+            const isSystem = shipMode === 'specific' && !!riders.find((r: any) => String(r.id) === shipRiderId)?.is_system;
+            await deliveryService.assignToOrder(shipModal.orderId, riderId, isSystem ? 0 : (shipFee || 0));
             await handleStatusUpdate(shipModal.orderId, 'SHIPPED');
             setShipModal(null);
             setShipRiderId('');
@@ -273,12 +279,12 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const loadOrders = async () => {
-        setLoading(true);
+    const loadOrders = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const data = await salesService.getAdminOrders({ no_pagination: 'true' });
             setOrders(data || []);
-        } catch (err) { toast.error("Failed to load orders"); } finally { setLoading(false); }
+        } catch (err) { if (!silent) toast.error("Failed to load orders"); } finally { if (!silent) setLoading(false); }
     };
 
     const handleStatusUpdate = async (id: string, newStatus: string) => {
@@ -410,7 +416,7 @@ export default function AdminOrdersPage() {
                     title="Recent Orders"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Recent Orders' }]}
                     actions={
-                        <Button variant="outline" onClick={loadOrders} disabled={loading} className="w-full sm:w-auto">
+                        <Button variant="outline" onClick={() => loadOrders()} disabled={loading} className="w-full sm:w-auto">
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Pipeline
                         </Button>
                     }
@@ -490,6 +496,21 @@ export default function AdminOrdersPage() {
                                                     updating={updatingRow === order.id?.toString()}
                                                     onSelect={(s) => handleStatusUpdateWithLoading(order.id?.toString(), s)}
                                                 />
+                                                {order.rider_reported_delivered && (order.status || '').toUpperCase() !== 'DELIVERED' && (
+                                                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600" title="The rider reported this order delivered — confirm by setting status to Delivered.">
+                                                        <CheckCircle size={11} /> Rider reported delivered
+                                                    </div>
+                                                )}
+                                                {order.rider_reported_cancelled && !['CANCELLED', 'DELIVERED'].includes((order.status || '').toUpperCase()) && (
+                                                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-rose-600" title="The customer cancelled at the door (reported by the rider) — confirm by setting status to Cancelled.">
+                                                        <XCircle size={11} /> Cancel by customer
+                                                    </div>
+                                                )}
+                                                {order.customer_reported_delivered && (order.status || '').toUpperCase() !== 'DELIVERED' && (
+                                                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600" title="The customer confirmed they received this order — confirm by setting status to Delivered.">
+                                                        <CheckCircle size={11} /> Delivered to customer
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -653,34 +674,6 @@ export default function AdminOrdersPage() {
                             </div>
                         </div>
 
-                        {/* Delivery rider assignment */}
-                        <div className="space-y-2">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 pb-1">
-                                <Truck size={12} /> Delivery Rider
-                            </h4>
-                            <div className="flex items-center gap-2">
-                                <select
-                                    value={selectedOrder.delivery_person || ''}
-                                    onChange={e => assignRider(e.target.value)}
-                                    disabled={assigningRider}
-                                    className={inputCls + ' flex-1 text-[12px] h-9'}
-                                >
-                                    <option value="">— Unassigned —</option>
-                                    {riders.map(r => (
-                                        <option key={r.id} value={r.id}>
-                                            {r.name}{r.vehicle_type ? ` · ${r.vehicle_type}` : ''}{r.area_name ? ` · ${r.area_name}` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                                {assigningRider && <Loader2 size={15} className="animate-spin text-indigo-500" />}
-                            </div>
-                            {riders.length === 0 && (
-                                <p className="text-[10.5px] text-slate-400">
-                                    No riders yet — create them in <Link href="/admin/delivery" className="text-indigo-600 font-semibold hover:underline">Delivery Persons</Link>.
-                                </p>
-                            )}
-                        </div>
-
                         {/* Items Table */}
                         <div className="space-y-3">
                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 pb-1">
@@ -748,9 +741,9 @@ export default function AdminOrdersPage() {
                                     <Truck size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Ship Order</h3>
+                                    <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Dispatch Order</h3>
                                     <p className="text-[12px] text-slate-400 font-medium">
-                                        Assign a delivery rider <span className="text-slate-300">(optional)</span>
+                                        Assign a rider or offer to all riders
                                     </p>
                                 </div>
                             </div>
@@ -759,42 +752,86 @@ export default function AdminOrdersPage() {
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                             <p className="text-[12.5px] text-slate-600">
-                                Order <span className="font-bold text-slate-900">#{shipModal.order?.tracking_id || shipModal.order?.order_number}</span> will be marked <span className="font-bold text-sky-600">Shipped</span>. Pick the rider who delivers it, or skip and assign later.
+                                Order <span className="font-bold text-slate-900">#{shipModal.order?.tracking_id || shipModal.order?.order_number}</span> will be marked <span className="font-bold text-sky-600">Shipped</span>.
                             </p>
 
+                            {/* Auto-fetched pickup + delivery locations */}
+                            {(() => { const p = pickupOf(shipModal.order); return (
+                                <div className="grid grid-cols-1 gap-2.5">
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">
+                                            <MapPin size={12} /> Pickup
+                                        </div>
+                                        <p className="text-[12.5px] font-semibold text-slate-800">{p.name}</p>
+                                        {p.loc && <p className="text-[11px] text-slate-500 leading-snug">{p.loc}</p>}
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-600 uppercase tracking-widest mb-1">
+                                            <MapPin size={12} /> Delivery
+                                        </div>
+                                        <p className="text-[12.5px] font-semibold text-slate-800">{shipModal.order?.customer_name || 'Customer'}</p>
+                                        <p className="text-[11px] text-slate-500 leading-snug">{shipModal.order?.shipping_address || '—'}</p>
+                                    </div>
+                                </div>
+                            ); })()}
+
+                            {/* Mode: specific rider vs offer to all */}
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery Rider</label>
-                                <select value={shipRiderId} onChange={e => setShipRiderId(e.target.value)} className={inputCls}>
-                                    <option value="">— No rider (assign later) —</option>
-                                    {riders.map(r => (
-                                        <option key={r.id} value={r.id}>
-                                            {r.name}{r.vehicle_type ? ` · ${r.vehicle_type}` : ''}{r.area_name ? ` · ${r.area_name}` : ''}{!r.is_active ? ' · inactive' : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                                {riders.length === 0 ? (
-                                    <p className="text-[10.5px] text-slate-400 mt-1.5">
-                                        No riders yet — create them in <Link href="/admin/delivery" className="text-indigo-600 font-semibold hover:underline">Delivery Persons</Link>. You can still ship without one.
-                                    </p>
-                                ) : (
-                                    <p className="text-[10.5px] text-slate-400 mt-1.5">The rider will see this order on their delivery dashboard.</p>
-                                )}
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Who delivers this?</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button type="button" onClick={() => setShipMode('specific')}
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
+                                        Specific rider
+                                    </button>
+                                    <button type="button" onClick={() => setShipMode('all')}
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
+                                        All riders
+                                    </button>
+                                </div>
                             </div>
 
-                            {shipRiderId && (
+                            {shipMode === 'specific' ? (
                                 <div>
-                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Rider Payout for this delivery (Rs)</label>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery Rider</label>
+                                    <select value={shipRiderId} onChange={e => setShipRiderId(e.target.value)} className={inputCls}>
+                                        <option value="">— Select a rider —</option>
+                                        {[...riders].sort((a: any, b: any) => (b.is_system ? 1 : 0) - (a.is_system ? 1 : 0)).map(r => (
+                                            <option key={r.id} value={r.id}>
+                                                {r.is_system ? '★ ' : ''}{r.name}{r.is_system ? ' · system' : ''}{r.vehicle_type ? ` · ${r.vehicle_type}` : ''}{!r.is_active ? ' · inactive' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {riders.length === 0 && (
+                                        <p className="text-[10.5px] text-slate-400 mt-1.5">
+                                            No riders yet — create them in <Link href="/admin/delivery" className="text-indigo-600 font-semibold hover:underline">Delivery Persons</Link>.
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">
+                                    This delivery will appear in <span className="font-semibold text-sky-700">every branch rider&apos;s feed</span> — the first one to accept it gets the job.
+                                </p>
+                            )}
+
+                            {/* Price the admin offers — hidden for a System (salaried) rider */}
+                            {!(shipMode === 'specific' && riders.find((r: any) => String(r.id) === shipRiderId)?.is_system) ? (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery price you offer (Rs)</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
                                         <input type="number" min="0" step="0.01" value={shipFee}
                                             onChange={e => setShipFee(e.target.value)}
-                                            placeholder="0.00 (leave blank for your in-house rider)"
+                                            placeholder="0.00"
                                             className={inputCls + ' pl-9'} />
                                     </div>
-                                    <p className="text-[10.5px] text-slate-400 mt-1.5">What you'll pay the rider for delivering this order — counts toward their earnings. Leave 0 for a branch's own salaried rider.</p>
+                                    <p className="text-[10.5px] text-slate-400 mt-1.5">The payout offered to the rider for this delivery — shown to riders and counted toward their earnings.</p>
                                 </div>
+                            ) : (
+                                <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 leading-snug">
+                                    System rider — no per-delivery charge (they&apos;re on salary).
+                                </p>
                             )}
                         </div>
 
@@ -806,7 +843,7 @@ export default function AdminOrdersPage() {
                             <button onClick={confirmShip} disabled={shippingNow}
                                 className="h-10 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold inline-flex items-center gap-2 disabled:opacity-50">
                                 {shippingNow ? <Loader2 size={15} className="animate-spin" /> : <Truck size={15} />}
-                                {shipRiderId ? 'Assign & Ship' : 'Ship Without Rider'}
+                                {shipMode === 'specific' ? 'Assign & Ship' : 'Offer & Ship'}
                             </button>
                         </div>
                     </div>

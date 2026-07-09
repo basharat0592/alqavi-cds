@@ -24,6 +24,16 @@ export const salesService = {
     deleteOrder: async (id: string) => {
         await api.delete(`v1/sales/orders/${id}/`);
     },
+    // Customer-initiated cancellation (allowed only before the order ships).
+    requestCancel: async (id: string) => {
+        const { data } = await api.post(`v1/sales/orders/${id}/request_cancel/`, {});
+        return data;
+    },
+    // Customer confirms they received the order (admin still confirms to finalize).
+    confirmDelivery: async (id: string) => {
+        const { data } = await api.post(`v1/sales/orders/${id}/confirm_delivery/`, {});
+        return data;
+    },
     // Returns
     getReturns: async (params?: any) => {
         const { data } = await api.get('v1/sales/returns/', { params });

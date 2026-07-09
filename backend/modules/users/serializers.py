@@ -337,9 +337,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 }
             }
 
-        # 4. Attempt Direct Delivery Rider Login
+        # 4. Attempt Direct Delivery Rider Login — accept email, username OR phone so a
+        # rider can sign in with whichever identifier the admin gave them (riders very
+        # often only know their phone number). Guard the phone match against a blank
+        # value so an empty phone field can never match an empty input.
         from modules.delivery.models import DeliveryPerson
-        rider = DeliveryPerson.objects.filter(Q(email=username) | Q(username=username), is_active=True).first()
+        _rider_q = Q(email=username) | Q(username=username)
+        if username:
+            _rider_q |= Q(phone=username)
+        rider = DeliveryPerson.objects.filter(_rider_q, is_active=True).first()
 
         if rider and check_password(password, rider.password):
             rider.last_login = timezone.now()

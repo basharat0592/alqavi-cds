@@ -1,16 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { CheckCircle, Truck, MapPin, Phone, Loader2, Search } from 'lucide-react';
+import { CheckCircle, Truck, MapPin, Phone, Loader2, Search, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { isDone, upper } from '@/lib/deliveryStats';
 
-const TABS = [
-    { id: 'active', label: 'Active Deliveries' },
-    { id: 'all', label: 'Assigned Orders' },
-];
 
 const statusPill = (s: string) => {
     const u = upper(s);
@@ -23,7 +19,6 @@ const statusPill = (s: string) => {
 export default function MyDeliveriesPage() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>({ rider: {}, stats: {}, results: [] });
-    const [activeTab, setActiveTab] = useState('active');
     const [search, setSearch] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [updating, setUpdating] = useState<string | null>(null);
@@ -37,13 +32,22 @@ export default function MyDeliveriesPage() {
         finally { setLoading(false); }
     }, []);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        load();
+        // Live sync: silently refresh so the admin's Delivered confirmation flips this
+        // view to Delivered without a manual refresh.
+        const id = setInterval(() => load(true), 12000);
+        return () => clearInterval(id);
+    }, [load]);
 
     const setStatus = async (orderId: string, status: string) => {
         setUpdating(orderId + status);
         try {
             await riderService.updateStatus(orderId, status);
-            toast.success(`Marked ${status.toLowerCase()}`);
+            const su = status.toUpperCase();
+            toast.success(su === 'DELIVERED' ? 'Delivery reported — waiting for admin confirmation'
+                : su === 'CANCELLED' ? 'Customer cancellation reported — waiting for admin confirmation'
+                : `Marked ${status.toLowerCase()}`);
             load(true);
         } catch (e: any) {
             toast.error(e?.response?.data?.error || 'Update failed');
@@ -58,15 +62,15 @@ export default function MyDeliveriesPage() {
             (o.customer_display_name || o.customer_name || '').toLowerCase().includes(q) ||
             (o.shipping_address || '').toLowerCase().includes(q);
         if (!matches) return false;
-        if (activeTab === 'active') return !isDone(o.status);
-        return true;
+        // Active deliveries only — completed/cancelled live in Delivery History.
+        return !isDone(o.status);
     });
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 pb-4">
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">My Deliveries</h1>
+                    <h1 className="text-3xl font-normal text-[#111]">Active Deliveries</h1>
                     <p className="text-sm text-gray-500 mt-1">Orders assigned to you — update each as you deliver.</p>
                 </div>
                 <div className="relative w-full md:w-72">
@@ -79,21 +83,6 @@ export default function MyDeliveriesPage() {
                         className="w-full h-8 pl-9 pr-3 bg-white border border-[#D5D9D9] rounded-md text-sm text-[#111] outline-none focus:border-[#F59E0B] shadow-inner"
                     />
                 </div>
-            </div>
-
-            <div className="flex items-center gap-10 border-b border-[#D5D9D9] text-sm overflow-x-auto whitespace-nowrap">
-                {TABS.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`pb-3 px-1 transition-all relative font-medium ${activeTab === tab.id
-                            ? 'text-[#C45500] border-b-2 border-[#C45500] font-bold'
-                            : 'text-gray-600 hover:text-[#111]'
-                            }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
             </div>
 
             {loading && results.length === 0 ? (
@@ -131,6 +120,15 @@ export default function MyDeliveriesPage() {
                                             <td className="px-6 py-4 text-sm text-gray-700 font-medium">{o.customer_display_name || o.customer_name || 'Customer'}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${statusPill(o.status)}`}>{o.status_display || o.status}</span>
+                                                {!done && o.rider_reported_delivered && (
+                                                    <span className="block mt-1 text-[10px] font-bold text-amber-600">Awaiting confirmation…</span>
+                                                )}
+                                                {!done && o.rider_reported_cancelled && (
+                                                    <span className="block mt-1 text-[10px] font-bold text-rose-600">Customer cancelled…</span>
+                                                )}
+                                                {!done && o.customer_reported_delivered && !o.rider_reported_delivered && (
+                                                    <span className="block mt-1 text-[10px] font-bold text-emerald-600">Customer confirmed…</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-sm font-bold text-[#B12704]">{formatCurrency(o.total_amount)}</td>
                                             <td className="px-6 py-4 text-right whitespace-nowrap">
@@ -174,6 +172,18 @@ export default function MyDeliveriesPage() {
                                                             <p className="text-xs text-gray-500 font-bold uppercase">Proof of Delivery</p>
                                                             {done ? (
                                                                 <p className="text-sm text-gray-500 italic">This delivery is {(o.status_display || o.status || '').toLowerCase()}.</p>
+                                                            ) : o.customer_reported_delivered ? (
+                                                                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[12.5px] font-bold">
+                                                                    <CheckCircle size={14} /> Customer confirmed delivery — waiting for admin…
+                                                                </div>
+                                                            ) : o.rider_reported_delivered ? (
+                                                                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[12.5px] font-bold">
+                                                                    <Loader2 size={14} className="animate-spin" /> Waiting for admin to confirm delivery…
+                                                                </div>
+                                                            ) : o.rider_reported_cancelled ? (
+                                                                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[12.5px] font-bold">
+                                                                    <Loader2 size={14} className="animate-spin" /> Customer cancelled — waiting for admin…
+                                                                </div>
                                                             ) : (
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {u !== 'SHIPPED' && (
@@ -185,6 +195,10 @@ export default function MyDeliveriesPage() {
                                                                     <button onClick={() => setStatus(o.id, 'DELIVERED')} disabled={!!updating}
                                                                         className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-[#007600] text-white text-[12px] font-bold hover:bg-[#005c00] disabled:opacity-50">
                                                                         {updating === o.id + 'DELIVERED' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Mark Delivered
+                                                                    </button>
+                                                                    <button onClick={() => setStatus(o.id, 'CANCELLED')} disabled={!!updating}
+                                                                        className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-rose-200 bg-rose-50 text-rose-700 text-[12px] font-bold hover:bg-rose-100 disabled:opacity-50">
+                                                                        {updating === o.id + 'CANCELLED' ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />} Cancel by Customer
                                                                     </button>
                                                                 </div>
                                                             )}

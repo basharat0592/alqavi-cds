@@ -26,6 +26,10 @@ class DeliveryPersonViewSet(viewsets.ModelViewSet):
         # Per-admin (tenant) isolation: a tenant user only sees riders in their
         # tenant; the platform operator / shadow logins see all.
         qs = scope_to_tenant(self.request.user, qs, 'tenant')
+        # System (in-house) riders are private to the admin who created them — every
+        # other admin in the tenant sees only the shared (non-system) riders.
+        from django.db.models import Q
+        qs = qs.filter(Q(is_system=False) | Q(created_by=self.request.user))
         search = self.request.query_params.get('search')
         if search:
             from django.db.models import Q
@@ -117,16 +121,17 @@ def my_deliveries(request):
         'cancelled': all_qs.filter(status__in=['CANCELLED', 'REJECTED']).count(),
     }
 
-    # Branch feed: ACTIVE orders of the rider's branch that are still UP FOR GRABS
-    # (unassigned) OR already theirs. Once the admin (or another rider) claims an
-    # order, it disappears from every other rider's feed — assignment is exclusive.
+    # Branch feed: only orders the admin has actually DISPATCHED (status SHIPPED) show
+    # to riders — nothing appears until the admin clicks "Shipped". A dispatch assigned
+    # to a specific rider is delivery_person=that rider (only they see it); a broadcast
+    # ("all riders") is delivery_person=NULL (every branch rider sees it to claim).
+    # Unshipped orders (PENDING/CONFIRMED/PROCESSING) are never shown.
     from django.db.models import Q
     branch_orders = []
     if rider.warehouse_id:
         branch_qs = (Order.objects
-                     .filter(warehouse_id=rider.warehouse_id)
+                     .filter(warehouse_id=rider.warehouse_id, status='SHIPPED')
                      .filter(Q(delivery_person__isnull=True) | Q(delivery_person=rider))
-                     .exclude(status__in=['DELIVERED', 'CANCELLED', 'REJECTED'])
                      .order_by('-created_at'))
         if rider.tenant_id:
             branch_qs = branch_qs.filter(tenant_id=rider.tenant_id)
@@ -135,6 +140,7 @@ def my_deliveries(request):
     return Response({
         'rider': {'id': rider.id, 'name': rider.name, 'phone': rider.phone,
                   'vehicle_type': rider.vehicle_type, 'vehicle_number': rider.vehicle_number,
+                  'is_system': rider.is_system,
                   'warehouse': rider.warehouse_id, 'warehouse_name': (rider.warehouse.name if rider.warehouse_id else None)},
         'stats': stats,
         'results': orders,
@@ -159,19 +165,27 @@ def update_delivery_status(request, order_id):
         return Response({'error': 'Order not found or not assigned to you'}, status=404)
 
     new_status = str(request.data.get('status', '')).upper()
-    # Riders may only move an order along the delivery path.
-    allowed = {'PROCESSING', 'SHIPPED', 'DELIVERED'}
+    # Riders may only move an order along the delivery path (+ report delivered/cancel).
+    allowed = {'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'}
     if new_status not in allowed:
         return Response({'error': f'Riders can only set: {", ".join(sorted(allowed))}'}, status=400)
 
-    order.status = new_status
-    if new_status == 'DELIVERED':
-        # Deduct branch stock + settle payment + book income (same completion the
-        # admin delivery runs). The order shipped as SHIPPED, so stock was reserved
-        # at POS create — this converts the reservation into a real deduction.
-        from modules.sales.views import complete_delivery_stock
-        complete_delivery_stock(order)
+    if new_status in ('DELIVERED', 'CANCELLED'):
+        # A rider tapping "Delivered" or "Cancel" is a REQUEST, not the final word. It
+        # does NOT deduct/settle/release anything — it just flags the order as rider-
+        # reported so the rider sees "waiting for response" and the admin can confirm.
+        # The admin's own DELIVERED/CANCELLED action is what finalizes. Order stays SHIPPED.
+        if str(order.status).upper() != 'SHIPPED':
+            order.status = 'SHIPPED'
+        if new_status == 'DELIVERED':
+            order.rider_reported_delivered = True
+            order.rider_reported_cancelled = False
+        else:
+            order.rider_reported_cancelled = True
+            order.rider_reported_delivered = False
+        order.save(update_fields=['status', 'rider_reported_delivered', 'rider_reported_cancelled'])
     else:
+        order.status = new_status
         order.save()
     return Response(OrderSerializer(order, context={'request': request}).data)
 

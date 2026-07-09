@@ -92,6 +92,16 @@ class Order(models.Model):
     )
     tracking_id = models.CharField(max_length=20, unique=True, db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    # The rider tapped "Delivered" but the admin hasn't confirmed yet. This does NOT
+    # finalize the order (no stock deduction / payment settlement) — it just flags the
+    # order so the rider sees "waiting for response" and the admin knows to confirm.
+    rider_reported_delivered = models.BooleanField(default=False)
+    # The rider tapped "Cancel" — a request the admin confirms. Nothing is finalized
+    # (reservation stays) until the admin actually sets the order to CANCELLED.
+    rider_reported_cancelled = models.BooleanField(default=False)
+    # The CUSTOMER confirmed they received the order from their account. Like the rider
+    # report, this doesn't finalize anything — the admin confirms delivery to settle it.
+    customer_reported_delivered = models.BooleanField(default=False)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)

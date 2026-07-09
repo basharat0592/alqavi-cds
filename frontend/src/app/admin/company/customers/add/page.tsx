@@ -42,8 +42,9 @@ export default function AddCustomerPage() {
 
     const validate = () => {
         const e: Record<string, string> = {};
+        // Only the name is truly required. Email is optional for walk-in customers —
+        // the backend auto-generates a placeholder when it's blank.
         if (!form.first_name.trim()) e.first_name = 'required';
-        if (!form.email.trim()) e.email = 'required';
         if (form.password && form.password !== form.password_confirm) e.password_confirm = 'mismatch';
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -127,7 +128,7 @@ export default function AddCustomerPage() {
                                 <input value={form.last_name} onChange={e => handle('last_name', e.target.value)} className={INPUT(!!errors.last_name)} placeholder="Last Name" />
                             </div>
                             <div className="space-y-1.5">
-                                <label className={LABEL}>Email <span className="text-red-500">*</span></label>
+                                <label className={LABEL}>Email <span className="text-slate-400 font-normal">(optional)</span></label>
                                 <input type="email" value={form.email} onChange={e => handle('email', e.target.value)} className={INPUT(!!errors.email)} placeholder="customer@example.com" />
                             </div>
                             <div className="space-y-1.5">

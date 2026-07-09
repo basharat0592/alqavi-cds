@@ -9,7 +9,7 @@ import { isDone, isDelivered, isCancelled, isReturned, upper } from '@/lib/deliv
 
 const TABS = [
     { id: 'completed', label: 'Completed' },
-    { id: 'cancelled', label: 'Cancelled' },
+    // Cancelled deliveries (customer cancelled at the door) are shown as Returns.
     { id: 'returned', label: 'Returned' },
     { id: 'all', label: 'All Records' },
 ];
@@ -17,8 +17,8 @@ const TABS = [
 const statusPill = (s: string) => {
     const u = upper(s);
     if (u === 'DELIVERED') return 'bg-[#007600] text-white';
-    if (u === 'CANCELLED' || u === 'REJECTED') return 'bg-red-50 text-red-700';
-    if (u === 'RETURNED') return 'bg-gray-100 text-gray-600';
+    // Cancelled deliveries are surfaced as Returns here → gray "returned" styling.
+    if (u === 'CANCELLED' || u === 'REJECTED' || u === 'RETURNED') return 'bg-gray-100 text-gray-600';
     return 'bg-[#FFD814]/20 text-[#111]';
 };
 
@@ -47,8 +47,8 @@ export default function DeliveryHistoryPage() {
             (o.shipping_address || '').toLowerCase().includes(q);
         if (!matches) return false;
         if (activeTab === 'completed') return isDelivered(o.status);
-        if (activeTab === 'cancelled') return isCancelled(o.status);
-        if (activeTab === 'returned') return isReturned(o.status);
+        // A cancelled delivery = goods came back → shown under Returned.
+        if (activeTab === 'returned') return isReturned(o.status) || isCancelled(o.status);
         return true;
     });
 
@@ -122,7 +122,7 @@ export default function DeliveryHistoryPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${statusPill(o.status)}`}>
-                                            {o.status_display || o.status}
+                                            {isCancelled(o.status) ? 'Returned' : (o.status_display || o.status)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm font-bold text-[#B12704] text-right whitespace-nowrap">{formatCurrency(o.total_amount)}</td>

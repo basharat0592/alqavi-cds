@@ -57,6 +57,10 @@ class DeliveryPerson(models.Model):
 
     status = models.CharField(max_length=20, default='active')
     is_active = models.BooleanField(default=True)
+    # System rider = the admin's own in-house/salaried rider. Visible ONLY to the
+    # admin who created them, prioritised at the top of the dispatch dropdown, and
+    # NOT offered a per-delivery charge (they're paid a salary, not per ride).
+    is_system = models.BooleanField(default=False)
     last_login = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Wallet, Loader2, Calendar, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
@@ -9,6 +10,7 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { computeEarnings, riderEarning, orderDate } from '@/lib/deliveryStats';
 
 export default function DeliveryEarningsPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [results, setResults] = useState<any[]>([]);
 
@@ -21,10 +23,14 @@ export default function DeliveryEarningsPage() {
     const load = useCallback(() => {
         setLoading(true);
         riderService.myDeliveries()
-            .then((d) => setResults(d?.results || []))
+            .then((d) => {
+                // System (salaried) riders have no per-delivery earnings page.
+                if (d?.rider?.is_system) { router.replace('/delivery/dashboard'); return; }
+                setResults(d?.results || []);
+            })
             .catch(() => toast.error('Failed to load earnings'))
             .finally(() => setLoading(false));
-    }, []);
+    }, [router]);
 
     useEffect(() => {
         load();

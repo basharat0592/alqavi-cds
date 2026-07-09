@@ -14,7 +14,7 @@ class DeliveryPersonSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'name', 'phone',
             'vehicle_type', 'vehicle_number', 'cnic', 'address', 'city',
-            'area', 'area_name', 'warehouse', 'warehouse_name', 'avatar', 'status', 'is_active',
+            'area', 'area_name', 'warehouse', 'warehouse_name', 'avatar', 'status', 'is_active', 'is_system',
             'plain_password', 'created_at', 'updated_at',
             'active_deliveries', 'completed_deliveries',
         ]
@@ -33,6 +33,6 @@ class DeliveryPersonCreateSerializer(serializers.ModelSerializer):
         fields = [
             'username', 'email', 'password', 'first_name', 'last_name', 'phone',
             'vehicle_type', 'vehicle_number', 'cnic', 'address', 'city',
-            'area', 'warehouse', 'avatar', 'status', 'is_active',
+            'area', 'warehouse', 'avatar', 'status', 'is_active', 'is_system',
         ]
         extra_kwargs = {'password': {'write_only': True}}

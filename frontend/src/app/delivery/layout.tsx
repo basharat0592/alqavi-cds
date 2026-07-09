@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import AuthGuard from '@/components/auth/AuthGuard';
 import { authService } from '@/lib/auth';
+import { riderService } from '@/services/delivery.service';
+import { isDelivered, isCancelled } from '@/lib/deliveryStats';
 
 // Same shape/styling as the customer dashboard sidebar, with the full rider menu.
 const SIDEBAR_SECTIONS = [
@@ -45,11 +47,38 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     const router = useRouter();
     const pathname = usePathname();
     const [name, setName] = useState('Rider');
+    // Live count of orders needing attention (available to accept + active assigned).
+    const [notifCount, setNotifCount] = useState(0);
+    // System (salaried) riders don't earn per-delivery, so hide the Earnings page.
+    const [isSystem, setIsSystem] = useState(false);
 
     useEffect(() => {
         const u = authService.getUser();
         if (u) setName(u.name || 'Rider');
     }, []);
+
+    // Poll the rider feed so the sidebar badge stays fresh.
+    useEffect(() => {
+        let alive = true;
+        const tick = () => {
+            riderService.myDeliveries()
+                .then((d: any) => {
+                    if (!alive) return;
+                    setIsSystem(!!d?.rider?.is_system);
+                    const assigned: any[] = d?.results || [];
+                    const assignedIds = new Set(assigned.map((o: any) => String(o.id)));
+                    const activeAssigned = assigned.filter((o: any) => !isDelivered(o.status) && !isCancelled(o.status)).length;
+                    const available = (d?.branch_orders || []).filter((o: any) =>
+                        !assignedIds.has(String(o.id)) && !o.delivery_person
+                        && !isDelivered(o.status) && !isCancelled(o.status)).length;
+                    setNotifCount(activeAssigned + available);
+                })
+                .catch(() => { });
+        };
+        tick();
+        const id = setInterval(tick, 20000);
+        return () => { alive = false; clearInterval(id); };
+    }, [pathname]);
 
     const logout = () => {
         authService.logout();
@@ -94,7 +123,9 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                                             {section.title}
                                         </h3>
                                         <div className="space-y-0.5">
-                                            {section.links.map((link) => {
+                                            {section.links
+                                                .filter((link) => !(isSystem && link.href === '/delivery/earnings'))
+                                                .map((link) => {
                                                 const isActive = pathname === link.href;
                                                 const Icon = link.icon;
                                                 return (
@@ -111,7 +142,15 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                                                             style={{ backgroundColor: link.accent }}
                                                         />
                                                         <Icon className={`h-4 w-4 ${isActive ? 'text-[#111]' : 'text-gray-400'}`} />
-                                                        {link.label}
+                                                        <span className="flex-1">{link.label}</span>
+                                                        {link.href === '/delivery/notifications' && notifCount > 0 && (
+                                                            <span className="relative inline-flex items-center justify-center">
+                                                                <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping" />
+                                                                <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                                                                    {notifCount > 99 ? '99+' : notifCount}
+                                                                </span>
+                                                            </span>
+                                                        )}
                                                     </Link>
                                                 );
                                             })}

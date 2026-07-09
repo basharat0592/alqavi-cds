@@ -16,7 +16,7 @@ const VEHICLES = ['bike', 'car', 'van', 'truck', 'other'];
 const EMPTY = {
     first_name: '', last_name: '', email: '', phone: '', password: '',
     vehicle_type: 'bike', vehicle_number: '', cnic: '', city: '', address: '',
-    warehouse: '' as number | string, status: 'active', is_active: true,
+    warehouse: '' as number | string, status: 'active', is_active: true, is_system: false,
 };
 
 export default function DeliveryForm({ id }: { id?: string }) {
@@ -56,7 +56,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
                     phone: r.phone || '', password: '', vehicle_type: r.vehicle_type || 'bike',
                     vehicle_number: r.vehicle_number || '', cnic: r.cnic || '', city: r.city || '',
                     address: r.address || '', warehouse: r.warehouse || '', status: r.status || 'active',
-                    is_active: r.is_active ?? true,
+                    is_active: r.is_active ?? true, is_system: r.is_system ?? false,
                 });
             } catch { toast.error('Failed to load rider'); router.push('/admin/delivery'); }
             finally { setLoading(false); }
@@ -161,6 +161,16 @@ export default function DeliveryForm({ id }: { id?: string }) {
                         <button type="button" onClick={() => handle('is_active', !form.is_active)}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-indigo-600' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-indigo-50/50 border border-indigo-200/60 rounded-lg">
+                        <div>
+                            <span className="text-[12px] font-bold text-slate-700">System Rider (in-house)</span>
+                            <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug max-w-[440px]">Your own salaried rider — visible only to you, shown at the top when dispatching, and no per-delivery charge is offered.</p>
+                        </div>
+                        <button type="button" onClick={() => handle('is_system', !form.is_system)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_system ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
                 </div>

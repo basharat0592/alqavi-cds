@@ -44,7 +44,21 @@ class CustomerViewSet(viewsets.ModelViewSet):
         data = request.data.copy()
         if data.get('password'):
             data['password'] = make_password(data['password'])
-        
+
+        # Email is OPTIONAL for admin-added (walk-in) customers. The model needs a
+        # unique email + username, so generate a stable placeholder from the phone
+        # (or a random slug) when none was provided.
+        if not (data.get('email') or '').strip():
+            import uuid as _uuid
+            phone_digits = ''.join(ch for ch in str(data.get('phone') or '') if ch.isdigit())
+            base = f"walkin_{phone_digits or _uuid.uuid4().hex[:10]}"
+            email = f"{base}@walkin.local"
+            n = 1
+            while Customer.objects.filter(email=email).exists():
+                email = f"{base}_{n}@walkin.local"
+                n += 1
+            data['email'] = email
+
         if not data.get('username') and data.get('email'):
             # Use email as username to ensure uniqueness, or fallback to prefix if email is missing
             data['username'] = data.get('email')

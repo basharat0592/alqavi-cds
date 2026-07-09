@@ -15,24 +15,34 @@ from core.scoping import (
 )
 
 
+def _track_order_response(tracking_id, request):
+    """Shared tracking logic. Kept as a plain helper (NOT an @api_view) so it can be
+    called both from the `track_order_by_id` public view AND the OrderViewSet.track
+    action — calling an @api_view function from another view double-wraps the request
+    and raises `AssertionError: request must be HttpRequest, not Request` (500)."""
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    tid_str = str(tracking_id).strip()
+    # First try the human-friendly tracking_id.
+    order = Order.objects.filter(tracking_id=tid_str).first()
+    if not order:
+        # Fallback to the UUID primary key — but a non-UUID string (e.g. "10091")
+        # makes the PK lookup raise, which must NOT mask a clean "not found".
+        try:
+            order = Order.objects.filter(id=tid_str).first()
+        except (ValueError, TypeError, DjangoValidationError):
+            order = None
+    if not order:
+        return Response({'error': 'Order not found. Please check the order ID and try again.'}, status=404)
+    try:
+        return Response(OrderSerializer(order, context={'request': request}).data)
+    except Exception:
+        return Response({'error': 'Unable to load this order right now.'}, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def track_order_by_id(request, tracking_id):
-    try:
-        tid_str = str(tracking_id).strip()
-        # First try finding by tracking_id
-        order = Order.objects.filter(tracking_id=tid_str).first()
-        if not order:
-            # Fallback for full UUID lookup
-            from django.db.models import Q
-            order = Order.objects.filter(id=tid_str).first()
-            
-        if not order:
-            return Response({'error': 'Order not found. Please check the order ID and try again.'}, status=404)
-            
-        return Response(OrderSerializer(order, context={'request': request}).data)
-    except Exception as e:
-        return Response({'error': 'Invalid order ID format.'}, status=400)
+    return _track_order_response(tracking_id, request)
 
 
 def complete_delivery_stock(order):
@@ -65,13 +75,16 @@ def complete_delivery_stock(order):
                 # Identity is NAME + warehouse (+ tenant) only — NOT weight/size — so a
                 # Stock row whose weight/size drifted from the Product's is still found
                 # and deducted (matches the storefront quantity + sync-signal identity).
-                sf = dict(
+                base_filter = dict(
                     product_name__iexact=item.product.product_name,
                     warehouse_id=warehouse_id,
                 )
+                stock = None
                 if getattr(order, 'tenant_id', None):
-                    sf['tenant_id'] = order.tenant_id
-                stock = Stock.objects.filter(**sf).order_by('-total_quantity').first()
+                    stock = (Stock.objects.filter(**base_filter, tenant_id=order.tenant_id)
+                             .order_by('-total_quantity').first())
+                if stock is None:
+                    stock = Stock.objects.filter(**base_filter).order_by('-total_quantity').first()
                 if stock:
                     # Deduct physical stock, clamped at zero (no negative stock).
                     stock.total_quantity = Greatest(F('total_quantity') - item.quantity, Value(0))
@@ -320,10 +333,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         tracking_id = request.query_params.get('tid')
         if not tracking_id:
             return Response({"error": "Tracking ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-        # Delegate to the canonical tracker (track_order_by_id) so the public
-        # ?tid= entry point and the /track/<id>/ entry point return an identical
-        # payload — one source of truth, no drift, with UUID fallback for free.
-        return track_order_by_id(request, tracking_id)
+        # Shared helper (NOT the @api_view view) so the public ?tid= entry point and the
+        # /track/<id>/ path return an identical payload without double-wrapping the request.
+        return _track_order_response(tracking_id, request)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def bought_products(self, request):
@@ -552,16 +564,24 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             # Actual Deduction from Physical Stock (Master Stock Table).
                             # Scope to THIS branch and, when the order is owned by a
                             # tenant, to that tenant — so a delivery can only ever
-                            # deplete the current branch's own stock.
-                            stock_filter = dict(
+                            # deplete the current branch's own stock. Identity is
+                            # NAME + warehouse (+ tenant) ONLY — NOT weight/size — else a
+                            # Stock row whose weight/size drifted from the Product's is
+                            # never found and the delivery silently deducts nothing (which
+                            # is exactly why Current Stock didn't drop on delivery).
+                            base_filter = dict(
                                 product_name__iexact=item.product.product_name,
-                                weight=item.product.weight,
-                                size=item.product.size,
                                 warehouse_id=warehouse_id,
                             )
+                            stock = None
                             if getattr(order, 'tenant_id', None):
-                                stock_filter['tenant_id'] = order.tenant_id
-                            stock = Stock.objects.filter(**stock_filter).first()
+                                stock = (Stock.objects.filter(**base_filter, tenant_id=order.tenant_id)
+                                         .order_by('-total_quantity').first())
+                            # Fall back to warehouse-only (the branch is the real isolation
+                            # boundary) so a Stock row with a NULL/mismatched tenant is still
+                            # found and deducted instead of silently skipped.
+                            if stock is None:
+                                stock = Stock.objects.filter(**base_filter).order_by('-total_quantity').first()
 
                             if stock:
                                 # Clamp at zero so a delivery can never drive stock negative.
@@ -595,8 +615,16 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     # Genuine credit sales (explicitly UNPAID/PARTIAL) keep their
                     # outstanding balance so they can still be collected later.
                     from modules.payments.services import has_confirmed_installments
-                    if (str(order.payment_status).upper() == 'PAID'
-                            and not has_confirmed_installments('order', order.id)):
+                    # Delivery = goods handed over → payment settles in full. COD cash is
+                    # collected at the doorstep NOW (so an UNPAID COD order becomes PAID);
+                    # prepaid orders were already PAID. A genuine credit sale explicitly
+                    # left PARTIAL (or paid via installments) keeps its outstanding balance.
+                    _pm = str(order.payment_method or '').upper()
+                    _ps = str(order.payment_status or '').upper()
+                    if (not has_confirmed_installments('order', order.id)
+                            and _ps != 'PARTIAL'
+                            and (_pm == 'COD' or _ps == 'PAID')):
+                        order.payment_status = 'PAID'
                         order.amount_paid = order.total_amount
 
                     order.is_reserved = False
@@ -618,26 +646,37 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             # Execute original status change logic
             response = super(OrderViewSet, self).partial_update(request, *args, **kwargs)
             
-            # 4. Trigger WhatsApp Confirmation if newly CONFIRMED (Accepted)
+            # 4. Trigger WhatsApp Confirmation if newly CONFIRMED (Accepted).
+            #    The ENTIRE block is defensive — building/sending the confirmation must
+            #    NEVER make the accept itself fail. The message is attached FIRST so the
+            #    admin's "Send Confirmation" popup is always pre-filled, even if the
+            #    auto-send below fails (no WhatsApp API configured, network error, etc.).
             if response.status_code == 200 and new_status == "CONFIRMED" and old_status != "CONFIRMED":
                 try:
                     from .utils import send_whatsapp_order_confirmation, get_whatsapp_message_body
-                    order.refresh_from_db()
-                    message_body = get_whatsapp_message_body(order)
-                    success, _ = send_whatsapp_order_confirmation(order)
-                    
+                    try:
+                        order.refresh_from_db()
+                    except Exception:
+                        pass
+                    try:
+                        message_body = get_whatsapp_message_body(order)
+                    except Exception:
+                        message_body = ''
                     if isinstance(response.data, dict):
-                        response.data["whatsapp_sent"] = success
                         response.data["whatsapp_message"] = message_body
-                        response.data["whatsapp_number"] = order.whatsapp_number
-                        
-                except Exception as e:
+                        response.data["whatsapp_number"] = (
+                            getattr(order, 'whatsapp_number', '') or getattr(order, 'phone_number', '') or ''
+                        )
+                    try:
+                        success, _ = send_whatsapp_order_confirmation(order)
+                        if isinstance(response.data, dict):
+                            response.data["whatsapp_sent"] = success
+                    except Exception:
+                        if isinstance(response.data, dict):
+                            response.data["whatsapp_sent"] = False
+                except Exception as _wa_err:
                     import traceback
-                    error_info = f"WhatsApp Automation Error: {str(e)}\n{traceback.format_exc()}\n"
-                    print(error_info)
-                    if isinstance(response.data, dict):
-                        response.data["whatsapp_sent"] = False
-                        response.data["whatsapp_error"] = str(e)
+                    print(f"WhatsApp confirmation extras failed (non-fatal): {_wa_err}\n{traceback.format_exc()}")
 
             return response
         except Exception as e:
@@ -667,6 +706,27 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         order.status = 'CANCEL_REQUESTED'
         order.save()
         return Response({'message': 'Cancellation request submitted.'})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def confirm_delivery(self, request, pk=None):
+        """Customer confirms they received the order. Like the rider report, this does
+        NOT finalize (no stock/payment change) — it flags the order so the admin sees
+        'customer confirmed delivered' and can confirm, and the rider sees it too."""
+        try:
+            order = scope_to_tenant(request.user, Order.objects.all(), 'tenant').get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found.'}, status=404)
+
+        if (not request.user.is_staff and order.customer_id != request.user.id
+                and getattr(order.user, 'id', None) != request.user.id):
+            return Response({'error': 'Not authorized to modify this order.'}, status=403)
+
+        if str(order.status).upper() in ('DELIVERED', 'CANCELLED', 'REJECTED'):
+            return Response({'error': f'Order already {order.status}.'}, status=400)
+
+        order.customer_reported_delivered = True
+        order.save(update_fields=['customer_reported_delivered'])
+        return Response({'message': 'Delivery confirmed — awaiting admin confirmation.'})
 
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
     def update_status(self, request, pk=None):

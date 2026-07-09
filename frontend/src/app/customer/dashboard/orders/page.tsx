@@ -14,8 +14,8 @@ export default function CustomerOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState('orders');
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [orderToDelete, setOrderToDelete] = useState<any>(null);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [orderToCancel, setOrderToCancel] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
@@ -49,17 +49,35 @@ export default function CustomerOrdersPage() {
 
     useEffect(() => {
         setUser(authService.getUser());
-        salesService.getOrders()
-            .then(setOrders)
-            .finally(() => setLoading(false));
+        const fetch = (silent = false) => {
+            salesService.getOrders()
+                .then(setOrders)
+                .finally(() => { if (!silent) setLoading(false); });
+        };
+        fetch();
+        // Live sync (same 12s cadence as the admin + rider views): reflect the admin's
+        // status changes (e.g. Delivered) without a manual refresh.
+        const id = setInterval(() => fetch(true), 12000);
+        return () => clearInterval(id);
     }, []);
 
-    const handleDelete = async (id: string) => {
+    const handleCancel = async (id: string) => {
         try {
-            await salesService.deleteOrder(id);
-            setOrders(prev => prev.filter(o => o.id !== id));
-        } catch (err) {
-            alert('Failed to delete order.');
+            await salesService.requestCancel(id);
+            // Reflect the new state in place (the order stays in the list as cancelled).
+            setOrders(prev => prev.map(o => o.id === id
+                ? { ...o, status: 'CANCEL_REQUESTED', status_display: 'Cancellation Requested' } : o));
+        } catch (err: any) {
+            alert(err?.response?.data?.error || 'Failed to cancel order.');
+        }
+    };
+
+    const handleConfirmDelivery = async (id: string) => {
+        try {
+            await salesService.confirmDelivery(id);
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, customer_reported_delivered: true } : o));
+        } catch (err: any) {
+            alert(err?.response?.data?.error || 'Failed to confirm delivery.');
         }
     };
 
@@ -141,9 +159,9 @@ export default function CustomerOrdersPage() {
         if (!matchesSearch) return false;
 
         // Tab filter
-        if (activeTab === 'orders') return o.status !== 'CANCELLED';
+        if (activeTab === 'orders') return !['CANCELLED', 'CANCEL_REQUESTED'].includes(o.status);
         if (activeTab === 'notShip') return ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(o.status);
-        if (activeTab === 'cancelled') return o.status === 'CANCELLED';
+        if (activeTab === 'cancelled') return ['CANCELLED', 'CANCEL_REQUESTED'].includes(o.status);
         return true;
     });
 
@@ -283,15 +301,17 @@ export default function CustomerOrdersPage() {
                                             >
                                                 Invoice
                                             </Link>
-                                            <button 
+                                            {!['SHIPPED', 'DELIVERED', 'CANCELLED', 'CANCEL_REQUESTED'].includes(order.status) && (
+                                            <button
                                                 onClick={() => {
-                                                    setOrderToDelete(order);
-                                                    setIsDeleteModalOpen(true);
+                                                    setOrderToCancel(order);
+                                                    setIsCancelModalOpen(true);
                                                 }}
                                                 className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline"
                                             >
-                                                Delete
+                                                Cancel
                                             </button>
+                                            )}
                                         </td>
                                     </tr>
                                     {expandedOrderId === order.id && (
@@ -322,6 +342,21 @@ export default function CustomerOrdersPage() {
                                                                     <span className="text-[#B12704]">Rs. {parseFloat(order.total_amount).toLocaleString()}</span>
                                                                 </div>
                                                             </div>
+                                                            {/* Mark as Delivered — only once the admin has SHIPPED the order */}
+                                                            {order.status === 'SHIPPED' && (
+                                                                <div className="pt-4 border-t border-gray-200">
+                                                                    {order.customer_reported_delivered ? (
+                                                                        <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#007600]">✓ Delivery confirmed — awaiting store confirmation</span>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => handleConfirmDelivery(order.id)}
+                                                                            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-[#007600] text-white text-[12.5px] font-bold hover:bg-[#005c00] transition-colors"
+                                                                        >
+                                                                            ✓ Mark as Delivered
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -365,34 +400,34 @@ export default function CustomerOrdersPage() {
                 </div>
             )}
 
-            {/* Custom Delete Modal */}
-            {isDeleteModalOpen && (
+            {/* Cancel Order Modal */}
+            {isCancelModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl scale-in-center">
                         <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
-                            <Package className="h-8 w-8 text-red-500" />
+                            <AlertTriangle className="h-8 w-8 text-red-500" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 text-center mb-2">Delete Order?</h3>
+                        <h3 className="text-xl font-bold text-gray-900 text-center mb-2">Cancel Order?</h3>
                         <p className="text-sm text-gray-500 text-center mb-8">
-                            Are you sure you want to delete order <span className="font-bold text-gray-900">#{orderToDelete?.tracking_id}</span>? This action cannot be undone.
+                            Are you sure you want to cancel order <span className="font-bold text-gray-900">#{orderToCancel?.tracking_id}</span>? This can only be done before it ships.
                         </p>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setIsDeleteModalOpen(false)}
+                                onClick={() => setIsCancelModalOpen(false)}
                                 className="flex-1 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition-all"
                             >
-                                Cancel
+                                Keep Order
                             </button>
                             <button
                                 onClick={async () => {
-                                    if (orderToDelete) {
-                                        await handleDelete(orderToDelete.id);
-                                        setIsDeleteModalOpen(false);
+                                    if (orderToCancel) {
+                                        await handleCancel(orderToCancel.id);
+                                        setIsCancelModalOpen(false);
                                     }
                                 }}
                                 className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-all shadow-lg shadow-red-500/20"
                             >
-                                Confirm Delete
+                                Yes, Cancel Order
                             </button>
                         </div>
                     </div>

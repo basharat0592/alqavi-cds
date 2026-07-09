@@ -62,9 +62,15 @@ def compute_low_stock(user, warehouse_id=None, limit=60):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def public_branches(request):
-    """Public list of active branches (warehouses) for the storefront's branch
-    picker — the platform's own branches created by the Super Admin (tenant NULL)."""
-    qs = Warehouse.objects.filter(is_active=True, tenant__isnull=True).order_by('name')
+    """Public list of active branches (warehouses) for the storefront's city + branch
+    pickers: every active branch that the Super Admin created and assigned to a city.
+
+    NOTE: we intentionally do NOT filter on ``tenant__isnull`` here. Branches start life
+    tenant-NULL (Super-Admin owned) but ``backfill_tenants`` stamps each branch with the
+    admin it is assigned to on every deploy — so a tenant-NULL filter would wrongly hide
+    every assigned branch (that's what emptied the storefront's city list). Identity for
+    the storefront is simply: active + has a city (area)."""
+    qs = Warehouse.objects.filter(is_active=True, area__isnull=False).order_by('name')
     data = [
         {
             'id': str(w.id),

@@ -291,7 +291,7 @@ export default function Navbar({ settings }: { settings?: any }) {
             {/* ── TOP HEADER (AMAZON NAVY) ── */}
             <div className="bg-[#131921] py-2 md:py-0 px-2 flex flex-col md:flex-row items-center gap-2 md:gap-4 lg:gap-8">
                 {/* Row 1: Logo & mobile actions */}
-                <div className="flex items-center justify-between w-full md:w-auto shrink-0">
+                <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
                     <div className="flex items-center gap-2">
                         {/* Logo */}
                         <Link href="/" className="flex items-center shrink-0 p-1 rounded-sm cursor-pointer">
@@ -299,26 +299,41 @@ export default function Navbar({ settings }: { settings?: any }) {
                         </Link>
                     </div>
 
-                    {/* Deliver To — city picker driven by the dashboard's Areas */}
-                    <div ref={cityRef} className="relative hidden lg:flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight hover:bg-white/5"
+                    {/* Deliver To — city picker driven by the dashboard's Areas (mobile + desktop) */}
+                    <div ref={cityRef} className="relative flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight hover:bg-white/5"
                         onClick={() => { setCityPromptOpen(false); setCityOpen(o => !o); }}>
-                        <span className="text-[12px] text-slate-300 ml-4">Deliver to</span>
-                        <div className="flex items-center gap-1">
-                            <MapPin size={15} className="text-white" />
-                            <span className="text-sm font-bold uppercase tracking-tighter">{selectedCity || 'All Cities'}</span>
-                            <ChevronDown size={14} className={`text-white transition-transform ${cityOpen ? 'rotate-180' : ''}`} />
+                        {/* Trigger — kept above the blur backdrop so the "Deliver to" icon stays visible */}
+                        <div className="relative z-[9997]">
+                            <span className="hidden lg:block text-[12px] text-slate-300 ml-4">Deliver to</span>
+                            <div className="flex items-center gap-1">
+                                <MapPin size={15} className="text-white shrink-0" />
+                                <span className="text-[12px] lg:text-sm font-bold uppercase tracking-tighter truncate max-w-[110px] lg:max-w-[150px]">{selectedCity || 'All Cities'}</span>
+                                <ChevronDown size={14} className={`text-white transition-transform shrink-0 ${cityOpen ? 'rotate-180' : ''}`} />
+                            </div>
                         </div>
                         {/* ── Simple city dropdown (opens on click of "Deliver to") ── */}
                         <AnimatePresence>
                             {cityOpen && (
+                                <>
+                                {/* Mobile-only blur backdrop (desktop uses outside-click to close) */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="fixed inset-0 z-[9993] bg-slate-900/25 backdrop-blur-[3px] cursor-default lg:hidden"
+                                    onClick={(e) => { e.stopPropagation(); setCityOpen(false); }}
+                                />
                                 <motion.div
                                     initial={{ opacity: 0, y: -6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -6 }}
                                     transition={{ duration: 0.15 }}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="absolute top-full left-0 mt-2 z-[9995] w-[230px] cursor-default"
+                                    className="absolute top-full left-0 mt-2 z-[9995] w-[230px] max-w-[calc(100vw-64px)] cursor-default"
                                 >
+                                    {/* Caret connecting the dropdown to the control */}
+                                    <div className="absolute -top-[6px] left-6 w-3 h-3 bg-white rotate-45 rounded-[2px] ring-1 ring-slate-900/[0.06]" />
                                     <div className="bg-white text-slate-800 rounded-xl shadow-[0_16px_40px_-12px_rgba(2,15,35,0.35)] ring-1 ring-slate-900/[0.08] overflow-hidden">
                                         <div className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Choose your city</div>
                                         <div className="py-1 max-h-72 overflow-y-auto">
@@ -341,6 +356,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                         </div>
                                     </div>
                                 </motion.div>
+                                </>
                             )}
                         </AnimatePresence>
 
@@ -358,42 +374,58 @@ export default function Navbar({ settings }: { settings?: any }) {
                                     onClick={(e) => { e.stopPropagation(); setCityPromptOpen(false); }}
                                 />
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.92, y: -10 }}
+                                    initial={{ opacity: 0, scale: 0.92, y: -8 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.94, y: -6 }}
                                     transition={{ type: 'spring', stiffness: 400, damping: 26 }}
                                     style={{ transformOrigin: 'top left' }}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="absolute top-full left-0 mt-3 z-[9994] w-[300px] max-w-[92vw] cursor-default"
+                                    className="absolute top-full left-0 mt-3 z-[9994] w-[240px] max-w-[calc(100vw-72px)] cursor-default lg:w-[300px] lg:max-w-[92vw]"
                                 >
-                                    <div className="absolute -top-[6px] left-9 w-3.5 h-3.5 bg-white rotate-45 rounded-[2px] ring-1 ring-slate-900/[0.06]" />
-                                    <div className="relative rounded-2xl overflow-hidden bg-white ring-1 ring-slate-900/[0.08] shadow-[0_24px_60px_-18px_rgba(2,15,35,0.45)] text-slate-800">
-                                        <div className="h-[3px] w-full bg-gradient-to-r from-[#0e7d95] via-[#14b8d4] to-[#0e7d95]" />
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); setCityPromptOpen(false); }}
-                                            aria-label="Close"
-                                            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                                        >
-                                            <X size={15} />
-                                        </button>
-                                        <div className="p-4">
-                                            <div onClick={openCityDropdown} className="flex items-center gap-3 cursor-pointer pr-6">
-                                                <span className="w-10 h-10 rounded-2xl bg-[#119AB8]/[0.1] text-[#0891B2] flex items-center justify-center shrink-0">
-                                                    <MapPin size={19} />
+                                    {/* Caret connecting the popup to the control */}
+                                    <div className="absolute -top-[6px] left-9 w-3.5 h-3.5 bg-[#0b6f86] rotate-45 rounded-[2px]" />
+                                    <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-[0_28px_70px_-16px_rgba(2,15,35,0.6)] text-slate-800">
+                                        {/* ── Vibrant gradient header ── */}
+                                        <div className="relative px-4 pt-4 pb-4 bg-gradient-to-br from-[#0b6f86] via-[#119AB8] to-[#18c6e4] text-white overflow-hidden">
+                                            <div className="pointer-events-none absolute -top-10 -right-8 w-32 h-32 rounded-full bg-white/20 blur-2xl" />
+                                            <div className="pointer-events-none absolute -bottom-14 -left-6 w-28 h-28 rounded-full bg-cyan-200/25 blur-2xl" />
+                                            <div className="pointer-events-none absolute inset-0 opacity-[0.09]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)', backgroundSize: '13px 13px' }} />
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); setCityPromptOpen(false); }}
+                                                aria-label="Close"
+                                                className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/15 transition-colors z-10"
+                                            >
+                                                <X size={15} />
+                                            </button>
+
+                                            <div onClick={openCityDropdown} className="relative flex items-center gap-3 cursor-pointer pr-6">
+                                                <span className="relative w-11 h-11 rounded-2xl bg-white/15 ring-1 ring-white/30 backdrop-blur-sm flex items-center justify-center shrink-0">
+                                                    {/* Pulsing ring to draw the eye */}
+                                                    <motion.span
+                                                        className="absolute inset-0 rounded-2xl ring-2 ring-white/60"
+                                                        animate={{ scale: [1, 1.45], opacity: [0.6, 0] }}
+                                                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+                                                    />
+                                                    <MapPin size={21} className="text-white relative" />
                                                 </span>
                                                 <div className="min-w-0">
-                                                    <h3 className="text-[15px] font-bold tracking-tight text-slate-900 leading-tight truncate">{selectedCity || 'Choose your city'}</h3>
-                                                    <p className="text-[11.5px] text-slate-400 mt-0.5 leading-snug">See only what&apos;s available near you</p>
+                                                    <h3 className="text-[16px] font-black tracking-tight leading-tight truncate">{selectedCity || 'Choose your city'}</h3>
+                                                    <p className="text-[11px] text-white/85 mt-0.5 leading-snug">See only what&apos;s available near you</p>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* ── CTA ── */}
+                                        <div className="p-3 bg-white">
                                             <button
                                                 type="button"
                                                 onClick={openCityDropdown}
-                                                className="mt-3.5 w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#119AB8] hover:bg-[#0e88a3] text-white text-[12.5px] font-bold tracking-tight transition-colors shadow-sm shadow-[#119AB8]/30"
+                                                className="group w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-gradient-to-r from-[#0b6f86] to-[#18c6e4] text-white text-[13px] font-bold tracking-tight shadow-lg shadow-[#119AB8]/30 hover:shadow-xl hover:shadow-[#119AB8]/40 hover:brightness-[1.05] active:scale-[0.98] transition-all"
                                             >
                                                 {selectedCity ? 'Change your city' : 'Choose your city'}
-                                                <ChevronDown size={15} />
+                                                <ChevronDown size={16} className="group-hover:translate-y-0.5 transition-transform" />
                                             </button>
                                         </div>
                                     </div>
@@ -404,7 +436,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                     </div>
 
                     {/* Mobile right icons (User & Cart) */}
-                    <div className="flex md:hidden items-center gap-2 text-white pr-1">
+                    <div className="flex md:hidden items-center gap-2 text-white pr-1 ml-auto">
                         {/* Mobile User Profile */}
                         <div className="relative" ref={mobileUserRef}>
                             <button
