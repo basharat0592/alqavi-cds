@@ -25,6 +25,7 @@ interface ProductCardProps {
     size?: string;
     stock?: number;
     branch?: string;
+    city?: string;
     onAddToCart?: (qty: number) => void;
     onWishlist?: () => void;
     layout?: 'vertical' | 'horizontal';
@@ -46,6 +47,7 @@ export default function ProductCard({
     size,
     stock,
     branch,
+    city,
     onAddToCart,
     onWishlist,
     layout = 'vertical',
@@ -230,16 +232,18 @@ export default function ProductCard({
                                 </span>
                             </div>
                         )}
-                        {/* Branch/city — so identical products from different branches are distinguishable */}
-                        {branch && (
-                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-100 px-1.5 py-0.5">
-                                <MapPin size={9} className="text-slate-400 shrink-0" />
-                                <span className="text-[8.5px] font-bold uppercase tracking-widest text-slate-500 truncate max-w-[120px]">{branch}</span>
+                        {/* City · Branch — tiny, so identical products from different branches are distinguishable */}
+                        {(city || branch) && (
+                            <div className="mt-0.5 flex items-center gap-0.5 text-slate-400">
+                                <MapPin size={8} className="shrink-0" />
+                                <span className="text-[7.5px] font-semibold uppercase tracking-wide truncate max-w-[150px] leading-none">
+                                    {[city, branch].filter(Boolean).join(' · ')}
+                                </span>
                             </div>
                         )}
 
                         {/* Description */}
-                        {!isMinimal && description && (
+                        {description && (
                             <div className="mt-1.5 relative">
                                 <p className={cn(
                                     "text-[#475569] leading-tight font-medium line-clamp-2 pr-2",

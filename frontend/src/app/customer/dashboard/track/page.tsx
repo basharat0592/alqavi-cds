@@ -119,7 +119,7 @@ export default function TrackOrderDashboard() {
             {/* ── Header ── */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 pb-4">
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">Track your package</h1>
+                    <h1 className="text-2xl font-semibold text-[#111]">Track your package</h1>
                 </div>
                 <form onSubmit={handleTrack} className="relative flex-1 max-w-lg group">
                     <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${loading ? 'text-[#F59E0B] animate-pulse' : 'text-gray-400 group-focus-within:text-[#F59E0B]'}`} />
@@ -152,10 +152,10 @@ export default function TrackOrderDashboard() {
                 <div className="space-y-6">
 
                     {/* ── Stepper Card ── */}
-                    <div className="bg-white border border-gray-200 p-8 rounded-xl shadow-sm">
+                    <div className="bg-white border border-gray-200 p-4 sm:p-8 rounded-xl shadow-sm">
 
                         {/* Order header row */}
-                        <div className="flex flex-wrap justify-between items-start gap-4 mb-8 pb-6 border-b border-gray-100">
+                        <div className="flex flex-wrap justify-between items-start gap-3 mb-6 pb-5 border-b border-gray-100">
                             <div>
                                 <h3 className="text-lg font-black text-slate-900">{order.order_number}</h3>
                                 <div className="flex items-center gap-2 mt-1">
@@ -226,34 +226,61 @@ export default function TrackOrderDashboard() {
                             </div>
 
                         ) : (
-                            <div className="mb-12">
-                                <div className="relative h-2 bg-[#F0F2F2] rounded-full overflow-hidden">
-                                    <div
-                                        className="absolute top-0 left-0 h-full bg-[#007600] transition-all duration-1000 ease-out"
-                                        style={{ width: `${Math.max(10, ((statusIndex + 1) / STATUS_STEPS.length) * 100)}%` }}
-                                    />
-                                </div>
-                                <div className="flex justify-between mt-4">
+                            <>
+                                {/* Mobile: vertical timeline (no cramped labels) */}
+                                <div className="sm:hidden">
                                     {STATUS_STEPS.map((step, idx) => {
                                         const isActive = idx <= statusIndex;
+                                        const isCurrent = idx === statusIndex;
+                                        const isLast = idx === STATUS_STEPS.length - 1;
+                                        const Icon = step.icon;
                                         return (
-                                            <div key={idx} className="flex flex-col items-center">
-                                                <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-[#007600]' : 'bg-gray-200'}`} />
-                                                <p className={`mt-2 text-[10px] sm:text-xs font-bold ${isActive ? 'text-[#007600]' : 'text-gray-400'}`}>
-                                                    {step.label}
-                                                </p>
+                                            <div key={idx} className="flex gap-3">
+                                                <div className="flex flex-col items-center">
+                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isActive ? 'bg-[#007600] text-white' : 'bg-gray-100 text-gray-300 border border-gray-200'}`}>
+                                                        {isActive ? <CheckCircle size={15} /> : <Icon size={13} />}
+                                                    </div>
+                                                    {!isLast && <div className={`w-0.5 flex-1 min-h-[22px] ${idx < statusIndex ? 'bg-[#007600]' : 'bg-gray-200'}`} />}
+                                                </div>
+                                                <div className={`pt-0.5 ${isLast ? '' : 'pb-4'}`}>
+                                                    <p className={`text-[13.5px] font-bold ${isActive ? 'text-[#111]' : 'text-gray-400'}`}>{step.label}</p>
+                                                    {isCurrent && <p className="text-[11px] text-[#007600] font-semibold mt-0.5">Current status</p>}
+                                                </div>
                                             </div>
                                         );
                                     })}
                                 </div>
-                            </div>
+
+                                {/* Desktop: horizontal progress bar */}
+                                <div className="hidden sm:block mb-4">
+                                    <div className="relative h-2 bg-[#F0F2F2] rounded-full overflow-hidden">
+                                        <div
+                                            className="absolute top-0 left-0 h-full bg-[#007600] transition-all duration-1000 ease-out"
+                                            style={{ width: `${Math.max(10, ((statusIndex + 1) / STATUS_STEPS.length) * 100)}%` }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between mt-4">
+                                        {STATUS_STEPS.map((step, idx) => {
+                                            const isActive = idx <= statusIndex;
+                                            return (
+                                                <div key={idx} className="flex flex-col items-center">
+                                                    <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-[#007600]' : 'bg-gray-200'}`} />
+                                                    <p className={`mt-2 text-xs font-bold ${isActive ? 'text-[#007600]' : 'text-gray-400'}`}>
+                                                        {step.label}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
 
                     {/* Order Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white border border-[#D5D9D9] rounded-lg p-6">
-                            <h3 className="text-lg font-bold text-[#111] mb-4">Shipping Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        <div className="bg-white border border-[#D5D9D9] rounded-xl p-4 sm:p-6">
+                            <h3 className="text-[15px] sm:text-lg font-bold text-[#111] mb-3.5 sm:mb-4">Shipping Information</h3>
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-xs text-gray-500 font-bold uppercase">Shipping Address</p>
@@ -266,8 +293,8 @@ export default function TrackOrderDashboard() {
                             </div>
                         </div>
 
-                        <div className="bg-white border border-[#D5D9D9] rounded-lg p-6">
-                            <h3 className="text-lg font-bold text-[#111] mb-4">Order Items</h3>
+                        <div className="bg-white border border-[#D5D9D9] rounded-xl p-4 sm:p-6">
+                            <h3 className="text-[15px] sm:text-lg font-bold text-[#111] mb-3.5 sm:mb-4">Order Items</h3>
                             <div className="space-y-2">
                                 {order.items?.map((item: any, i: number) => (
                                     <div key={i} className="flex justify-between items-center text-sm border-b border-[#F0F2F2] pb-2 last:border-0">

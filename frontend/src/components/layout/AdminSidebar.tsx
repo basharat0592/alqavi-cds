@@ -8,7 +8,7 @@ import {
     Boxes, Settings, UserCheck, ShoppingBag,
     ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
-    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, Bell
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { orderService } from '@/lib/api';
@@ -66,6 +66,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
                 { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },
+                { name: 'Notifications', href: '/admin/notifications', icon: Bell },
             ],
         },
         {
@@ -98,11 +99,12 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         {
             label: 'Security & Logs',
             items: [
+                { name: 'Branches', href: '/admin/branches', icon: Building2 },
                 { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
                 { name: 'Delivery Persons', href: '/admin/delivery', icon: Truck },
                 { name: 'Areas', href: '/admin/company/areas', icon: MapPin },
-                { name: 'Internal Users', href: '/admin/users', icon: User },
+                { name: 'Admins', href: '/admin/users', icon: User },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
                 { name: 'System Users', href: '/admin/system-users', icon: UserCog },
                 { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },

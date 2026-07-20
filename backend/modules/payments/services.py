@@ -301,6 +301,37 @@ def remove_sale(order):
     _remove_auto('sale', 'order', order.id)
 
 
+def record_delivery_charge(order):
+    """Book the rider's delivery payout (order.delivery_fee) as an EXPENSE when the
+    order is delivered/received. Kept as its own 'delivery' ledger line so it shows
+    separately in the payments page and deducts from the branch account on delivery."""
+    fee = Decimal(str(getattr(order, 'delivery_fee', 0) or 0))
+    if fee <= 0:
+        _remove_auto('delivery', 'delivery', order.id)
+        return
+    rider = getattr(order, 'delivery_person', None)
+    return _upsert_auto(
+        'delivery', 'delivery', order.id,
+        defaults={
+            'amount': fee,
+            'payment_type': 'outbound',
+            'method': 'cash',
+            'category': _category('Delivery Charges', 'outbound'),
+            'reference_number': order.tracking_id or '',
+            'payer_payee': (getattr(rider, 'name', None) or 'Delivery Rider'),
+            'description': f"Delivery charge for order #{order.tracking_id}",
+            'date': (order.delivered_at or order.updated_at or order.created_at).date(),
+            'warehouse_id': order.warehouse_id,
+            'user': _real_user(getattr(order, 'created_by', None)),
+            'tenant_id': getattr(order, 'tenant_id', None),
+        },
+    )
+
+
+def remove_delivery_charge(order):
+    _remove_auto('delivery', 'delivery', order.id)
+
+
 # ── Purchase payments (money out) ─────────────────────────────────────────────
 def record_purchase_payment(purchase):
     """Subtract expense when a supplier accepts the admin's purchase payment.

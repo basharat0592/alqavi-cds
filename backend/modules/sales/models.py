@@ -102,6 +102,12 @@ class Order(models.Model):
     # The CUSTOMER confirmed they received the order from their account. Like the rider
     # report, this doesn't finalize anything — the admin confirms delivery to settle it.
     customer_reported_delivered = models.BooleanField(default=False)
+    # Proof of delivery — the photo the rider takes at the doorstep, plus where/when it
+    # was captured. Shown to the admin (active orders + sales history) as verification.
+    proof_image = models.ImageField(upload_to='delivery/proofs/', null=True, blank=True)
+    proof_lat = models.CharField(max_length=32, blank=True, default='')
+    proof_lng = models.CharField(max_length=32, blank=True, default='')
+    proof_at = models.DateTimeField(null=True, blank=True)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)

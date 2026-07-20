@@ -239,6 +239,7 @@ export function PaymentPanel({
                                     </p>
                                     <p className="text-[10.5px] text-slate-400 truncate">
                                         Payment {idx + 1} · {fmtDateTime(it.paid_at)}{it.reference ? ` · ${it.reference}` : ''}
+                                        {it.created_by_name ? ` · by ${it.created_by_name}` : ''}
                                         {it.status === 'pending' ? ' · awaiting verification' : ''}
                                     </p>
                                 </div>

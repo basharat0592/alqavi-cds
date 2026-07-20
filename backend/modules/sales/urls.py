@@ -6,7 +6,7 @@ from .views import (
 )
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
-    report_delivery,
+    report_delivery, report_ledger,
 )
 
 router = DefaultRouter()
@@ -21,6 +21,7 @@ urlpatterns = [
     path('reports/by-area/', report_by_area, name='report-by-area'),
     path('reports/by-user/', report_by_user, name='report-by-user'),
     path('reports/statements/', report_statements, name='report-statements'),
+    path('reports/ledger/', report_ledger, name='report-ledger'),
     path('reports/returns-summary/', report_returns_summary, name='report-returns-summary'),
     path('reports/delivery/', report_delivery, name='report-delivery'),
 

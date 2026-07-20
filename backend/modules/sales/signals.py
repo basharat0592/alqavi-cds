@@ -15,12 +15,16 @@ def order_to_ledger(sender, instance, **kwargs):
     from modules.payments import services
     if str(instance.status).upper() == 'DELIVERED':
         services.record_sale(instance)
+        # Book the rider's delivery charge as an expense on delivery/receipt.
+        services.record_delivery_charge(instance)
     else:
-        # Order moved out of DELIVERED (or never reached it) → ensure no income entry.
+        # Order moved out of DELIVERED (or never reached it) → ensure no ledger entries.
         services.remove_sale(instance)
+        services.remove_delivery_charge(instance)
 
 
 @receiver(post_delete, sender=Order)
 def order_deleted_from_ledger(sender, instance, **kwargs):
     from modules.payments import services
     services.remove_sale(instance)
+    services.remove_delivery_charge(instance)

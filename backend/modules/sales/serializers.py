@@ -40,6 +40,8 @@ class OrderSerializer(serializers.ModelSerializer):
     customer_type = serializers.SerializerMethodField()
     # Contact number for the buyer — prefers the linked account, then the snapshot.
     customer_phone = serializers.SerializerMethodField()
+    # Proof-of-delivery photo — absolute URL for the admin views.
+    proof_image_url = serializers.SerializerMethodField()
     # Pickup branch (warehouse) details — used by the rider dispatch/detail views.
     warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
     warehouse_location = serializers.ReadOnlyField(source='warehouse.location')
@@ -53,6 +55,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'customer_type', 'customer_phone', 'notes',
             'delivery_person', 'delivery_person_name', 'discount', 'shipping_cost', 'delivery_fee',
             'rider_reported_delivered', 'rider_reported_cancelled', 'customer_reported_delivered',
+            'proof_image_url', 'proof_lat', 'proof_lng', 'proof_at',
             'warehouse', 'warehouse_name', 'warehouse_location', 'warehouse_area',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
@@ -61,6 +64,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_delivery_person_name(self, obj):
         return obj.delivery_person.name if obj.delivery_person_id else None
+
+    def get_proof_image_url(self, obj):
+        if not obj.proof_image:
+            return None
+        try:
+            url = obj.proof_image.url
+        except Exception:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(url) if request else url
 
     def get_customer_type(self, obj):
         # Registered ONLY when a real Customer account was selected (POS dropdown),

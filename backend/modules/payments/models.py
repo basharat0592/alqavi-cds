@@ -49,6 +49,7 @@ class Payment(models.Model):
         ('purchase', 'Purchase Payment'),
         ('sale_return', 'Sale Return'),
         ('purchase_return', 'Purchase Return'),
+        ('delivery', 'Delivery Charge'),
     ]
 
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)

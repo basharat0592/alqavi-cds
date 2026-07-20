@@ -66,6 +66,17 @@ export const riderService = {
         const { data } = await api.patch(`v1/delivery/orders/${orderId}/status/`, { status });
         return data;
     },
+    // Upload proof-of-delivery photo (+ GPS location) for an assigned order.
+    uploadProof: async (orderId: string, file: File, lat?: string, lng?: string): Promise<any> => {
+        const fd = new FormData();
+        fd.append('image', file);
+        if (lat) fd.append('lat', lat);
+        if (lng) fd.append('lng', lng);
+        const { data } = await api.post(`v1/delivery/orders/${orderId}/proof/`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return data;
+    },
     // Rider claims an unassigned order from their branch feed.
     accept: async (orderId: string): Promise<any> => {
         const { data } = await api.post(`v1/delivery/orders/${orderId}/accept/`, {});

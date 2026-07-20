@@ -9,9 +9,9 @@ import ReadOnlyController from '@/components/admin/ReadOnlyController';
 import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
-    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Wallet, Building2
+    ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
+    Home, Globe, Settings
 } from 'lucide-react';
-import { paymentsDueService } from '@/services/payment.service';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
@@ -127,6 +127,50 @@ function SessionTimer({ className = '', onTimeout }: { className?: string; onTim
     );
 }
 
+/* ═══════════════════════════════════════════════
+   SUPER-ADMIN MOBILE BOTTOM NAV (app-style tab bar)
+   ═══════════════════════════════════════════════ */
+function SuperAdminBottomNav({ pathname }: { pathname: string }) {
+    const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+    const Tab = ({ href, label, icon: Icon }: { href: string; label: string; icon: any }) => (
+        <Link
+            href={href}
+            className={cn(
+                "flex flex-col items-center justify-center gap-0.5 h-16 transition-colors active:scale-95",
+                isActive(href) ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
+            )}
+        >
+            <Icon size={20} />
+            <span className="text-[9.5px] font-bold tracking-tight">{label}</span>
+        </Link>
+    );
+    const homeActive = isActive('/admin/dashboard');
+    return (
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
+            <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                <div className="grid grid-cols-5">
+                    <Tab href="/admin/users" label="Admins" icon={Users} />
+                    <Tab href="/admin/branches" label="Branches" icon={Building2} />
+                    <div aria-hidden />{/* center slot for the raised Home button */}
+                    <Tab href="/admin/website-settings" label="CMS" icon={Globe} />
+                    <Tab href="/admin/settings" label="Settings" icon={Settings} />
+                </div>
+                {/* Raised center Home */}
+                <Link
+                    href="/admin/dashboard"
+                    aria-label="Dashboard"
+                    className={cn(
+                        "absolute left-1/2 -translate-x-1/2 -top-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white transition-colors active:scale-95",
+                        homeActive ? "bg-indigo-600 text-white" : "bg-slate-900 text-white hover:bg-slate-800"
+                    )}
+                >
+                    <Home size={22} />
+                </Link>
+            </div>
+        </nav>
+    );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -163,6 +207,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminRole, setAdminRole] = useState('');
     const [adminId, setAdminId] = useState<string | number>('');
     const [branchLabel, setBranchLabel] = useState('');
+    const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
 
     // Settings & Display
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -172,8 +217,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Notifications
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
-    const [dueOverdue, setDueOverdue] = useState(0);
-    const [dueSoon, setDueSoon] = useState(0);
 
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
@@ -183,6 +226,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         const user = authService.getUser();
+        setIsSuperAdminUser(authService.isSuperAdmin());
         if (user) {
             setAdminName(user.name || 'Administrator');
             setAdminEmail(user.email || 'admin@alqavi.com');
@@ -221,19 +265,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             } catch { }
         };
 
-        const fetchDue = async () => {
-            try {
-                const d = await paymentsDueService.get('all');
-                setDueOverdue(d?.summary?.overdue || 0);
-                setDueSoon(d?.summary?.due_soon || 0);
-            } catch { }
-        };
-
         loadSettings();
         loadProfile();
         fetchActivity();
-        fetchDue();
-        const dueInterval = setInterval(fetchDue, 60000); // payments due: refresh each minute
 
         const handleUpdate = () => {
             loadProfile();
@@ -254,7 +288,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         return () => {
             clearInterval(pollInterval);
-            clearInterval(dueInterval);
             window.removeEventListener('profileUpdated', handleUpdate);
             window.removeEventListener('settingsUpdated', loadSettings);
             document.removeEventListener('mousedown', handleClickOutside);
@@ -494,19 +527,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </div>
                             )}
                             <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
-                            {(dueOverdue > 0 || dueSoon > 0) && (
-                                <Link
-                                    href="/admin/alerts"
-                                    title={`${dueOverdue} overdue · ${dueSoon} due soon`}
-                                    className={`hidden lg:flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-xl border shadow-sm hover:shadow-md transition-all ${dueOverdue > 0 ? 'text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100'}`}
-                                >
-                                    <Wallet className="h-3.5 w-3.5" />
-                                    {dueOverdue > 0 ? `${dueOverdue} Overdue` : `${dueSoon} Due Soon`}
-                                    {dueOverdue > 0 && dueSoon > 0 && (
-                                        <span className="text-[10px] font-semibold opacity-70">+{dueSoon}</span>
-                                    )}
-                                </Link>
-                            )}
+                            {/* Dues pill removed from the navbar for all admins — it lives on System Alerts. */}
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
@@ -545,12 +566,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
 
                     {/* ═══ MAIN CONTENT ═══ */}
-                    <main className="flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white">
+                    <main className={cn(
+                        "flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
+                        isSuperAdminUser && "pb-24 lg:pb-8"
+                    )}>
                         {isNavigating && <PageLoader />}
                         <ReadOnlyController />
                         {children}
                     </main>
                 </div>
+
+                {/* App-style bottom tab bar — super admin, mobile only */}
+                {isSuperAdminUser && <SuperAdminBottomNav pathname={pathname} />}
             </div>
         </AuthGuard>
 

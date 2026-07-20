@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-    Package, Clock, CheckCircle, Truck, Wallet, Star, Loader2, ChevronRight,
+    Package, Clock, CheckCircle, Truck, Star, Loader2, ChevronRight, Bell,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
-import { formatCurrency } from '@/lib/utils';
 import {
-    computeEarnings, ratingFor, isActive, isDelivered, orderDate,
+    ratingFor, isActive, isDelivered, orderDate,
 } from '@/lib/deliveryStats';
 
 const StarMini = ({ rating }: { rating: number }) => {
@@ -45,81 +44,69 @@ export default function DeliveryDashboardOverview() {
     }).length;
     const pending = results.filter((o) => isActive(o.status)).length;
     const completed = Number(stats.delivered || results.filter((o) => isDelivered(o.status)).length);
-    const earnings = computeEarnings(results, now);
     const rating = ratingFor(completed);
+    const riderName = (data.rider?.name || 'Rider').trim();
 
     const CARDS = [
-        { label: "Today's Deliveries", value: todaysDeliveries, icon: Package, color: 'text-[#111]', tint: 'bg-[#F0F2F2] text-gray-500' },
-        { label: 'Pending Orders', value: pending, icon: Clock, color: 'text-amber-600', tint: 'bg-amber-50 text-amber-600' },
-        { label: 'Completed Orders', value: completed, icon: CheckCircle, color: 'text-[#007600]', tint: 'bg-emerald-50 text-[#007600]' },
+        { label: "Today", value: todaysDeliveries, icon: Package, color: 'text-[#111]', tint: 'bg-[#F0F2F2] text-gray-500', bar: '#64748b' },
+        { label: 'Pending', value: pending, icon: Clock, color: 'text-amber-600', tint: 'bg-amber-50 text-amber-600', bar: '#F59E0B' },
+        { label: 'Completed', value: completed, icon: CheckCircle, color: 'text-[#007600]', tint: 'bg-emerald-50 text-[#007600]', bar: '#10b981' },
     ];
 
     if (loading) return <div className="py-24 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="border-b border-gray-200 pb-4">
-                <h1 className="text-3xl font-normal text-[#111]">Dashboard</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                    {data.rider?.name ? `Welcome back, ${data.rider.name}.` : 'Your delivery overview at a glance.'}
-                </p>
+        <div className="space-y-5 animate-in fade-in duration-500">
+            {/* Greeting */}
+            <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
+                <span className="w-11 h-11 rounded-xl bg-[#232F3E] text-white flex items-center justify-center text-[17px] font-bold shrink-0">
+                    {riderName.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                    <h1 className="text-[19px] sm:text-[21px] font-bold text-[#111] leading-tight truncate">Hello, {riderName}</h1>
+                    <p className="text-[12.5px] text-gray-500">Here's your delivery overview.</p>
+                </div>
             </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Stat cards — 3 across with colored accents */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                 {CARDS.map((c, i) => (
-                    <div key={i} className="bg-white border border-[#D5D9D9] rounded-lg p-5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{c.label}</p>
-                            <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${c.tint}`}><c.icon size={17} /></span>
-                        </div>
-                        <p className={`text-[30px] font-bold tabular-nums mt-2 ${c.color}`}>{c.value}</p>
+                    <div key={i} className="relative bg-white border border-[#E3E6E6] rounded-2xl p-3 sm:p-5 shadow-sm overflow-hidden">
+                        <span className="absolute top-0 inset-x-0 h-1" style={{ backgroundColor: c.bar }} />
+                        <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center ${c.tint}`}><c.icon size={16} /></span>
+                        <p className={`text-[26px] sm:text-[32px] font-black tabular-nums mt-2.5 leading-none ${c.color}`}>{c.value}</p>
+                        <p className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-1.5 leading-tight">{c.label}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Earnings + Rating summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-white border border-[#D5D9D9] rounded-lg p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <span className="w-9 h-9 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center"><Wallet size={17} /></span>
-                            <h3 className="text-[14px] font-bold text-[#111]">Earnings Summary</h3>
-                        </div>
-                        <Link href="/delivery/earnings" className="text-[12px] font-bold text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-0.5">Details <ChevronRight size={13} /></Link>
+            {/* Rating (full width) */}
+            <div className="bg-white border border-[#E3E6E6] rounded-2xl p-4 sm:p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-3.5">
+                    <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-amber-50 text-[#F59E0B] flex items-center justify-center"><Star size={16} /></span>
+                        <h3 className="text-[13.5px] font-bold text-[#111]">Your Rating</h3>
                     </div>
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                        {[['Today', earnings.today], ['This Week', earnings.week], ['This Month', earnings.month]].map(([l, v]) => (
-                            <div key={l as string} className="bg-[#F7FAFA] rounded-lg p-3 border border-gray-100">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{l}</p>
-                                <p className="text-[16px] font-bold text-[#111] tabular-nums mt-1">{formatCurrency(v as number)}</p>
-                            </div>
-                        ))}
-                    </div>
+                    <Link href="/delivery/rating" className="text-[12px] font-bold text-[#007185] active:text-[#C45500] hover:underline flex items-center gap-0.5">Details <ChevronRight size={13} /></Link>
                 </div>
-
-                <div className="bg-white border border-[#D5D9D9] rounded-lg p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <span className="w-9 h-9 rounded-lg bg-amber-50 text-[#F59E0B] flex items-center justify-center"><Star size={17} /></span>
-                            <h3 className="text-[14px] font-bold text-[#111]">Rating Overview</h3>
-                        </div>
-                        <Link href="/delivery/rating" className="text-[12px] font-bold text-[#007185] hover:text-[#C45500] hover:underline flex items-center gap-0.5">Details <ChevronRight size={13} /></Link>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <StarMini rating={rating} />
-                        <div>
-                            <p className="text-[22px] font-bold text-[#111] tabular-nums leading-none">{rating.toFixed(2)} <span className="text-[14px] font-semibold text-gray-400">/ 5.0</span></p>
-                            <p className="text-[12px] text-gray-500 mt-1">{completed} completed {completed === 1 ? 'delivery' : 'deliveries'}</p>
-                        </div>
+                <div className="flex items-center gap-4">
+                    <StarMini rating={rating} />
+                    <div>
+                        <p className="text-[22px] font-black text-[#111] tabular-nums leading-none">{rating.toFixed(2)} <span className="text-[13px] font-semibold text-gray-400">/ 5.0</span></p>
+                        <p className="text-[11.5px] text-gray-500 mt-1">{completed} completed {completed === 1 ? 'delivery' : 'deliveries'}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Quick action */}
-            <Link href="/delivery/deliveries" className="inline-flex items-center gap-2 h-10 px-5 rounded-md bg-[#232F3E] text-white text-[13px] font-bold hover:bg-[#1a2532] transition-all">
-                <Truck size={15} /> Go to My Deliveries
-            </Link>
+            {/* Quick actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Link href="/delivery/deliveries" className="flex items-center justify-center gap-2 h-12 rounded-xl bg-[#232F3E] text-white text-[14px] font-bold hover:bg-[#1a2532] active:scale-[0.99] transition-all">
+                    <Truck size={16} /> Active Orders
+                </Link>
+                <Link href="/delivery/notifications" className="flex items-center justify-center gap-2 h-12 rounded-xl border border-[#D5D9D9] bg-white text-[#111] text-[14px] font-bold hover:bg-gray-50 active:scale-[0.99] transition-all">
+                    <Bell size={16} /> Notifications
+                </Link>
+            </div>
         </div>
     );
 }

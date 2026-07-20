@@ -13,24 +13,50 @@ class PaymentSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True, default='')
     user_name = serializers.SerializerMethodField()
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True, default='')
+    # Real sale-order PK behind this ledger row (for the "View → sale page"
+    # drill-down): sale/delivery lines key by order.id; installment lines key by
+    # "tp:<id>", so those are resolved back through the TransactionPayment.
+    order_ref_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Payment
         fields = [
             'id', 'amount', 'payment_type', 'method', 'category', 'category_name',
             'reference_number', 'payer_payee', 'description', 'date',
-            'user', 'user_name', 'source', 'is_auto', 'created_at',
+            'user', 'user_name', 'source', 'source_type', 'source_id', 'order_ref_id',
+            'is_auto', 'created_at',
             'warehouse', 'warehouse_name', 'tenant',
         ]
         # Branch + tenant are set server-side (perform_create / ledger services)
         # and only ever read here, so out-of-branch/out-of-tenant entries can't be
-        # forged via the API.
-        read_only_fields = ['user', 'source', 'is_auto', 'created_at', 'warehouse', 'tenant']
+        # forged via the API. source_type/source_id are the read-only link back to
+        # the originating transaction (order / purchase / return) for drill-down.
+        read_only_fields = ['user', 'source', 'source_type', 'source_id', 'is_auto', 'created_at', 'warehouse', 'tenant']
 
     def get_user_name(self, obj):
         if obj.user:
             return obj.user.get_full_name() or obj.user.username
         return 'System' if obj.is_auto else 'Admin'
+
+    def get_order_ref_id(self, obj):
+        st = obj.source_type or ''
+        sid = str(obj.source_id or '')
+        if not sid:
+            return None
+        # Delivery-charge lines are keyed directly by the order pk.
+        if st == 'delivery':
+            return sid
+        if st == 'order':
+            # Installment ledger rows key by "tp:<TransactionPayment id>" — follow
+            # that back to the installment's own order id.
+            if sid.startswith('tp:'):
+                from .models import TransactionPayment
+                tp = TransactionPayment.objects.filter(pk=sid[3:]).only('source_id', 'source_type').first()
+                if tp and tp.source_type == 'order':
+                    return str(tp.source_id)
+                return None
+            return sid
+        return None
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

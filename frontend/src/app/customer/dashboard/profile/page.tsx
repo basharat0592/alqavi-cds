@@ -105,7 +105,7 @@ export default function ProfileDashboard() {
     return (
         <div className="max-w-[800px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
             <div>
-                <h1 className="text-3xl font-normal text-[#111] mb-2">Login & Security</h1>
+                <h1 className="text-2xl font-semibold text-[#111] mb-2">Login & Security</h1>
             </div>
 
             <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden">

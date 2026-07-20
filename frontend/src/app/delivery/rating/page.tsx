@@ -58,9 +58,9 @@ export default function DeliveryRatingPage() {
     ];
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="border-b border-gray-200 pb-4">
-                <h1 className="text-3xl font-normal text-[#111]">My Rating &amp; Performance</h1>
+        <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-500">
+            <div className="border-b border-gray-200 pb-3 sm:pb-4">
+                <h1 className="text-2xl font-semibold text-[#111]">My Rating &amp; Performance</h1>
                 <p className="text-sm text-gray-500 mt-1">Your rider rating grows with every completed delivery.</p>
             </div>
 

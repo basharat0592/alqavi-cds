@@ -738,7 +738,8 @@ export default function Home() {
                                                                 price={parseFloat(p.selling_price || p.price || 0)}
                                                                 category={p.category_name || 'Cosmetics'}
                                                                 stock={p.total_quantity ?? p.quantity_in_stock ?? 0}
-                                                                branch={p.warehouse_area || p.warehouse_name}
+                                                                city={p.warehouse_area}
+                                                                branch={p.warehouse_name}
                                                                 batch={p.batch || p.batch_number}
                                                                 badge={p.badge || p.status}
                                                                 weight={p.weight || p.volume_weight}

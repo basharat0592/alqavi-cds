@@ -214,6 +214,21 @@ class UserActivityLog(models.Model):
             models.Index(fields=['-timestamp']),
         ]
     
+    def save(self, *args, **kwargs):
+        # Auto-stamp the owning Admin (tenant) from the acting user so the
+        # notification feed is isolated per-Admin without every call site having
+        # to pass it. A staff/admin actor resolves to their tenant; the platform
+        # operator (super admin) and shadow/guest users resolve to None (NULL =
+        # global/system event, visible only to the super admin). Guest storefront
+        # events that DO belong to a branch pass tenant_id explicitly at creation.
+        if self.tenant_id is None and self.user_id is not None:
+            try:
+                from core.scoping import tenant_id_for
+                self.tenant_id = tenant_id_for(self.user)
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user} - {self.action} - {self.timestamp}"
 

@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.decorators import api_view, permission_classes, action, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth.hashers import make_password
@@ -187,6 +188,36 @@ def update_delivery_status(request, order_id):
     else:
         order.status = new_status
         order.save()
+    return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def upload_delivery_proof(request, order_id):
+    """Rider uploads a proof-of-delivery photo (+ GPS location) for one of their own
+    assigned orders. Shown to the admin as delivery verification."""
+    from django.utils import timezone
+    from modules.sales.models import Order
+    from modules.sales.serializers import OrderSerializer
+
+    rider = _current_rider(request)
+    if not rider:
+        return Response({'error': 'Not a delivery account'}, status=403)
+
+    order = Order.objects.filter(id=order_id, delivery_person=rider).first()
+    if not order:
+        return Response({'error': 'Order not found or not assigned to you'}, status=404)
+
+    image = request.FILES.get('image') or request.FILES.get('proof_image')
+    if not image:
+        return Response({'error': 'No image provided'}, status=400)
+
+    order.proof_image = image
+    order.proof_lat = str(request.data.get('lat') or '')[:32]
+    order.proof_lng = str(request.data.get('lng') or '')[:32]
+    order.proof_at = timezone.now()
+    order.save(update_fields=['proof_image', 'proof_lat', 'proof_lng', 'proof_at'])
     return Response(OrderSerializer(order, context={'request': request}).data)
 
 

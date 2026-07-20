@@ -73,7 +73,7 @@ const PAGE_GROUPS = [
             { name: 'Supplier Registry', href: '/admin/company/suppliers' },
             { name: 'Customer Registry', href: '/admin/company/customers' },
             { name: 'Areas', href: '/admin/company/areas' },
-            { name: 'Internal Users', href: '/admin/users' },
+            { name: 'Admins', href: '/admin/users' },
             { name: 'Staff Roles', href: '/admin/users/roles' },
             { name: 'System Alerts', href: '/admin/alerts' },
         ],

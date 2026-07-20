@@ -5,7 +5,7 @@ from modules.supplier.serializers import SupplierSerializer
 from .models import Area
 from .serializers import AreaSerializer
 from core.permissions import HasModulePermission
-from core.scoping import tenant_id_for, is_platform_operator
+from core.scoping import tenant_id_for, is_platform_operator, scope_to_tenant
 
 
 def _is_portal_login(user):
@@ -86,7 +86,9 @@ class SupplierViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if _is_portal_login(self.request.user):
             return Supplier.objects.none()
-        return Supplier.objects.all().order_by('-created_at')
+        # Per-Admin isolation: each admin sees only their own suppliers; the Super
+        # Admin sees all (scope_to_tenant is a no-op for the platform operator).
+        return scope_to_tenant(self.request.user, Supplier.objects.all(), 'tenant').order_by('-created_at')
 
     def paginate_queryset(self, queryset):
         # The supplier registry + purchase-order supplier picker load the full list
@@ -94,6 +96,11 @@ class SupplierViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get('no_pagination') == 'true':
             return None
         return super().paginate_queryset(queryset)
+
+    def perform_create(self, serializer):
+        # Stamp the creating admin as the owning tenant so it stays private to them.
+        tid = tenant_id_for(self.request.user)
+        serializer.save(**({'tenant_id': tid} if tid else {}))
 
     def create(self, request, *args, **kwargs):
         if _is_portal_login(request.user):

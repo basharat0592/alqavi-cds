@@ -8,6 +8,7 @@ from .models import Supplier
 from .serializers import SupplierSerializer
 from modules.users.models import Role
 from core.permissions import HasModulePermission
+from core.scoping import scope_to_tenant, tenant_id_for
 
 User = get_user_model()
 
@@ -29,20 +30,22 @@ class SupplierViewSet(viewsets.ModelViewSet):
         if (getattr(u, 'is_supplier', False) or getattr(u, 'is_customer', False)
                 or getattr(u, 'is_delivery', False)):
             return Supplier.objects.none()
-        return Supplier.objects.all().order_by('-created_at')
+        # Per-Admin isolation (defence-in-depth; mirrors company.SupplierViewSet).
+        return scope_to_tenant(u, Supplier.objects.all(), 'tenant').order_by('-created_at')
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         """Supplier creation logic - Hashing handled by Serializer."""
         data = request.data.copy()
-        
+
         # Set default username if missing
         if not data.get('username') and data.get('email'):
             data['username'] = data.get('email').split('@')[0]
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        tid = tenant_id_for(request.user)
+        serializer.save(**({'tenant_id': tid} if tid else {}))
         
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

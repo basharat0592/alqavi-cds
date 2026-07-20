@@ -10,6 +10,54 @@ from .serializers import (
 )
 
 
+def _storefront_event_tenants(request):
+    """Resolve which Admin (tenant) a branch-less storefront event — a newsletter
+    signup or a customer review — belongs to, from the branch/city the shopper is
+    currently browsing.
+
+    The storefront is a single shared multi-city site, so these events carry no
+    branch of their own. The client sends the active ``branch`` (warehouse id) or,
+    failing that, the active ``city`` (Area name from ``deliver_to_city``). We map
+    that to the owning Admin(s) so each branch admin only sees signups from their
+    own city/branch. A city with more than one branch resolves to every tenant
+    serving it. Returns a de-duplicated list of tenant ids (empty = unresolved →
+    the caller records a global/super-admin-only event)."""
+    from modules.inventory.models import Warehouse
+    qs = Warehouse.objects.filter(is_active=True, tenant__isnull=False)
+    branch = request.data.get('branch') or request.data.get('warehouse')
+    if branch:
+        tids = list(qs.filter(id=branch).values_list('tenant_id', flat=True))
+        if tids:
+            return list(dict.fromkeys(tids))
+    city = (request.data.get('city') or '').strip()
+    if city:
+        tids = list(qs.filter(area__name__iexact=city).values_list('tenant_id', flat=True))
+        return list(dict.fromkeys(tids))
+    return []
+
+
+def _fanout_storefront_log(request, description):
+    """Record a guest storefront activity log, one row per resolved tenant so each
+    branch admin sees only their own city/branch's signups. When the tenant can't
+    be resolved (no active branch/city sent) a single NULL-tenant row is written —
+    a global event visible only to the super admin."""
+    from modules.users.models import UserActivityLog
+    ip = request.META.get('REMOTE_ADDR')
+    ua = request.META.get('HTTP_USER_AGENT', '')
+    tenants = _storefront_event_tenants(request)
+    if not tenants:
+        UserActivityLog.objects.create(
+            user=None, action='other', description=description,
+            ip_address=ip, user_agent=ua,
+        )
+        return
+    for tid in tenants:
+        UserActivityLog.objects.create(
+            user=None, action='other', description=description,
+            ip_address=ip, user_agent=ua, tenant_id=tid,
+        )
+
+
 class ReadOnlyOrPlatformOperator(BasePermission):
     """Reads (safe methods) allowed for any authenticated user; writes restricted
     to the platform operator (super admin). The CMS/storefront is a single global
@@ -93,18 +141,14 @@ class CmsConfigViewSet(viewsets.ViewSet):
         rating = request.data.get('rating', 5)
         text = request.data.get('text', '')
         
-        # Trigger System Notification via Activity Log
+        # Trigger System Notification via Activity Log — routed to the branch
+        # admin(s) of the city/branch the shopper is browsing.
         from modules.users.models import UserActivityLog
-        UserActivityLog.objects.create(
-            user=None, # Unauthenticated Guest Action
-            action='other',
-            description=f"New Customer Review: {name} gave {rating} Stars. \"{text[:60]}...\"",
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
-        
+        desc = f"New Customer Review: {name} gave {rating} Stars. \"{text[:60]}...\""
+        _fanout_storefront_log(request, desc)
+
         return Response({
-            "status": "success", 
+            "status": "success",
             "message": "Review submitted and admin notified."
         })
 
@@ -114,18 +158,12 @@ class CmsConfigViewSet(viewsets.ViewSet):
         if not email:
             return Response({'error': 'Email is required'}, status=400)
         
-        # Trigger System Notification via Activity Log
-        from modules.users.models import UserActivityLog
-        UserActivityLog.objects.create(
-            user=None, # Unauthenticated Guest Action
-            action='other',
-            description=f"Newsletter: {email}",
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
-        
+        # Trigger System Notification via Activity Log — routed to the branch
+        # admin(s) of the city/branch the shopper is browsing.
+        _fanout_storefront_log(request, f"Newsletter: {email}")
+
         return Response({
-            "status": "success", 
+            "status": "success",
             "message": "Subscribed successfully and admin notified."
         })
 

@@ -14,6 +14,7 @@ import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/utils';
 import { salesService, settingsService } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
+import { productService } from '@/services/product.service';
 import { installmentService } from '@/services/payment.service';
 
 const STORAGE_KEY = 'alqavi_checkout_info';
@@ -49,25 +50,66 @@ export default function CheckoutPage() {
     // Active branches the Super Admin created — the customer picks which branch
     // fulfils the order. Stock, assignment and deduction all follow this branch.
     const [branches, setBranches] = useState<any[]>([]);
+    // Branches that belong to the shopper's selected city. When a city has more than
+    // one branch, the customer can pick between them (defaulting to the branch that
+    // the cart's products came from); a single-branch city stays locked.
+    const [cityBranches, setCityBranches] = useState<any[]>([]);
     useEffect(() => {
-        inventoryService.getPublicBranches().then((list) => {
+        const load = async () => {
+            const list = await inventoryService.getPublicBranches().catch(() => []);
             const arr = Array.isArray(list) ? list : [];
             setBranches(arr);
-            // Pre-select the branch matching the storefront's selected city, if any.
+
+            let city = '';
+            try { city = localStorage.getItem('deliver_to_city') || ''; } catch { }
+            const inCity = city
+                ? arr.filter((b: any) => (b.area || '').toLowerCase() === city.toLowerCase())
+                : [];
+            setCityBranches(inCity);
+
+            // Resolve the branch the cart's products actually belong to, so we can
+            // default the dropdown to it (each storefront product row is one branch's).
+            let cartBranchId = '';
             try {
-                const city = localStorage.getItem('deliver_to_city') || '';
-                if (city) {
-                    const match = arr.find((b: any) => (b.area || '').toLowerCase() === city.toLowerCase());
-                    if (match) setShippingInfo(prev => prev.branchId ? prev : { ...prev, branchId: String(match.id), city: match.area || prev.city });
+                const raw = localStorage.getItem('qavi_cart');
+                const cartItems: any[] = raw ? JSON.parse(raw) : [];
+                if (cartItems.length) {
+                    const resp = await productService.getAll({ no_pagination: 'true' });
+                    const prods: any[] = Array.isArray(resp) ? resp : (resp?.results || []);
+                    const map: Record<string, string> = {};
+                    prods.forEach((p: any) => { if (p?.id != null && p?.warehouse != null) map[String(p.id)] = String(p.warehouse); });
+                    for (const it of cartItems) {
+                        const w = map[String(it.id)];
+                        if (w) { cartBranchId = w; break; }
+                    }
                 }
             } catch { }
-        }).catch(() => setBranches([]));
+
+            if (inCity.length === 1) {
+                // Single branch in the city → fixed / locked.
+                setShippingInfo(prev => ({ ...prev, branchId: String(inCity[0].id), city: inCity[0].area || prev.city }));
+                setCityLocked(true);
+            } else if (inCity.length > 1) {
+                // Multiple branches → selectable dropdown, default to the cart's branch.
+                const def = inCity.some((b: any) => String(b.id) === cartBranchId) ? cartBranchId : String(inCity[0].id);
+                const chosen = inCity.find((b: any) => String(b.id) === def);
+                setShippingInfo(prev => ({ ...prev, branchId: def, city: chosen?.area || city || prev.city }));
+                setCityLocked(false);
+            } else if (cartBranchId) {
+                // No city match but we know the cart's branch — default to it (unlocked).
+                setShippingInfo(prev => ({ ...prev, branchId: cartBranchId }));
+                setCityLocked(false);
+            }
+        };
+        load();
     }, []);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showReview, setShowReview] = useState(false);
     const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+    // When a city is chosen in the storefront navbar, the branch is fixed to it here.
+    const [cityLocked, setCityLocked] = useState(false);
 
     // Payment Specific State
     const [selectedEasypaisaNum, setSelectedEasypaisaNum] = useState('');
@@ -113,6 +155,10 @@ export default function CheckoutPage() {
 
     const shipping = cartTotal > 5000 ? 0 : 350;
     const total = cartTotal + shipping;
+
+    // In a known city, the dropdown offers only that city's branches; otherwise every branch.
+    const inCityMode = cityBranches.length > 0;
+    const dropdownBranches = inCityMode ? cityBranches : branches;
 
     const handleCopy = () => {
         if (placedOrderNumber) {
@@ -293,7 +339,15 @@ export default function CheckoutPage() {
                                         />
                                     </AmazonField>
                                 </div>
-                                <AmazonField label="Select Branch" id="branch" required>
+                                <AmazonField label={(cityLocked || inCityMode) ? 'Delivery Branch (from your city)' : 'Select Branch'} id="branch" required>
+                                    {cityLocked ? (
+                                        <div className="w-full h-[46px] px-4 flex items-center justify-between rounded-[8px] border border-[#D5D9D9] bg-slate-50 text-[14px] font-semibold text-slate-700 select-none cursor-not-allowed">
+                                            <span className="truncate">
+                                                {(() => { const b = branches.find((x: any) => String(x.id) === shippingInfo.branchId); return b ? (b.name + (b.area ? ` - ${b.area}` : '')) : (shippingInfo.city || 'Selected branch'); })()}
+                                            </span>
+                                            <Lock size={15} className="text-slate-400 shrink-0" />
+                                        </div>
+                                    ) : (
                                     <div className="relative">
                                         <button
                                             type="button"
@@ -303,7 +357,7 @@ export default function CheckoutPage() {
                                         >
                                             <span className="truncate">
                                                 {shippingInfo.branchId ? (() => {
-                                                    const b = branches.find((x: any) => String(x.id) === shippingInfo.branchId);
+                                                    const b = dropdownBranches.find((x: any) => String(x.id) === shippingInfo.branchId);
                                                     return b ? (b.name + (b.area ? ` - ${b.area}` : '')) : 'Select Branch';
                                                 })() : 'Select Branch'}
                                             </span>
@@ -313,16 +367,18 @@ export default function CheckoutPage() {
                                             <>
                                                 <div className="fixed inset-0 z-[100]" onClick={() => setBranchDropdownOpen(false)} />
                                                 <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-[#D5D9D9] rounded-[8px] shadow-lg z-[110] divide-y divide-slate-100 text-[14px] font-medium text-[#0f1111] animate-in fade-in slide-in-from-top-1 duration-150">
-                                                    <div
-                                                        onClick={() => {
-                                                            setShippingInfo({ ...shippingInfo, branchId: '' });
-                                                            setBranchDropdownOpen(false);
-                                                        }}
-                                                        className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!shippingInfo.branchId ? 'bg-indigo-50 text-indigo-700' : ''}`}
-                                                    >
-                                                        Select Branch
-                                                    </div>
-                                                    {branches.map((b: any) => (
+                                                    {!inCityMode && (
+                                                        <div
+                                                            onClick={() => {
+                                                                setShippingInfo({ ...shippingInfo, branchId: '' });
+                                                                setBranchDropdownOpen(false);
+                                                            }}
+                                                            className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!shippingInfo.branchId ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                                        >
+                                                            Select Branch
+                                                        </div>
+                                                    )}
+                                                    {dropdownBranches.map((b: any) => (
                                                         <div
                                                             key={b.id}
                                                             onClick={() => {
@@ -338,6 +394,7 @@ export default function CheckoutPage() {
                                             </>
                                         )}
                                     </div>
+                                    )}
                                 </AmazonField>
                             </div>
                         </div>

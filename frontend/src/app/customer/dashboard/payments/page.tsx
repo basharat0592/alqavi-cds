@@ -260,7 +260,7 @@ export default function CustomerPaymentsPage() {
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 pb-4">
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">Your Payments</h1>
+                    <h1 className="text-2xl font-semibold text-[#111]">Your Payments</h1>
                 </div>
             </div>
 
@@ -375,87 +375,62 @@ export default function CustomerPaymentsPage() {
 
             {activeTab === 'bills' ? (
                 /* Billing Invoices List */
-                <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-x-auto shadow-sm">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#F0F2F2] border-b border-[#D5D9D9] text-[10.5px] font-bold text-gray-600 uppercase tracking-wider">
-                                <th className="px-4 py-3">Date</th>
-                                <th className="px-4 py-3">Order #</th>
-                                <th className="px-4 py-3">Total Amount</th>
-                                <th className="px-4 py-3">Amount Paid</th>
-                                <th className="px-4 py-3">Balance</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#D5D9D9]">
-                            {filteredOrders.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="py-8 text-center text-gray-500 text-xs">
-                                        No billing records found matching your filters.
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedOrders.map((order: any) => {
-                                    const total = Number(order.total_amount || 0);
-                                    const paid = Number(order.amount_paid || 0);
-                                    const remaining = Number(order.remaining_amount ?? (total - paid));
-                                    const isPaid = remaining <= 0;
-                                    const isPartial = paid > 0 && remaining > 0;
+                <div className="space-y-3">
+                    {filteredOrders.length === 0 ? (
+                        <div className="bg-white border border-[#D5D9D9] rounded-xl p-8 text-center text-gray-500 text-[13px]">
+                            No billing records found matching your filters.
+                        </div>
+                    ) : (
+                        paginatedOrders.map((order: any) => {
+                            const total = Number(order.total_amount || 0);
+                            const paid = Number(order.amount_paid || 0);
+                            const remaining = Number(order.remaining_amount ?? (total - paid));
+                            const isPaid = remaining <= 0;
+                            const isPartial = paid > 0 && remaining > 0;
+                            return (
+                                <div key={order.id} className="bg-white border border-[#D5D9D9] rounded-xl shadow-sm p-4">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <h3 className="text-[14px] font-bold text-[#111] truncate">Order #{order.tracking_id}</h3>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">{formatDate(order.created_at)}</p>
+                                        </div>
+                                        <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider shrink-0
+                                            ${isPaid ? 'bg-[#007600] text-white' : isPartial ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                            {isPaid ? 'Fully Paid' : isPartial ? 'Partially Paid' : 'Unpaid'}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
+                                        <div>
+                                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-wide">Total</p>
+                                            <p className="text-[13px] font-bold text-[#111] tabular-nums">Rs. {total.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-wide">Paid</p>
+                                            <p className="text-[13px] font-semibold text-emerald-600 tabular-nums">Rs. {paid.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-wide">Balance</p>
+                                            <p className="text-[13px] font-bold text-rose-600 tabular-nums">Rs. {remaining.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-4">
+                                        {!isPaid && (
+                                            <button onClick={() => openPayModal(order)} className="inline-flex items-center justify-center h-9 px-4 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] text-[12px] font-bold text-[#111] rounded-lg shadow-sm transition-all">
+                                                Pay Now
+                                            </button>
+                                        )}
+                                        <Link href={`/customer/dashboard/orders`} className="inline-flex items-center justify-center h-9 px-4 border border-[#D5D9D9] bg-white text-[12px] font-bold text-[#007185] rounded-lg hover:bg-gray-50 transition-colors">
+                                            View Order
+                                        </Link>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
 
-                                    return (
-                                        <tr key={order.id} className="hover:bg-gray-50 transition-colors text-[13px]">
-                                            <td className="px-4 py-3 text-gray-900 font-medium whitespace-nowrap">
-                                                {formatDate(order.created_at)}
-                                            </td>
-                                            <td className="px-4 py-3 font-bold text-[#111]">
-                                                {order.tracking_id}
-                                            </td>
-                                            <td className="px-4 py-3 font-bold text-[#111]">
-                                                Rs. {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-4 py-3 text-emerald-600 font-semibold">
-                                                Rs. {paid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-4 py-3 text-rose-600 font-bold">
-                                                Rs. {remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider
-                                                    ${isPaid 
-                                                        ? 'bg-[#007600] text-white' 
-                                                        : isPartial 
-                                                        ? 'bg-amber-50 text-amber-700 border border-amber-200' 
-                                                        : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                                                    {isPaid ? 'Fully Paid' : isPartial ? 'Partially Paid' : 'Unpaid'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-right space-x-2.5 whitespace-nowrap">
-                                                {!isPaid && (
-                                                    <button 
-                                                        onClick={() => openPayModal(order)}
-                                                        className="px-2.5 py-0.5 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] text-[11px] font-bold text-[#111] rounded shadow-sm transition-all"
-                                                    >
-                                                        Pay Now
-                                                    </button>
-                                                )}
-                                                <Link 
-                                                    href={`/customer/dashboard/orders`}
-                                                    className="text-[11px] font-bold text-[#007185] hover:text-[#C45500] hover:underline align-middle"
-                                                >
-                                                    View Order
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-
-                    {/* Pagination Footer Controls for Orders */}
+                    {/* Pagination */}
                     {totalPagesOrders > 1 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-200 text-[12px] text-slate-500 font-medium text-left">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white border border-[#D5D9D9] rounded-xl text-[12px] text-slate-500 font-medium text-left">
                             <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                                 Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
                                 <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filteredOrders.length)}</span> of{' '}
@@ -485,65 +460,43 @@ export default function CustomerPaymentsPage() {
                 </div>
             ) : (
                 /* Payment History Ledger */
-                <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-x-auto shadow-sm">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#F0F2F2] border-b border-[#D5D9D9] text-[10.5px] font-bold text-gray-600 uppercase tracking-wider">
-                                <th className="px-4 py-3">Date</th>
-                                <th className="px-4 py-3">Order #</th>
-                                <th className="px-4 py-3">Reference</th>
-                                <th className="px-4 py-3">Method</th>
-                                <th className="px-4 py-3 text-center">Status</th>
-                                <th className="px-4 py-3 text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#D5D9D9]">
-                            {filteredPayments.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="py-8 text-center text-gray-500 text-xs">
-                                        No payments found matching your filters.
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedPayments.map((p: any) => (
-                                    <tr key={p.id} className="hover:bg-gray-50 transition-colors text-[13px]">
-                                        <td className="px-4 py-3 text-gray-900 font-medium whitespace-nowrap">
-                                            {formatDateTime(p.paid_at || p.created_at)}
-                                        </td>
-                                        <td className="px-4 py-3 font-bold text-[#111]">
-                                            {p.order_number || p.tracking_id}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
-                                            {p.reference || 'Checkout Settle'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="inline-block px-1.5 py-0.5 bg-gray-100 border border-gray-200/50 text-[9.5px] font-bold uppercase text-gray-600 rounded">
-                                                {p.method || 'Cash'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase rounded ${
-                                                p.status === 'confirmed'
-                                                    ? 'bg-emerald-50 text-[#007600] border border-emerald-200'
-                                                    : p.status === 'rejected'
-                                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                            }`}>
-                                                {p.status === 'confirmed' ? 'Confirmed' : p.status === 'rejected' ? 'Rejected' : 'Waiting for Admin Response'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-bold text-[#B12704] tabular-nums">
-                                            Rs. {parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                <div className="space-y-3">
+                    {filteredPayments.length === 0 ? (
+                        <div className="bg-white border border-[#D5D9D9] rounded-xl p-8 text-center text-gray-500 text-[13px]">
+                            No payments found matching your filters.
+                        </div>
+                    ) : (
+                        paginatedPayments.map((p: any) => (
+                            <div key={p.id} className="bg-white border border-[#D5D9D9] rounded-xl shadow-sm p-4">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <h3 className="text-[14px] font-bold text-[#111] truncate">Order #{p.order_number || p.tracking_id}</h3>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">{formatDateTime(p.paid_at || p.created_at)}</p>
+                                    </div>
+                                    <p className="text-[14px] font-bold text-[#B12704] tabular-nums shrink-0">Rs. {parseFloat(p.amount).toLocaleString()}</p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                                    <span className="inline-block px-1.5 py-0.5 bg-gray-100 border border-gray-200/50 text-[9.5px] font-bold uppercase text-gray-600 rounded">
+                                        {p.method || 'Cash'}
+                                    </span>
+                                    <span className={`inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase rounded ${
+                                        p.status === 'confirmed'
+                                            ? 'bg-emerald-50 text-[#007600] border border-emerald-200'
+                                            : p.status === 'rejected'
+                                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    }`}>
+                                        {p.status === 'confirmed' ? 'Confirmed' : p.status === 'rejected' ? 'Rejected' : 'Waiting for Admin'}
+                                    </span>
+                                    <span className="text-[11px] text-gray-400 truncate">Ref: {p.reference || 'Checkout Settle'}</span>
+                                </div>
+                            </div>
+                        ))
+                    )}
 
-                    {/* Pagination Footer Controls for Payments */}
+                    {/* Pagination */}
                     {totalPagesPayments > 1 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-200 text-[12px] text-slate-500 font-medium text-left">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white border border-[#D5D9D9] rounded-xl text-[12px] text-slate-500 font-medium text-left">
                             <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                                 Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
                                 <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filteredPayments.length)}</span> of{' '}

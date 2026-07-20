@@ -42,7 +42,7 @@ export default function WishlistDashboard() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">Your Wishlist</h1>
+                    <h1 className="text-2xl font-semibold text-[#111]">Your Wishlist</h1>
                     <p className="text-sm text-gray-600 mt-1">Manage your saved items for future purchases.</p>
                 </div>
                 <Link href="/customer/dashboard" className="text-sm text-[#007185] hover:text-[#C45500] hover:underline">

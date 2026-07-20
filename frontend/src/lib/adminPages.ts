@@ -31,6 +31,14 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
     '/admin/inventory/list',    // Current Stocks
     '/admin/users/roles',       // Staff Roles
     '/admin/invoices',          // Invoices
+    // Finance is a branch-admin concern — hidden from the Super Admin side.
+    '/admin/payments',          // Global Payments
+    '/admin/income',            // Income
+    '/admin/expense',           // Expense
+    '/admin/reports',           // Reports Center
+    '/admin/company/customers', // Customer Registry
+    '/admin/company/suppliers', // Supplier Registry
+    '/admin/alerts',            // System Alerts
 ];
 
 /**
@@ -39,10 +47,12 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
  * what they're not allowed to see).
  */
 export const SUPER_ONLY_HREFS: string[] = [
-    '/admin/branches',                // Branches & Admins
-    '/admin/users',                   // Internal Users
+    '/admin/branches',                // Branches
+    '/admin/users',                   // Admins
     '/admin/website-settings',        // Website CMS
     '/admin/company/areas',           // Areas / Territories
+    '/admin/income',                  // Income — branch admins use the unified Global Payments page
+    '/admin/expense',                 // Expense — branch admins use the unified Global Payments page
 ];
 
 /**
@@ -105,8 +115,8 @@ export const ADMIN_PAGE_GROUPS: { group: string; items: { n: string; h: string }
     {
         group: 'Administration',
         items: [
-            { n: 'Branches & Admins', h: '/admin/branches' },
-            { n: 'Internal Users', h: '/admin/users' },
+            { n: 'Branches', h: '/admin/branches' },
+            { n: 'Admins', h: '/admin/users' },
             { n: 'Staff Roles', h: '/admin/users/roles' },
         ],
     },
@@ -133,7 +143,7 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Product List', href: '/admin/products', keywords: ['items', 'catalog', 'skus', 'edit', 'products'] },
     { name: 'Add Listing', href: '/admin/products/add', keywords: ['create', 'new item', 'upload', 'add product', 'add listing'] },
     { name: 'Current Stocks', href: '/admin/inventory/list', keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory'] },
-    { name: 'Branches & Admins', href: '/admin/branches', keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch', 'who manages'] },
+    { name: 'Branches', href: '/admin/branches', keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch', 'who manages'] },
     { name: 'Order Tracking', href: '/admin/tracking', keywords: ['delivery', 'courier', 'dispatch', 'tracking'] },
     { name: 'Supplier Registry', href: '/admin/company/suppliers', keywords: ['vendors', 'manufacturers', 'contacts', 'supplier'] },
     { name: 'Customer Registry', href: '/admin/company/customers', keywords: ['clients', 'profiles', 'ledger', 'customer'] },
@@ -147,7 +157,7 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Sale Returns', href: '/admin/sale-returns', keywords: ['returns', 'refunds', 'customer returns'] },
     { name: 'Purchase History', href: '/admin/purchases', keywords: ['expenses', 'vendor orders', 'invoices'] },
     { name: 'Purchase Returns', href: '/admin/purchases/returns', keywords: ['refunds', 'damaged', 'shipback'] },
-    { name: 'Internal Users', href: '/admin/users', keywords: ['staff', 'logins', 'accounts'] },
+    { name: 'Admins', href: '/admin/users', keywords: ['staff', 'logins', 'accounts'] },
     { name: 'Staff Roles', href: '/admin/users/roles', keywords: ['groups', 'privileges', 'ranks'] },
     { name: 'Global Payments', href: '/admin/payments', keywords: ['payment methods', 'stripe', 'paypal', 'banks'] },
 ];

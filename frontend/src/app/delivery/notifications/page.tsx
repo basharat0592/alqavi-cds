@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Truck, CheckCircle, XCircle, Package, Loader2, Eye, X, MapPin, Phone, User, Wallet, ShoppingCart } from 'lucide-react';
+import { Bell, Truck, CheckCircle, Package, Loader2, Eye, X, MapPin, Phone, User, Wallet, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
 import { formatDateTime, formatCurrency } from '@/lib/utils';
@@ -25,15 +25,13 @@ export default function DeliveryNotificationsPage() {
                 setRiderIsSystem(!!d?.rider?.is_system);
                 const assigned: any[] = d?.results || [];
                 const assignedIds = new Set(assigned.map((o: any) => String(o.id)));
-                const items: Notif[] = assigned.map((o) => {
+                // Only active work belongs in notifications — delivered/cancelled
+                // orders live in Delivery History, not here.
+                const items: Notif[] = assigned
+                    .filter((o) => !isDelivered(o.status) && !isCancelled(o.status))
+                    .map((o) => {
                     const ref = o.order_number || o.tracking_id;
                     const cust = o.customer_display_name || o.customer_name || 'a customer';
-                    if (isDelivered(o.status)) {
-                        return { id: `${o.id}-d`, icon: CheckCircle, tint: 'bg-emerald-50 text-[#007600]', title: `Order #${ref} delivered`, body: `You completed the delivery to ${cust}.`, at: orderDate(o), order: o };
-                    }
-                    if (isCancelled(o.status)) {
-                        return { id: `${o.id}-c`, icon: XCircle, tint: 'bg-red-50 text-red-600', title: `Order #${ref} cancelled`, body: `This delivery to ${cust} was cancelled.`, at: orderDate(o), order: o };
-                    }
                     if (upper(o.status) === 'SHIPPED') {
                         return { id: `${o.id}-s`, icon: Truck, tint: 'bg-sky-50 text-sky-600', title: `Out for delivery: #${ref}`, body: `${cust} — ${o.shipping_address || 'address on file'}.`, at: orderDate(o), order: o };
                     }
@@ -85,9 +83,9 @@ export default function DeliveryNotificationsPage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="border-b border-gray-200 pb-4">
-                <h1 className="text-3xl font-normal text-[#111]">Notifications</h1>
+        <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-500">
+            <div className="border-b border-gray-200 pb-3 sm:pb-4">
+                <h1 className="text-2xl font-semibold text-[#111]">Notifications</h1>
                 <p className="text-sm text-gray-500 mt-1">
                     Delivery alerts and active orders{branch ? <> for <span className="font-semibold text-[#111]">{branch}</span> branch</> : ''}.
                 </p>
@@ -102,35 +100,37 @@ export default function DeliveryNotificationsPage() {
                     <p className="text-sm text-gray-600 mt-2">New delivery alerts will show up here.</p>
                 </div>
             ) : (
-                <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm divide-y divide-gray-100">
+                <div className="bg-white sm:border sm:border-[#D5D9D9] rounded-lg sm:shadow-sm divide-y divide-gray-100">
                     {notifs.map((n) => (
-                        <div key={n.id} className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
-                            <span className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${n.tint}`}><n.icon size={18} /></span>
+                        <div key={n.id} className="flex items-start gap-3 px-1 sm:px-5 py-3.5 hover:bg-gray-50/60 transition-colors">
+                            <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${n.tint}`}><n.icon size={17} /></span>
                             <div className="min-w-0 flex-1">
-                                <p className="text-[14px] font-bold text-[#111]">{n.title}</p>
-                                <p className="text-[12.5px] text-gray-500 mt-0.5">{n.body}</p>
-                                <div className="flex items-center gap-2 mt-2">
-                                    {n.order && (
-                                        <button
-                                            onClick={() => setViewOrder(n.order)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#D5D9D9] bg-white hover:bg-gray-50 text-[#111] text-[12px] font-bold rounded-lg transition-colors"
-                                        >
-                                            <Eye size={13} /> View
-                                        </button>
-                                    )}
-                                    {n.acceptId && (
-                                        <button
-                                            onClick={() => handleAccept(n.acceptId!)}
-                                            disabled={accepting === n.acceptId}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#131921] hover:bg-black text-white text-[12px] font-bold rounded-lg transition-colors disabled:opacity-50"
-                                        >
-                                            {accepting === n.acceptId ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
-                                            Accept this order
-                                        </button>
-                                    )}
+                                <p className="text-[13px] font-bold text-[#111] leading-snug">{n.title}</p>
+                                <p className="text-[12px] text-gray-500 mt-0.5 leading-snug">{n.body}</p>
+                                <div className="flex items-center justify-between gap-2 mt-2.5">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {n.order && (
+                                            <button
+                                                onClick={() => setViewOrder(n.order)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#D5D9D9] bg-white hover:bg-gray-50 text-[#111] text-[11.5px] font-bold rounded-lg transition-colors"
+                                            >
+                                                <Eye size={13} /> View
+                                            </button>
+                                        )}
+                                        {n.acceptId && (
+                                            <button
+                                                onClick={() => handleAccept(n.acceptId!)}
+                                                disabled={accepting === n.acceptId}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#131921] hover:bg-black text-white text-[11.5px] font-bold rounded-lg transition-colors disabled:opacity-50"
+                                            >
+                                                {accepting === n.acceptId ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                                                Accept
+                                            </button>
+                                        )}
+                                    </div>
+                                    <span className="text-[10px] text-gray-400 whitespace-nowrap shrink-0">{n.at ? formatDateTime(n.at.toISOString()) : ''}</span>
                                 </div>
                             </div>
-                            <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{n.at ? formatDateTime(n.at.toISOString()) : ''}</span>
                         </div>
                     ))}
                 </div>

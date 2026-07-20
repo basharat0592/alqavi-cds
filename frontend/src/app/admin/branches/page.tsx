@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
     Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail, Phone
 } from 'lucide-react';
@@ -30,6 +29,11 @@ export default function BranchesPage() {
     const [nb, setNb] = useState({ name: '', area: '', newCity: '', address: '' });
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deletingBranch, setDeletingBranch] = useState(false);
+
+    // "Create admin here" — a two-option menu per branch (pick an existing internal
+    // user, or create a brand-new admin) plus the pick-existing modal.
+    const [selectFor, setSelectFor] = useState<any | null>(null);
+    const [assigningId, setAssigningId] = useState<any>(null);
 
     const load = async () => {
         setLoading(true);
@@ -105,6 +109,23 @@ export default function BranchesPage() {
         }
     };
 
+    // Assign an existing internal user to this branch (adds the branch to their
+    // warehouse list — a user can manage more than one branch).
+    const assignExisting = async (u: any, wh: any) => {
+        setAssigningId(u.id);
+        try {
+            const ids = (u.warehouses || []).map((w: any) => w.id);
+            await userService.update(u.id, { warehouses: [...ids, wh.id] } as any);
+            toast.success(`${name(u)} assigned to ${wh.name}`);
+            setSelectFor(null);
+            load();
+        } catch {
+            toast.error('Failed to assign admin');
+        } finally {
+            setAssigningId(null);
+        }
+    };
+
     // Delete a branch (warehouse). Cascades to its stock/products; unassigns admins.
     const doDelete = async () => {
         if (!deleteTarget) return;
@@ -166,7 +187,7 @@ export default function BranchesPage() {
         <div className="pb-16 text-left text-slate-800">
             <div className="max-w-[1200px] mx-auto">
                 <PageHeader
-                    title="Branches & Admins"
+                    title="Branches"
                     subtitle="Which admin manages which city / branch"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Branches' }]}
                     actions={
@@ -295,10 +316,26 @@ export default function BranchesPage() {
                                                             ))}
                                                         </div>
                                                     )}
-                                                    <Link href={`/admin/users/add?warehouse=${wh.id}`}
-                                                        className="flex items-center justify-center gap-1.5 mt-1 text-[11.5px] font-bold text-indigo-600 hover:bg-indigo-50 border border-dashed border-indigo-200 rounded-lg py-2 transition-colors">
-                                                        <Plus size={13} /> {admins.length === 0 ? 'Assign an admin' : 'Assign another admin'}
-                                                    </Link>
+
+                                                    {/* Assign options — only while the branch has no admin yet. */}
+                                                    {admins.length === 0 && (
+                                                        <div className="space-y-2 mt-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelectFor(wh)}
+                                                                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg py-2 transition-colors"
+                                                            >
+                                                                <Users size={13} className="text-slate-400" /> Select existing admin
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => router.push(`/admin/users/add?warehouse=${wh.id}`)}
+                                                                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-indigo-600 hover:bg-indigo-50 border border-dashed border-indigo-200 rounded-lg py-2 transition-colors"
+                                                            >
+                                                                <Plus size={13} /> Create new admin
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </Card>
                                         );
@@ -400,6 +437,63 @@ export default function BranchesPage() {
                         <p>This permanently removes the branch and any inventory (products &amp; stock) in it, and unassigns its admin. This cannot be undone.</p>
                     </div>
                 </div>
+            </Modal>
+
+            {/* Select an existing internal user to manage this branch */}
+            <Modal
+                open={!!selectFor}
+                onClose={() => { if (!assigningId) setSelectFor(null); }}
+                title={`Select admin for ${selectFor?.name || 'branch'}`}
+                size="md"
+            >
+                {(() => {
+                    const eligible = users.filter(u =>
+                        !u.is_super_admin &&
+                        !(u.warehouses || []).some((w: any) => String(w.id) === String(selectFor?.id))
+                    );
+                    if (eligible.length === 0) {
+                        return (
+                            <div className="py-8 text-center">
+                                <p className="text-[13px] text-slate-500">No other internal users available to assign.</p>
+                                <Button
+                                    className="mt-4"
+                                    onClick={() => { const wh = selectFor; setSelectFor(null); router.push(`/admin/users/add?warehouse=${wh.id}`); }}
+                                >
+                                    <Plus size={14} /> Create a new admin instead
+                                </Button>
+                            </div>
+                        );
+                    }
+                    return (
+                        <div className="space-y-2 max-h-[55vh] overflow-y-auto">
+                            <p className="text-[12px] text-slate-500 mb-1">Pick an existing internal user to also manage this branch.</p>
+                            {eligible.map(u => (
+                                <button
+                                    key={u.id}
+                                    onClick={() => assignExisting(u, selectFor)}
+                                    disabled={!!assigningId}
+                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/50 hover:border-indigo-200 transition-colors text-left disabled:opacity-50"
+                                >
+                                    <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[11px] font-bold text-slate-500">
+                                        {u.avatar ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                            : name(u).split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-bold text-[13px] text-slate-900 truncate">{name(u)}</p>
+                                        <p className="text-[11px] text-slate-500 truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
+                                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                            {u.role_name && <Badge tone="blue">{u.role_name}</Badge>}
+                                            {(u.warehouses || []).length > 0 && <span className="text-[10px] text-slate-400">Also manages {(u.warehouses || []).length} branch(es)</span>}
+                                        </div>
+                                    </div>
+                                    {assigningId === u.id
+                                        ? <RefreshCw size={15} className="animate-spin text-indigo-500 shrink-0" />
+                                        : <Plus size={15} className="text-slate-300 shrink-0" />}
+                                </button>
+                            ))}
+                        </div>
+                    );
+                })()}
             </Modal>
         </div>
     );

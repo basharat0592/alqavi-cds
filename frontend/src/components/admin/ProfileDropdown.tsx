@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { X, User, Settings, LogOut, ChevronRight, Shield, ExternalLink, Users, Building2 } from 'lucide-react';
 import { getImageUrl, cn } from '@/lib/utils';
+import { authService } from '@/lib/auth';
 
 /* ═══════════════════════════════════════════════
    PURE AMAZON PROFILE DROPDOWN
@@ -17,6 +18,9 @@ export default function ProfileDropdown({
     positionClassName?: string;
 }) {
     const initials = (user.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    // Customer & Supplier registries are hidden from the Super Admin side, so their
+    // profile-dropdown shortcuts are hidden too.
+    const isSuper = authService.isSuperAdmin();
 
     return (
         <div className={cn(positionClassName, "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-white/5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[100] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden text-slate-800 dark:text-slate-100 font-sans")}>
@@ -70,14 +74,18 @@ export default function ProfileDropdown({
                 <div className="px-4 py-1">
                     <p className="text-[10px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Shortcuts</p>
                     <div className="space-y-0.5">
-                        <Link href="/admin/company/customers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <Users size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Customer</span>
-                        </Link>
-                        <Link href="/admin/company/suppliers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <Building2 size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Supplier</span>
-                        </Link>
+                        {!isSuper && (
+                            <>
+                                <Link href="/admin/company/customers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                                    <Users size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
+                                    <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Customer</span>
+                                </Link>
+                                <Link href="/admin/company/suppliers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                                    <Building2 size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
+                                    <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Supplier</span>
+                                </Link>
+                            </>
+                        )}
                         <Link href="/" target="_blank" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                             <ExternalLink size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
                             <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">View Store</span>

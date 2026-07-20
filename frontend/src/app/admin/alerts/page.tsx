@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import PageLoader from '@/components/ui/PageLoader';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
 const DUE_LINK: Record<string, string> = {
@@ -153,6 +154,18 @@ export default function AlertsPage() {
     const outOfStockCount = alerts.filter(a => a.priority === 'high').length;
     const lowStockCount = alerts.length - outOfStockCount;
 
+    // Real system status — anything out of stock or overdue is critical; low stock
+    // or a payment due soon is a warning. Only a genuinely clean board reads green.
+    const overdueCount = Number(dueSummary.overdue || 0);
+    const dueSoonCount = Number(dueSummary.due_soon || 0);
+    const criticalCount = outOfStockCount + overdueCount;
+    const warningCount = lowStockCount + dueSoonCount;
+    const status = criticalCount > 0
+        ? { tone: 'red' as const, label: `${criticalCount} Need${criticalCount === 1 ? 's' : ''} Action`, Icon: AlertTriangle }
+        : warningCount > 0
+            ? { tone: 'amber' as const, label: `${warningCount} Need${warningCount === 1 ? 's' : ''} Attention`, Icon: Clock }
+            : { tone: 'green' as const, label: 'All Systems Good', Icon: ShieldCheck };
+
     return (
         <div className="text-left">
 
@@ -162,8 +175,8 @@ export default function AlertsPage() {
                 breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'System Alerts' }]}
                 actions={
                     <div className="flex items-center gap-3">
-                        <Badge tone="green">
-                            <ShieldCheck className="h-3.5 w-3.5" /> All Systems Good
+                        <Badge tone={status.tone}>
+                            <status.Icon className="h-3.5 w-3.5" /> {status.label}
                         </Badge>
                         <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading}>
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -215,7 +228,7 @@ export default function AlertsPage() {
                                             <span className={`text-[10px] font-bold flex items-center gap-1 ${tone.text}`}>
                                                 {overdue ? <><AlertTriangle className="h-3 w-3" /> {d.days_overdue}d late</>
                                                     : soon ? <><CalendarClock className="h-3 w-3" /> Due soon</>
-                                                        : d.due_date ? <><CalendarClock className="h-3 w-3" /> {d.due_date}</> : 'No due date'}
+                                                        : d.due_date ? <><CalendarClock className="h-3 w-3" /> {formatDate(d.due_date)}</> : 'No due date'}
                                             </span>
                                         </div>
                                         <p className="text-[13px] font-bold text-slate-900 truncate">{d.party}</p>
@@ -225,7 +238,7 @@ export default function AlertsPage() {
                                                 <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Remaining</p>
                                                 <p className={`text-[15px] font-bold tabular-nums ${tone.text}`}>{money(d.remaining)}</p>
                                             </div>
-                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 group-hover:gap-1.5 transition-all">
                                                 Settle <ArrowRight className="h-3 w-3" />
                                             </span>
                                         </div>
@@ -245,8 +258,13 @@ export default function AlertsPage() {
                             </h2>
                             <p className="text-[12px] text-slate-500 mt-0.5">Products running low or out of stock</p>
                         </div>
-                        <Badge tone="red" className="self-start sm:self-auto">
-                            {outOfStockCount} Out of Stock / {lowStockCount} Low Stock
+                        <Badge
+                            tone={outOfStockCount > 0 ? 'red' : lowStockCount > 0 ? 'amber' : 'green'}
+                            className="self-start sm:self-auto"
+                        >
+                            {alerts.length === 0
+                                ? 'All stocked'
+                                : `${outOfStockCount} Out of Stock · ${lowStockCount} Low Stock`}
                         </Badge>
                     </div>
 
@@ -319,8 +337,8 @@ export default function AlertsPage() {
                                                 <Badge tone="neutral">{act.type}</Badge>
                                                 <h3 className="text-[13px] font-bold text-slate-900 tracking-tight">{act.title}</h3>
                                             </div>
-                                            <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider tabular-nums">
-                                                <Clock size={11} className="text-indigo-600" /> {act.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 tracking-wider tabular-nums whitespace-nowrap">
+                                                <Clock size={11} className="text-indigo-600" /> {formatDateTime(act.time.toISOString())}
                                             </div>
                                         </div>
                                         <p className="text-[12px] text-slate-600 font-medium leading-relaxed">{act.message}</p>

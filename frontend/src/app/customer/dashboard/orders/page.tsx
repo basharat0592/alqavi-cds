@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, Clock, Search, ChevronRight, Globe, ShoppingBag, X, Upload, AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { authService, User as AuthUser } from '@/lib/auth';
@@ -174,7 +174,7 @@ export default function CustomerOrdersPage() {
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 pb-4">
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">Your Orders</h1>
+                    <h1 className="text-2xl font-semibold text-[#111]">Your Orders</h1>
                 </div>
 
                 <div className="relative w-full md:w-72">
@@ -222,155 +222,110 @@ export default function CustomerOrdersPage() {
                     </Link>
                 </div>
             ) : (
-                <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-x-auto shadow-sm">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#F0F2F2] border-b border-[#D5D9D9] text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Order #</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Items</th>
-                                <th className="px-6 py-4">Total</th>
-                                <th className="px-6 py-4">Payment</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#D5D9D9]">
-                            {paginated.map((order) => (
-                                <Fragment key={order.id}>
-                                    <tr className="hover:bg-gray-50 transition-colors group">
-                                        <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
-                                            {formatDateTime(order.created_at)}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[#111]">
-                                            {order.tracking_id}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider
-                                                ${order.status === 'DELIVERED' 
-                                                    ? 'bg-[#007600] text-white' 
-                                                    : order.status === 'CANCELLED' 
-                                                    ? 'bg-red-50 text-red-700' 
-                                                    : order.status === 'CANCEL_REQUESTED'
-                                                    ? 'bg-amber-50 text-amber-700'
-                                                    : 'bg-[#FFD814]/20 text-[#111]'}`}>
-                                                {order.status_display || order.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 font-medium">
-                                            {order.items?.length || 0} Products
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[#B12704]">
-                                            Rs. {parseFloat(order.total_amount).toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {(() => {
-                                                const total = parseFloat(order.total_amount || '0');
-                                                const paid = parseFloat(order.amount_paid || '0');
-                                                const remaining = parseFloat(order.remaining_amount ?? String(total - paid));
-                                                const isPaid = remaining <= 0;
+                <div className="space-y-3">
+                    {paginated.map((order) => {
+                        const total = parseFloat(order.total_amount || '0');
+                        const paid = parseFloat(order.amount_paid || '0');
+                        const remaining = parseFloat(order.remaining_amount ?? String(total - paid));
+                        const isPaid = remaining <= 0;
+                        const expanded = expandedOrderId === order.id;
+                        return (
+                            <div key={order.id} className="bg-white border border-[#D5D9D9] rounded-xl shadow-sm overflow-hidden">
+                                <div className="p-4">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <h3 className="text-[14px] font-bold text-[#111] truncate">Order #{order.tracking_id}</h3>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">{formatDateTime(order.created_at)}</p>
+                                        </div>
+                                        <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider shrink-0
+                                            ${order.status === 'DELIVERED'
+                                                ? 'bg-[#007600] text-white'
+                                                : order.status === 'CANCELLED'
+                                                ? 'bg-red-50 text-red-700'
+                                                : order.status === 'CANCEL_REQUESTED'
+                                                ? 'bg-amber-50 text-amber-700'
+                                                : 'bg-[#FFD814]/30 text-[#111]'}`}>
+                                            {order.status_display || order.status}
+                                        </span>
+                                    </div>
 
-                                                if (isPaid) {
-                                                    return (
-                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#007600] text-white uppercase tracking-wider">
-                                                            Paid
-                                                        </span>
-                                                    );
-                                                } else {
-                                                    return (
-                                                        <button
-                                                            onClick={() => openPayModal(order)}
-                                                            className="px-2.5 py-1 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] text-[11px] font-bold text-[#111] rounded shadow-sm transition-all animate-pulse"
-                                                        >
-                                                            Pay Now
-                                                        </button>
-                                                    );
-                                                }
-                                            })()}
-                                        </td>
-                                        <td className="px-6 py-4 text-right space-x-3 whitespace-nowrap">
-                                            <button 
-                                                onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
-                                                className="text-xs font-bold text-[#007185] hover:text-[#C45500] hover:underline"
-                                            >
-                                                {expandedOrderId === order.id ? 'Hide' : 'Details'}
-                                            </button>
-                                            <Link 
-                                                href={`/customer/dashboard/orders/${order.id}/invoice`}
-                                                className="text-xs font-bold text-[#007185] hover:text-[#C45500] hover:underline"
-                                            >
-                                                Invoice
-                                            </Link>
-                                            {!['SHIPPED', 'DELIVERED', 'CANCELLED', 'CANCEL_REQUESTED'].includes(order.status) && (
-                                            <button
-                                                onClick={() => {
-                                                    setOrderToCancel(order);
-                                                    setIsCancelModalOpen(true);
-                                                }}
-                                                className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline"
-                                            >
+                                    <div className="flex items-center gap-5 mt-3 pt-3 border-t border-gray-100">
+                                        <div>
+                                            <p className="text-[9.5px] text-gray-400 uppercase font-bold tracking-wide">Total</p>
+                                            <p className="text-[14px] font-bold text-[#B12704] tabular-nums">Rs. {total.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9.5px] text-gray-400 uppercase font-bold tracking-wide">Items</p>
+                                            <p className="text-[13px] font-semibold text-gray-700">{order.items?.length || 0} Products</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9.5px] text-gray-400 uppercase font-bold tracking-wide">Payment</p>
+                                            {isPaid ? (
+                                                <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#007600] text-white uppercase tracking-wider">Paid</span>
+                                            ) : (
+                                                <button onClick={() => openPayModal(order)} className="mt-0.5 px-2.5 py-0.5 bg-[#FFD814] hover:bg-[#F7CA00] border border-[#FCD200] text-[11px] font-bold text-[#111] rounded shadow-sm transition-all animate-pulse">
+                                                    Pay Now
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2 mt-4">
+                                        <button onClick={() => setExpandedOrderId(expanded ? null : order.id)} className="inline-flex items-center justify-center h-9 px-3 rounded-lg border border-[#D5D9D9] bg-white text-[12px] font-bold text-[#111] hover:bg-gray-50 transition-colors">
+                                            {expanded ? 'Hide Details' : 'Details'}
+                                        </button>
+                                        <Link href={`/customer/dashboard/orders/${order.id}/invoice`} className="inline-flex items-center justify-center h-9 px-3 rounded-lg border border-[#D5D9D9] bg-white text-[12px] font-bold text-[#007185] hover:bg-gray-50 transition-colors">
+                                            Invoice
+                                        </Link>
+                                        {!['SHIPPED', 'DELIVERED', 'CANCELLED', 'CANCEL_REQUESTED'].includes(order.status) && (
+                                            <button onClick={() => { setOrderToCancel(order); setIsCancelModalOpen(true); }} className="inline-flex items-center justify-center h-9 px-3 rounded-lg border border-rose-200 bg-rose-50 text-[12px] font-bold text-red-600 hover:bg-rose-100 transition-colors">
                                                 Cancel
                                             </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                    {expandedOrderId === order.id && (
-                                        <tr className="bg-gray-50 border-t border-[#D5D9D9]">
-                                            <td colSpan={7} className="px-12 py-6">
-                                                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                                    <h4 className="text-sm font-bold text-[#111] mb-2 border-b border-gray-200 pb-1">Order Summary</h4>
-                                                    <div className="grid md:grid-cols-2 gap-8 text-sm">
-                                                        <div>
-                                                            <p className="text-xs text-gray-500 font-bold uppercase mb-2">Items Purchased</p>
-                                                            <ul className="space-y-2">
-                                                                {order.items?.map((item: any, i: number) => (
-                                                                    <li key={i} className="flex justify-between items-center text-gray-700 bg-white p-2 rounded border border-gray-100">
-                                                                        <span>{item.product_name} <span className="text-gray-400 text-xs">x{item.quantity}</span></span>
-                                                                        <span className="font-bold">Rs. {parseFloat(item.price).toLocaleString()}</span>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                        <div className="space-y-4">
-                                                            <div>
-                                                                <p className="text-xs text-gray-500 font-bold uppercase">Shipping Info</p>
-                                                                <p className="text-gray-700 mt-1">{order.notes || 'Default Shipping Address'}</p>
-                                                            </div>
-                                                            <div className="pt-4 border-t border-gray-200">
-                                                                <div className="flex justify-between text-sm font-bold">
-                                                                    <span>Grand Total:</span>
-                                                                    <span className="text-[#B12704]">Rs. {parseFloat(order.total_amount).toLocaleString()}</span>
-                                                                </div>
-                                                            </div>
-                                                            {/* Mark as Delivered — only once the admin has SHIPPED the order */}
-                                                            {order.status === 'SHIPPED' && (
-                                                                <div className="pt-4 border-t border-gray-200">
-                                                                    {order.customer_reported_delivered ? (
-                                                                        <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#007600]">✓ Delivery confirmed — awaiting store confirmation</span>
-                                                                    ) : (
-                                                                        <button
-                                                                            onClick={() => handleConfirmDelivery(order.id)}
-                                                                            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-[#007600] text-white text-[12.5px] font-bold hover:bg-[#005c00] transition-colors"
-                                                                        >
-                                                                            ✓ Mark as Delivered
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </Fragment>
-                            ))}
-                        </tbody>
-                    </table>
+                                        )}
+                                    </div>
+                                </div>
 
-                    {/* Pagination Footer Controls */}
+                                {expanded && (
+                                    <div className="px-4 py-4 bg-gray-50 border-t border-[#D5D9D9] animate-in fade-in slide-in-from-top-1 duration-200 space-y-3">
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Items Purchased</p>
+                                        <div className="space-y-2">
+                                            {order.items?.map((item: any, i: number) => (
+                                                <div key={i} className="flex justify-between items-center gap-2 text-[12.5px] bg-white p-2.5 rounded-lg border border-gray-100">
+                                                    <span className="text-gray-700 truncate">{item.product_name} <span className="text-gray-400 text-[11px]">×{item.quantity}</span></span>
+                                                    <span className="font-bold text-[#111] tabular-nums whitespace-nowrap">Rs. {parseFloat(item.price).toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {order.notes && (
+                                            <div className="pt-1">
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Shipping Info</p>
+                                                <p className="text-[12.5px] text-gray-700 mt-0.5">{order.notes}</p>
+                                            </div>
+                                        )}
+                                        <div className="pt-2.5 border-t border-gray-200 flex justify-between items-center">
+                                            <span className="text-[12px] font-bold text-gray-600">Grand Total:</span>
+                                            <span className="text-[15px] font-bold text-[#B12704] tabular-nums">Rs. {total.toLocaleString()}</span>
+                                        </div>
+                                        {order.status === 'SHIPPED' && (
+                                            <div className="pt-2.5 border-t border-gray-200">
+                                                {order.customer_reported_delivered ? (
+                                                    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[#007600]">✓ Delivery confirmed — awaiting store confirmation</span>
+                                                ) : (
+                                                    <button onClick={() => handleConfirmDelivery(order.id)} className="inline-flex items-center justify-center gap-1.5 h-10 w-full sm:w-auto px-4 rounded-lg bg-[#007600] text-white text-[12.5px] font-bold hover:bg-[#005c00] transition-colors">
+                                                        ✓ Mark as Delivered
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-200 text-[12px] text-slate-500 font-medium text-left">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white border border-[#D5D9D9] rounded-xl text-[12px] text-slate-500 font-medium text-left">
                             <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                                 Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
                                 <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}

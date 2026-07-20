@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Trash2, X, CheckCircle, Package, ArrowLeft,
-    RefreshCw, Save, Search, ChevronDown, User, Banknote, CreditCard,
+    RefreshCw, Save, Search, ChevronDown, User,
     Printer, Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
@@ -254,6 +254,10 @@ export default function SaleEntryPage() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [riders, setRiders] = useState<any[]>([]);
     const [selectedRider, setSelectedRider] = useState('');
+    // Finalize dispatch modal: create as SHIPPED (dispatch to rider) or DELIVERED (done now).
+    const [finalizeMode, setFinalizeMode] = useState<'shipped' | 'delivered'>('delivered');
+    const [shipMode, setShipMode] = useState<'specific' | 'all'>('all');
+    const [shipFee, setShipFee] = useState('');
     
     // Form and Items State
     const [orderNumber, setOrderNumber] = useState(`SAL-${Date.now().toString().slice(-6)}`);
@@ -261,6 +265,7 @@ export default function SaleEntryPage() {
     const [customerId, setCustomerId] = useState<string>('');
 const [warehouseId, setWarehouseId] = useState<string>('');
     const [guestName, setGuestName] = useState('');
+    const [guestPhone, setGuestPhone] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     // Settlement mode: full = paid in full now; partial = pay some now, rest later;
     // credit = nothing now, customer owes the balance by a due date.
@@ -272,8 +277,6 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     // Discount and Shipping Charges state
     const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat');
     const [discountVal, setDiscountVal] = useState('');
-    const [shippingCharges, setShippingCharges] = useState('');
-    
     const [stockError, setStockError] = useState<string | null>(null);
     const [warehouseStock, setWarehouseStock] = useState<any[]>([]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
@@ -294,15 +297,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             }
         } else {
             setDeliveryCustomerName(guestName);
-            setDeliveryCustomerPhone('');
+            setDeliveryCustomerPhone(guestPhone);
             setDeliveryCustomerAddress('');
         }
-    }, [customerId, guestName, users]);
-
-    // Partial is registered-customer-only — revert to Full if the account is cleared.
-    useEffect(() => {
-        if (!customerId && payMode === 'partial') setPayMode('full');
-    }, [customerId, payMode]);
+    }, [customerId, guestName, guestPhone, users]);
 
     const loadData = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -430,7 +428,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         ? (totalBill * (enteredDiscount / 100))
         : enteredDiscount;
 
-    const parsedShipping = parseFloat(shippingCharges) || 0;
+    const parsedShipping = 0; // shipping charges removed from POS
     const grandTotal = Math.max(0, totalBill + parsedShipping - discountAmount);
 
     // How much is collected at checkout, and the resulting settlement status.
@@ -442,37 +440,42 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     const settlementStatus = paidNow >= grandTotal ? 'PAID' : paidNow > 0 ? 'PARTIAL' : 'UNPAID';
 
     // Products available in THIS branch's warehouse only, each carrying its real
-    // stock count. The source warehouse is the branch admin's own (auto-selected),
-    // so the picker lists exactly what this branch holds — nothing from other branches.
-    const branchProducts = products
-        .map((p: any) => {
-            // SUM every stock batch of this product in the branch — a product can hold
-            // multiple batches, so a single row underreports the true on-hand quantity.
-            const matches = warehouseStock.filter((s: any) =>
-                (s.product_name?.toLowerCase().trim() === p.product_name?.toLowerCase().trim()) &&
-                (s.weight === p.weight || (!s.weight && !p.weight)) &&
-                (s.size === p.size || (!s.size && !p.size))
-            );
-            if (matches.length === 0) return null;
-            const total = matches.reduce((sum: number, s: any) => sum + Number(s.total_quantity || 0), 0);
-            return { ...p, total_quantity: total };
-        })
-        .filter(Boolean);
+    // stock count. Identity is NAME (within the branch) — NOT weight/size, which can
+    // drift from the Stock row and would otherwise hide the product entirely. A product
+    // is listed if it belongs to this branch OR has stock recorded here; deduped by
+    // name, quantity = summed branch stock (falling back to the product's own count).
+    const branchProducts = (() => {
+        const stockByName: Record<string, number> = {};
+        warehouseStock.forEach((s: any) => {
+            const k = (s.product_name || '').toLowerCase().trim();
+            if (k) stockByName[k] = (stockByName[k] || 0) + Number(s.total_quantity || 0);
+        });
+        const out = new Map<string, any>();
+        products.forEach((p: any) => {
+            const k = (p.product_name || '').toLowerCase().trim();
+            if (!k) return;
+            const inThisBranch = !!warehouseId && String(p.warehouse ?? '') === String(warehouseId);
+            const hasBranchStock = k in stockByName;
+            if (!inThisBranch && !hasBranchStock) return; // belongs to another branch
+            const qty = hasBranchStock ? stockByName[k] : Number(p.total_quantity || 0);
+            // Prefer the Product row that actually belongs to this warehouse.
+            if (!out.has(k) || inThisBranch) out.set(k, { ...p, total_quantity: qty });
+        });
+        return [...out.values()];
+    })();
 
     const handleSave = async () => {
-        // Guard rails for credit / partial sales.
+        // Guard rails for credit / partial sales (allowed for walk-in too now).
         if (payMode !== 'full') {
-            // Partial / credit sales must be tied to a registered customer account
-            // so the outstanding balance lives on a real ledger (no walk-in credit).
-            if (!customerId) {
-                setShowConfirm(false);
-                return toast.error('Partial / credit sales require a registered customer account.');
-            }
             if (!dueDate) { setShowConfirm(false); return toast.error('Set a payment due date for the outstanding balance.'); }
             if (payMode === 'partial' && (paidNow < 0 || paidNow >= grandTotal)) {
                 setShowConfirm(false);
                 return toast.error('Enter an amount paid now that is less than the total.');
             }
+        }
+        if (finalizeMode === 'shipped' && shipMode === 'specific' && !selectedRider) {
+            setShowConfirm(false);
+            return toast.error('Pick a rider, or choose "All riders".');
         }
         setShowConfirm(false);
         setSaving(true);
@@ -486,22 +489,22 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 })()
                 : (guestName || 'Walk-in Customer');
 
+            const isShipped = finalizeMode === 'shipped';
             const payload = {
                 customer: customerId || null,
-                customer_name: selectedRider ? (deliveryCustomerName || resolvedCustomerName) : resolvedCustomerName,
-                shipping_address: selectedRider ? (deliveryCustomerAddress || 'Walk-in Store Selection') : 'Walk-in Store Selection',
-                phone_number: selectedRider ? (deliveryCustomerPhone || 'N/A') : 'N/A',
+                customer_name: deliveryCustomerName || resolvedCustomerName,
+                shipping_address: deliveryCustomerAddress || 'Walk-in Store Selection',
+                phone_number: deliveryCustomerPhone || guestPhone || 'N/A',
                 notes: `POS Gen: ${orderNumber}`,
-                // With a rider assigned the order goes out for delivery (SHIPPED) and
-                // shows in the rider's active orders; a counter sale completes at once.
-                status: selectedRider ? 'SHIPPED' : 'DELIVERED',
+                // Shipped → out for delivery (shows in the rider feed); Delivered → done now.
+                status: isShipped ? 'SHIPPED' : 'DELIVERED',
                 payment_method: paymentMethod === 'cash' ? 'SHOP' : 'ONLINE',
                 payment_status: settlementStatus,
                 amount_paid: paidNow,
                 due_date: payMode !== 'full' && dueDate ? dueDate : null,
                 warehouse_id: warehouseId,
                 discount: discountAmount,
-                shipping_cost: parsedShipping,
+                shipping_cost: 0,
                 items: items.map(i => ({
                     id: i.product,
                     quantity: i.quantity,
@@ -509,9 +512,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 }))
             };
             const data = await orderService.create(payload);
-            // Optional: assign a delivery rider chosen on the confirm popup.
-            if (selectedRider && data?.id) {
-                try { await deliveryService.assignToOrder(String(data.id), selectedRider); } catch { /* non-blocking */ }
+            // On dispatch: assign to a specific rider, or broadcast to all (null rider),
+            // saving the offered delivery price either way.
+            if (isShipped && data?.id) {
+                const riderId = shipMode === 'specific' ? selectedRider : null;
+                try { await deliveryService.assignToOrder(String(data.id), riderId, shipFee || 0); } catch { /* non-blocking */ }
             }
             // Record the amount collected now as an installment so it shows in the
             // payment history (full sales already book via delivery).
@@ -634,10 +639,15 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             }}
                                         />
                                     </Field>
-                                    {/* Walk-in name only applies when no registered account is chosen. */}
+                                    {/* Walk-in name + contact — only when no registered account is chosen. */}
                                     {!customerId && (
                                         <Field label="Walk-in Name">
                                             <input className={inputCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
+                                        </Field>
+                                    )}
+                                    {!customerId && (
+                                        <Field label="Walk-in Contact Number">
+                                            <input className={inputCls} value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="e.g. 03xx-xxxxxxx" />
                                         </Field>
                                     )}
                                 </div>
@@ -744,51 +754,32 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 </div>
                                 
                                 <div className="p-6 space-y-5">
-                                    {/* Payment Method Selector */}
-                                    <div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => setPaymentMethod('cash')}
-                                                className={`flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11px] font-bold transition-all ${paymentMethod === 'cash' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
-                                            >
-                                                <Banknote size={13} className={paymentMethod === 'cash' ? 'text-indigo-600' : 'text-slate-400'} />
-                                                Cash
-                                            </button>
-                                            <button
-                                                onClick={() => setPaymentMethod('online')}
-                                                className={`flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11px] font-bold transition-all ${paymentMethod === 'online' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
-                                            >
-                                                <CreditCard size={13} className={paymentMethod === 'online' ? 'text-indigo-600' : 'text-slate-400'} />
-                                                Online Transfer
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Settlement: Full / Partial (shown for the selected payment mode) */}
+                                    {/* Settlement: Full / Partial (available for walk-in too) */}
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Settlement</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {([['full', 'Full'], ['partial', 'Partial']] as const).map(([m, label]) => {
-                                                // Partial / credit is only allowed for a registered customer
-                                                // account (a walk-in has no ledger to carry the balance).
-                                                const disabled = m === 'partial' && !customerId;
-                                                return (
-                                                    <button
-                                                        key={m}
-                                                        type="button"
-                                                        disabled={disabled}
-                                                        onClick={() => { if (!disabled) setPayMode(m); }}
-                                                        title={disabled ? 'Select a registered customer to enable partial payment' : undefined}
-                                                        className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                );
-                                            })}
+                                            {([['full', 'Full'], ['partial', 'Partial']] as const).map(([m, label]) => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => setPayMode(m)}
+                                                    className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-indigo-500 bg-indigo-50/70 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
                                         </div>
-                                        {!customerId && (
-                                            <p className="mt-2 text-[10.5px] text-slate-400 font-medium">Partial payment is available only for a registered customer account.</p>
-                                        )}
+
+                                        {/* Payment method — moved here as a dropdown */}
+                                        <div className="mt-3">
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Method</label>
+                                            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
+                                                className="w-full h-[38px] px-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white font-medium">
+                                                <option value="cash">Cash</option>
+                                                <option value="online">Online Transfer</option>
+                                            </select>
+                                        </div>
+
                                         {payMode !== 'full' && (
                                             <div className="mt-3 space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/40 p-3.5">
                                                 {payMode === 'partial' && (
@@ -813,27 +804,14 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 </div>
                                                 <p className="flex items-start gap-1.5 text-[10.5px] text-amber-700 font-medium leading-snug">
                                                     <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                                                    Requires a registered customer. The remaining balance is tracked as outstanding and can be collected later from Sales History.
+                                                    The remaining balance is tracked as outstanding and can be collected later from Sales History.
                                                 </p>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Shipping & Discount Controls */}
+                                    {/* Discount Controls */}
                                     <div className="space-y-4 pt-2 border-t border-slate-100">
-                                        {/* Shipping Input */}
-                                        <div>
-                                            <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block mb-1.5">Shipping / Delivery Charges</label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
-                                                <input
-                                                    type="number" min={0} value={shippingCharges}
-                                                    onChange={e => setShippingCharges(e.target.value)} placeholder="0.00"
-                                                    className="w-full h-[38px] pl-8 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white transition-all font-medium"
-                                                />
-                                            </div>
-                                        </div>
-
                                         {/* Discount Input */}
                                         <div>
                                             <div className="flex justify-between items-center mb-1.5">
@@ -954,12 +932,12 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             <Modal
                 open={showConfirm}
                 onClose={() => setShowConfirm(false)}
-                title="Confirm Sale"
+                title="Finalize Order"
                 size="md"
                 footer={
                     <div className="w-full space-y-3">
                         <Button variant="primary" onClick={handleSave} className="w-full">
-                            Yes, Complete Sale
+                            {finalizeMode === 'shipped' ? 'Dispatch & Bill' : 'Complete Sale'}
                         </Button>
                         <button
                             onClick={() => setShowConfirm(false)}
@@ -970,81 +948,80 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </div>
                 }
             >
-                <div className="text-center">
-                    <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-100 text-amber-600">
-                        <AlertTriangle size={32} />
-                    </div>
-                    <h3 className="text-[18px] font-bold text-slate-900 mb-2">Finalize this order?</h3>
-                    <p className="text-[13px] text-slate-600 leading-relaxed">
-                        You are about to process a total of <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(totalBill)}</span> for {items.length} items.
+                <div className="text-left space-y-4">
+                    <p className="text-[13px] text-slate-600">
+                        Processing <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(grandTotal)}</span> for {items.length} item{items.length === 1 ? '' : 's'}.
                     </p>
 
-                    {/* Optional: assign a delivery rider */}
-                    <div className="mt-5 text-left">
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                            Assign Rider <span className="text-slate-400 normal-case font-medium">(optional)</span>
-                        </label>
-                        <div className="relative">
-                            <select
-                                value={selectedRider}
-                                onChange={e => setSelectedRider(e.target.value)}
-                                className="w-full h-10 px-3 pr-9 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white appearance-none cursor-pointer"
-                            >
-                                <option value="">No rider — assign later</option>
-                                {riders.map((r: any) => (
-                                    <option key={r.id} value={r.id}>{r.name}{r.phone ? ` · ${r.phone}` : ''}</option>
-                                ))}
-                            </select>
-                            <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                    {/* Top toggle: Shipped (dispatch) vs Mark as Delivered (done now) */}
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">How is this fulfilled?</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button type="button" onClick={() => setFinalizeMode('shipped')}
+                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'shipped' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Shipped</button>
+                            <button type="button" onClick={() => setFinalizeMode('delivered')}
+                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'delivered' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Mark as Delivered</button>
                         </div>
                     </div>
 
-                    {selectedRider && (
-                        <div className="mt-4 p-4 rounded-xl border border-indigo-100 bg-indigo-50/20 space-y-3.5 text-left animate-in fade-in duration-300">
-                            <h4 className="text-[12px] font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5 border-b border-indigo-100/50 pb-1.5">
-                                <User size={13} />
-                                Customer Delivery Info
-                            </h4>
-                            
+                    {finalizeMode === 'shipped' && (
+                        <>
+                            {/* Auto pickup (branch) + delivery (customer) */}
+                            {(() => { const wh = warehouses.find((w: any) => String(w.id) === String(warehouseId)); return (
+                                <div className="grid grid-cols-1 gap-2">
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1"><MapPin size={12} /> Pickup</div>
+                                        <p className="text-[12.5px] font-semibold text-slate-800">{wh?.name || 'Branch'}</p>
+                                        {wh?.location && <p className="text-[11px] text-slate-500">{wh.location}</p>}
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-600 uppercase tracking-widest"><MapPin size={12} /> Delivery</div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input value={deliveryCustomerName} onChange={e => setDeliveryCustomerName(e.target.value)} placeholder="Customer name"
+                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-indigo-400 bg-white" />
+                                            <input value={deliveryCustomerPhone} onChange={e => setDeliveryCustomerPhone(e.target.value)} placeholder="Phone"
+                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-indigo-400 bg-white" />
+                                        </div>
+                                        <textarea rows={2} value={deliveryCustomerAddress} onChange={e => setDeliveryCustomerAddress(e.target.value)} placeholder="Delivery address"
+                                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-indigo-400 bg-white resize-none" />
+                                    </div>
+                                </div>
+                            ); })()}
+
+                            {/* Who delivers: specific rider vs all riders */}
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Customer Delivery Name</label>
-                                <div className="relative">
-                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={13} /></span>
-                                    <input
-                                        type="text" value={deliveryCustomerName}
-                                        onChange={e => setDeliveryCustomerName(e.target.value)}
-                                        placeholder="Customer Name"
-                                        className="w-full h-[34px] pl-8 pr-2.5 rounded-lg border border-slate-200 text-[12.5px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
-                                    />
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Who delivers this?</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button type="button" onClick={() => setShipMode('specific')}
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Specific rider</button>
+                                    <button type="button" onClick={() => setShipMode('all')}
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>All riders</button>
                                 </div>
                             </div>
-                            
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Contact Number</label>
-                                <div className="relative">
-                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"><Phone size={13} /></span>
-                                    <input
-                                        type="text" value={deliveryCustomerPhone}
-                                        onChange={e => setDeliveryCustomerPhone(e.target.value)}
-                                        placeholder="Phone Number"
-                                        className="w-full h-[34px] pl-8 pr-2.5 rounded-lg border border-slate-200 text-[12.5px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
-                                    />
+                            {shipMode === 'specific' ? (
+                                <select value={selectedRider} onChange={e => setSelectedRider(e.target.value)}
+                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-800 outline-none focus:border-indigo-400 bg-white">
+                                    <option value="">— Select a rider —</option>
+                                    {[...riders].sort((a: any, b: any) => (b.is_system ? 1 : 0) - (a.is_system ? 1 : 0)).map((r: any) => (
+                                        <option key={r.id} value={r.id}>{r.is_system ? '★ ' : ''}{r.name}{r.is_system ? ' · system' : ''}{r.phone ? ` · ${r.phone}` : ''}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">Offered to every branch rider — the first to accept gets the delivery.</p>
+                            )}
+
+                            {/* Delivery price offered — hidden for a System (salaried) rider */}
+                            {!(shipMode === 'specific' && riders.find((r: any) => String(r.id) === selectedRider)?.is_system) && (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery price you offer (Rs)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                        <input type="number" min="0" step="0.01" value={shipFee} onChange={e => setShipFee(e.target.value)} placeholder="0.00"
+                                            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-indigo-400 bg-white" />
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Delivery Address</label>
-                                <div className="relative">
-                                    <span className="absolute left-2.5 top-3 text-slate-400"><MapPin size={13} /></span>
-                                    <textarea
-                                        rows={2} value={deliveryCustomerAddress}
-                                        onChange={e => setDeliveryCustomerAddress(e.target.value)}
-                                        placeholder="Street Address, City..."
-                                        className="w-full pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-200 text-[12.5px] font-medium outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white resize-none"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                            )}
+                        </>
                     )}
                 </div>
             </Modal>

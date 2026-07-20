@@ -674,6 +674,26 @@ export default function AdminOrdersPage() {
                             </div>
                         </div>
 
+                        {/* Proof of delivery (rider photo + GPS location) */}
+                        {selectedOrder.proof_image_url && (
+                            <div className="space-y-2">
+                                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 pb-1">
+                                    <MapPin size={12} /> Proof of Delivery
+                                </h4>
+                                <div className="flex items-start gap-3">
+                                    <a href={selectedOrder.proof_image_url} target="_blank" rel="noreferrer">
+                                        <img src={selectedOrder.proof_image_url} alt="Delivery proof" className="w-20 h-20 rounded-lg object-cover border border-slate-200" />
+                                    </a>
+                                    <div className="text-[11px] text-slate-600 space-y-1">
+                                        {selectedOrder.proof_at && <p>Captured: {formatDate(selectedOrder.proof_at)}</p>}
+                                        {selectedOrder.proof_lat && selectedOrder.proof_lng ? (
+                                            <a href={`https://maps.google.com/?q=${selectedOrder.proof_lat},${selectedOrder.proof_lng}`} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline font-semibold inline-flex items-center gap-1"><MapPin size={11} /> {selectedOrder.proof_lat}, {selectedOrder.proof_lng}</a>
+                                        ) : <p className="text-slate-400">Location unavailable</p>}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Items Table */}
                         <div className="space-y-3">
                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 pb-1">

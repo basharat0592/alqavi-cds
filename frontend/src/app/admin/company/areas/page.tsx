@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Plus, Search, MapPin, RefreshCw, Save, Trash2, Users, ShieldCheck
 } from 'lucide-react';
@@ -157,14 +157,38 @@ export default function AreasPage() {
         }
     };
 
-    const filtered = areas.filter(a =>
+    // ── Level-wise (parent → child) ordering, with a depth on every row ──
+    const treeAreas = useMemo(() => {
+        const byParent = new Map<string, any[]>();
+        areas.forEach(a => {
+            const pid = (a as any).parent ? String((a as any).parent) : 'root';
+            if (!byParent.has(pid)) byParent.set(pid, []);
+            byParent.get(pid)!.push(a);
+        });
+        const out: any[] = [];
+        const walk = (pid: string, depth: number) => {
+            (byParent.get(pid) || []).slice()
+                .sort((x, y) => (x.name || '').localeCompare(y.name || ''))
+                .forEach(k => { out.push({ ...k, _depth: depth }); walk(String(k.id), depth + 1); });
+        };
+        walk('root', 0);
+        // Orphans (parent not in the current set) still appear at the top level.
+        const seen = new Set(out.map(o => String(o.id)));
+        areas.forEach(a => { if (!seen.has(String(a.id))) out.push({ ...a, _depth: 0 }); });
+        return out;
+    }, [areas]);
+
+    const searching = search.trim().length > 0;
+    const filtered = (searching ? areas.map(a => ({ ...(a as any), _depth: 0 })) : treeAreas).filter(a =>
         a.name?.toLowerCase().includes(search.toLowerCase()) ||
         a.code?.toLowerCase().includes(search.toLowerCase()) ||
         (a.description || '').toLowerCase().includes(search.toLowerCase())
     );
 
-    // Possible parents (exclude the area being edited to avoid self-parenting)
-    const parentOptions = areas.filter(a => !editTarget || a.id !== editTarget.id);
+    // Possible parents (exclude the area being edited to avoid self-parenting),
+    // ordered as a tree with depth so the dropdown reads level-wise.
+    const parentOptions = treeAreas.filter(a => !editTarget || a.id !== editTarget.id);
+    const parentDepth = form.parent ? ((treeAreas.find(a => String(a.id) === String(form.parent))?._depth ?? 0) + 1) : 0;
 
     if (allowed === false) {
         return (
@@ -211,7 +235,51 @@ export default function AreasPage() {
                 </Card>
 
                 {/* Table */}
-                <Card className="overflow-hidden">
+                {/* ── Mobile: card list ── */}
+                <div className="sm:hidden space-y-2.5 mb-6">
+                    {loading && areas.length === 0 ? (
+                        <Card className="py-16 text-center text-[13px] text-slate-500">Loading areas…</Card>
+                    ) : filtered.length === 0 ? (
+                        <Card className="py-16 text-center text-[13px] text-slate-500">No areas found.</Card>
+                    ) : filtered.map(a => (
+                        <div key={a.id} className="bg-white border border-slate-200 rounded-xl shadow-sm p-3.5" style={{ marginLeft: ((a as any)._depth || 0) * 14 }}>
+                            <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${(a as any)._depth ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-indigo-50 border-indigo-100 text-indigo-600'}`}>
+                                    <MapPin size={18} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="text-[14px] font-bold text-slate-900 truncate">{a.name}</p>
+                                        <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">L{((a as any)._depth || 0) + 1}</span>
+                                        {a.code && <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{a.code}</span>}
+                                    </div>
+                                    {a.parent_name && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">Parent: {a.parent_name}</p>}
+                                    {a.description && <p className="text-[11.5px] text-slate-500 line-clamp-2 mt-1">{a.description}</p>}
+                                    <div className="flex items-center gap-4 mt-1.5">
+                                        <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-600"><Users size={12} className="text-slate-400" /> {a.customer_count ?? 0}</span>
+                                        <span className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-600"><ShieldCheck size={12} className="text-slate-400" /> {a.manager_count ?? 0}</span>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleActive(a)}
+                                    disabled={togglingId === a.id}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 shrink-0 ${a.is_active ? 'bg-indigo-600' : 'bg-slate-300'} ${togglingId === a.id ? 'opacity-50' : ''}`}
+                                    aria-label="Toggle active"
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${a.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                                <button onClick={() => openEdit(a)} className="flex-1 h-9 rounded-lg border border-indigo-200 bg-indigo-50 text-[12px] font-bold text-indigo-600 hover:bg-indigo-100">Edit</button>
+                                <button onClick={() => setDeleteTarget(a)} className="flex-1 h-9 rounded-lg border border-rose-200 bg-rose-50 text-[12px] font-bold text-rose-600 hover:bg-rose-100">Delete</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Desktop: table ── */}
+                <Card className="hidden sm:block overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -234,12 +302,16 @@ export default function AreasPage() {
                                     filtered.map(a => (
                                         <tr key={a.id} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-6 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center text-indigo-600 shrink-0">
+                                                <div className="flex items-center gap-3" style={{ paddingLeft: ((a as any)._depth || 0) * 24 }}>
+                                                    {((a as any)._depth || 0) > 0 && <span className="text-slate-300 text-[15px] -ml-3 select-none">└</span>}
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${(a as any)._depth ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-indigo-50 border-indigo-100 text-indigo-600'}`}>
                                                         <MapPin size={18} />
                                                     </div>
                                                     <div>
-                                                        <div className="text-[15px] font-bold text-slate-900">{a.name}</div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[15px] font-bold text-slate-900">{a.name}</span>
+                                                            <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">L{((a as any)._depth || 0) + 1}</span>
+                                                        </div>
                                                         {a.parent_name && (
                                                             <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">Parent: {a.parent_name}</div>
                                                         )}
@@ -311,13 +383,20 @@ export default function AreasPage() {
                     <Field label="Description">
                         <textarea className={inputCls + ' min-h-[80px]'} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description of this territory" />
                     </Field>
-                    <Field label="Parent Area">
+                    <Field label="Parent Area (level)">
                         <select className={inputCls + ' cursor-pointer'} value={form.parent} onChange={e => setForm(f => ({ ...f, parent: e.target.value }))}>
-                            <option value="">None (top-level)</option>
+                            <option value="">None — top level (L1)</option>
                             {parentOptions.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
+                                <option key={p.id} value={p.id}>
+                                    {'   '.repeat((p as any)._depth || 0)}{((p as any)._depth || 0) > 0 ? '└ ' : ''}{p.name} (L{((p as any)._depth || 0) + 1})
+                                </option>
                             ))}
                         </select>
+                        <p className="text-[11.5px] text-slate-500 mt-1.5">
+                            {form.parent
+                                ? <>This area will be added as <span className="font-bold text-indigo-600">Level {parentDepth + 1}</span>, nested under the selected parent.</>
+                                : <>This area will be a <span className="font-bold text-indigo-600">Level 1</span> (top-level) territory.</>}
+                        </p>
                     </Field>
                     <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200/70 rounded-lg">
                         <span className="text-[13px] font-semibold text-slate-700">Active</span>

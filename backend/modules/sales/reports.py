@@ -206,6 +206,96 @@ def report_by_user(request):
     return Response({'results': rows, 'totals': totals})
 
 
+# ── Customer ledger (running balance) ────────────────────────────────────────
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def report_ledger(request):
+    """Per-customer running-balance ledger (like the desktop 'Ledger' report).
+    Each sale invoice is a Debit; each payment (checkout + confirmed installments)
+    is a Credit. Optional ?date_from/&date_to gives opening balance + period rows.
+    Select the party with ?customer_id= (registered) or ?customer_name= (walk-in).
+    """
+    from collections import defaultdict
+    cid = request.query_params.get('customer_id')
+    cname = (request.query_params.get('customer_name') or '').strip()
+    df = request.query_params.get('date_from')
+    dt = request.query_params.get('date_to')
+
+    qs = (Order.objects.exclude(status__in=['CANCELLED', 'REJECTED'])
+          .select_related('customer'))
+    qs = apply_report_scope(request, qs, 'warehouse', 'created_by', tenant_field='tenant')
+    area_ids = user_area_ids(request.user)
+    if area_ids is not None:
+        qs = qs.filter(customer__area_id__in=area_ids)
+
+    if cid:
+        qs = qs.filter(customer_id=cid)
+    elif cname:
+        qs = qs.filter(customer__isnull=True, customer_name__iexact=cname)
+    else:
+        return Response({'error': 'Provide customer_id or customer_name.'}, status=400)
+
+    orders = list(qs)
+    if not orders:
+        return Response({'customer': cname or '', 'opening': 0, 'rows': [], 'closing': 0,
+                         'totals': {'debit': 0, 'credit': 0}})
+
+    cust_name = cname
+    for o in orders:
+        if o.customer_id and o.customer:
+            cust_name = o.customer.name; break
+        if o.customer_name:
+            cust_name = o.customer_name
+
+    oid_ref = {str(o.id): (o.order_number or o.tracking_id) for o in orders}
+    insts = list(TransactionPayment.objects.filter(
+        source_type='order', source_id__in=list(oid_ref.keys()),
+        status='confirmed', direction='inbound'))
+    inst_sum = defaultdict(float)
+    for ip in insts:
+        inst_sum[str(ip.source_id)] += float(ip.amount or 0)
+
+    events = []
+    for o in orders:
+        d0 = (o.created_at.date().isoformat() if o.created_at else '')
+        ref = o.order_number or o.tracking_id
+        events.append({'date': d0, 'ref': ref, 'detail': 'Sale Invoice',
+                       'debit': round(float(o.total_amount or 0), 2), 'credit': 0.0})
+        checkout = float(o.amount_paid or 0) - inst_sum.get(str(o.id), 0.0)
+        if checkout > 0.01:
+            events.append({'date': d0, 'ref': ref, 'detail': 'Paid at sale',
+                           'debit': 0.0, 'credit': round(checkout, 2)})
+    for ip in insts:
+        pd = ip.paid_at or ip.created_at
+        events.append({'date': pd.date().isoformat() if pd else '',
+                       'ref': oid_ref.get(str(ip.source_id), ''),
+                       'detail': f"Payment ({(ip.method or 'cash').replace('_', ' ')})",
+                       'debit': 0.0, 'credit': round(float(ip.amount or 0), 2)})
+
+    events.sort(key=lambda e: (e['date'], 0 if e['debit'] else 1))
+
+    opening = sum(e['debit'] - e['credit'] for e in events if df and e['date'] and e['date'] < df)
+    run = round(opening, 2)
+    rows = []
+    tot_d = tot_c = 0.0
+    for e in events:
+        if df and e['date'] and e['date'] < df:
+            continue
+        if dt and e['date'] and e['date'] > dt:
+            continue
+        run = round(run + e['debit'] - e['credit'], 2)
+        tot_d += e['debit']; tot_c += e['credit']
+        rows.append({**e, 'balance': run})
+
+    return Response({
+        'customer': cust_name,
+        'opening': round(opening, 2),
+        'rows': rows,
+        'closing': run,
+        'totals': {'debit': round(tot_d, 2), 'credit': round(tot_c, 2)},
+    })
+
+
 # ── Customer statements ──────────────────────────────────────────────────────
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

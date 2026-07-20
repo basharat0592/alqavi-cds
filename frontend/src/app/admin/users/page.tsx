@@ -155,9 +155,16 @@ export default function UsersPage() {
         if (!deleteUser) return;
         setDeleting(true);
         try {
-            await userService.delete(deleteUser.id);
-            setUsers(prev => prev.filter(u => u.id !== deleteUser.id));
-            toast.success(`User deleted`);
+            const res: any = await userService.delete(deleteUser.id as any);
+            if (res?.deactivated) {
+                // Can't hard-delete an admin that owns branches / transactions — the
+                // server deactivated them instead. Keep them in the list as inactive.
+                setUsers(prev => prev.map(u => u.id === deleteUser.id ? { ...u, is_active: false, status: 'inactive' } as any : u));
+                toast.success(res.message || 'This admin owns records, so it was deactivated (can no longer sign in) instead of deleted.', { duration: 6000 });
+            } else {
+                setUsers(prev => prev.filter(u => u.id !== deleteUser.id));
+                toast.success('User deleted');
+            }
         } catch { toast.error('Failed to remove user'); } finally { setDeleting(false); setDeleteUser(null); }
     };
 
@@ -224,9 +231,9 @@ export default function UsersPage() {
         <div className="pb-12 text-left text-slate-800">
             <div className="max-w-[1400px] mx-auto">
                 <PageHeader
-                    title="Internal Users"
+                    title="Admins"
                     subtitle="Manage employees and system access"
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Internal Users' }]}
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Admins' }]}
                     actions={
                         <>
                             <Button variant="outline" onClick={loadData} disabled={loading} className="whitespace-nowrap">
@@ -304,8 +311,58 @@ export default function UsersPage() {
                     </div>
                 </Card>
 
-                {/* Table */}
-                <Card className="overflow-hidden text-left mb-6">
+                {/* ── Mobile: card list ── */}
+                <div className="sm:hidden space-y-2.5 mb-6">
+                    {filtered.length === 0 ? (
+                        <Card className="py-16 text-center text-[13px] text-slate-500">No users found.</Card>
+                    ) : filtered.map(user => (
+                        <div key={user.id} className="bg-white border border-slate-200 rounded-xl shadow-sm p-3.5">
+                            <div className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={sel.isSelected(user.id)}
+                                    onChange={() => sel.toggle(user.id)}
+                                    className="mt-1 w-4 h-4 accent-indigo-600 rounded border-slate-300 cursor-pointer shrink-0"
+                                />
+                                <div className="h-10 w-10 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden font-bold text-slate-500 shrink-0">
+                                    {user.avatar ? <img src={getImageUrl(user.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                        : (user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-slate-900 text-[13.5px] truncate">{user.first_name} {user.last_name}</p>
+                                    <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                        <Badge tone={user.role_name?.toLowerCase().includes('admin') ? 'blue' : 'neutral'}>{user.role_name || 'Individual'}</Badge>
+                                        {(user as any).is_super_admin
+                                            ? <Badge tone="blue">All Branches</Badge>
+                                            : ((user as any).warehouses || []).length === 0
+                                                ? <span className="text-[10px] font-semibold text-rose-500">No branch</span>
+                                                : <span className="text-[10px] font-semibold text-slate-500">{((user as any).warehouses || []).map((w: any) => w.name).join(', ')}</span>}
+                                    </div>
+                                </div>
+                                <select
+                                    value={user.is_active ? 'active' : 'inactive'}
+                                    onChange={() => toggleUserStatus(user)}
+                                    className={`shrink-0 px-2 py-1 rounded-lg text-[9.5px] font-bold uppercase tracking-wide outline-none cursor-pointer border
+                                        ${user.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                                <button onClick={() => setSelectedUserForView(user)} className="flex-1 h-9 rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50">View</button>
+                                <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="flex-1 h-9 rounded-lg border border-indigo-200 bg-indigo-50 text-[12px] font-bold text-indigo-600 hover:bg-indigo-100">Edit</button>
+                                {!(user as any).is_super_admin && (
+                                    <button onClick={() => setDeleteUser(user)} className="flex-1 h-9 rounded-lg border border-rose-200 bg-rose-50 text-[12px] font-bold text-rose-600 hover:bg-rose-100">Delete</button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Desktop: table ── */}
+                <Card className="hidden sm:block overflow-hidden text-left mb-6">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -429,7 +486,7 @@ export default function UsersPage() {
                     <div className="text-center py-2">
                         <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600"><AlertTriangle size={32} /></div>
                         <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Delete User?</h3>
-                        <p className="text-[13px] text-slate-600 mt-3 leading-relaxed mb-8">Delete <span className="font-bold text-slate-900">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This will revoke all system access.</p>
+                        <p className="text-[13px] text-slate-600 mt-3 leading-relaxed mb-8">Delete <span className="font-bold text-slate-900">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This revokes all system access. If this admin owns branches or transactions, it will be <span className="font-semibold">deactivated</span> (blocked from signing in) instead of permanently removed, so their data stays intact.</p>
                         <div className="flex gap-3">
                             <Button variant="outline" onClick={() => setDeleteUser(null)} className="flex-1">Cancel</Button>
                             <Button variant="danger" onClick={confirmDelete} disabled={deleting} className="flex-1">

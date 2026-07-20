@@ -660,6 +660,9 @@ function ReportsEngineInner() {
                         breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Reports' }]}
                         actions={
                             <>
+                                <Button variant="outline" size="sm" onClick={() => router.push('/admin/reports/ledger')}>
+                                    <ClipboardList size={14} /> Customer Ledger
+                                </Button>
                                 <Button variant="outline" size="sm"
                                     onClick={() => profitSummary
                                         ? exportToExcel([

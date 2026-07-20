@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { authService } from '@/lib/auth';
 
 export interface Crumb {
     label: string;
@@ -32,6 +33,10 @@ export function PageHeader({
     const pathname = usePathname();
     const router = useRouter();
     const showBack = !hideBack && pathname !== '/admin/dashboard';
+    // On the Super Admin side, mobile headers are compact: no subtitle, and the
+    // action button sits on the same line as the title (right-most).
+    const [isSuper, setIsSuper] = useState(false);
+    useEffect(() => { setIsSuper(authService.isSuperAdmin()); }, []);
 
     return (
         <div className={cn('mb-6', className)}>
@@ -51,14 +56,20 @@ export function PageHeader({
                     ))}
                 </nav>
             )}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className={cn('flex justify-between gap-3 sm:gap-4', isSuper ? 'flex-row items-center' : 'flex-col sm:flex-row sm:items-center')}>
                 <div className="min-w-0">
-                    <h1 className="text-[22px] font-bold text-slate-900 tracking-tight truncate">{title}</h1>
-                    {subtitle && <p className="text-[13px] text-slate-500 mt-1">{subtitle}</p>}
+                    <h1 className="text-[20px] sm:text-[22px] font-bold text-slate-900 tracking-tight truncate">{title}</h1>
+                    {subtitle && <p className={cn('text-[13px] text-slate-500 mt-1', isSuper && 'hidden sm:block')}>{subtitle}</p>}
                 </div>
                 {(actions || showBack) && (
                     <div className="flex items-center gap-2 shrink-0">
-                        {actions}
+                        {/* Super Admin on mobile: keep only the primary (last) action —
+                            secondary utility buttons like Refresh/Export are hidden. */}
+                        {actions && (
+                            <div className={cn('flex items-center gap-2', isSuper && 'max-sm:[&>*:not(:last-child)]:hidden')}>
+                                {actions}
+                            </div>
+                        )}
                         {/* Desktop back button — same line as page actions (mobile uses the top-bar back button) */}
                         {showBack && (
                             <button

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ClipboardList, Loader2, Search, MapPin } from 'lucide-react';
+import { ClipboardList, Loader2, Search, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { riderService } from '@/services/delivery.service';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
@@ -27,6 +27,8 @@ export default function DeliveryHistoryPage() {
     const [results, setResults] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('completed');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -38,6 +40,9 @@ export default function DeliveryHistoryPage() {
     }, []);
 
     useEffect(() => { load(); }, [load]);
+
+    // Reset to the first page whenever the filters change.
+    useEffect(() => { setCurrentPage(1); }, [search, activeTab]);
 
     const filtered = results.filter((o) => {
         const q = search.toLowerCase();
@@ -52,11 +57,15 @@ export default function DeliveryHistoryPage() {
         return true;
     });
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+    const page = Math.min(currentPage, totalPages);
+    const paginated = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 pb-4">
+        <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 pb-3 sm:pb-4">
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">Delivery History</h1>
+                    <h1 className="text-2xl font-semibold text-[#111]">Delivery History</h1>
                     <p className="text-sm text-gray-500 mt-1">Your completed and cancelled deliveries.</p>
                 </div>
                 <div className="relative w-full md:w-72">
@@ -97,39 +106,48 @@ export default function DeliveryHistoryPage() {
                     <p className="text-sm text-gray-600 mt-2">Completed deliveries will appear here.</p>
                 </div>
             ) : (
-                <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-x-auto shadow-sm">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#F0F2F2] border-b border-[#D5D9D9] text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Order #</th>
-                                <th className="px-6 py-4">Customer</th>
-                                <th className="px-6 py-4">Address</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#D5D9D9]">
-                            {filtered.map((o) => (
-                                <tr key={o.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
-                                        {o.created_at ? formatDateTime(o.created_at) : '—'}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-bold text-[#111]">{o.order_number || o.tracking_id}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-700 font-medium">{o.customer_display_name || o.customer_name || 'Customer'}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-[260px]">
-                                        <span className="flex items-start gap-1.5"><MapPin size={13} className="text-gray-400 shrink-0 mt-0.5" /> <span className="truncate">{o.shipping_address || '—'}</span></span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${statusPill(o.status)}`}>
-                                            {isCancelled(o.status) ? 'Returned' : (o.status_display || o.status)}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-bold text-[#B12704] text-right whitespace-nowrap">{formatCurrency(o.total_amount)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="space-y-2.5">
+                    {paginated.map((o) => (
+                        <div key={o.id} className="bg-white border border-[#D5D9D9] rounded-xl shadow-sm px-4 py-3.5 flex items-start gap-3">
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-[14px] font-bold text-[#111]">#{o.order_number || o.tracking_id}</span>
+                                    <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider ${statusPill(o.status)}`}>
+                                        {isCancelled(o.status) ? 'Returned' : (o.status_display || o.status)}
+                                    </span>
+                                </div>
+                                <p className="text-[12.5px] text-gray-700 font-semibold mt-1 truncate">{o.customer_display_name || o.customer_name || 'Customer'}</p>
+                                <p className="text-[11.5px] text-gray-400 mt-0.5 flex items-center gap-1"><MapPin size={11} className="shrink-0" /> <span className="truncate">{o.shipping_address || '—'}</span></p>
+                                <p className="text-[10.5px] text-gray-400 mt-1">{o.created_at ? formatDateTime(o.created_at) : '—'}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="text-[14px] font-bold text-[#B12704] tabular-nums">{formatCurrency(o.total_amount)}</p>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Pagination — 10 per page (mobile + desktop) */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between gap-2 pt-2">
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="inline-flex items-center gap-1 h-9 px-3.5 rounded-lg border border-[#D5D9D9] bg-white text-[12.5px] font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft size={15} /> Prev
+                            </button>
+                            <span className="text-[12px] font-semibold text-gray-500 tabular-nums">
+                                Page {page} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="inline-flex items-center gap-1 h-9 px-3.5 rounded-lg border border-[#D5D9D9] bg-white text-[12.5px] font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Next <ChevronRight size={15} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
