@@ -49,6 +49,25 @@ const EMPTY_FORM = {
     // Optional initial settlement at creation.
     paid_amount: 0,
     due_date: '',
+    // Supplier's own bill/invoice number (desktop "Bill.No").
+    reference_number: '',
+    // Flat discount on the whole bill (desktop "Extra Disc").
+    extra_discount: 0,
+    // Staff member who booked the purchase (desktop "Staff").
+    staff: '',
+};
+
+const EMPTY_ITEM: LineItem = {
+    product: '',
+    product_name: '',
+    packaging_type: 'SINGLE',
+    items_per_carton: 1,
+    quantity: 1,
+    unit_price: 0,
+    bonus_quantity: 0,
+    selling_price: 0,
+    retail_rate: 0,
+    expiry_date: '',
 };
 
 type LineItem = {
@@ -57,7 +76,11 @@ type LineItem = {
     packaging_type: 'SINGLE' | 'CARTON';
     items_per_carton: number;
     quantity: number;
-    unit_price: number;
+    unit_price: number;        // Pur.Rate (cost)
+    bonus_quantity: number;    // Bonus (U) — free units
+    selling_price: number;     // Sale Rate
+    retail_rate: number;       // Retail.Rate
+    expiry_date: string;       // Exp Date (YYYY-MM-DD)
 };
 
 /* ─── Pure Amazon Style Product Selector ─── */
@@ -285,14 +308,8 @@ export default function AddPurchasePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM });
-    const [items, setItems] = useState<LineItem[]>([{
-        product: '',
-        product_name: '',
-        packaging_type: 'SINGLE',
-        items_per_carton: 1,
-        quantity: 1,
-        unit_price: 0,
-    }]);
+    const [staffList, setStaffList] = useState<any[]>([]);
+    const [items, setItems] = useState<LineItem[]>([{ ...EMPTY_ITEM }]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
     const [tempPayload, setTempPayload] = useState<any>(null);
@@ -305,14 +322,7 @@ export default function AddPurchasePage() {
             supplier_name: '',
             purchase_number: `PO-${Date.now().toString().slice(-6)}`
         }));
-        setItems([{
-            product: '',
-            product_name: '',
-            packaging_type: 'SINGLE',
-            items_per_carton: 1,
-            quantity: 1,
-            unit_price: 0,
-        }]);
+        setItems([{ ...EMPTY_ITEM }]);
     };
     // Prefill (supplier + product) coming from low-stock links / Current Stock "Reorder".
     const [prefill, setPrefill] = useState<{ supplier: string; sku: string; product_name: string; price: string } | null>(null);
@@ -345,6 +355,18 @@ export default function AddPurchasePage() {
 
             const merged = Array.from(new Map([...fromCompMapped, ...fromUsers].map(s => [s.name, s])).values());
             setSuppliers(merged);
+
+            // Staff dropdown: internal team members (exclude supplier/customer/delivery portal roles).
+            const staff = usersArr
+                .filter((u: any) => {
+                    const r = (u.role_name || '').toLowerCase();
+                    return !r.includes('supplier') && !r.includes('customer') && !r.includes('delivery');
+                })
+                .map((u: any) => ({
+                    id: u.id,
+                    name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
+                }));
+            setStaffList(staff);
 
             try {
                 const whRes = await inventoryService.getWarehouses();
@@ -451,6 +473,9 @@ export default function AddPurchasePage() {
                     warehouse: String(po.warehouse || ''),
                     paid_amount: parseFloat(po.paid_amount || 0) || 0,
                     due_date: (po.due_date || '') as string,
+                    reference_number: po.reference_number || '',
+                    extra_discount: parseFloat(po.extra_discount || 0) || 0,
+                    staff: String(po.staff || ''),
                 });
                 const loaded = (po.items || []).map((it: any) => ({
                     product: String(it.product || ''),
@@ -459,6 +484,10 @@ export default function AddPurchasePage() {
                     items_per_carton: it.items_per_carton || 1,
                     quantity: it.quantity || 1,
                     unit_price: parseFloat(it.price || 0) || 0,
+                    bonus_quantity: parseInt(it.bonus_quantity || 0) || 0,
+                    selling_price: parseFloat(it.selling_price || 0) || 0,
+                    retail_rate: parseFloat(it.retail_rate || 0) || 0,
+                    expiry_date: (it.expiry_date || '') as string,
                 }));
                 if (loaded.length) setItems(loaded);
             } catch {
@@ -549,7 +578,7 @@ export default function AddPurchasePage() {
 
         try {
             // Derive the settlement status from any advance paid at creation.
-            const grandTotal = totalAmount + ((form as any).shipping_cost || 0) + taxAmount;
+            const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmount - (Number((form as any).extra_discount) || 0));
             const paidNow = Number((form as any).paid_amount) || 0;
             const payment_status = paidNow <= 0 ? 'UNPAID' : paidNow >= grandTotal ? 'PAID' : 'PARTIAL';
             const payload: any = { ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
@@ -564,14 +593,7 @@ export default function AddPurchasePage() {
         } finally { setSaving(false); }
     };
 
-    const addItem = () => setItems(prev => [...prev, {
-        product: '',
-        product_name: '',
-        packaging_type: 'SINGLE',
-        items_per_carton: 1,
-        quantity: 1,
-        unit_price: 0,
-    }]);
+    const addItem = () => setItems(prev => [...prev, { ...EMPTY_ITEM }]);
 
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
 
@@ -588,7 +610,12 @@ export default function AddPurchasePage() {
                     const matched = suppliers.find(s => String(s.id) === String(p.supplier));
                     setForm(f => ({ ...f, supplier: String(p.supplier), supplier_name: matched?.name || f.supplier_name }));
                 }
-                return { ...item, product: val, product_name: p?.name || '', unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price };
+                return {
+                    ...item,
+                    product: val,
+                    product_name: p?.name || '',
+                    unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price,
+                };
             }
             return { ...item, [field]: val };
         }));
@@ -602,9 +629,13 @@ export default function AddPurchasePage() {
     };
     const totalAmount = items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
 
+    // Value of free bonus units (cost basis) — shown as "Amt Bonus" like the desktop app.
+    const bonusValue = items.reduce((sum, item) => sum + ((item.bonus_quantity || 0) * (item.unit_price || 0)), 0);
+
     // Live order totals + settlement, so the summary bar mirrors what the backend will store.
     const taxAmountLive = (totalAmount * ((form as any).tax_rate || 0)) / 100;
-    const grandTotal = totalAmount + ((form as any).shipping_cost || 0) + taxAmountLive;
+    const extraDiscount = Number((form as any).extra_discount) || 0;
+    const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmountLive - extraDiscount);
     const paidNow = Number((form as any).paid_amount) || 0;
     const balanceDue = Math.max(0, grandTotal - paidNow);
     const paymentStatus: 'PAID' | 'PARTIAL' | 'UNPAID' =
@@ -622,10 +653,11 @@ export default function AddPurchasePage() {
             const p = products.find(prod => String(prod.id) === String(item.product));
 
             return (
-                <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-4 transition-all hover:border-indigo-400 hover:shadow-md group">
-                    <div className="flex flex-col sm:flex-row gap-3 items-end">
-                        {/* Product Selector */}
-                        <div className="flex-1 min-w-[200px] max-w-[450px]">
+                <div key={i} className="relative bg-white border border-slate-200/70 rounded-2xl p-4 sm:p-5 transition-all hover:border-indigo-300 hover:shadow-[0_6px_20px_rgba(15,23,42,0.07)] group">
+                    {/* Row 1 — item number + product + remove */}
+                    <div className="flex items-end gap-3">
+                        <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-indigo-100">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</label>
                             {purchaseMode === 'custom' ? (
                                 <input
@@ -641,10 +673,20 @@ export default function AddPurchasePage() {
                                 <ProductSelector selectedId={item.product} products={products} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'product', val)} />
                             )}
                         </div>
+                        <button
+                            onClick={() => removeItem(i)}
+                            title="Remove item"
+                            className="shrink-0 mb-0.5 w-9 h-9 flex items-center justify-center rounded-lg text-slate-350 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors"
+                        >
+                            <Trash2 size={15} />
+                        </button>
+                    </div>
 
+                    {/* Row 2 — quantities & pricing grid */}
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
                         {/* Type */}
-                        <div className="w-full sm:w-[140px] shrink-0">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 sm:text-center">Type</label>
+                        <div className="col-span-2 sm:col-span-1">
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
                             <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
                                 <option value="SINGLE">Single</option>
                                 <option value="CARTON">Carton</option>
@@ -652,8 +694,8 @@ export default function AddPurchasePage() {
                         </div>
 
                         {/* Qty */}
-                        <div className="w-full sm:w-[105px] shrink-0 relative">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 sm:text-center">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}</label>
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}</label>
                             <input
                                 className={inputCls + " text-center font-bold tabular-nums text-indigo-650"}
                                 type="number"
@@ -663,39 +705,60 @@ export default function AddPurchasePage() {
                             />
                         </div>
 
-                        {/* Pcs/Ctn */}
-                        <div className="w-full sm:w-[105px] shrink-0">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 sm:text-center">Pcs/Ctn</label>
+                        {/* Packing */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Packing</label>
                             <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-slate-50' : '') + " text-center tabular-nums"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
                         </div>
 
-                        {/* Price / Cost */}
-                        <div className="w-full sm:w-[160px] shrink-0">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 sm:text-center">Price / Cost</label>
+                        {/* Bonus */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Bonus (U)</label>
+                            <input
+                                className={inputCls + " text-center tabular-nums text-emerald-700 font-bold"}
+                                type="number"
+                                min="0"
+                                value={item.bonus_quantity || ''}
+                                onChange={e => updateItem(i, 'bonus_quantity', Math.max(0, parseInt(e.target.value) || 0))}
+                                placeholder="0"
+                            />
+                        </div>
+
+                        {/* Pur. Rate */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Pur. Rate</label>
                             <div className="relative flex items-center">
-                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]">Rs</span>
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
                                 <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    className={inputCls + " pl-7 font-bold text-slate-800 text-center"}
+                                    type="number" min="0" step="0.01"
+                                    className={inputCls + " pl-6 font-bold text-slate-800 text-center"}
                                     value={item.unit_price || ''}
                                     onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
                                 />
                             </div>
                         </div>
 
-                        {/* Action */}
-                        <div className="w-auto sm:w-[36px] shrink-0 flex justify-center pb-2">
-                            <button onClick={() => removeItem(i)} className="text-slate-350 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-50/50">
-                                <Trash2 size={16} />
-                            </button>
+                        {/* Exp Date */}
+                        <div className="col-span-2 sm:col-span-1">
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Exp Date</label>
+                            <input
+                                type="date"
+                                className={inputCls + " text-center tabular-nums"}
+                                value={item.expiry_date || ''}
+                                onChange={e => updateItem(i, 'expiry_date', e.target.value)}
+                            />
                         </div>
                     </div>
                     {item.product && (
-                        <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-500">
-                            <div className="flex items-center gap-3">
-                                <span>Total Pcs: <b className="text-slate-700 tabular-nums">{item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity} Pcs</b></span>
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-x-4 gap-y-1 justify-between items-center text-[11px] text-slate-500">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span>Total Pcs: <b className="text-slate-700 tabular-nums">{(item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity) + (item.bonus_quantity || 0)} Pcs</b></span>
+                                {(item.bonus_quantity || 0) > 0 && (
+                                    <>
+                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                        <span className="text-emerald-700">incl. {item.bonus_quantity} bonus</span>
+                                    </>
+                                )}
                                 {p && (
                                     <>
                                         <span className="w-1 h-1 bg-slate-300 rounded-full" />
@@ -715,15 +778,23 @@ export default function AddPurchasePage() {
 
     /* ─── Order Items card (identical in both modes) ─── */
     const renderItemsCard = () => (
-        <Card className="relative z-[10]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Items</h2>
-                    <p className="text-[12px] text-slate-500">Select products and quantities.</p>
+        <Card className="relative z-[10] overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
+                        <Package size={17} strokeWidth={2} />
+                    </div>
+                    <div>
+                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            Order Items
+                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
+                        </h2>
+                        <p className="text-[11.5px] text-slate-500">Products, quantities, and pricing.</p>
+                    </div>
                 </div>
                 <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={addItem}><Plus size={14} /> Add Item</Btn>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3.5 bg-slate-50/40">
                 {renderItemsList()}
             </div>
         </Card>
@@ -731,10 +802,15 @@ export default function AddPurchasePage() {
 
     /* ─── Order Information card — shared shell; only the Supplier field differs per mode ─── */
     const renderOrderInfoCard = (supplierField: React.ReactNode) => (
-        <Card>
-            <div className="px-6 py-4 border-b border-slate-100">
-                <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Information</h2>
-                <p className="text-[12px] text-slate-500">Enter order number, supplier, and date.</p>
+        <Card className="overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center ring-1 ring-inset ring-slate-200 shrink-0">
+                    <Building2 size={17} strokeWidth={2} />
+                </div>
+                <div>
+                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Information</h2>
+                    <p className="text-[11.5px] text-slate-500">Supplier, bill no., staff, and settlement.</p>
+                </div>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <Field label="Order Number" required>
@@ -745,6 +821,17 @@ export default function AddPurchasePage() {
                 </Field>
                 <Field label="Order Date" required>
                     <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
+                </Field>
+                <Field label="Supplier Bill No.">
+                    <input className={inputCls} value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="Supplier's invoice / bill no." />
+                </Field>
+                <Field label="Staff">
+                    <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
+                        <option value="">Select any one</option>
+                        {staffList.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
                 </Field>
                 <Field label="Payment Method">
                     <select className={selectCls} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
@@ -785,13 +872,26 @@ export default function AddPurchasePage() {
                         onClick={() => setShowAdvanced(!showAdvanced)}
                         className="text-[12px] font-bold text-indigo-650 hover:text-indigo-700 flex items-center gap-1 transition-colors"
                     >
-                        {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Shipping, Tax, Balance Date)'}
+                        {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
                     </button>
                 </div>
 
                 {showAdvanced && (
                     <>
-                        <Field label="Shipping Cost">
+                        <Field label="Extra Discount">
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <input
+                                    className={inputCls + " pl-9"}
+                                    type="number"
+                                    min="0"
+                                    value={(form as any).extra_discount || ''}
+                                    onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </Field>
+                        <Field label="Freight / Shipping Cost">
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
                                 <input
@@ -906,8 +1006,20 @@ export default function AddPurchasePage() {
                                             <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Tax ({(form as any).tax_rate || 0}%)</span>
                                             <span className="font-extrabold text-slate-800 text-[14px] mt-0.5 tabular-nums">{formatCurrency(taxAmountLive)}</span>
                                         </div>
+                                        {bonusValue > 0 && (
+                                            <div className="flex flex-col border-l border-slate-200 pl-8">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Amt Bonus</span>
+                                                <span className="font-extrabold text-emerald-700 text-[14px] mt-0.5 tabular-nums">{formatCurrency(bonusValue)}</span>
+                                            </div>
+                                        )}
+                                        {extraDiscount > 0 && (
+                                            <div className="flex flex-col border-l border-slate-200 pl-8">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Extra Disc.</span>
+                                                <span className="font-extrabold text-rose-600 text-[14px] mt-0.5 tabular-nums">− {formatCurrency(extraDiscount)}</span>
+                                            </div>
+                                        )}
                                         <div className="flex flex-col border-l border-slate-200 pl-8">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Grand Total</span>
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Net Amount</span>
                                             <span className="text-[18px] font-black text-indigo-650 mt-0.5 tabular-nums">
                                                 {formatCurrency(grandTotal)}
                                             </span>

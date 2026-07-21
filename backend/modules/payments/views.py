@@ -8,7 +8,7 @@ from .models import Payment, PaymentCategory, TransactionPayment
 from .serializers import (
     PaymentSerializer, PaymentCategorySerializer, TransactionPaymentSerializer,
 )
-from core.permissions import HasModulePermission
+from core.permissions import HasModulePermission, CanRecordPayment
 from core.scoping import (
     BranchScopedQuerysetMixin, scope_queryset, user_warehouse_ids,
     user_can_use_warehouse, apply_report_scope,
@@ -123,7 +123,9 @@ class TransactionPaymentViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet
     a ledger row and recomputes the parent's paid amount / status via services.
     """
     serializer_class = TransactionPaymentSerializer
-    permission_classes = [permissions.IsAuthenticated, HasModulePermission]
+    # A payment booked against a sale/purchase is allowed for whoever can edit that
+    # sale/purchase — not only holders of the standalone Payments-page grant.
+    permission_classes = [permissions.IsAuthenticated, CanRecordPayment]
     perm_module = 'payments'
     branch_field = 'warehouse'
     # Tenant (owning Admin) is THE isolation axis.

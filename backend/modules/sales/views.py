@@ -15,6 +15,22 @@ from core.scoping import (
 )
 
 
+def _dec(value, default='0'):
+    """Parse a possibly-blank client value into a Decimal, never raising."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        s = str(value).strip()
+        return Decimal(s) if s not in ('', 'None', 'null') else Decimal(default)
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal(default)
+
+
+def _clean_date(value):
+    """Normalize a client date string to 'YYYY-MM-DD' or None (blank-safe)."""
+    s = str(value or '').strip()
+    return s or None
+
+
 def _track_order_response(tracking_id, request):
     """Shared tracking logic. Kept as a plain helper (NOT an @api_view) so it can be
     called both from the `track_order_by_id` public view AND the OrderViewSet.track
@@ -389,6 +405,36 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             })
             
         return Response(results)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def customer_balance(self, request):
+        """Outstanding balance (previous unpaid dues) for a registered customer, so
+        the POS / invoice can show 'Prev. Bal' + its due date. Sums remaining_amount
+        over the customer's non-cancelled, not-fully-paid orders — tenant scoped.
+        Pass ?exclude=<orderId> to leave the current sale out (invoice/detail views),
+        so the figure is the balance from that customer's OTHER orders only. Returns
+        the earliest outstanding due date among those orders."""
+        from decimal import Decimal
+        cust_id = request.query_params.get('customer')
+        exclude_id = request.query_params.get('exclude')
+        if not cust_id:
+            return Response({'previous_balance': 0, 'due_date': None})
+        qs = Order.objects.filter(customer_id=cust_id).exclude(status__in=['CANCELLED', 'REJECTED'])
+        if exclude_id:
+            qs = qs.exclude(id=exclude_id)
+        qs = scope_to_tenant(request.user, qs, 'tenant')
+        total = Decimal('0')
+        earliest_due = None
+        for o in qs.only('total_amount', 'amount_paid', 'status', 'due_date'):
+            rem = Decimal(str(o.total_amount or 0)) - Decimal(str(o.amount_paid or 0))
+            if rem > 0:
+                total += rem
+                if o.due_date and (earliest_due is None or o.due_date < earliest_due):
+                    earliest_due = o.due_date
+        return Response({
+            'previous_balance': float(total),
+            'due_date': earliest_due.isoformat() if earliest_due else None,
+        })
 
     def update(self, request, *args, **kwargs):
         order = self.get_object()
@@ -1016,8 +1062,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     sp = item.product
                     if not sp: continue
                     
-                    units = item.total_units
-                    
+                    # Bonus units are received into stock too (they're free extra
+                    # pieces), so stock movements use received_units; costing elsewhere
+                    # still uses paid units only.
+                    units = item.received_units
+
                     # 1. Deduct from Supplier available units
                     sp.quantity = F('quantity') - units
                     sp.save()
@@ -1061,6 +1110,16 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             # synced stock stays inside the same tenant.
                             tenant_id=purchase.tenant_id,
                         )
+
+                    # 2b. Honor an explicitly-entered Sale Rate: push it onto the
+                    # matching Admin Product(s) so the price the admin typed on the
+                    # purchase line actually takes effect (overrides margin-preserve).
+                    if Decimal(str(item.selling_price or 0)) > 0:
+                        Product.objects.filter(
+                            product_name__iexact=sp.name,
+                            warehouse=warehouse,
+                            tenant_id=purchase.tenant_id,
+                        ).update(selling_price=Decimal(str(item.selling_price)))
 
                     # 3. Record the movement history
                     StockMovement.objects.create(
@@ -1345,7 +1404,7 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     data[date_field] = val if val else None
 
             # Numeric Sanitization
-            for num_field in ['paid_amount', 'shipping_cost', 'tax_amount', 'total_amount']:
+            for num_field in ['paid_amount', 'shipping_cost', 'tax_amount', 'total_amount', 'extra_discount']:
                 if num_field in data:
                     try:
                         val = str(data[num_field]).strip()
@@ -1353,10 +1412,16 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     except (ValueError, TypeError, Exception):
                         data[num_field] = Decimal('0.00')
 
+            # Staff FK — sanitize empty string to omitted.
+            staff_id = data.get('staff') or data.get('staff_id')
+            if staff_id and str(staff_id).strip():
+                data['staff_id'] = staff_id
+            data.pop('staff', None)
+
             # 3. Field Filtering
             allowed_fields = [
                 'purchase_number', 'supplier_id', 'reference_number', 'warehouse_id',
-                'total_amount', 'shipping_cost', 'tax_amount', 'status',
+                'total_amount', 'shipping_cost', 'tax_amount', 'extra_discount', 'staff_id', 'status',
                 'payment_status', 'payment_method', 'expected_delivery_date', 'due_date', 'notes',
                 'paid_amount', 'payment_date', 'payment_notes', 'transaction_id',
                 'payment_confirmed', 'is_inventory_synced'
@@ -1392,7 +1457,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         price = Decimal(str(item.get('unit_price', '0')))
                         qty = int(item.get('quantity', 1))
                         items_per = int(item.get('items_per_carton', 1))
-                        
+                        bonus = int(item.get('bonus_quantity', 0) or 0)
+                        sale_rate = _dec(item.get('selling_price'))
+                        retail_rate = _dec(item.get('retail_rate'))
+                        expiry = _clean_date(item.get('expiry_date'))
+
                         # Fetch weight/size from SupplierProduct if not provided
                         sp_obj = SupplierProduct.objects.filter(id=p_id).first()
                         weight = item.get('weight') or (sp_obj.weight if sp_obj else '')
@@ -1404,10 +1473,13 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             packaging_type=item.get('packaging_type', 'SINGLE'),
                             items_per_carton=items_per,
                             quantity=qty,
+                            bonus_quantity=bonus,
                             price=price,
                             weight=weight,
                             size=size,
-                            selling_price=Decimal('0.00')
+                            selling_price=sale_rate,
+                            retail_rate=retail_rate,
+                            expiry_date=expiry,
                         )
                         # Carton purchases cost (cartons × pcs-per-carton × per-piece price);
                         # single purchases cost (qty × price). price is always per-piece.
@@ -1416,8 +1488,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     except (ValueError, TypeError):
                         continue
 
-                # Grand total = items + shipping + tax (so the stored total matches the order summary).
-                purchase.total_amount = calculated_total + (purchase.shipping_cost or Decimal('0.00')) + (purchase.tax_amount or Decimal('0.00'))
+                # Grand total = items + shipping + tax − extra discount (matches the order summary).
+                purchase.total_amount = (calculated_total
+                                         + (purchase.shipping_cost or Decimal('0.00'))
+                                         + (purchase.tax_amount or Decimal('0.00'))
+                                         - (purchase.extra_discount or Decimal('0.00')))
                 # Authoritatively derive payment status from paid vs total, so it can
                 # never disagree with the amounts (client value is not trusted).
                 _paid = purchase.paid_amount or Decimal('0.00')
@@ -1497,7 +1572,7 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     val = str(data[date_field]).strip()
                     data[date_field] = val if val else None
 
-            for num_field in ['paid_amount', 'shipping_cost', 'tax_amount']:
+            for num_field in ['paid_amount', 'shipping_cost', 'tax_amount', 'extra_discount']:
                 if num_field in data:
                     try:
                         val = str(data[num_field]).strip()
@@ -1505,8 +1580,11 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     except (ValueError, TypeError, Exception):
                         data[num_field] = Decimal('0.00')
 
+            staff_id = data.get('staff') or data.get('staff_id')
+            data['staff_id'] = staff_id if (staff_id and str(staff_id).strip()) else None
+
             header_fields = [
-                'reference_number', 'shipping_cost', 'tax_amount', 'status',
+                'reference_number', 'shipping_cost', 'tax_amount', 'extra_discount', 'staff_id', 'status',
                 'payment_status', 'payment_method', 'expected_delivery_date', 'notes',
             ]
 
@@ -1532,6 +1610,10 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             qty = int(item.get('quantity', 1))
                             items_per = int(item.get('items_per_carton', 1))
                             packaging = item.get('packaging_type', 'SINGLE')
+                            bonus = int(item.get('bonus_quantity', 0) or 0)
+                            sale_rate = _dec(item.get('selling_price'))
+                            retail_rate = _dec(item.get('retail_rate'))
+                            expiry = _clean_date(item.get('expiry_date'))
 
                             sp_obj = SupplierProduct.objects.filter(id=p_id).first()
                             weight = item.get('weight') or (sp_obj.weight if sp_obj else '')
@@ -1543,17 +1625,23 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                                 packaging_type=packaging,
                                 items_per_carton=items_per,
                                 quantity=qty,
+                                bonus_quantity=bonus,
                                 price=price,
                                 weight=weight,
                                 size=size,
-                                selling_price=Decimal('0.00'),
+                                selling_price=sale_rate,
+                                retail_rate=retail_rate,
+                                expiry_date=expiry,
                             )
                             total_units = qty * items_per if packaging == 'CARTON' else qty
                             calculated_total += (Decimal(str(total_units)) * price)
                         except (ValueError, TypeError):
                             continue
-                    # Grand total = items + shipping + tax (header values already applied above).
-                    purchase.total_amount = calculated_total + (purchase.shipping_cost or Decimal('0.00')) + (purchase.tax_amount or Decimal('0.00'))
+                    # Grand total = items + shipping + tax − extra discount (header values already applied above).
+                    purchase.total_amount = (calculated_total
+                                             + (purchase.shipping_cost or Decimal('0.00'))
+                                             + (purchase.tax_amount or Decimal('0.00'))
+                                             - (purchase.extra_discount or Decimal('0.00')))
 
                 # Re-derive payment status from paid vs total so edits stay consistent.
                 _paid = purchase.paid_amount or Decimal('0.00')

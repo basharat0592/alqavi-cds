@@ -10,13 +10,13 @@ export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
         '/admin/products', '/admin/products/add',
         '/admin/inventory/list',
         '/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns',
-        '/admin/sale', '/admin/invoices', '/admin/payments', '/admin/sale-returns',
+        '/admin/sale', '/admin/payments', '/admin/sale-returns',
         '/admin/company/suppliers', '/admin/company/customers', '/admin/alerts',
         '/admin/reports',
     ],
     'sales manager': [
         '/admin/dashboard', '/admin/orders', '/admin/sales', '/admin/tracking',
-        '/admin/sale', '/admin/invoices', '/admin/payments', '/admin/sale-returns',
+        '/admin/sale', '/admin/payments', '/admin/sale-returns',
         '/admin/company/customers',
         '/admin/reports',
     ],
@@ -30,17 +30,17 @@ export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
     ],
     'accountant': [
         '/admin/dashboard',
-        '/admin/invoices', '/admin/payments',
+        '/admin/payments',
         '/admin/reports',
     ],
     'area manager': [
         '/admin/dashboard', '/admin/orders', '/admin/sales', '/admin/tracking',
-        '/admin/sale', '/admin/invoices', '/admin/payments', '/admin/sale-returns',
+        '/admin/sale', '/admin/payments', '/admin/sale-returns',
         '/admin/company/customers', '/admin/inventory/list',
         '/admin/reports',
     ],
     'cashier': [
-        '/admin/dashboard', '/admin/sale', '/admin/invoices', '/admin/orders', '/admin/sales',
+        '/admin/dashboard', '/admin/sale', '/admin/orders', '/admin/sales',
     ],
 };
 

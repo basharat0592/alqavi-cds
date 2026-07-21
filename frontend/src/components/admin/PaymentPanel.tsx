@@ -103,6 +103,16 @@ export function PaymentPanel({
     const remaining = Math.max(0, Number(total || 0) - paid);
     const pct = total > 0 ? Math.min(100, Math.round((paid / Number(total)) * 100)) : 0;
 
+    // Prefill the Amount field with this sale's remaining balance so it shows directly
+    // (updates after the history loads and after each payment). Only fills when the
+    // field is empty, so it never overwrites a value the user has typed/cleared.
+    useEffect(() => {
+        if (!loading && !readOnly && remaining > 0 && amount === '') {
+            setAmount(String(Number(remaining.toFixed(2))));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, remaining, readOnly]);
+
     const addPayment = async () => {
         const amt = Number(amount);
         if (!amt || amt <= 0) { setError('Enter a valid amount.'); return; }

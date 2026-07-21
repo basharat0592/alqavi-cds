@@ -42,14 +42,22 @@ const Field = ({ label, required = false, children }: { label: string; required?
 const inputCls = "w-full h-[38px] px-3 border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-400 bg-white transition-all font-medium";
 const selectCls = `${inputCls} cursor-pointer`;
 
-type SaleItem = { 
-    product: string; 
-    product_name: string; 
-    quantity: number; 
-    unit_price: number;
+type SaleItem = {
+    product: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;      // Unit TP (editable sale rate)
+    bonus: number;           // Bon(U) — free units
+    discountPct: number;     // per-line Disct %
+    cost: number;            // snapshot cost for profit calc
     stock: number;
     weight?: string;
     size?: string;
+};
+
+const EMPTY_SALE_ITEM: SaleItem = {
+    product: '', product_name: '', quantity: 1, unit_price: 0,
+    bonus: 0, discountPct: 0, cost: 0, stock: 0, weight: '', size: '',
 };
 
 /* ─── Searchable Product Selector (Interactive Input) ─── */
@@ -272,7 +280,12 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     const [payMode, setPayMode] = useState<'full' | 'partial'>('full');
     const [amountPaidNow, setAmountPaidNow] = useState('');
     const [dueDate, setDueDate] = useState('');
-    const [items, setItems] = useState<SaleItem[]>([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
+    const [items, setItems] = useState<SaleItem[]>([{ ...EMPTY_SALE_ITEM }]);
+    // Salesman (desktop "Saleman") + staff options.
+    const [staffList, setStaffList] = useState<any[]>([]);
+    const [salesperson, setSalesperson] = useState<string>('');
+    // Selected customer's outstanding balance (desktop "Prev. Bal").
+    const [prevBalance, setPrevBalance] = useState<number>(0);
     
     // Discount and Shipping Charges state
     const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat');
@@ -358,6 +371,27 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         deliveryService.getAll().then((r) => setRiders(r.filter((x: any) => x.is_active !== false))).catch(() => setRiders([]));
     }, []);
 
+    // Salesman options — internal staff, loaded once.
+    useEffect(() => {
+        userService.getAll().then((allUsers: any) => {
+            const staff = (Array.isArray(allUsers) ? allUsers : allUsers?.results || [])
+                .filter((usr: any) => {
+                    const r = (usr.role_name || '').toLowerCase();
+                    return !r.includes('supplier') && !r.includes('customer') && !r.includes('delivery');
+                })
+                .map((usr: any) => ({ id: usr.id, name: usr.full_name || `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || usr.username }));
+            setStaffList(staff);
+        }).catch(() => setStaffList([]));
+    }, []);
+
+    // Previous outstanding balance for the chosen registered customer (desktop "Prev. Bal").
+    useEffect(() => {
+        if (!customerId) { setPrevBalance(0); return; }
+        orderService.getCustomerBalance?.(customerId)
+            .then((b: any) => setPrevBalance(Number(b?.previous_balance || 0)))
+            .catch(() => setPrevBalance(0));
+    }, [customerId]);
+
     // Source warehouse = the logged-in branch admin's own branch. There's no picker;
     // we auto-select their assigned warehouse (falling back to the first available).
     useEffect(() => {
@@ -379,11 +413,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         return () => clearInterval(timer);
     }, [loading, saving, loadData]);
 
-    const addItem = () => setItems(prev => [...prev, { product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
-    
+    const addItem = () => setItems(prev => [...prev, { ...EMPTY_SALE_ITEM }]);
+
     const removeItem = (i: number) => {
         if (items.length > 1) setItems(prev => prev.filter((_, idx) => idx !== i));
-        else setItems([{ product: '', product_name: '', quantity: 1, unit_price: 0, stock: 0, weight: '', size: '' }]);
+        else setItems([{ ...EMPTY_SALE_ITEM }]);
     };
 
     const updateItem = (i: number, pInfo: any) => {
@@ -394,12 +428,27 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 product: String(pInfo.id),
                 product_name: pInfo.product_name || pInfo.name,
                 unit_price: parseFloat(pInfo.selling_price || pInfo.price || 0),
+                cost: parseFloat(pInfo.cost_price || 0),
                 stock: pInfo.total_quantity || pInfo.stock_quantity || (typeof pInfo.stock === 'number' ? pInfo.stock : 0),
                 quantity: 1,
+                bonus: 0,
+                discountPct: 0,
                 weight: pInfo.weight,
                 size: pInfo.size
             };
         }));
+    };
+
+    // Patch a single editable field on a line (rate, bonus, discount %).
+    const patchItem = (i: number, field: keyof SaleItem, val: number) => {
+        setItems(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
+    };
+
+    // Charged net for a line: qty × rate − line discount (bonus units are free).
+    const lineNet = (it: SaleItem) => {
+        const gross = (parseInt(it.quantity as any) || 0) * (parseFloat(it.unit_price as any) || 0);
+        const disc = gross * ((parseFloat(it.discountPct as any) || 0) / 100);
+        return Math.max(0, gross - disc);
     };
 
     const updateQty = (i: number, val: number) => {
@@ -416,11 +465,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         }));
     };
 
-    const totalBill = items.reduce((sum, item) => {
-        const qty = parseInt(item.quantity as any) || 0;
-        const price = parseFloat(item.unit_price as any) || 0;
-        return sum + (qty * price);
-    }, 0);
+    // Subtotal now nets each line's own discount (desktop "Sub Total" column sum).
+    const totalBill = items.reduce((sum, item) => sum + lineNet(item), 0);
 
     // Calculate discount amount
     const enteredDiscount = parseFloat(discountVal) || 0;
@@ -430,6 +476,15 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     const parsedShipping = 0; // shipping charges removed from POS
     const grandTotal = Math.max(0, totalBill + parsedShipping - discountAmount);
+
+    // Profit (desktop "Invoice Pur.Value / Profit"): charged net − cost of all
+    // physical units shipped (paid + bonus), less the order-level discount.
+    const totalCost = items.reduce((sum, item) => {
+        const units = (parseInt(item.quantity as any) || 0) + (parseInt(item.bonus as any) || 0);
+        return sum + units * (parseFloat(item.cost as any) || 0);
+    }, 0);
+    const invoiceProfit = grandTotal - totalCost;
+    const profitPct = totalCost > 0 ? (invoiceProfit / totalCost) * 100 : 0;
 
     // How much is collected at checkout, and the resulting settlement status.
     const paidNow = payMode === 'full'
@@ -505,11 +560,19 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 warehouse_id: warehouseId,
                 discount: discountAmount,
                 shipping_cost: 0,
-                items: items.map(i => ({
-                    id: i.product,
-                    quantity: i.quantity,
-                    price: i.unit_price
-                }))
+                salesperson: salesperson || null,
+                sale_date: orderDate || null,
+                items: items.map(i => {
+                    const gross = (parseInt(i.quantity as any) || 0) * (parseFloat(i.unit_price as any) || 0);
+                    const lineDisc = gross * ((parseFloat(i.discountPct as any) || 0) / 100);
+                    return {
+                        id: i.product,
+                        quantity: i.quantity,
+                        price: i.unit_price,
+                        bonus_quantity: parseInt(i.bonus as any) || 0,
+                        discount: Number(lineDisc.toFixed(2)),
+                    };
+                })
             };
             const data = await orderService.create(payload);
             // On dispatch: assign to a specific rider, or broadcast to all (null rider),
@@ -650,6 +713,17 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             <input className={inputCls} value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="e.g. 03xx-xxxxxxx" />
                                         </Field>
                                     )}
+                                    <Field label="Salesman">
+                                        <select className={selectCls} value={salesperson} onChange={e => setSalesperson(e.target.value)}>
+                                            <option value="">Select any one</option>
+                                            {staffList.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </Field>
+                                    <Field label="Sale Date">
+                                        <input className={inputCls} type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
+                                    </Field>
                                 </div>
                             </Card>
 
@@ -662,19 +736,16 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
                                     <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
                                 </div>
-                                <div className="p-3 sm:p-6 space-y-3">
-                                    {/* Desktop Table Header - hidden on mobile */}
-                                    <div className="hidden sm:grid grid-cols-12 gap-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 pb-1">
-                                        <div className="col-span-6">Choose Product</div>
-                                        <div className="col-span-2 text-center">Qty</div>
-                                        <div className="col-span-3 text-right">Subtotal</div>
-                                        <div className="col-span-1 text-center font-bold">Del</div>
-                                    </div>
-                                    
-                                    {items.map((item, i) => (
-                                        <div key={i} className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-3 transition-all hover:border-slate-300 animate-in slide-in-from-left-2 duration-300">
-                                            {/* Mobile Card Layout */}
-                                            <div className="flex items-start gap-2 sm:hidden">
+                                <div className="p-3 sm:p-5 space-y-3">
+                                    {items.map((item, i) => {
+                                        const net = lineNet(item);
+                                        const gross = (parseInt(item.quantity as any) || 0) * (parseFloat(item.unit_price as any) || 0);
+                                        const discAmt = gross - net;
+                                        return (
+                                        <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-3 sm:p-4 transition-all hover:border-indigo-300 hover:shadow-sm animate-in slide-in-from-left-2 duration-300">
+                                            {/* Product + remove */}
+                                            <div className="flex items-end gap-2.5">
+                                                <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-indigo-100">{i + 1}</span>
                                                 <div className="flex-1 min-w-0">
                                                     <ProductSelector
                                                         selectedId={item.product}
@@ -683,59 +754,74 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                         onSelect={(p: any) => updateItem(i, p)}
                                                     />
                                                 </div>
-                                                <button onClick={() => removeItem(i)} className="text-slate-400 hover:text-rose-600 transition-colors p-1.5 rounded-full hover:bg-rose-50 shrink-0 mt-1">
-                                                    <Trash2 size={14} />
+                                                <button onClick={() => removeItem(i)} title="Remove" className="shrink-0 mb-0.5 w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors">
+                                                    <Trash2 size={15} />
                                                 </button>
                                             </div>
-                                            <div className="flex items-center justify-between mt-2 sm:hidden">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Qty:</span>
-                                                    <input
-                                                        className={"w-16 h-[28px] px-2 border border-slate-200 rounded-lg text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 text-center font-black text-indigo-600 bg-white transition-all"}
-                                                        type="number" min="1"
-                                                        value={item.quantity || ''}
-                                                        onChange={e => updateQty(i, parseInt(e.target.value))}
-                                                    />
-                                                    {(parseInt(item.stock as any) > 0) && <span className="text-[9px] font-bold text-slate-400">/{item.stock}</span>}
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-[15px] font-black text-slate-900 tabular-nums">{formatCurrency(item.unit_price * item.quantity)}</div>
-                                                    {item.product && <div className="text-[9px] text-slate-400 font-bold uppercase">@{formatCurrency(item.unit_price)}</div>}
-                                                </div>
-                                            </div>
 
-                                            {/* Desktop Row Layout */}
-                                            <div className="hidden sm:grid grid-cols-12 gap-3 items-center">
-                                                <div className="col-span-6">
-                                                    <ProductSelector
-                                                        selectedId={item.product}
-                                                        products={branchProducts}
-                                                        inputCls={selectCls}
-                                                        onSelect={(p: any) => updateItem(i, p)}
-                                                    />
-                                                </div>
-                                                <div className="col-span-2 relative">
+                                            {/* Per-line fields grid */}
+                                            <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                                                <div>
+                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Qty {item.stock > 0 ? <span className="text-slate-300 normal-case">/ {item.stock}</span> : ''}</label>
                                                     <input
                                                         className={inputCls + " text-center font-black text-indigo-600"}
                                                         type="number" min="1"
                                                         value={item.quantity || ''}
                                                         onChange={e => updateQty(i, parseInt(e.target.value))}
                                                     />
-                                                    {(parseInt(item.stock as any) > 0) && <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black text-slate-400 whitespace-nowrap uppercase tracking-tighter">Max: {item.stock}</span>}
                                                 </div>
-                                                <div className="col-span-3 text-right">
-                                                    <div className="text-[16px] font-black text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(item.unit_price * item.quantity)}</div>
-                                                    {item.product && <div className="text-[10px] text-slate-400 font-bold uppercase">@{formatCurrency(item.unit_price)}</div>}
+                                                <div>
+                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Bonus (U)</label>
+                                                    <input
+                                                        className={inputCls + " text-center tabular-nums text-emerald-700 font-bold"}
+                                                        type="number" min="0"
+                                                        value={item.bonus || ''}
+                                                        onChange={e => patchItem(i, 'bonus', Math.max(0, parseInt(e.target.value) || 0))}
+                                                        placeholder="0"
+                                                    />
                                                 </div>
-                                                <div className="col-span-1 flex justify-center">
-                                                    <button onClick={() => removeItem(i)} className="text-slate-400 hover:text-rose-600 transition-colors p-2 rounded-full hover:bg-rose-50">
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                <div>
+                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Rate (TP)</label>
+                                                    <div className="relative flex items-center">
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
+                                                        <input
+                                                            className={inputCls + " pl-6 text-center tabular-nums font-bold text-slate-800"}
+                                                            type="number" min="0" step="0.01"
+                                                            value={item.unit_price || ''}
+                                                            onChange={e => patchItem(i, 'unit_price', Math.max(0, parseFloat(e.target.value) || 0))}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Disc %</label>
+                                                    <div className="relative flex items-center">
+                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">%</span>
+                                                        <input
+                                                            className={inputCls + " pr-5 text-center tabular-nums"}
+                                                            type="number" min="0" max="100"
+                                                            value={item.discountPct || ''}
+                                                            onChange={e => patchItem(i, 'discountPct', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Amt</label>
+                                                    <div className="h-[38px] flex items-center justify-end px-3 rounded-lg bg-slate-50 border border-slate-200/70">
+                                                        <span className="text-[14px] font-black text-slate-900 tabular-nums">{formatCurrency(net)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            {(item.bonus > 0 || discAmt > 0) && (
+                                                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[10.5px] text-slate-500">
+                                                    {item.bonus > 0 && <span className="text-emerald-700">+{item.bonus} bonus units (free)</span>}
+                                                    {discAmt > 0 && <span>Disc: <b className="text-rose-600">-{formatCurrency(discAmt)}</b></span>}
+                                                    <span>Total pcs: <b className="text-slate-700 tabular-nums">{(parseInt(item.quantity as any) || 0) + (parseInt(item.bonus as any) || 0)}</b></span>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                    
+                                    );})}
+
                                     {items.length === 0 && (
                                         <div className="py-10 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-300">
                                             <ShoppingCart size={40} className="mx-auto mb-2 opacity-20" />
@@ -889,7 +975,35 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 <span className="font-bold text-rose-700 tabular-nums">{formatCurrency(grandTotal - paidNow)}</span>
                                             </div>
                                         )}
+
+                                        {/* Previous balance + running net balance (registered customer) */}
+                                        {customerId && prevBalance > 0 && (
+                                            <div className="mt-1 pt-3 border-t border-slate-100 space-y-2">
+                                                <div className="flex justify-between items-center text-[13px]">
+                                                    <span className="text-slate-500">Previous Balance</span>
+                                                    <span className="font-bold text-amber-600 tabular-nums">{formatCurrency(prevBalance)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[13px]">
+                                                    <span className="font-semibold text-slate-700">Net Balance</span>
+                                                    <span className="font-black text-rose-700 tabular-nums">{formatCurrency(prevBalance + (grandTotal - paidNow))}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* Profit tracking (cost-based) */}
+                                    {totalCost > 0 && (
+                                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-black text-emerald-700/70 uppercase tracking-widest">Invoice Profit</p>
+                                                <p className={`text-[17px] font-black tabular-nums ${invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(invoiceProfit)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-emerald-700/70 uppercase tracking-widest">Margin</p>
+                                                <p className={`text-[17px] font-black tabular-nums ${invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{profitPct.toFixed(1)}%</p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Action Button */}
                                     <Button

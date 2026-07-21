@@ -48,5 +48,13 @@ export const orderService = {
     getBoughtProducts: async () => {
         const response = await api.get('v1/sales/orders/bought_products/');
         return response.data.results || response.data || [];
-    }
+    },
+    // Outstanding balance (previous unpaid dues) for a registered customer — POS Prev. Bal.
+    // Pass excludeOrderId to leave the current sale out (invoice / detail views).
+    getCustomerBalance: async (customerId: string, excludeOrderId?: string) => {
+        const params: any = { customer: customerId };
+        if (excludeOrderId) params.exclude = excludeOrderId;
+        const response = await api.get('v1/sales/orders/customer_balance/', { params });
+        return response.data;
+    },
 };

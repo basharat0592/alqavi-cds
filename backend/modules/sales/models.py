@@ -129,6 +129,17 @@ class Order(models.Model):
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='PAID')
     due_date = models.DateField(null=True, blank=True)
 
+    # Salesman who booked this sale (desktop POS "Saleman" dropdown). Distinct from
+    # created_by (which is always the logged-in staff); lets a shop attribute the
+    # sale to a specific salesperson for commission/reporting.
+    salesperson = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='salesperson_orders'
+    )
+    # Optional back-dated sale date (desktop "Sale Date" checkbox). Falls back to
+    # created_at for display when unset.
+    sale_date = models.DateField(null=True, blank=True)
+
     # Shipping info
     shipping_address = models.TextField()
     phone_number = models.CharField(max_length=20)
@@ -201,12 +212,29 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=10, decimal_places=2)      # Snapshotted selling price
+    # Free bonus units given with this line (desktop "Bon(U)"). Leave stock but are
+    # not charged for.
+    bonus_quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2)      # Snapshotted selling price / "Unit TP"
+    # Per-line discount AMOUNT (desktop "Disc.Amt"); the % is a UI convenience.
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Snapshotted purchase cost
 
     @property
+    def line_net(self):
+        """Charged amount for this line: qty × price − line discount (bonus is free)."""
+        return (Decimal(str(self.price or 0)) * self.quantity) - Decimal(str(self.discount or 0))
+
+    @property
+    def received_units(self):
+        """Physical units that leave stock: paid quantity + free bonus."""
+        return (self.quantity or 0) + (self.bonus_quantity or 0)
+
+    @property
     def profit(self):
-        return (self.price - self.cost_price) * self.quantity
+        # Profit is on the charged amount (net of line discount), over cost of all
+        # physical units shipped (paid + bonus).
+        return self.line_net - (Decimal(str(self.cost_price or 0)) * self.received_units)
 
     def __str__(self):
         product_name = self.product.product_name if self.product else "Deleted Product"
@@ -251,9 +279,16 @@ class PurchaseOrder(models.Model):
     warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True)
     
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # "Freight"
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)      # "Extra Tax Amt"
+    # Extra flat discount given by the supplier on the whole bill ("Extra Disc").
+    extra_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # Staff member who handled/booked this purchase (desktop "Staff" dropdown).
+    staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='handled_purchase_orders'
+    )
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     is_inventory_synced = models.BooleanField(default=False)
     payment_status = models.CharField(max_length=20, choices=[
@@ -342,17 +377,36 @@ class PurchaseOrderItem(models.Model):
     items_per_carton = models.PositiveIntegerField(default=1) # If carton, how many pieces inside?
     
     quantity = models.PositiveIntegerField(default=1) # Number of cartons or items
-    price = models.DecimalField(max_digits=10, decimal_places=2) # Cost Price (from supplier)
-    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Planned Sale Price for distributor
+    # Free bonus units received on top of the paid quantity ("Bonus (U)").
+    bonus_quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Cost Price / "Pur.Rate"
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Planned "Sale Rate"
+    retail_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)   # "Retail.Rate"
+    # Batch expiry for this received lot ("Exp Date").
+    expiry_date = models.DateField(null=True, blank=True)
 
     weight = models.CharField(max_length=50, null=True, blank=True)
     size = models.CharField(max_length=50, null=True, blank=True)
 
     @property
     def total_units(self):
+        """Paid units (excludes free bonus) — the basis for costing/subtotal."""
         if self.packaging_type == 'CARTON':
             return self.quantity * self.items_per_carton
         return self.quantity
+
+    @property
+    def received_units(self):
+        """Units that actually enter stock: paid units + free bonus units."""
+        return self.total_units + (self.bonus_quantity or 0)
+
+    @property
+    def profit_percent(self):
+        """Margin over cost: (sale − cost) / cost × 100."""
+        cost = float(self.price or 0)
+        if cost <= 0:
+            return 0.0
+        return round((float(self.selling_price or 0) - cost) / cost * 100, 2)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name if self.product else 'Deleted'}"

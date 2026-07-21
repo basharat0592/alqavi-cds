@@ -89,7 +89,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
             label: 'Sales Console',
             items: [
                 { name: 'Point of Sale', href: '/admin/sale', icon: Monitor },
-                { name: 'Invoices', href: '/admin/invoices', icon: FileText },
                 { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
                 { name: 'Income', href: '/admin/income', icon: ArrowDownLeft },
                 { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight },

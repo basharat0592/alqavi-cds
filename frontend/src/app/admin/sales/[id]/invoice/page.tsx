@@ -15,12 +15,25 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     const [loading, setLoading] = useState(true);
     const [shared, setShared] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+    // This customer's outstanding balance from OTHER orders (previous dues) + its due date.
+    const [prevBalance, setPrevBalance] = useState(0);
+    const [prevDueDate, setPrevDueDate] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOrder = async () => {
             try {
                 const data = await orderService.getById(id);
                 setOrder(data);
+                // Registered customer → look up their previous outstanding balance
+                // (all their other unpaid orders) + earliest due date.
+                const custId = (data as any)?.customer;
+                if (custId) {
+                    try {
+                        const bal = await orderService.getCustomerBalance(String(custId), String((data as any).id));
+                        setPrevBalance(Number(bal?.previous_balance || 0));
+                        setPrevDueDate(bal?.due_date || null);
+                    } catch { /* non-blocking */ }
+                }
             } catch (error) {
                 console.error("Failed to load order", error);
             } finally {
@@ -136,10 +149,15 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bill To</p>
                         <p className="text-[15px] font-black text-slate-900 leading-tight">{customerName}</p>
                         {customerCell && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{customerCell}</p>}
+                        {(order as any).salesperson_name && (
+                            <p className="text-[11px] font-medium text-slate-500 mt-1">Salesman: <span className="font-bold text-slate-700">{(order as any).salesperson_name}</span></p>
+                        )}
                     </div>
                     <div className="text-right">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment</p>
                         <p className="text-[12px] font-black uppercase text-slate-900">{order.payment_method || 'Cash'}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 mb-1">Sale Date</p>
+                        <p className="text-[12px] font-bold text-slate-700 tabular-nums">{formatDate((order as any).sale_date || order.created_at)}</p>
                     </div>
                 </div>
 
@@ -151,24 +169,30 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 <SelectAllTh sel={sel} className="print:hidden" />
                                 <th className="py-1.5 px-2 w-12 text-center">#</th>
                                 <th className="py-1.5 px-3">Item Description</th>
-                                <th className="py-1.5 px-3 text-center w-28">Quantity</th>
-                                <th className="py-1.5 px-3 text-right w-32">Unit Price</th>
-                                <th className="py-1.5 px-3 text-right w-32">Total</th>
+                                <th className="py-1.5 px-3 text-center w-16">Qty</th>
+                                <th className="py-1.5 px-3 text-center w-16">Bonus</th>
+                                <th className="py-1.5 px-3 text-right w-24">Unit Price</th>
+                                <th className="py-1.5 px-3 text-right w-24">Disc</th>
+                                <th className="py-1.5 px-3 text-right w-28">Total</th>
                             </tr>
                         </thead>
                         <tbody className="text-[13px]">
                             {items.map((item: any, i: number) => {
                                 const price = parseFloat(item.price || item.unit_price || 0);
                                 const qty = item.quantity || 1;
-                                const amt = price * qty;
+                                const bonus = parseInt(item.bonus_quantity || 0) || 0;
+                                const disc = parseFloat(item.discount || 0) || 0;
+                                const net = item.line_net != null ? parseFloat(item.line_net) : (price * qty - disc);
                                 return (
                                     <tr key={i} className="hover:bg-slate-50">
                                         <RowCheckboxTd sel={sel} id={String(i)} className="print:hidden" />
                                         <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
                                         <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">{item.product_name || item.name}</td>
                                         <td className="py-1.5 px-3 text-center tabular-nums">{qty}</td>
+                                        <td className="py-1.5 px-3 text-center tabular-nums text-emerald-700 font-bold">{bonus > 0 ? `+${bonus}` : '—'}</td>
                                         <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
-                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(amt)}</td>
+                                        <td className="py-1.5 px-3 text-right tabular-nums text-rose-600">{disc > 0 ? `-${formatCurrency(disc)}` : '—'}</td>
+                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(net)}</td>
                                     </tr>
                                 );
                             })}
@@ -185,8 +209,20 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                     <div className="w-[280px] text-[12px] space-y-2">
                         <div className="flex justify-between">
                             <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
-                            <span className="font-bold text-slate-700 tabular-nums">{formatCurrency(items.reduce((s, i) => s + (parseFloat(i.price || i.unit_price || 0) * (i.quantity || 1)), 0))}</span>
+                            <span className="font-bold text-slate-700 tabular-nums">{formatCurrency(items.reduce((s, i) => s + (i.line_net != null ? parseFloat(i.line_net) : (parseFloat(i.price || i.unit_price || 0) * (i.quantity || 1) - parseFloat(i.discount || 0))), 0))}</span>
                         </div>
+                        {items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0) > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Bonus Units</span>
+                                <span className="font-bold text-emerald-700 tabular-nums">+{items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0)} free</span>
+                            </div>
+                        )}
+                        {items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0) > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Line Discounts</span>
+                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0))}</span>
+                            </div>
+                        )}
                         {parseFloat((order as any).shipping_cost || '0') > 0 && (
                             <div className="flex justify-between">
                                 <span className="text-slate-500 font-bold uppercase text-[11px]">Delivery Charges</span>
@@ -221,6 +257,24 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 <span className="font-bold text-slate-700 tabular-nums">{formatDate((order as any).due_date)}</span>
                             </div>
                         )}
+                        {prevBalance > 0 && (
+                            <>
+                                <div className="flex justify-between pt-2 border-t border-slate-200">
+                                    <span className="text-amber-600 font-bold uppercase text-[11px]">Previous Balance</span>
+                                    <span className="font-bold text-amber-600 tabular-nums">{formatCurrency(prevBalance)}</span>
+                                </div>
+                                {prevDueDate && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-bold uppercase text-[11px]">Prev. Due Date</span>
+                                        <span className="font-bold text-slate-700 tabular-nums">{formatDate(prevDueDate)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between pt-1 border-t border-slate-200">
+                                    <span className="text-rose-700 font-black uppercase text-[11px]">Net Balance</span>
+                                    <span className="font-black text-rose-700 text-[15px] tabular-nums">{formatCurrency(prevBalance + balance)}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -232,13 +286,18 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                             sel.selectedItems.map((item: any, idx: number) => {
                                 const price = parseFloat(item.price || item.unit_price || 0);
                                 const qty = item.quantity || 1;
+                                const bonus = parseInt(item.bonus_quantity || 0) || 0;
+                                const disc = parseFloat(item.discount || 0) || 0;
+                                const net = item.line_net != null ? parseFloat(item.line_net) : (price * qty - disc);
                                 return {
                                     line: idx + 1,
                                     invoice: order.order_number || String(order.id),
                                     product: item.product_name || item.name || '',
                                     quantity: qty,
+                                    bonus_units: bonus,
                                     unit_price: price,
-                                    total: price * qty,
+                                    discount: disc,
+                                    total: net,
                                 };
                             }),
                             `invoice-${order.order_number || order.id}-items.csv`,

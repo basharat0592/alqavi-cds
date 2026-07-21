@@ -62,7 +62,6 @@ const PAGE_GROUPS = [
         label: 'Sales Console',
         items: [
             { name: 'Point of Sale', href: '/admin/sale' },
-            { name: 'Invoices', href: '/admin/invoices' },
             { name: 'Global Payments', href: '/admin/payments' },
             { name: 'Sale Returns', href: '/admin/sale-returns' },
         ],

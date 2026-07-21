@@ -8,7 +8,7 @@ import {
     ShoppingCart, History, RefreshCcw,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, CreditCard,
     Truck, AlertTriangle, Globe,
-    ScanLine, Receipt, ClipboardList, PackagePlus,
+    ScanLine, ClipboardList, PackagePlus,
     ArrowDownLeft, ArrowUpRight, Building2,
     MapPin, Bell, Bike, CalendarClock, Search
 } from 'lucide-react';
@@ -46,7 +46,6 @@ const BRANCH_ADMIN_IMPORTANT_HREFS = new Set<string>([
     // Sales & Orders
     '/admin/sale',            // Point of Sale
     '/admin/sales',           // Sales History
-    '/admin/invoices',        // Invoices
     '/admin/sale-returns',    // Sale Returns
     '/admin/orders',          // Order List
     '/admin/tracking',        // Order Tracking
@@ -236,20 +235,6 @@ export default function AdminDashboard() {
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(16,185,129,0.06)]'
             },
             keywords: ['draft', 'buy', 'stock order', 'procurement', 'purchase']
-        },
-        {
-            name: 'Invoices',
-            desc: 'Billing & receipts',
-            href: '/admin/invoices',
-            icon: Receipt,
-            theme: {
-                border: 'hover:border-amber-500',
-                iconBg: 'bg-amber-50 border-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]',
-                leftBar: 'bg-amber-600',
-                chevron: 'text-amber-400 group-hover:text-amber-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(245,158,11,0.06)]'
-            },
-            keywords: ['billing', 'receipts', 'print', 'invoice']
         },
         {
             name: 'Reports Center',
@@ -600,7 +585,6 @@ export default function AdminDashboard() {
             items: [
                 { name: 'Point of Sale (POS)', href: '/admin/sale', icon: ScanLine, keywords: ['counter', 'cashier', 'barcode', 'checkout', 'pos'] },
                 { name: 'Sales History', href: '/admin/sales', icon: TrendingUp, keywords: ['sales list', 'transactions', 'revenue ledger'] },
-                { name: 'Invoices', href: '/admin/invoices', icon: Receipt, keywords: ['billing', 'receipts', 'print', 'invoice'] },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, keywords: ['returns', 'refunds', 'customer returns'] },
                 { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, keywords: ['orders', 'shipping', 'list', 'recent', 'active'] },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, keywords: ['delivery', 'courier', 'dispatch'] },
@@ -690,7 +674,7 @@ export default function AdminDashboard() {
 
     // ── Group the core button-cards into labeled sections (order = display order) ──
     const CORE_GROUPS: { title: string; hrefs: string[] }[] = [
-        { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/invoices', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
+        { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
         { title: 'Purchasing & Inventory', hrefs: ['/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns', '/admin/products', '/admin/products/add', '/admin/inventory/list'] },
         { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense', '/admin/payments'] },
         { title: 'Administration', hrefs: ['/admin/branches', '/admin/users', '/admin/website-settings', '/admin/settings', '/admin/company/suppliers', '/admin/company/customers'] },

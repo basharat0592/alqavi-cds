@@ -36,6 +36,9 @@ export default function SaleDetailView({
     const [order, setOrder] = useState<any | null>(null);
     const [installments, setInstallments] = useState<any[]>([]);
     const [warehouses, setWarehouses] = useState<any[]>([]);
+    // This customer's previous outstanding balance (other orders) + its due date.
+    const [prevBalance, setPrevBalance] = useState(0);
+    const [prevDueDate, setPrevDueDate] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -53,6 +56,20 @@ export default function SaleDetailView({
             setOrder(orderData);
             setInstallments(paymentsData);
             setWarehouses(whsData);
+
+            // Registered customer → fetch their previous outstanding balance (their
+            // other unpaid orders, excluding this one) + earliest due date.
+            const custId = (orderData as any)?.customer;
+            if (custId) {
+                try {
+                    const bal = await orderService.getCustomerBalance(String(custId), String((orderData as any).id));
+                    setPrevBalance(Number(bal?.previous_balance || 0));
+                    setPrevDueDate(bal?.due_date || null);
+                } catch { /* non-blocking */ }
+            } else {
+                setPrevBalance(0);
+                setPrevDueDate(null);
+            }
 
             // Keep selected installment reference up-to-date if modal is open
             if (selectedInstallment) {
@@ -203,13 +220,19 @@ export default function SaleDetailView({
                                 <thead className="bg-slate-50/20 border-b border-slate-100 text-[10.5px] font-bold uppercase text-slate-400">
                                     <tr>
                                         <th className="px-6 py-3">Product</th>
-                                        <th className="px-4 py-3 text-center">Qty</th>
-                                        <th className="px-4 py-3 text-right">Unit Price</th>
+                                        <th className="px-3 py-3 text-center">Qty</th>
+                                        <th className="px-3 py-3 text-center">Bonus</th>
+                                        <th className="px-3 py-3 text-right">Unit Price</th>
+                                        <th className="px-3 py-3 text-right">Disc</th>
                                         <th className="px-6 py-3 text-right">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {(order.items || []).map((it: any, index: number) => (
+                                    {(order.items || []).map((it: any, index: number) => {
+                                        const disc = Number(it.discount || 0);
+                                        const bonus = Number(it.bonus_quantity || 0);
+                                        const net = it.line_net != null ? Number(it.line_net) : (Number(it.price) * Number(it.quantity) - disc);
+                                        return (
                                         <tr key={index} className="hover:bg-slate-50/30 transition-colors">
                                             <td className="px-6 py-4">
                                                 <p className="font-semibold text-slate-900">{it.product_name || 'Unnamed Product'}</p>
@@ -219,11 +242,13 @@ export default function SaleDetailView({
                                                     </p>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-4 text-center text-slate-600 font-medium">{it.quantity}</td>
-                                            <td className="px-4 py-4 text-right text-slate-500 tabular-nums">{formatCurrency(it.price)}</td>
-                                            <td className="px-6 py-4 text-right font-semibold text-slate-900 tabular-nums">{formatCurrency(Number(it.price) * Number(it.quantity))}</td>
+                                            <td className="px-3 py-4 text-center text-slate-600 font-medium">{it.quantity}</td>
+                                            <td className="px-3 py-4 text-center font-bold tabular-nums text-emerald-700">{bonus > 0 ? `+${bonus}` : '—'}</td>
+                                            <td className="px-3 py-4 text-right text-slate-500 tabular-nums">{formatCurrency(it.price)}</td>
+                                            <td className="px-3 py-4 text-right tabular-nums text-rose-600">{disc > 0 ? `-${formatCurrency(disc)}` : '—'}</td>
+                                            <td className="px-6 py-4 text-right font-semibold text-slate-900 tabular-nums">{formatCurrency(net)}</td>
                                         </tr>
-                                    ))}
+                                    );})}
                                 </tbody>
                             </table>
 
@@ -233,9 +258,21 @@ export default function SaleDetailView({
                                     <div className="flex justify-between items-center text-slate-500">
                                         <span>Subtotal</span>
                                         <span className="font-semibold tabular-nums">
-                                            {formatCurrency((order.items || []).reduce((s: number, it: any) => s + (Number(it.price) * Number(it.quantity)), 0))}
+                                            {formatCurrency((order.items || []).reduce((s: number, it: any) => s + (it.line_net != null ? Number(it.line_net) : (Number(it.price) * Number(it.quantity) - Number(it.discount || 0))), 0))}
                                         </span>
                                     </div>
+                                    {(order.items || []).reduce((s: number, it: any) => s + Number(it.bonus_quantity || 0), 0) > 0 && (
+                                        <div className="flex justify-between items-center text-slate-500">
+                                            <span>Bonus Units</span>
+                                            <span className="font-semibold text-emerald-700 tabular-nums">+{(order.items || []).reduce((s: number, it: any) => s + Number(it.bonus_quantity || 0), 0)} free</span>
+                                        </div>
+                                    )}
+                                    {(order.items || []).reduce((s: number, it: any) => s + Number(it.discount || 0), 0) > 0 && (
+                                        <div className="flex justify-between items-center text-slate-500">
+                                            <span>Line Discounts</span>
+                                            <span className="font-semibold text-rose-600 tabular-nums">-{formatCurrency((order.items || []).reduce((s: number, it: any) => s + Number(it.discount || 0), 0))}</span>
+                                        </div>
+                                    )}
                                     {Number(order.shipping_cost || 0) > 0 && (
                                         <div className="flex justify-between items-center text-slate-500">
                                             <span>Delivery Charges</span>
@@ -261,6 +298,24 @@ export default function SaleDetailView({
                                             <span>Remaining Balance</span>
                                             <span className="tabular-nums">{formatCurrency(remaining)}</span>
                                         </div>
+                                    )}
+                                    {prevBalance > 0 && (
+                                        <>
+                                            <div className="flex justify-between items-center text-amber-600 font-semibold pt-2 border-t border-slate-200/60">
+                                                <span>Previous Balance</span>
+                                                <span className="tabular-nums">{formatCurrency(prevBalance)}</span>
+                                            </div>
+                                            {prevDueDate && (
+                                                <div className="flex justify-between items-center text-slate-500">
+                                                    <span>Prev. Due Date</span>
+                                                    <span className="tabular-nums">{formatDate(prevDueDate)}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center text-[13.5px] font-black text-rose-700 pt-1 border-t border-slate-200/60">
+                                                <span>Net Balance</span>
+                                                <span className="tabular-nums">{formatCurrency(prevBalance + remaining)}</span>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -411,10 +466,22 @@ export default function SaleDetailView({
                                     <span className="text-slate-400 font-medium">Date & Time</span>
                                     <span className="font-semibold text-slate-700">{formatDateTime(order.created_at)}</span>
                                 </div>
+                                {order.sale_date && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-medium">Sale Date</span>
+                                        <span className="font-semibold text-slate-700">{formatDate(order.sale_date)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-400 font-medium">Branch</span>
                                     <span className="font-semibold text-slate-700">{order.warehouse_name || 'Main Branch'}</span>
                                 </div>
+                                {order.salesperson_name && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-medium">Salesman</span>
+                                        <span className="font-semibold text-slate-700">{order.salesperson_name}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-400 font-medium">Sales Channel</span>
                                     <span className="font-semibold text-slate-700">{channel} Counter</span>

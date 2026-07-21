@@ -30,7 +30,6 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
     '/admin/products/add',      // Add Listing
     '/admin/inventory/list',    // Current Stocks
     '/admin/users/roles',       // Staff Roles
-    '/admin/invoices',          // Invoices
     // Finance is a branch-admin concern — hidden from the Super Admin side.
     '/admin/payments',          // Global Payments
     '/admin/income',            // Income
@@ -67,7 +66,6 @@ export const ADMIN_PAGE_GROUPS: { group: string; items: { n: string; h: string }
             { n: 'Dashboard', h: '/admin/dashboard' },
             { n: 'Point of Sale (POS)', h: '/admin/sale' },
             { n: 'Sales History', h: '/admin/sales' },
-            { n: 'Invoices', h: '/admin/invoices' },
             { n: 'Sale Returns', h: '/admin/sale-returns' },
             { n: 'Recent Orders', h: '/admin/orders' },
             { n: 'Order Tracking', h: '/admin/tracking' },
@@ -135,7 +133,6 @@ export const ADMIN_PAGES: AdminPage[] = [
     // ── Core operations ──
     { name: 'Point of Sale (POS)', href: '/admin/sale', keywords: ['counter', 'cashier', 'barcode', 'checkout', 'pos', 'sales'] },
     { name: 'New Purchase Order', href: '/admin/purchases/add', keywords: ['draft', 'buy', 'stock order', 'procurement', 'purchase'] },
-    { name: 'Invoices', href: '/admin/invoices', keywords: ['billing', 'receipts', 'print', 'invoice', 'sales invoices'] },
     { name: 'Reports Center', href: '/admin/reports', keywords: ['hub', 'audits', 'graphs', 'reports'] },
     { name: 'Income', href: '/admin/income', keywords: ['income', 'money in', 'revenue', 'earnings', 'sales income', 'inbound'] },
     { name: 'Expense', href: '/admin/expense', keywords: ['expense', 'money out', 'spending', 'costs', 'outbound', 'payments out'] },
