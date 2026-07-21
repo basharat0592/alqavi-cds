@@ -1,5 +1,18 @@
 import api from '@/lib/axios';
 
+/**
+ * The city the shopper is currently browsing (persisted as `deliver_to_city`).
+ * Attached to branch-less storefront signups (newsletter / reviews) so the
+ * backend can route the resulting notification to that city's branch admin(s).
+ */
+function activeStorefrontScope(): { city?: string } {
+  try {
+    const city = (localStorage.getItem('deliver_to_city') || '').trim();
+    if (city) return { city };
+  } catch { /* SSR / storage unavailable */ }
+  return {};
+}
+
 export interface SiteSettings {
   id?: number;
   site_name: string;
@@ -123,11 +136,11 @@ const cmsService = {
     await api.delete(`v1/cms/media/${id}/`);
   },
   submitReview: async (payload: { name: string; rating: number; text: string }) => {
-    const { data } = await api.post('v1/cms/config/submit_review/', payload);
+    const { data } = await api.post('v1/cms/config/submit_review/', { ...payload, ...activeStorefrontScope() });
     return data;
   },
   subscribeNewsletter: async (email: string) => {
-    const { data } = await api.post('v1/cms/config/subscribe_newsletter/', { email });
+    const { data } = await api.post('v1/cms/config/subscribe_newsletter/', { email, ...activeStorefrontScope() });
     return data;
   },
   // Navigation

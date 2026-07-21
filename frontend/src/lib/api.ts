@@ -15,7 +15,7 @@ export { sectionService } from '../services/section.service';
 export { roleService, userService, permissionService, settingsService } from '../services/user.service';
 export { companyService, companyCategoryService } from '../services/company.service';
 export { inventoryService } from '../services/inventory.service';
-export { paymentService, paymentCategoryService } from '../services/payment.service';
+export { paymentService, paymentCategoryService, installmentService } from '../services/payment.service';
 export { purchaseService } from '../services/purchase.service';
 export { salesService } from '../services/sales.service';
 export { supplierService } from '../services/supplier.service';

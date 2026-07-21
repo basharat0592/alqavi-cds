@@ -10,6 +10,7 @@ import { ShoppingCart, Star, Truck, ShieldCheck, MapPin, Lock, ChevronRight, Rot
 import Link from 'next/link';
 import PageLoader from '@/components/ui/PageLoader';
 import { useCart } from '@/context/CartContext';
+import { useWishlist } from '@/context/WishlistContext';
 
 const AmazonStars = ({ count, reviews }: { count: number, reviews: number }) => (
     <div className="flex items-center gap-1">
@@ -29,6 +30,7 @@ const AmazonStars = ({ count, reviews }: { count: number, reviews: number }) => 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const { addToCart } = useCart();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
     const router = useRouter();
 
     const [product, setProduct] = useState<any>(null);
@@ -211,7 +213,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                         </button>
                                         <span className="w-8 text-center text-[14px] font-bold">{quantity}</span>
                                         <button 
-                                            onClick={() => setQuantity(Math.min(product.total_quantity || 999, quantity + 1))} 
+                                            onClick={() => setQuantity(Math.min(product.total_quantity || 0, quantity + 1))}
                                             className="w-8 h-8 hover:bg-white flex items-center justify-center rounded transition-colors disabled:opacity-30"
                                             disabled={quantity >= (product.total_quantity || 0)}
                                         >
@@ -258,8 +260,25 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                 <span className="text-[12px] text-[#007185] hover:text-[#c45500] hover:underline cursor-pointer font-medium">Secure transaction</span>
                             </div>
 
-                            <button className="w-full py-2 text-[13px] text-[#0f1111] bg-white border border-[#adb1b8] rounded-[8px] hover:bg-[#f7f8fa] transition-all shadow-sm">
-                                Add to Wish List
+                            <button
+                                onClick={() => {
+                                    const pid = String(product.id);
+                                    if (isInWishlist(pid)) {
+                                        removeFromWishlist(pid);
+                                    } else {
+                                        addToWishlist({
+                                            id: pid,
+                                            name: product.product_name || product.name,
+                                            price: price,
+                                            image: product.image || product.catalog_image || '',
+                                            category: product.category_name || 'Cosmetics',
+                                            addedAt: new Date().toISOString(),
+                                        });
+                                    }
+                                }}
+                                className="w-full py-2 text-[13px] text-[#0f1111] bg-white border border-[#adb1b8] rounded-[8px] hover:bg-[#f7f8fa] transition-all shadow-sm"
+                            >
+                                {isInWishlist(String(product.id)) ? '✓ In Wish List' : 'Add to Wish List'}
                             </button>
                         </div>
                     </div>

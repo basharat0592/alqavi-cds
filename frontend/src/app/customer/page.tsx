@@ -136,7 +136,9 @@ export default function Home() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 1000); // 1-second sync
+        // Storefront content doesn't change second-to-second; a 1s poll re-pulled the
+        // entire CMS state + full catalog every second per visitor. Poll every 60s.
+        const interval = setInterval(fetchData, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -149,6 +151,8 @@ export default function Home() {
     }, []);
 
     const filtered = (() => {
+        // No cross-branch dedup: every branch lists its own product separately (the
+        // backend already scopes by the selected city). Only filter by category.
         const raw = activeCategory === 'All'
             ? allProducts
             : allProducts.filter(p => {
@@ -157,15 +161,7 @@ export default function Home() {
                 const name2 = (p.category?.name || '').toLowerCase().trim();
                 return name1 === target || name2 === target;
             });
-
-        const groups = new Map();
-        raw.forEach(p => {
-            const name = (p.product_name || p.name || '').toLowerCase().trim();
-            const price = parseFloat(p.selling_price || p.price || 0);
-            const key = `${name}_${price}`;
-            if (!groups.has(key)) groups.set(key, p);
-        });
-        return Array.from(groups.values());
+        return raw;
     })();
 
     const handleAdd = (p: any, qty: number = 1) => {
@@ -177,7 +173,7 @@ export default function Home() {
             quantity: qty,
             image: finalImage,
             category: p.category_name || 'Cosmetics',
-            stock: p.total_quantity || p.quantity_in_stock
+            stock: p.total_quantity ?? p.quantity_in_stock ?? 0
         });
     };
 
@@ -687,7 +683,7 @@ export default function Home() {
                                                             const searchIds = Array.isArray(content.product_ids) ? content.product_ids : [];
                                                             return searchIds.some((sid: string | number) => String(sid) === String(p.id));
                                                         });
-                                                    const categoryFiltered = activeCategory === 'All'
+                                                    const categoryFiltered = (!isFullCollection || activeCategory === 'All')
                                                         ? baseList
                                                         : baseList.filter(p => {
                                                             const target = activeCategory.toLowerCase().trim();
@@ -707,7 +703,7 @@ export default function Home() {
                                                             return searchIds.some((sid: string | number) => String(sid) === String(p.id));
                                                         });
 
-                                                    const categoryFiltered = activeCategory === 'All'
+                                                    const categoryFiltered = (!isFullCollection || activeCategory === 'All')
                                                         ? baseList
                                                         : baseList.filter(p => {
                                                             const target = activeCategory.toLowerCase().trim();
@@ -741,7 +737,9 @@ export default function Home() {
                                                                 image={getImageUrl(p.images?.[0]?.image || p.image || p.catalog_image || p.image_url) || undefined}
                                                                 price={parseFloat(p.selling_price || p.price || 0)}
                                                                 category={p.category_name || 'Cosmetics'}
-                                                                stock={p.total_quantity || p.quantity_in_stock}
+                                                                stock={p.total_quantity ?? p.quantity_in_stock ?? 0}
+                                                                city={p.warehouse_area}
+                                                                branch={p.warehouse_name}
                                                                 batch={p.batch || p.batch_number}
                                                                 badge={p.badge || p.status}
                                                                 weight={p.weight || p.volume_weight}

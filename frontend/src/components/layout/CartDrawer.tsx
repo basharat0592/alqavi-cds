@@ -258,7 +258,10 @@ function QuantityController({ item, updateQuantity }: { item: any, updateQuantit
         }
     }, [item.quantity, isFocused]);
 
-    const maxStock = item.stock || 999;
+    // Use the item's real (city-scoped) stock as the ceiling. `??` keeps a genuine
+    // 0 as 0 instead of collapsing it into 999 (the old `|| 999` over-sold out-of-
+    // stock / out-of-city items). Only a truly-unknown stock stays permissive.
+    const maxStock = item.stock ?? 999;
     const isMax = item.quantity >= maxStock;
 
     const handleUpdate = (val: number) => {

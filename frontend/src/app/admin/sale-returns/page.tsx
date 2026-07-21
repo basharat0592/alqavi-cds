@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation';
 import {
     Package, Search,
     RefreshCw, AlertTriangle, XCircle,
-    User, Clock, Loader2, CheckCircle2, Trash2
+    User, Clock, Loader2, CheckCircle2, Trash2, Plus
 } from 'lucide-react';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, exportToCSV, formatCurrency } from '@/lib/utils';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 const STATUS_FILTERS = ['All', 'Pending', 'Accepted', 'Rejected'];
+
+const refundTotal = (r: any) =>
+    Number(r.refund_total ?? r.refund_amount ?? 0) ||
+    (r.items?.reduce((s: number, i: any) => s + (i.price * i.quantity), 0) || 0);
 
 // ── Status badge tone ──────────────────────────────────────────────────────────
 const getStatusTone = (status: string): 'amber' | 'green' | 'red' | 'neutral' => {
@@ -131,7 +136,17 @@ export default function SaleReturnsPage() {
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedReturn, setSelectedReturn] = useState<any>(null);
     const [returnToDelete, setReturnToDelete] = useState<any>(null);
+    const [payReturn, setPayReturn] = useState<any>(null);
     const [deleting, setDeleting] = useState(false);
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset pagination to first page when search filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
 
     const loadReturns = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -181,6 +196,23 @@ export default function SaleReturnsPage() {
         return matchesSearch && matchesStatus;
     });
 
+    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => api.delete(`v1/sales/returns/${id}/`)));
+        toast.success(`${ids.length} return record(s) deleted`);
+        loadReturns();
+    };
+
+    const bulkStatus = async (ids: string[], status: string) => {
+        await Promise.allSettled(ids.map(id => api.patch(`v1/sales/returns/${id}/`, { status })));
+        toast.success(`${ids.length} return(s) ${status.toLowerCase()}`);
+        loadReturns();
+    };
+
     if (loading && returns.length === 0) return <PageLoader />;
 
     return (
@@ -190,9 +222,14 @@ export default function SaleReturnsPage() {
                     title="Customer Return Requests"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Sale Returns' }]}
                     actions={
-                        <Button variant="secondary" onClick={() => loadReturns()} disabled={loading}>
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                        </Button>
+                        <>
+                            <Button variant="secondary" onClick={() => loadReturns()} disabled={loading}>
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                            </Button>
+                            <Button variant="primary" onClick={() => router.push('/admin/sale-returns/add')} className="whitespace-nowrap">
+                                <Plus size={14} /> Add Return
+                            </Button>
+                        </>
                     }
                 />
 
@@ -226,6 +263,7 @@ export default function SaleReturnsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Return ID</th>
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Source Order</th>
                                     <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Customer</th>
@@ -236,13 +274,14 @@ export default function SaleReturnsPage() {
                             </thead>
                             <tbody>
                                 {filtered.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-24 text-center">
+                                    <tr><td colSpan={7} className="py-24 text-center">
                                         <div className="text-slate-200 mb-4"><Package size={60} className="mx-auto" /></div>
                                         <p className="text-[14px] text-slate-400 font-medium italic">No return requests found matching your criteria.</p>
                                     </td></tr>
                                 ) : (
-                                    filtered.map(r => (
+                                    paginated.map(r => (
                                         <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <RowCheckboxTd sel={sel} id={r.id} />
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                                                 <div className="text-[14px] font-bold text-indigo-600 group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
                                                     #{r.return_number}
@@ -279,13 +318,24 @@ export default function SaleReturnsPage() {
                                                     <span className="hidden sm:inline-block">
                                                         <Badge tone={getStatusTone(r.status)}>{r.status}</Badge>
                                                     </span>
+                                                    {r.status?.toUpperCase() === 'ACCEPTED' && (
+                                                        <span className={`text-[9px] font-black uppercase tracking-tighter ${r.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                            {r.refund_status === 'PAID' ? 'Refunded' : 'Refund pending'}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-2.5 transition-opacity">
+                                                    {r.status?.toUpperCase() === 'ACCEPTED' && r.refund_status !== 'PAID' && (
+                                                        <>
+                                                            <button onClick={() => setPayReturn(r)} className="text-[12px] font-bold text-indigo-600 hover:underline">Settle</button>
+                                                            <span className="text-slate-300">|</span>
+                                                        </>
+                                                    )}
                                                     <button onClick={() => setSelectedReturn(r)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
-                                                    <button className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
+                                                    <button onClick={() => { setSelectedReturn(r); setTimeout(() => window.print(), 350); }} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => setReturnToDelete(r)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
@@ -295,8 +345,60 @@ export default function SaleReturnsPage() {
                                 )}
                             </tbody>
                         </table>
+
+                        {/* Pagination Footer Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-100 text-[12px] text-slate-500 font-medium text-left">
+                                <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                    Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                                    <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
+                                    <span className="font-semibold text-slate-700">{filtered.length}</span> returns
+                                </div>
+                                <div className="flex items-center gap-2.5 order-1 sm:order-2 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="text-[11.5px] font-extrabold text-slate-800 tracking-wider tabular-nums px-2">
+                                        {currentPage} / {totalPages}
+                                    </div>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Card>
+
+                <BulkBar
+                    sel={sel}
+                    entity="returns"
+                    onDelete={bulkDelete}
+                    statusActions={[
+                        { label: 'Accept & Restock', apply: (ids) => bulkStatus(ids, 'ACCEPTED') },
+                        { label: 'Reject', apply: (ids) => bulkStatus(ids, 'REJECTED') },
+                    ]}
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((r: any) => ({
+                            return_number: r.return_number,
+                            order_tracking_id: r.order_tracking_id || '',
+                            customer_name: r.customer_name || '',
+                            status: r.status || '',
+                            refund_value: r.items?.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0) || 0,
+                            items: r.items?.length || 0,
+                            date: formatDateTime(r.created_at),
+                        })),
+                        'sale-returns.csv',
+                    )}
+                />
 
                 {/* Summary Note */}
                 <div className="mt-8 bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">
@@ -309,6 +411,20 @@ export default function SaleReturnsPage() {
             </div>
 
             {selectedReturn && <ReturnDetailModal returnData={selectedReturn} onClose={() => setSelectedReturn(null)} onUpdate={loadReturns} />}
+
+            {/* Refund settlement modal — records the refund paid back to the customer */}
+            {payReturn && (
+                <PaymentModal
+                    open={!!payReturn}
+                    onClose={() => setPayReturn(null)}
+                    title={`Refund · Return #${payReturn.return_number}`}
+                    sourceType="salereturn"
+                    sourceId={payReturn.id}
+                    total={refundTotal(payReturn)}
+                    direction="outbound"
+                    onChanged={() => loadReturns(true)}
+                />
+            )}
 
             {/* Delete Confirmation Modal */}
             <Modal

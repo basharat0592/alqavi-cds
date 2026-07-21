@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus, Sparkles } from 'lucide-react';
+import { Star, ShoppingCart, Eye, Heart, Check, Package, Plus, Minus, Sparkles, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -24,6 +24,8 @@ interface ProductCardProps {
     weight?: string;
     size?: string;
     stock?: number;
+    branch?: string;
+    city?: string;
     onAddToCart?: (qty: number) => void;
     onWishlist?: () => void;
     layout?: 'vertical' | 'horizontal';
@@ -44,6 +46,8 @@ export default function ProductCard({
     weight,
     size,
     stock,
+    branch,
+    city,
     onAddToCart,
     onWishlist,
     layout = 'vertical',
@@ -228,9 +232,18 @@ export default function ProductCard({
                                 </span>
                             </div>
                         )}
+                        {/* City · Branch — tiny, so identical products from different branches are distinguishable */}
+                        {(city || branch) && (
+                            <div className="mt-0.5 flex items-center gap-0.5 text-slate-400">
+                                <MapPin size={8} className="shrink-0" />
+                                <span className="text-[7.5px] font-semibold uppercase tracking-wide truncate max-w-[150px] leading-none">
+                                    {[city, branch].filter(Boolean).join(' · ')}
+                                </span>
+                            </div>
+                        )}
 
                         {/* Description */}
-                        {!isMinimal && description && (
+                        {description && (
                             <div className="mt-1.5 relative">
                                 <p className={cn(
                                     "text-[#475569] leading-tight font-medium line-clamp-2 pr-2",
@@ -279,7 +292,7 @@ export default function ProductCard({
                                     <span className="text-[12px] font-bold">{quantityInCart}</span>
                                     <button
                                         onClick={(e) => handleUpdateQuantity(e, 1)}
-                                        disabled={stock !== undefined && quantityInCart >= stock}
+                                        disabled={quantityInCart >= (stock ?? 999)}
                                         className="w-5 h-5 rounded-md hover:bg-white/20 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         <Plus className="h-2.5 w-2.5 stroke-[4]" />

@@ -121,8 +121,8 @@ export default function SupplierOrders() {
         setIsUpdating(true);
         try {
             const payload: any = {
-                payment_status: paymentEdit.payment_status,
-                payment_method: paymentEdit.payment_method || 'cash',
+                payment_status: (paymentEdit.payment_status || 'UNPAID').toUpperCase(),
+                payment_method: (paymentEdit.payment_method || 'CASH').toUpperCase(),
                 paid_amount: paymentEdit.payment_status === 'PAID' ? paymentEdit.total_amount : (paymentEdit.paid_amount || 0),
                 payment_date: paymentEdit.date || new Date().toISOString().slice(0, 10),
                 payment_notes: paymentEdit.notes || ''
@@ -376,7 +376,14 @@ export default function SupplierOrders() {
                                                                             </div>
                                                                             <div className="text-right">
                                                                                 <p className="text-[10px] text-slate-400 font-black uppercase">Quantity</p>
-                                                                                <p className="text-[13px] font-black text-slate-900">{item.quantity}x</p>
+                                                                                {item.packaging_type === 'CARTON' ? (
+                                                                                    <div className="flex flex-col leading-tight items-end">
+                                                                                        <p className="text-[13px] font-black text-slate-900">{item.total_units ?? (item.quantity * (item.items_per_carton || 1))} pcs</p>
+                                                                                        <p className="text-[10px] text-slate-400 font-medium">{item.quantity} ctn × {item.items_per_carton || 1}</p>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <p className="text-[13px] font-black text-slate-900">{item.quantity}x</p>
+                                                                                )}
                                                                             </div>
                                                                             <div className="text-right w-[100px]">
                                                                                 <p className="text-[10px] text-slate-400 font-black uppercase">Subtotal</p>
@@ -455,16 +462,53 @@ export default function SupplierOrders() {
                                 <div>
                                     <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Method</label>
                                     <select
-                                        value={paymentEdit.payment_method || 'cash'}
+                                        value={(paymentEdit.payment_method || 'CASH').toUpperCase()}
                                         onChange={e => setPaymentEdit({ ...paymentEdit, payment_method: e.target.value })}
                                         className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm font-medium outline-none focus:border-[#F59E0B]"
                                     >
-                                        <option value="cash">Cash</option>
-                                        <option value="bank_transfer">Bank Transfer</option>
-                                        <option value="online">Online</option>
+                                        <option value="CASH">Cash</option>
+                                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                                        <option value="ONLINE">Online</option>
+                                        <option value="CHEQUE">Cheque</option>
+                                        <option value="CREDIT">Credit</option>
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Payment Breakdown — total / paid / remaining so the supplier sees partial payments clearly */}
+                            {(() => {
+                                const total = Number(paymentEdit.total_amount || 0);
+                                const paid = Number(paymentEdit.paid_amount || (paymentEdit.payment_status === 'PAID' ? paymentEdit.total_amount : 0) || 0);
+                                const due = Math.max(0, total - paid);
+                                const payDate = paymentEdit.payment_date
+                                    ? new Date(paymentEdit.payment_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                                    : '—';
+                                return (
+                                    <div className="p-4 bg-slate-50 rounded border border-slate-200 space-y-2.5">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase">Payment Summary</span>
+                                        <div className="flex justify-between text-[12px]">
+                                            <span className="text-slate-500 font-semibold">Total Amount</span>
+                                            <span className="font-bold tabular-nums text-slate-900">{fmt(total)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[12px]">
+                                            <span className="text-slate-500 font-semibold">Paid Amount</span>
+                                            <span className="font-bold tabular-nums text-emerald-600">{fmt(paid)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[12px] pt-2 border-t border-slate-200">
+                                            <span className="text-slate-500 font-semibold">Remaining / Due</span>
+                                            <span className={`font-bold tabular-nums ${due > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{fmt(due)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[12px]">
+                                            <span className="text-slate-500 font-semibold">Payment Date</span>
+                                            <span className="font-bold text-slate-700">{payDate}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[12px]">
+                                            <span className="text-slate-500 font-semibold">Supplier</span>
+                                            <span className="font-bold text-slate-700">{paymentEdit.supplier_name || '—'}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Payment Slip and Transaction ID for Supplier */}
                             <div className="p-4 bg-blue-50/50 rounded border border-blue-100 space-y-4">

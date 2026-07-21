@@ -1,26 +1,152 @@
 from django.db.models import Count
 from django.db import transaction
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
+from core.permissions import HasModulePermission
+from core.scoping import (
+    BranchScopedQuerysetMixin, scope_to_tenant, scope_queryset, tenant_id_for,
+    user_can_use_warehouse, user_warehouse_ids,
+)
+
+
+def compute_low_stock(user, warehouse_id=None, limit=60):
+    """Per-branch low-stock list.
+
+    Returns products whose on-hand quantity (summed within the user's tenant AND
+    branch scope) is at or below their ``Product.min_count`` (default 10). A branch
+    admin sees only their warehouse(s) — an item full in one branch but empty in
+    another is still flagged for the empty branch. The platform operator sees every
+    tenant. ``warehouse_id`` narrows to a single branch.
+    """
+    from modules.products.models import Product
+    stock_scope = scope_to_tenant(user, Stock.objects.all(), 'tenant')
+    stock_scope = scope_queryset(user, stock_scope, 'warehouse')
+    if warehouse_id:
+        stock_scope = stock_scope.filter(warehouse_id=warehouse_id)
+
+    qty_by_name, sup_by_name = {}, {}
+    for s in stock_scope.values('product_name', 'supplier', 'total_quantity'):
+        key = (s['product_name'] or '').strip().lower()
+        if not key:
+            continue
+        qty_by_name[key] = qty_by_name.get(key, 0) + (s['total_quantity'] or 0)
+        if key not in sup_by_name and s['supplier']:
+            sup_by_name[key] = str(s['supplier'])
+
+    prod_meta = {}
+    for p in scope_to_tenant(user, Product.objects.all(), 'tenant').only('product_name', 'min_count', 'sku'):
+        k = (p.product_name or '').strip().lower()
+        if k:
+            prod_meta[k] = {'min': p.min_count if p.min_count is not None else 10,
+                            'sku': p.sku, 'name': p.product_name}
+
+    low = []
+    for key, qty in qty_by_name.items():
+        meta = prod_meta.get(key, {})
+        m = meta.get('min', 10)
+        if qty <= m:
+            low.append({
+                'product_name': meta.get('name') or key,
+                'qty': qty, 'min': m,
+                'sku': meta.get('sku'),
+                'supplier': sup_by_name.get(key),
+            })
+    low.sort(key=lambda x: x['qty'])
+    return low[:limit]
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_branches(request):
+    """Public list of active branches (warehouses) for the storefront's city + branch
+    pickers: every active branch that the Super Admin created and assigned to a city.
+
+    NOTE: we intentionally do NOT filter on ``tenant__isnull`` here. Branches start life
+    tenant-NULL (Super-Admin owned) but ``backfill_tenants`` stamps each branch with the
+    admin it is assigned to on every deploy — so a tenant-NULL filter would wrongly hide
+    every assigned branch (that's what emptied the storefront's city list). Identity for
+    the storefront is simply: active + has a city (area)."""
+    qs = Warehouse.objects.filter(is_active=True, area__isnull=False).order_by('name')
+    data = [
+        {
+            'id': str(w.id),
+            'name': w.name,
+            'area': (w.area.name if w.area_id else None),
+            'location': w.location,
+        }
+        for w in qs
+    ]
+    return Response(data)
 
 
 class WarehouseViewSet(viewsets.ModelViewSet):
+    """Branch (warehouse) registry.
+
+    Visibility is by ASSIGNMENT, not by tenant: a branch is created by the Super
+    Admin (tenant NULL) and then assigned to one or more Admins via the
+    ``User.warehouses`` M2M. A branch Admin must therefore see the branches
+    assigned to them even though those branches carry tenant NULL — scoping by
+    ``tenant`` alone would hide them (the round-trip bug). We scope by the user's
+    assigned warehouse ids instead:
+
+    * Super Admin / superuser  -> every branch.
+    * Branch Admin / staff     -> only their assigned branch(es).
+    * Portal/shadow logins      -> none (they use the public_branches endpoint).
+    """
     queryset = Warehouse.objects.all().order_by('name')
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasModulePermission]
+    perm_module = 'inventory'
 
+    def get_queryset(self):
+        from django.db.models import Q
+        user = self.request.user
+        qs = Warehouse.objects.all().order_by('name')
+        if (getattr(user, 'is_supplier', False) or getattr(user, 'is_customer', False)
+                or getattr(user, 'is_delivery', False)):
+            return qs.none()
+        ids = user_warehouse_ids(user)  # None => unscoped (Super Admin); set => assigned branches
+        if ids is None:
+            return qs
+        # A branch Admin sees branches ASSIGNED to them (M2M — covers Super-Admin-
+        # created, tenant-NULL branches) OR owned by their tenant (legacy safety).
+        cond = Q(id__in=ids) if ids else Q(pk__in=[])
+        tid = tenant_id_for(user)
+        if tid is not None:
+            cond = cond | Q(tenant_id=tid)
+        return qs.filter(cond)
 
-class StockViewSet(viewsets.ModelViewSet):
-    queryset = Stock.objects.all()
-    serializer_class = StockSerializer
-    permission_classes = [IsAuthenticated]
+    def paginate_queryset(self, queryset):
+        # Branch dropdowns need EVERY branch, not just the first page.
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def perform_create(self, serializer):
-        stock = serializer.save()
+        serializer.save(tenant_id=tenant_id_for(self.request.user))
+
+
+class StockViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
+    queryset = Stock.objects.all()
+    serializer_class = StockSerializer
+    permission_classes = [IsAuthenticated, HasModulePermission]
+    perm_module = 'inventory'
+    # Stock is shared branch inventory: show ALL products in the user's
+    # warehouse(s), no matter who brought them in (branch-scoped, not per-creator).
+    branch_field = 'warehouse'
+    # Tenant (owning-Admin) isolation is the primary axis.
+    tenant_field = 'tenant'
+
+    def perform_create(self, serializer):
+        actor = self.request.user
+        real = actor if (getattr(actor, 'pk', None) and actor.__class__.__name__ == 'User'
+                         and not getattr(actor, 'is_supplier', False)
+                         and not getattr(actor, 'is_customer', False)) else None
+        stock = serializer.save(created_by=real, tenant_id=tenant_id_for(actor))
         # Record initial purchase movement
         StockMovement.objects.create(
             stock=stock,
@@ -28,7 +154,8 @@ class StockViewSet(viewsets.ModelViewSet):
             quantity=stock.total_quantity,
             to_warehouse=stock.warehouse,
             date=stock.date,
-            description="Initial stock purchase"
+            description="Initial stock purchase",
+            tenant_id=stock.tenant_id,
         )
 
     def get_queryset(self):
@@ -85,134 +212,13 @@ class StockViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return super().list(request, *args, **kwargs)
 
-    @action(detail=True, methods=['post'])
-    def transfer(self, request, pk=None):
-        primary_stock = self.get_object()
-        destination_warehouse_id = request.data.get('destination_warehouse')
-        quantity_to_transfer = request.data.get('quantity')
-        transfer_date = request.data.get('date', primary_stock.date)
+    @action(detail=False, methods=['get'])
+    def low_stock(self, request):
+        """Per-branch low-stock alerts (tenant + branch scoped) vs Product.min_count.
+        Optional ?warehouse= narrows to one branch."""
+        wh = request.query_params.get('warehouse')
+        return Response(compute_low_stock(request.user, wh))
 
-        if not destination_warehouse_id or not quantity_to_transfer:
-            return Response({"error": "Destination warehouse and quantity are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            total_requested = int(quantity_to_transfer)
-            if total_requested <= 0:
-                return Response({"error": "Quantity must be greater than zero"}, status=status.HTTP_400_BAD_REQUEST)
-        except ValueError:
-            return Response({"error": "Invalid quantity format"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            destination_warehouse = Warehouse.objects.get(id=destination_warehouse_id)
-        except Warehouse.DoesNotExist:
-            return Response({"error": "Destination warehouse does not exist"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Find all matching stock records in the source warehouse to deplete from
-        # matching the "Global Price-Point Truth" (Product + Price + Warehouse)
-        matching_stocks = Stock.objects.filter(
-            warehouse=primary_stock.warehouse,
-            product=primary_stock.product,
-            product_name=primary_stock.product_name,
-            price_per_item=primary_stock.price_per_item,
-            purchase_type=primary_stock.purchase_type,
-            supplier=primary_stock.supplier,
-            weight=primary_stock.weight,
-            size=primary_stock.size
-        ).order_by('-total_quantity')
-
-        total_available = sum(s.total_quantity for s in matching_stocks)
-        if total_requested > total_available:
-            return Response({
-                "error": f"Insufficient stock. Total available: {total_available}, Requested: {total_requested}"
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        remaining_to_transfer = total_requested
-        
-        with transaction.atomic():
-            for stock in matching_stocks:
-                if remaining_to_transfer <= 0:
-                    break
-                
-                transfer_from_this = min(stock.total_quantity, remaining_to_transfer)
-                if transfer_from_this <= 0:
-                    continue
-                
-                # 1. Update source stock
-                stock.total_quantity -= transfer_from_this
-                if stock.purchase_type == 'carton' and stock.items_per_carton:
-                    stock.cartons = stock.total_quantity // stock.items_per_carton
-                stock.save()
-
-                # Record Transfer Out
-                StockMovement.objects.create(
-                    stock=stock,
-                    movement_type='TRANSFER_OUT',
-                    quantity=-transfer_from_this,
-                    from_warehouse=stock.warehouse,
-                    to_warehouse=destination_warehouse,
-                    date=transfer_date,
-                    description=f"Transfer to {destination_warehouse.name}"
-                )
-
-                # 2. Add to destination stock (Merge if product/price matches)
-                dest_stock = Stock.objects.filter(
-                    warehouse=destination_warehouse,
-                    product=stock.product,
-                    product_name=stock.product_name,
-                    price_per_item=stock.price_per_item,
-                    purchase_type=stock.purchase_type,
-                    supplier=stock.supplier,
-                    category=stock.category,
-                    weight=stock.weight,
-                    size=stock.size
-                ).first()
-
-                if dest_stock:
-                    dest_stock.total_quantity += transfer_from_this
-                    if dest_stock.purchase_type == 'carton' and dest_stock.items_per_carton:
-                        dest_stock.cartons = dest_stock.total_quantity // dest_stock.items_per_carton
-                    dest_stock.save()
-                    
-                    StockMovement.objects.create(
-                        stock=dest_stock,
-                        movement_type='TRANSFER_IN',
-                        quantity=transfer_from_this,
-                        from_warehouse=stock.warehouse,
-                        to_warehouse=destination_warehouse,
-                        date=transfer_date,
-                        description=f"Transfer from {stock.warehouse.name}"
-                    )
-                else:
-                    new_stock = Stock.objects.create(
-                        product=stock.product,
-                        product_name=stock.product_name,
-                        category=stock.category,
-                        supplier=stock.supplier,
-                        warehouse=destination_warehouse,
-                        purchase_type=stock.purchase_type,
-                        total_quantity=transfer_from_this,
-                        items_per_carton=stock.items_per_carton,
-                        cartons=transfer_from_this // stock.items_per_carton if stock.purchase_type == 'carton' and stock.items_per_carton else None,
-                        price_per_item=stock.price_per_item,
-                        price_per_carton=stock.price_per_carton,
-                        weight=stock.weight,
-                        size=stock.size,
-                        date=transfer_date
-                    )
-                    
-                    StockMovement.objects.create(
-                        stock=new_stock,
-                        movement_type='TRANSFER_IN',
-                        quantity=transfer_from_this,
-                        from_warehouse=stock.warehouse,
-                        to_warehouse=destination_warehouse,
-                        date=transfer_date,
-                        description=f"Transfer from {stock.warehouse.name}"
-                    )
-                
-                remaining_to_transfer -= transfer_from_this
-            
-            return Response({"message": f"Successfully transferred {total_requested} units to {destination_warehouse.name}"})
 
     @action(detail=True, methods=['get'])
     def movements(self, request, pk=None):
@@ -220,7 +226,7 @@ class StockViewSet(viewsets.ModelViewSet):
         
         # Find all matching stock records ONLY in the CURRENT warehouse
         # matching by Product Name, Price, and Supplier
-        matching_stock_ids = Stock.objects.filter(
+        matching_stock_ids = scope_to_tenant(request.user, Stock.objects.all()).filter(
             warehouse=primary_stock.warehouse,
             product=primary_stock.product,
             product_name=primary_stock.product_name,

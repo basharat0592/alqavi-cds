@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, CheckCircle, Package, ArrowLeft, RefreshCw, Search, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Package, ArrowLeft, RefreshCw, Search, ChevronDown, Building2, PackagePlus } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
@@ -29,12 +29,14 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[13px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+        <label className="block text-[12px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
 
-const inputCls = ui.inputBase;
+const inputCls = ui.inputBase
+    .replace('h-10', 'h-9')
+    .replace('text-[13.5px]', 'text-[12.5px]');
 const selectCls = `${inputCls} cursor-pointer`;
 
 const EMPTY_FORM = {
@@ -44,6 +46,28 @@ const EMPTY_FORM = {
     shipping_cost: 0,
     tax_rate: 0,
     warehouse: '',
+    // Optional initial settlement at creation.
+    paid_amount: 0,
+    due_date: '',
+    // Supplier's own bill/invoice number (desktop "Bill.No").
+    reference_number: '',
+    // Flat discount on the whole bill (desktop "Extra Disc").
+    extra_discount: 0,
+    // Staff member who booked the purchase (desktop "Staff").
+    staff: '',
+};
+
+const EMPTY_ITEM: LineItem = {
+    product: '',
+    product_name: '',
+    packaging_type: 'SINGLE',
+    items_per_carton: 1,
+    quantity: 1,
+    unit_price: 0,
+    bonus_quantity: 0,
+    selling_price: 0,
+    retail_rate: 0,
+    expiry_date: '',
 };
 
 type LineItem = {
@@ -52,7 +76,11 @@ type LineItem = {
     packaging_type: 'SINGLE' | 'CARTON';
     items_per_carton: number;
     quantity: number;
-    unit_price: number;
+    unit_price: number;        // Pur.Rate (cost)
+    bonus_quantity: number;    // Bonus (U) — free units
+    selling_price: number;     // Sale Rate
+    retail_rate: number;       // Retail.Rate
+    expiry_date: string;       // Exp Date (YYYY-MM-DD)
 };
 
 /* ─── Pure Amazon Style Product Selector ─── */
@@ -66,7 +94,9 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
         (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
     );
 
-    const selected = products.find((p: any) => String(p.id) === String(selectedId));
+    const selected = String(selectedId).startsWith('__custom__:')
+        ? { id: selectedId, name: selectedId.replace('__custom__:', ''), isCustom: true }
+        : products.find((p: any) => String(p.id) === String(selectedId));
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -87,8 +117,10 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
             >
                 {selected ? (
                     <div className="flex items-center gap-2 overflow-hidden py-1">
-                        <div className="w-8 h-8 rounded border border-slate-100 overflow-hidden shrink-0 bg-white">
-                            {selected.image ? (
+                        <div className="w-8 h-8 rounded border border-slate-100 overflow-hidden shrink-0 bg-white flex items-center justify-center">
+                            {selected.isCustom ? (
+                                <Plus size={14} className="text-indigo-650" />
+                            ) : selected.image ? (
                                 <img src={getImageUrl(selected.image) || ''} className="w-full h-full object-contain p-0.5" alt="" />
                             ) : (
                                 <Package size={14} className="text-slate-300 m-auto mt-2" />
@@ -96,17 +128,23 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                         </div>
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-baseline gap-1 truncate leading-tight">
-                                <span className="text-[12px] font-bold text-slate-900">{selected.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
-                                {(selected.weight || selected.size) && (
-                                    <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
+                                <span className="text-[11px] font-bold text-slate-900">{selected.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
+                                {selected.isCustom ? (
+                                    <span className="text-[9px] text-indigo-600 font-extrabold uppercase tracking-tight shrink-0">
+                                        (Custom)
+                                    </span>
+                                ) : (selected.weight || selected.size) && (
+                                    <span className="text-[9px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
                                         - {selected.weight}{selected.weight && selected.size ? ' • ' : ''}{selected.size}
                                     </span>
                                 )}
                             </div>
-                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter shrink-0 mt-0.5">SKU: {selected.sku || 'N/A'}</span>
+                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter shrink-0 mt-0.5">
+                                {selected.isCustom ? 'Custom written product' : `SKU: ${selected.sku || 'N/A'}`}
+                            </span>
                         </div>
                     </div>
-                ) : <span className="text-slate-400 italic">Search products...</span>}
+                ) : <span className="text-slate-400 italic text-[12px]">Search products...</span>}
                 <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${open ? 'rotate-180 text-indigo-600' : ''}`} />
             </button>
 
@@ -118,7 +156,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                             <input
                                 className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-lg focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none bg-white transition-all"
-                                placeholder="Type to filter products..."
+                                placeholder="Type to filter or write custom..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 autoFocus
@@ -128,7 +166,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
 
                     {/* Results Area */}
                     <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
-                        {filtered.length > 0 ? (
+                        {search.trim() && filtered.length > 0 ? (
                             filtered.map((p: any) => (
                                 <div
                                     key={p.id}
@@ -144,21 +182,20 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                         )}
                                     </div>
 
-                                    {/* Info */}
-                                    <div className="flex-1 flex justify-between gap-4 min-w-0">
+                                                <div className="flex-1 flex justify-between gap-4 min-w-0">
                                         <div className="flex flex-col min-w-0">
                                             <div className="flex items-baseline gap-1 leading-[1.2] group-hover:text-indigo-600">
-                                                <span className="text-[13px] font-bold text-slate-900 group-hover:underline line-clamp-1">{p.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
+                                                <span className="text-[12px] font-bold text-slate-900 group-hover:underline line-clamp-1">{p.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
                                                 {(p.weight || p.size) && (
-                                                    <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
+                                                    <span className="text-[9px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
                                                         - {p.weight}{p.weight && p.size ? ' • ' : ''}{p.size}
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-y-0.5 gap-x-2 mt-1">
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">SKU: {p.sku || 'N/A'}</span>
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">SKU: {p.sku || 'N/A'}</span>
                                                 <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                                <span className={`text-[10px] font-bold ${p.quantity < 10 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                                                <span className={`text-[9px] font-bold ${p.quantity < 10 ? 'text-rose-600' : 'text-emerald-700'}`}>
                                                     {p.quantity} in stock
                                                 </span>
                                             </div>
@@ -166,16 +203,43 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
 
                                         {/* Price Section */}
                                         <div className="flex flex-col items-end shrink-0">
-                                            <span className="text-[15px] font-black text-slate-900">{formatCurrency(p.retail_price || 0)}</span>
-                                            <span className="text-[9px] text-slate-400 font-medium">Retail Price</span>
+                                            <span className="text-[13px] font-black text-slate-900">{formatCurrency(p.retail_price || 0)}</span>
+                                            <span className="text-[8px] text-slate-400 font-medium">Retail Price</span>
                                         </div>
                                     </div>
                                 </div>
                             ))
-                        ) : (
+                        ) : null}
+
+                        {/* Always offer custom write/typing option if search is not empty */}
+                        {search.trim() && (
+                            <div
+                                className="p-3.5 hover:bg-indigo-50 cursor-pointer border-t border-slate-100 transition-all flex items-center gap-4 group bg-indigo-50/10"
+                                onClick={() => { onSelect(`__custom__:${search.trim()}`); setOpen(false); }}
+                            >
+                                <div className="w-12 h-12 bg-white rounded border border-indigo-200 overflow-hidden shrink-0 flex items-center justify-center text-indigo-650 group-hover:border-indigo-400 transition-colors">
+                                    <Plus size={20} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <span className="text-[12px] font-bold text-slate-900 block truncate group-hover:text-indigo-600">
+                                        Use Custom: <span className="text-indigo-600">"{search.trim()}"</span>
+                                    </span>
+                                    <span className="text-[9px] text-slate-500">Will be saved to supplier catalog on order creation</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {!search.trim() && (
                             <div className="p-12 text-center flex flex-col items-center gap-2">
                                 <Search size={24} className="text-slate-300" />
-                                <span className="text-slate-400 text-[13px]">No results found for "{search}"</span>
+                                <span className="text-slate-400 text-[13px]">Type to search products or use a custom name.</span>
+                            </div>
+                        )}
+
+                        {search.trim() && filtered.length === 0 && (
+                            <div className="p-12 text-center flex flex-col items-center gap-2">
+                                <Search size={24} className="text-slate-300" />
+                                <span className="text-slate-400 text-[13px]">No matching products found. Type to use custom.</span>
                             </div>
                         )}
                     </div>
@@ -190,13 +254,13 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     );
 };
 
-/* ─── Supplier Selector ─── */
+/* ─── Supplier Selector (registered suppliers only — no free-text/new supplier) ─── */
 const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const filtered = suppliers.filter((s: any) => s.name.toLowerCase().includes(search.toLowerCase()));
+    const filtered = suppliers.filter((s: any) => (s.name || '').toLowerCase().includes(search.toLowerCase()));
     const selected = suppliers.find((s: any) => String(s.id) === String(selectedId));
 
     useEffect(() => {
@@ -210,16 +274,23 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
     return (
         <div className="relative w-full" ref={containerRef}>
             <button type="button" onClick={() => setOpen(!open)} className={inputCls + " flex items-center justify-between text-left"}>
-                <span className={selected ? 'text-slate-900' : 'text-slate-400'}>{selected ? selected.name : 'Select Supplier...'}</span>
+                <span className={selected ? 'text-slate-900 font-bold' : 'text-slate-400'}>
+                    {selected ? selected.name : 'Select a registered supplier...'}
+                </span>
                 <ChevronDown size={14} className="text-slate-400" />
             </button>
             {open && (
-                <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                    <div className="p-2 border-b border-slate-100"><input className="w-full px-3 py-1.5 text-[13px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
-                    <div className="max-h-[200px] overflow-y-auto">
+                <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                         {filtered.map((s: any) => (
-                            <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[13px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
+                            <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
                         ))}
+                        {filtered.length === 0 && (
+                            <div className="px-4 py-6 text-center text-slate-400 text-[11px]">
+                                No registered suppliers{search.trim() ? ' match your search' : ''}. Add one in the Supplier Registry first.
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -229,30 +300,44 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
 
 export default function AddPurchasePage() {
     const router = useRouter();
+    const [purchaseMode, setPurchaseMode] = useState<'supplier' | 'custom'>('custom');
+    const [showAdvanced, setShowAdvanced] = useState(false);
     const [products, setProducts] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_FORM });
-    const [items, setItems] = useState<LineItem[]>([{
-        product: '',
-        product_name: '',
-        packaging_type: 'SINGLE',
-        items_per_carton: 1,
-        quantity: 1,
-        unit_price: 0,
-    }]);
+    const [staffList, setStaffList] = useState<any[]>([]);
+    const [items, setItems] = useState<LineItem[]>([{ ...EMPTY_ITEM }]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
     const [tempPayload, setTempPayload] = useState<any>(null);
-    // Prefill (supplier + product) coming from the dashboard low-stock alert links.
-    const [prefill, setPrefill] = useState<{ supplier: string; sku: string; product_name: string } | null>(null);
+
+    const handleModeChange = (mode: 'supplier' | 'custom') => {
+        setPurchaseMode(mode);
+        setForm(prev => ({
+            ...prev,
+            supplier: '',
+            supplier_name: '',
+            purchase_number: `PO-${Date.now().toString().slice(-6)}`
+        }));
+        setItems([{ ...EMPTY_ITEM }]);
+    };
+    // Prefill (supplier + product) coming from low-stock links / Current Stock "Reorder".
+    const [prefill, setPrefill] = useState<{ supplier: string; sku: string; product_name: string; price: string } | null>(null);
     const supplierPrefillApplied = useRef(false);
     const prefillApplied = useRef(false);
 
+    // Edit mode: /admin/purchases/add?id=<purchaseOrderId> loads an existing PO.
+    // Read on the client (this is SSR'd, so a lazy useState initializer would see no window).
+    const [editId, setEditId] = useState<string | null>(null);
+    const editPrefillApplied = useRef(false);
+
     const loadData = useCallback(async () => {
         setLoading(true);
+        const urlId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null;
+        if (urlId) setEditId(urlId);
         try {
             const [usersRes, suppRes] = await Promise.allSettled([
                 userService.getAll(),
@@ -271,30 +356,53 @@ export default function AddPurchasePage() {
             const merged = Array.from(new Map([...fromCompMapped, ...fromUsers].map(s => [s.name, s])).values());
             setSuppliers(merged);
 
+            // Staff dropdown: internal team members (exclude supplier/customer/delivery portal roles).
+            const staff = usersArr
+                .filter((u: any) => {
+                    const r = (u.role_name || '').toLowerCase();
+                    return !r.includes('supplier') && !r.includes('customer') && !r.includes('delivery');
+                })
+                .map((u: any) => ({
+                    id: u.id,
+                    name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
+                }));
+            setStaffList(staff);
+
             try {
                 const whRes = await inventoryService.getWarehouses();
                 setWarehouses(whRes || []);
+                // Auto-select the branch when there's only one (scoped admins): no
+                // point making them pick. Multi-branch users choose below.
+                if ((whRes || []).length === 1) {
+                    setForm(prev => ({ ...prev, warehouse: prev.warehouse || String(whRes[0].id) }));
+                }
             } catch (e) {
                 console.error("Failed to fetch warehouses", e);
             }
 
-            setForm(prev => ({ ...prev, purchase_number: `PO-${Date.now().toString().slice(-6)}` }));
+            if (!urlId) {
+                setForm(prev => ({ ...prev, purchase_number: `PO-${Date.now().toString().slice(-6)}` }));
+            }
         } catch { toast.error('Failed to load data'); } finally { setLoading(false); }
     }, []);
 
     useEffect(() => { loadData(); }, [loadData]);
 
     useEffect(() => {
-        if (!form.supplier) { setProducts([]); return; }
         const fetchSupplierProducts = async () => {
+            if (purchaseMode === 'supplier' && !form.supplier) {
+                setProducts([]);
+                return;
+            }
             try {
-                const res = await productService.getAllSupplier({ supplier: form.supplier });
+                const params = (purchaseMode === 'supplier' && form.supplier) ? { supplier: form.supplier } : undefined;
+                const res = await productService.getAllSupplier(params);
                 const raw = res as any;
                 setProducts(Array.isArray(raw) ? raw : raw?.results || []);
             } catch (error) { setProducts([]); }
         };
         fetchSupplierProducts();
-    }, [form.supplier]);
+    }, [form.supplier, purchaseMode]);
 
     // Read prefill (?supplier=&sku=&product_name=) from the dashboard low-stock links.
     useEffect(() => {
@@ -303,7 +411,13 @@ export default function AddPurchasePage() {
         const supplier = sp.get('supplier') || '';
         const sku = sp.get('sku') || '';
         const product_name = sp.get('product_name') || '';
-        if (supplier || sku || product_name) setPrefill({ supplier, sku, product_name });
+        const price = sp.get('price') || '';
+        if (supplier || sku || product_name) {
+            setPrefill({ supplier, sku, product_name, price });
+            // A reorder comes with a real supplier + product → use supplier mode so
+            // the product loads from that supplier's catalog and can be matched.
+            if (supplier) setPurchaseMode('supplier');
+        }
     }, []);
 
     // Apply the prefilled supplier once (after suppliers load) — never override a later manual change.
@@ -330,36 +444,144 @@ export default function AddPurchasePage() {
                 ...next[0],
                 product: String(match.id),
                 product_name: match.name || '',
-                unit_price: match.retail_price ? parseFloat(match.retail_price) : next[0].unit_price,
+                // Prefer the exact cost passed from Reorder so the received stock
+                // merges into the same batch; otherwise fall back to the catalog price.
+                unit_price: prefill.price ? parseFloat(prefill.price)
+                    : match.retail_price ? parseFloat(match.retail_price) : next[0].unit_price,
             };
             return next;
         });
     }, [products, prefill]);
 
+    // Load an existing purchase order into the form when editing (?id=...).
+    useEffect(() => {
+        if (!editId || editPrefillApplied.current) return;
+        editPrefillApplied.current = true;
+        (async () => {
+            try {
+                const po = await purchaseService.getById(editId);
+                setForm({
+                    purchase_number: po.purchase_number || '',
+                    supplier: String(po.supplier || ''),
+                    supplier_name: po.supplier_name || '',
+                    order_date: (po.order_date || po.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+                    status: po.status || 'PENDING',
+                    payment_method: po.payment_method || 'CASH',
+                    notes: po.notes || '',
+                    shipping_cost: parseFloat(po.shipping_cost || 0) || 0,
+                    tax_rate: 0,
+                    warehouse: String(po.warehouse || ''),
+                    paid_amount: parseFloat(po.paid_amount || 0) || 0,
+                    due_date: (po.due_date || '') as string,
+                    reference_number: po.reference_number || '',
+                    extra_discount: parseFloat(po.extra_discount || 0) || 0,
+                    staff: String(po.staff || ''),
+                });
+                const loaded = (po.items || []).map((it: any) => ({
+                    product: String(it.product || ''),
+                    product_name: it.product_name || '',
+                    packaging_type: (it.packaging_type || 'SINGLE') as 'SINGLE' | 'CARTON',
+                    items_per_carton: it.items_per_carton || 1,
+                    quantity: it.quantity || 1,
+                    unit_price: parseFloat(it.price || 0) || 0,
+                    bonus_quantity: parseInt(it.bonus_quantity || 0) || 0,
+                    selling_price: parseFloat(it.selling_price || 0) || 0,
+                    retail_rate: parseFloat(it.retail_rate || 0) || 0,
+                    expiry_date: (it.expiry_date || '') as string,
+                }));
+                if (loaded.length) setItems(loaded);
+            } catch {
+                toast.error('Failed to load purchase order for editing');
+                router.push('/admin/purchases');
+            }
+        })();
+    }, [editId, router]);
+
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
-        if (!form.supplier || items.some(i => !i.product)) return toast.error('Please fill all required fields');
+        // A registered supplier is required in BOTH modes (custom + select-from-supplier).
+        if (!form.supplier || String(form.supplier).startsWith('__custom__:')) {
+            return toast.error('Please select a registered supplier');
+        }
+        if (items.some(i => !i.product)) return toast.error('Please select a product for all items');
+
+        setSaving(true);
+        const finalSupplier = form.supplier;
+        const finalSupplierName = form.supplier_name;
+
+        // 2. Register custom products if any exist
+        let finalItems = [...items];
+        const hasCustom = items.some(i => i.product.startsWith('__custom__:'));
+        if (hasCustom) {
+            try {
+                const targetSupplier = finalSupplier || (suppliers.length > 0 ? String(suppliers[0].id) : '');
+                if (!targetSupplier) {
+                    setSaving(false);
+                    return toast.error('Please create or select a supplier to register custom products.');
+                }
+                finalItems = await Promise.all(items.map(async (item) => {
+                    if (item.product.startsWith('__custom__:')) {
+                        const name = item.product.replace('__custom__:', '');
+                        const newProd = await productService.createSupplier({
+                            name,
+                            supplier: targetSupplier,
+                            sku: `SKU-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`,
+                            retail_price: String(item.unit_price || 0),
+                            price: String(item.unit_price || 0),
+                            status: 'ACTIVE'
+                        });
+                        return {
+                            ...item,
+                            product: String(newProd.id),
+                            product_name: newProd.name
+                        };
+                    }
+                    return item;
+                }));
+                setItems(finalItems);
+            } catch (err: any) {
+                setSaving(false);
+                return toast.error('Failed to register custom supplier products');
+            }
+        }
+
+        // Tax is entered as a rate (%); the backend stores an absolute tax_amount and
+        // folds shipping + tax into the grand total, so compute it here.
+        const taxAmount = (totalAmount * ((form as any).tax_rate || 0)) / 100;
+
+        // Edit mode: update the existing order (full header + items recompute).
+        if (editId) {
+            try {
+                await purchaseService.updateFull(editId, { ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
+                toast.success('Purchase order updated!');
+                router.push('/admin/purchases');
+            } catch (err: any) {
+                const msg = err.response?.data?.error || err.response?.data?.message || 'Failed to update purchase';
+                toast.error(msg);
+            } finally {
+                setSaving(false);
+            }
+            return;
+        }
 
         if (form.status === 'RECEIVED' && !warehouseId && !form.warehouse) {
-            setTempPayload({ ...form, items });
+            setTempPayload({ ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems });
             setIsWarehouseModalOpen(true);
+            setSaving(false);
             return;
         }
 
         const finalWarehouseId = warehouseId || form.warehouse;
 
-        for (const item of items) {
-            const p = products.find(prod => String(prod.id) === String(item.product));
-            if (!p) continue;
-            const totalUnitsNeeded = item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity;
-            if (totalUnitsNeeded > p.quantity) {
-                return toast.error(`Cannot purchase more than ${p.quantity} units of ${p.name}`);
-            }
-        }
+        // A purchase order increases inventory, so we deliberately do NOT cap the
+        // quantity at current stock — you must be able to restock a sold-out item.
 
-        setSaving(true);
         try {
-            const payload: any = { ...form, items };
+            // Derive the settlement status from any advance paid at creation.
+            const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmount - (Number((form as any).extra_discount) || 0));
+            const paidNow = Number((form as any).paid_amount) || 0;
+            const payment_status = paidNow <= 0 ? 'UNPAID' : paidNow >= grandTotal ? 'PAID' : 'PARTIAL';
+            const payload: any = { ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
             if (finalWarehouseId) payload.warehouse = finalWarehouseId;
             const data = await purchaseService.create(payload);
             setSuccessOrder(data);
@@ -371,14 +593,7 @@ export default function AddPurchasePage() {
         } finally { setSaving(false); }
     };
 
-    const addItem = () => setItems(prev => [...prev, {
-        product: '',
-        product_name: '',
-        packaging_type: 'SINGLE',
-        items_per_carton: 1,
-        quantity: 1,
-        unit_price: 0,
-    }]);
+    const addItem = () => setItems(prev => [...prev, { ...EMPTY_ITEM }]);
 
     const removeItem = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
 
@@ -386,183 +601,456 @@ export default function AddPurchasePage() {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
             if (field === 'product') {
+                if (String(val).startsWith('__custom__:')) {
+                    const name = String(val).replace('__custom__:', '');
+                    return { ...item, product: val, product_name: name, unit_price: item.unit_price || 0 };
+                }
                 const p = products.find(p => String(p.id) === String(val));
-                return { ...item, product: val, product_name: p?.name || '', unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price };
+                if (p && p.supplier) {
+                    const matched = suppliers.find(s => String(s.id) === String(p.supplier));
+                    setForm(f => ({ ...f, supplier: String(p.supplier), supplier_name: matched?.name || f.supplier_name }));
+                }
+                return {
+                    ...item,
+                    product: val,
+                    product_name: p?.name || '',
+                    unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price,
+                };
             }
             return { ...item, [field]: val };
         }));
     };
 
-    const calculateSubtotal = (item: LineItem) => (item.quantity || 0) * (item.unit_price || 0);
+    const calculateSubtotal = (item: LineItem) => {
+        const units = item.packaging_type === 'CARTON'
+            ? (item.quantity || 0) * (item.items_per_carton || 0)
+            : (item.quantity || 0);
+        return units * (item.unit_price || 0);
+    };
     const totalAmount = items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
+
+    // Value of free bonus units (cost basis) — shown as "Amt Bonus" like the desktop app.
+    const bonusValue = items.reduce((sum, item) => sum + ((item.bonus_quantity || 0) * (item.unit_price || 0)), 0);
+
+    // Live order totals + settlement, so the summary bar mirrors what the backend will store.
+    const taxAmountLive = (totalAmount * ((form as any).tax_rate || 0)) / 100;
+    const extraDiscount = Number((form as any).extra_discount) || 0;
+    const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmountLive - extraDiscount);
+    const paidNow = Number((form as any).paid_amount) || 0;
+    const balanceDue = Math.max(0, grandTotal - paidNow);
+    const paymentStatus: 'PAID' | 'PARTIAL' | 'UNPAID' =
+        grandTotal > 0 && paidNow >= grandTotal ? 'PAID' : paidNow > 0 ? 'PARTIAL' : 'UNPAID';
+    const paymentPill = {
+        PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        PARTIAL: 'bg-amber-50 text-amber-700 border-amber-200',
+        UNPAID: 'bg-slate-100 text-slate-500 border-slate-200',
+    }[paymentStatus];
+
+    const renderItemsList = () => {
+        return items.map((item, i) => {
+            // A purchase order *adds* stock, so there is no upper cap on the order
+            // quantity — current stock is shown as context only, never a limit.
+            const p = products.find(prod => String(prod.id) === String(item.product));
+
+            return (
+                <div key={i} className="relative bg-white border border-slate-200/70 rounded-2xl p-4 sm:p-5 transition-all hover:border-indigo-300 hover:shadow-[0_6px_20px_rgba(15,23,42,0.07)] group">
+                    {/* Row 1 — item number + product + remove */}
+                    <div className="flex items-end gap-3">
+                        <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-indigo-100">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</label>
+                            {purchaseMode === 'custom' ? (
+                                <input
+                                    className={inputCls + " font-bold text-slate-800 bg-white"}
+                                    value={item.product_name || ''}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        updateItem(i, 'product', `__custom__:${val}`);
+                                    }}
+                                    placeholder="Type custom product name..."
+                                />
+                            ) : (
+                                <ProductSelector selectedId={item.product} products={products} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'product', val)} />
+                            )}
+                        </div>
+                        <button
+                            onClick={() => removeItem(i)}
+                            title="Remove item"
+                            className="shrink-0 mb-0.5 w-9 h-9 flex items-center justify-center rounded-lg text-slate-350 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors"
+                        >
+                            <Trash2 size={15} />
+                        </button>
+                    </div>
+
+                    {/* Row 2 — quantities & pricing grid */}
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+                        {/* Type */}
+                        <div className="col-span-2 sm:col-span-1">
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
+                            <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
+                                <option value="SINGLE">Single</option>
+                                <option value="CARTON">Carton</option>
+                            </select>
+                        </div>
+
+                        {/* Qty */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}</label>
+                            <input
+                                className={inputCls + " text-center font-bold tabular-nums text-indigo-650"}
+                                type="number"
+                                min="1"
+                                value={item.quantity || ''}
+                                onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
+                            />
+                        </div>
+
+                        {/* Packing */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Packing</label>
+                            <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-slate-50' : '') + " text-center tabular-nums"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
+                        </div>
+
+                        {/* Bonus */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Bonus (U)</label>
+                            <input
+                                className={inputCls + " text-center tabular-nums text-emerald-700 font-bold"}
+                                type="number"
+                                min="0"
+                                value={item.bonus_quantity || ''}
+                                onChange={e => updateItem(i, 'bonus_quantity', Math.max(0, parseInt(e.target.value) || 0))}
+                                placeholder="0"
+                            />
+                        </div>
+
+                        {/* Pur. Rate */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Pur. Rate</label>
+                            <div className="relative flex items-center">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
+                                <input
+                                    type="number" min="0" step="0.01"
+                                    className={inputCls + " pl-6 font-bold text-slate-800 text-center"}
+                                    value={item.unit_price || ''}
+                                    onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Exp Date */}
+                        <div className="col-span-2 sm:col-span-1">
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Exp Date</label>
+                            <input
+                                type="date"
+                                className={inputCls + " text-center tabular-nums"}
+                                value={item.expiry_date || ''}
+                                onChange={e => updateItem(i, 'expiry_date', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    {item.product && (
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-x-4 gap-y-1 justify-between items-center text-[11px] text-slate-500">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span>Total Pcs: <b className="text-slate-700 tabular-nums">{(item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity) + (item.bonus_quantity || 0)} Pcs</b></span>
+                                {(item.bonus_quantity || 0) > 0 && (
+                                    <>
+                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                        <span className="text-emerald-700">incl. {item.bonus_quantity} bonus</span>
+                                    </>
+                                )}
+                                {p && (
+                                    <>
+                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                        <span>Current stock: <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="text-[13px] font-bold text-slate-900 tabular-nums">
+                                Subtotal: {formatCurrency(calculateSubtotal(item))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        });
+    };
+
+    /* ─── Order Items card (identical in both modes) ─── */
+    const renderItemsCard = () => (
+        <Card className="relative z-[10] overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
+                        <Package size={17} strokeWidth={2} />
+                    </div>
+                    <div>
+                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            Order Items
+                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
+                        </h2>
+                        <p className="text-[11.5px] text-slate-500">Products, quantities, and pricing.</p>
+                    </div>
+                </div>
+                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={addItem}><Plus size={14} /> Add Item</Btn>
+            </div>
+            <div className="p-4 sm:p-6 space-y-3.5 bg-slate-50/40">
+                {renderItemsList()}
+            </div>
+        </Card>
+    );
+
+    /* ─── Order Information card — shared shell; only the Supplier field differs per mode ─── */
+    const renderOrderInfoCard = (supplierField: React.ReactNode) => (
+        <Card className="overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center ring-1 ring-inset ring-slate-200 shrink-0">
+                    <Building2 size={17} strokeWidth={2} />
+                </div>
+                <div>
+                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Information</h2>
+                    <p className="text-[11.5px] text-slate-500">Supplier, bill no., staff, and settlement.</p>
+                </div>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+                <Field label="Order Number" required>
+                    <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
+                </Field>
+                <Field label="Supplier" required>
+                    {supplierField}
+                </Field>
+                <Field label="Order Date" required>
+                    <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
+                </Field>
+                <Field label="Supplier Bill No.">
+                    <input className={inputCls} value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="Supplier's invoice / bill no." />
+                </Field>
+                <Field label="Staff">
+                    <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
+                        <option value="">Select any one</option>
+                        {staffList.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
+                </Field>
+                <Field label="Payment Method">
+                    <select className={selectCls} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
+                        <option value="CASH">Cash</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="ONLINE">Online / UPI</option>
+                        <option value="CREDIT">Credit</option>
+                    </select>
+                </Field>
+                <Field label="Paid Now (Advance)">
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                        <input
+                            className={inputCls + " pl-9"}
+                            type="number"
+                            min="0"
+                            value={(form as any).paid_amount || ''}
+                            onChange={e => setForm(f => ({ ...f, paid_amount: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                            placeholder="0.00"
+                        />
+                    </div>
+                </Field>
+                {warehouses.length > 1 && (
+                    <Field label="Branch / Warehouse" required>
+                        <select className={selectCls} value={form.warehouse} onChange={e => setForm(f => ({ ...f, warehouse: e.target.value }))}>
+                            <option value="">Select branch</option>
+                            {warehouses.map(w => (
+                                <option key={w.id} value={w.id}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
+                            ))}
+                        </select>
+                    </Field>
+                )}
+
+                <div className="col-span-1 md:col-span-3 pt-2 border-t border-slate-100 flex justify-between items-center">
+                    <button
+                        type="button"
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="text-[12px] font-bold text-indigo-650 hover:text-indigo-700 flex items-center gap-1 transition-colors"
+                    >
+                        {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
+                    </button>
+                </div>
+
+                {showAdvanced && (
+                    <>
+                        <Field label="Extra Discount">
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <input
+                                    className={inputCls + " pl-9"}
+                                    type="number"
+                                    min="0"
+                                    value={(form as any).extra_discount || ''}
+                                    onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </Field>
+                        <Field label="Freight / Shipping Cost">
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <input
+                                    className={inputCls + " pl-9"}
+                                    type="number"
+                                    min="0"
+                                    value={(form as any).shipping_cost || ''}
+                                    onChange={e => setForm(f => ({ ...f, shipping_cost: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </Field>
+                        <Field label="Tax Rate (%)">
+                            <div className="relative">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
+                                <input
+                                    className={inputCls + " pr-8"}
+                                    type="number"
+                                    min="0"
+                                    value={(form as any).tax_rate || ''}
+                                    onChange={e => setForm(f => ({ ...f, tax_rate: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                                    placeholder="0"
+                                />
+                            </div>
+                        </Field>
+                        <Field label="Balance Due Date">
+                            <input
+                                className={inputCls}
+                                type="date"
+                                value={(form as any).due_date || ''}
+                                onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                            />
+                        </Field>
+                    </>
+                )}
+            </div>
+        </Card>
+    );
+
+    // Both modes require a REGISTERED supplier chosen from the dropdown. The two
+    // modes differ only in how PRODUCTS are entered (custom = typed by hand;
+    // supplier = picked from the selected supplier's catalog).
+    const supplierField = (
+        <SupplierSelector selectedId={form.supplier} suppliers={suppliers} inputCls={selectCls} onSelect={(val: any) => {
+            const matched = suppliers.find(c => String(c.id) === String(val));
+            setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
+        }} />
+    );
 
     return (
         <div className="pb-20">
             <div className="max-w-[1100px] mx-auto">
                 <PageHeader
-                    title="New Purchase"
-                    subtitle="Create a purchase order with supplier, items, and totals."
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: 'New Purchase' }]}
+                    title={editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
+                    subtitle={editId ? 'Update this purchase order — supplier, items, and totals.' : 'Create a purchase order with supplier, items, and totals.'}
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: editId ? 'Edit Purchase' : 'New Purchase' }]}
+                    actions={
+                        <div className="bg-slate-100 p-1.5 rounded-xl inline-flex gap-2 border border-slate-250/60 shadow-sm">
+                            <button
+                                type="button"
+                                onClick={() => handleModeChange('supplier')}
+                                className={`px-4 py-2 rounded-lg text-[11px] font-black tracking-wider uppercase transition-all duration-200 flex items-center gap-1.5 ${purchaseMode === 'supplier' ? 'bg-white text-indigo-650 shadow-md border border-slate-200 font-bold scale-[1.01]' : 'text-slate-500 hover:text-slate-800'}`}
+                            >
+                                <Building2 size={13} /> Select from Supplier
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleModeChange('custom')}
+                                className={`px-4 py-2 rounded-lg text-[11px] font-black tracking-wider uppercase transition-all duration-200 flex items-center gap-1.5 ${purchaseMode === 'custom' ? 'bg-white text-indigo-650 shadow-md border border-slate-200 font-bold scale-[1.01]' : 'text-slate-500 hover:text-slate-800'}`}
+                            >
+                                <PackagePlus size={13} /> Custom Purchase
+                            </button>
+                        </div>
+                    }
                 />
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
                 ) : (
-                    <div className="flex flex-col lg:flex-row gap-6 items-start">
-                        <div className="flex-1 min-w-0 space-y-5">
-                            <Card>
-                                <div className="px-6 py-4 border-b border-slate-100">
-                                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Information</h2>
-                                    <p className="text-[12px] text-slate-500">Enter order number, supplier, and date.</p>
-                                </div>
-                                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                    <Field label="Order Number" required>
-                                        <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
-                                    </Field>
-                                    <Field label="Supplier" required>
-                                        <SupplierSelector selectedId={form.supplier} suppliers={suppliers} inputCls={selectCls} onSelect={(val: any) => {
-                                            const matched = suppliers.find(c => String(c.id) === String(val));
-                                            setForm(f => ({ ...f, supplier: val, supplier_name: matched?.name || '' }));
-                                        }} />
-                                    </Field>
-                                    <Field label="Order Date" required>
-                                        <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
-                                    </Field>
-                                    <Field label="Payment Method">
-                                        <select className={selectCls} value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
-                                            <option value="CASH">Cash</option>
-                                            <option value="BANK_TRANSFER">Bank Transfer</option>
-                                            <option value="CHEQUE">Cheque</option>
-                                            <option value="ONLINE">Online / UPI</option>
-                                            <option value="CREDIT">Credit</option>
-                                        </select>
-                                    </Field>
-                                    <Field label="Shipping Cost">
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
-                                            <input
-                                                className={inputCls + " pl-9"}
-                                                type="number"
-                                                value={(form as any).shipping_cost || ''}
-                                                onChange={e => setForm(f => ({ ...f, shipping_cost: parseFloat(e.target.value) || 0 }))}
-                                                placeholder="0.00"
-                                            />
-                                        </div>
-                                    </Field>
-                                    <Field label="Tax Rate (%)">
-                                        <div className="relative">
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
-                                            <input
-                                                className={inputCls + " pr-8"}
-                                                type="number"
-                                                value={(form as any).tax_rate || ''}
-                                                onChange={e => setForm(f => ({ ...f, tax_rate: parseFloat(e.target.value) || 0 }))}
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    </Field>
-                                </div>
+                    <div className="space-y-5">
+
+                            {purchaseMode === 'supplier' ? (
+                                <>
+                                    {renderOrderInfoCard(supplierField)}
+                                    {renderItemsCard()}
+                                </>
+                            ) : (
+                                <>
+                                    {renderItemsCard()}
+                                    {renderOrderInfoCard(supplierField)}
+                                </>
+                            )}
+                                         <Card>
+                                <div className="px-5 py-3 border-b border-slate-100"><h2 className="text-[12px] font-extrabold text-slate-900 tracking-tight">Notes (Optional)</h2></div>
+                                <div className="p-4"><textarea className="w-full p-3 border border-slate-200 rounded-lg text-[12px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" rows={3} placeholder="Any notes for this purchase..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
                             </Card>
 
-                            <Card className="relative z-[10]">
-                                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Items</h2>
-                                        <p className="text-[12px] text-slate-500">Select products and quantities.</p>
-                                    </div>
-                                    <Btn variant="secondary" onClick={addItem}><Plus size={14} /> Add Item</Btn>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    {items.map((item, i) => {
-                                        const p = products.find(prod => String(prod.id) === String(item.product));
-                                        const maxQty = p ? (item.packaging_type === 'CARTON' ? Math.floor(p.quantity / (item.items_per_carton || 1)) : p.quantity) : 9999;
-                                        const isMax = p && item.quantity >= maxQty;
-
-                                        return (
-                                            <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-4 transition-all hover:border-indigo-400 hover:shadow-md group">
-                                                <div className="grid grid-cols-12 gap-4 items-center">
-                                                    <div className="col-span-12 lg:col-span-5">
-                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</label>
-                                                        <ProductSelector selectedId={item.product} products={products} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'product', val)} />
-                                                    </div>
-                                                    <div className="col-span-4 lg:col-span-2 text-center">
-                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
-                                                        <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
-                                                            <option value="SINGLE">Single</option>
-                                                            <option value="CARTON">Carton</option>
-                                                        </select>
-                                                    </div>
-                                                    <div className="col-span-4 lg:col-span-2 relative text-center">
-                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Qty</label>
-                                                        <input className={inputCls + " text-center font-bold tabular-nums " + (isMax ? 'text-rose-600 border-rose-400' : 'text-indigo-600')} type="number" min="1" value={item.quantity || ''} onChange={e => {
-                                                            let val = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                                            const p = products.find(prod => String(prod.id) === String(item.product));
-                                                            if (p) {
-                                                                const maxQty = item.packaging_type === 'CARTON' ? Math.floor(p.quantity / (item.items_per_carton || 1)) : p.quantity;
-                                                                if (val > maxQty) val = maxQty;
-                                                            }
-                                                            updateItem(i, 'quantity', val);
-                                                        }} />
-                                                        {isMax && <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[7px] font-black text-rose-600 uppercase">MAX</span>}
-                                                    </div>
-                                                    <div className="col-span-3 lg:col-span-2 text-center">
-                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pcs/Ctn</label>
-                                                        <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-slate-50' : '') + " text-center tabular-nums"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
-                                                    </div>
-                                                    <div className="col-span-1 flex justify-center pt-5"><button onClick={() => removeItem(i)} className="text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={18} /></button></div>
-                                                </div>
-                                                {item.product && (
-                                                    <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-[11px]">
-                                                        <div className="flex gap-4 text-slate-500">
-                                                            <span>Cost: <b className="text-slate-800 tabular-nums">{formatCurrency(item.unit_price)}</b></span>
-                                                            <span className="w-[1px] h-3 bg-slate-200" />
-                                                            <span>Total: <b className="text-slate-800 tabular-nums">{item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity} Pcs</b></span>
-                                                        </div>
-                                                        <div className="text-[14px] font-black text-slate-900 tabular-nums">{formatCurrency(calculateSubtotal(item))}</div>
-                                                    </div>
-                                                )}
+                            <Card className="p-4 sm:p-5 bg-slate-50 border border-slate-200">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-left">
+                                    <div className="flex flex-wrap gap-8 text-[12.5px]">
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Items Total</span>
+                                            <span className="font-extrabold text-slate-800 text-[14px] mt-0.5 tabular-nums">{formatCurrency(totalAmount)}</span>
+                                        </div>
+                                        <div className="flex flex-col border-l border-slate-200 pl-8">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Shipping</span>
+                                            <span className={`text-[14px] mt-0.5 font-extrabold tabular-nums ${((form as any).shipping_cost > 0) ? "text-slate-850" : "text-emerald-700 font-black"}`}>
+                                                {(form as any).shipping_cost > 0 ? formatCurrency((form as any).shipping_cost) : 'FREE'}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col border-l border-slate-200 pl-8">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Tax ({(form as any).tax_rate || 0}%)</span>
+                                            <span className="font-extrabold text-slate-800 text-[14px] mt-0.5 tabular-nums">{formatCurrency(taxAmountLive)}</span>
+                                        </div>
+                                        {bonusValue > 0 && (
+                                            <div className="flex flex-col border-l border-slate-200 pl-8">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Amt Bonus</span>
+                                                <span className="font-extrabold text-emerald-700 text-[14px] mt-0.5 tabular-nums">{formatCurrency(bonusValue)}</span>
                                             </div>
-                                        );
-                                    })}
+                                        )}
+                                        {extraDiscount > 0 && (
+                                            <div className="flex flex-col border-l border-slate-200 pl-8">
+                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Extra Disc.</span>
+                                                <span className="font-extrabold text-rose-600 text-[14px] mt-0.5 tabular-nums">− {formatCurrency(extraDiscount)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col border-l border-slate-200 pl-8">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Net Amount</span>
+                                            <span className="text-[18px] font-black text-indigo-650 mt-0.5 tabular-nums">
+                                                {formatCurrency(grandTotal)}
+                                            </span>
+                                        </div>
+                                        {paidNow > 0 && (
+                                            <>
+                                                <div className="flex flex-col border-l border-slate-200 pl-8">
+                                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Paid Now</span>
+                                                    <span className="font-extrabold text-emerald-700 text-[14px] mt-0.5 tabular-nums">{formatCurrency(paidNow)}</span>
+                                                </div>
+                                                <div className="flex flex-col border-l border-slate-200 pl-8">
+                                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Balance Due</span>
+                                                    <span className={`font-black text-[14px] mt-0.5 tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                        <div className="flex flex-col justify-center border-l border-slate-200 pl-8">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>
+                                                {paymentStatus}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="shrink-0 w-full md:w-auto">
+                                        <Btn className="w-full md:w-[220px] justify-center text-[12px] py-3 uppercase tracking-wider font-extrabold" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>
+                                            {editId ? 'Update Order' : 'Place Order'}
+                                        </Btn>
+                                    </div>
                                 </div>
-                            </Card>
-
-                            <Card>
-                                <div className="px-6 py-4 border-b border-slate-100"><h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Notes (Optional)</h2></div>
-                                <div className="p-6"><textarea className="w-full p-3 border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" rows={3} placeholder="Any notes for this purchase..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
                             </Card>
                         </div>
-
-                        <div className="w-full lg:w-[300px] space-y-4">
-                            <Card className="p-5">
-                                <h3 className="text-[14px] font-bold text-slate-900 tracking-tight mb-4">Order Summary</h3>
-                                <div className="space-y-3 border-b border-slate-100 pb-4 mb-4">
-                                    <div className="flex justify-between text-[13px]">
-                                        <span className="text-slate-500">Items Total:</span>
-                                        <span className="font-medium text-slate-700 tabular-nums">{formatCurrency(totalAmount)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-[13px]">
-                                        <span className="text-slate-500">Shipping:</span>
-                                        <span className={((form as any).shipping_cost > 0) ? "font-medium text-slate-700 tabular-nums" : "text-emerald-700 font-bold"}>
-                                            {(form as any).shipping_cost > 0 ? formatCurrency((form as any).shipping_cost) : 'FREE'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between text-[13px]">
-                                        <span className="text-slate-500">Estimated Tax ({(form as any).tax_rate}%):</span>
-                                        <span className="font-medium text-slate-700 tabular-nums">{formatCurrency((totalAmount * ((form as any).tax_rate || 0)) / 100)}</span>
-                                    </div>
-                                </div>
-                                <div className="flex justify-between items-center mb-6">
-                                    <span className="text-[16px] font-bold text-slate-900">Order Total:</span>
-                                    <span className="text-[18px] font-black text-slate-900 tabular-nums">
-                                        {formatCurrency(totalAmount + ((form as any).shipping_cost || 0) + (totalAmount * ((form as any).tax_rate || 0)) / 100)}
-                                    </span>
-                                </div>
-                                <Btn className="w-full justify-center" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>Place Order</Btn>
-                            </Card>
-                        </div>
-                    </div>
-                )}
+                    )}
 
                 <Modal open={!!successOrder} onClose={() => setSuccessOrder(null)} size="sm">
                     <div className="py-4 text-center">

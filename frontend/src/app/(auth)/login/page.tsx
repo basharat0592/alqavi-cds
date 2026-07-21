@@ -9,9 +9,94 @@ import Logo from '@/components/ui/Logo';
 
 const inputCls = "w-full h-10 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] text-slate-700 placeholder:text-slate-400 focus:bg-white focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/5 transition-all duration-300 outline-none font-medium";
 
+function BlinkingEye({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) {
+    const [blink, setBlink] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
+    useEffect(() => {
+        if (isOpen || !isHovered) return;
+
+        // Blink once immediately on hover
+        setBlink(true);
+        const timeout = setTimeout(() => setBlink(false), 180);
+
+        // Keep blinking every 1.6 seconds while hovered
+        const interval = setInterval(() => {
+            setBlink(true);
+            setTimeout(() => setBlink(false), 180);
+        }, 1600);
+
+        return () => {
+            clearTimeout(timeout);
+            clearInterval(interval);
+        };
+    }, [isOpen, isHovered]);
+
+    const isEyeOpen = isOpen || blink;
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                setBlink(false);
+            }}
+            className="p-1 text-slate-400 hover:text-[#13B0D1] hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none flex items-center justify-center shrink-0"
+            title={isOpen ? "Hide Password" : "Show Password"}
+        >
+            <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-all duration-300"
+            >
+                {/* Top Lid */}
+                <path
+                    className="transition-all duration-300 ease-in-out"
+                    d={isEyeOpen ? "M2 12C5 5.5 19 5.5 22 12" : "M2 12C5 18.5 19 18.5 22 12"}
+                />
+                {/* Bottom Lid */}
+                <path d="M2 12C5 18.5 19 18.5 22 12" />
+                
+                {/* Pupil Group with cute sparkle */}
+                <g
+                    className="transition-all duration-300 ease-in-out origin-center"
+                    style={{
+                        transform: isEyeOpen ? 'scale(1)' : 'scale(0)',
+                        opacity: isEyeOpen ? 1 : 0,
+                    }}
+                >
+                    <circle cx="12" cy="12" r="3.8" fill="currentColor" stroke="none" />
+                    <circle cx="13.2" cy="10.8" r="0.9" fill="white" stroke="none" />
+                </g>
+
+                {/* Lashes */}
+                <g 
+                    className="transition-all duration-300 ease-in-out"
+                    style={{ 
+                        opacity: isEyeOpen ? 0 : 1,
+                        transform: isEyeOpen ? 'translateY(1px)' : 'translateY(0px)'
+                    }}
+                >
+                    <line x1="6.5" y1="16" x2="5.2" y2="17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="12" y1="17.5" x2="12" y2="19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="17.5" y1="16" x2="18.8" y2="17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </g>
+            </svg>
+        </button>
+    );
+}
+
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 text-left">{label}</label>
+        <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-1.5 text-left">{label}</label>
         {children}
     </div>
 );
@@ -22,6 +107,7 @@ export default function LoginPage() {
     const [success, setSuccess] = useState(false);
     const [formData, setFormData] = useState({ username: '', password: '', rememberMe: false });
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -37,6 +123,8 @@ export default function LoginPage() {
                 router.push('/admin/dashboard');
             } else if (role === 'supplier') {
                 router.push('/supplier/dashboard');
+            } else if (role === 'delivery') {
+                router.push('/delivery/dashboard');
             } else {
                 router.push('/customer/dashboard');
             }
@@ -44,6 +132,11 @@ export default function LoginPage() {
 
         const saved = localStorage.getItem('rememberedUsername');
         if (saved) setFormData(p => ({ ...p, username: saved, rememberMe: true }));
+
+        // A shared "login link" (e.g. ?email=admin@site.com) pre-fills the username
+        // so an invited admin only has to type their password.
+        const emailParam = params.get('email') || params.get('username');
+        if (emailParam) setFormData(p => ({ ...p, username: emailParam }));
     }, [router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +159,8 @@ export default function LoginPage() {
                 router.push('/admin/dashboard');
             } else if (role === 'supplier') {
                 router.push('/supplier/dashboard');
+            } else if (role === 'delivery') {
+                router.push('/delivery/dashboard');
             } else {
                 router.push('/customer/dashboard');
             }
@@ -78,22 +173,22 @@ export default function LoginPage() {
 
     return (
         <div className="h-screen bg-white flex font-sans overflow-hidden">
-            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-12 md:py-20 relative z-10 shadow-2xl">
-                <div className="max-w-md mx-auto w-full animate-in fade-in slide-in-from-left-4 duration-700">
-                    <div className="mb-6 text-center">
-                        <Link href="/" className="inline-block mb-6 opacity-80 hover:opacity-100 transition-opacity">
-                            <img src="/logo.png" alt="Logo" className="h-40 w-auto object-contain mx-auto" />
+            <div className="w-full lg:w-[58%] xl:w-[52%] h-full overflow-y-auto no-scrollbar flex flex-col px-6 md:px-10 py-6 md:py-10 relative z-10 shadow-2xl">
+                <div className="max-w-md mx-auto w-full my-auto animate-in fade-in slide-in-from-left-4 duration-700">
+                    <div className="mb-4 text-center">
+                        <Link href="/" className="inline-block mb-3 opacity-80 hover:opacity-100 transition-opacity">
+                            <img src="/logo.png" alt="Logo" className="h-28 w-auto object-contain mx-auto" />
                         </Link>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-none mb-4">
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-2">
                             Welcome <span className="text-[#13B0D1]">Back</span>
                         </h1>
-                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
                             Sign in to your business dashboard
                         </p>
                     </div>
 
                     {success && (
-                        <div className="mb-6 flex items-start gap-3 border border-green-100 bg-green-50/50 rounded-2xl p-4">
+                        <div className="mb-4 flex items-start gap-3 border border-green-100 bg-green-50/50 rounded-2xl p-4">
                             <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
                             <div>
                                 <p className="text-green-700 font-bold text-sm">Account Ready</p>
@@ -103,13 +198,13 @@ export default function LoginPage() {
                     )}
 
                     {error && (
-                        <div className="mb-6 flex items-start gap-3 border border-red-100 bg-red-50/50 rounded-2xl p-4 animate-in shake duration-500">
+                        <div className="mb-4 flex items-start gap-3 border border-red-100 bg-red-50/50 rounded-2xl p-4 animate-in shake duration-500">
                             <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                             <p className="text-gray-800 text-sm leading-relaxed">{error}</p>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <Field label="Username or Email">
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -126,12 +221,17 @@ export default function LoginPage() {
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                 <input
-                                    name="password" type="password" required
+                                    name="password" type={showPassword ? "text" : "password"} required
                                     value={formData.password} onChange={handleChange}
-                                    className={`${inputCls} pl-10`}
+                                    className={`${inputCls} pl-10 pr-12`}
                                     placeholder="••••••••"
                                 />
-                                <Link href="/forgot-password" core-link="true" className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#13B0D1] uppercase tracking-widest hover:underline">
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10">
+                                    <BlinkingEye isOpen={showPassword} onClick={() => setShowPassword(!showPassword)} />
+                                </div>
+                            </div>
+                            <div className="text-right mt-1.5">
+                                <Link href="/forgot-password" core-link="true" className="text-[10px] font-bold text-[#13B0D1] uppercase tracking-widest hover:underline whitespace-nowrap">
                                     Forgot?
                                 </Link>
                             </div>
@@ -149,13 +249,13 @@ export default function LoginPage() {
                         </div>
 
                         <button type="submit" disabled={loading}
-                            className="w-full h-12 bg-[#13B0D1] hover:bg-[#119ab8] text-white rounded-xl text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#13B0D1]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60">
+                            className="w-full h-11 bg-[#13B0D1] hover:bg-[#119ab8] text-white rounded-xl text-[12px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[#13B0D1]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60">
                             {loading ? <Loader2 className="animate-spin h-5 w-5" /> : (
                                 <>Sign In <ArrowLeft className="h-4 w-4 rotate-180" /></>
                             )}
                         </button>
 
-                        <div className="text-center pt-6 border-t border-slate-50">
+                        <div className="text-center pt-4 border-t border-slate-50">
                             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
                                 New here? <Link href="/register" className="text-[#13B0D1] hover:underline ml-1">Join the Network</Link>
                             </p>
@@ -163,7 +263,7 @@ export default function LoginPage() {
                     </form>
                 </div>
 
-                <footer className="mt-auto pt-6 text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center border-t border-slate-50">
+                <footer className="mt-auto pt-4 text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em] text-center border-t border-slate-50">
                     © 2026 Al-Qavi Hub Distribution
                 </footer>
             </div>

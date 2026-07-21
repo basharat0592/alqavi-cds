@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Search, Plus, RefreshCw, Trash2, User, ChevronRight, ChevronLeft,
     Phone, Mail, MapPin, Pencil, Save, Eye, EyeOff, X, Building2,
     Activity, ShieldCheck, ExternalLink, MoreVertical, Loader2, CheckCircle2, Camera, Image
 } from 'lucide-react';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, exportToCSV } from '@/lib/utils';
 import { companyService } from '@/services/company.service';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    SUPPLIER LIST — ADMIN DESIGN SYSTEM
@@ -25,6 +26,7 @@ const Field = ({ label, required = false, children }: { label: string; required?
 const inputCls = ui.inputBase;
 
 export default function SuppliersPage() {
+    const router = useRouter();
     const [view, setView] = useState<'list' | 'add' | 'edit'>('list');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -58,12 +60,12 @@ export default function SuppliersPage() {
         setCurrentPage(1);
     }, [search]);
 
-    // AUTO-SYNC (2s)
+    // AUTO-SYNC (30s) — was 2s.
     useEffect(() => {
         if (view !== 'list') return;
         const interval = setInterval(() => {
             if (!loading && !saving) loadData(true);
-        }, 2000);
+        }, 30000);
         return () => clearInterval(interval);
     }, [view, loading, saving, loadData]);
 
@@ -121,6 +123,20 @@ export default function SuppliersPage() {
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+    const sel = useTableSelection(paginatedItems);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => companyService.deleteSupplier(id)));
+        toast.success(`${ids.length} supplier(s) deleted`);
+        loadData();
+    };
+
+    const bulkStatus = async (ids: string[], active: boolean) => {
+        await Promise.allSettled(ids.map(id => companyService.updateSupplier(id, { is_active: active })));
+        toast.success(`Marked ${ids.length} ${active ? 'active' : 'inactive'}`);
+        loadData();
+    };
+
     if (loading && suppliers.length === 0) return <PageLoader />;
 
     return (
@@ -136,7 +152,7 @@ export default function SuppliersPage() {
                                 <Button variant="outline" onClick={() => loadData()} disabled={loading} className="whitespace-nowrap">
                                     <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> <span className="hidden sm:inline">Refresh</span>
                                 </Button>
-                                <Button onClick={() => setView('add')} className="whitespace-nowrap"><Plus size={16} /> Add Supplier</Button>
+                                <Button onClick={() => router.push('/admin/company/suppliers/add')} className="whitespace-nowrap"><Plus size={16} /> Add Supplier</Button>
                             </>
                         ) : (
                             <Button variant="outline" onClick={() => setView('list')} className="whitespace-nowrap">
@@ -215,6 +231,7 @@ export default function SuppliersPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Supplier Detail</th>
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Phone & Email</th>
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Location</th>
@@ -224,13 +241,14 @@ export default function SuppliersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-24 text-center">
+                                    <tr><td colSpan={6} className="py-24 text-center">
                                         <div className="opacity-20 mb-4"><User size={60} className="mx-auto text-slate-400" /></div>
                                         <p className="text-[14px] text-slate-500 font-medium">No suppliers found in registry.</p>
                                     </td></tr>
                                 ) : (
                                     paginatedItems.map(s => (
                                         <tr key={s.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <RowCheckboxTd sel={sel} id={s.id} />
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
@@ -310,6 +328,27 @@ export default function SuppliersPage() {
                     </Card>
                 )}
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="suppliers"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkStatus(ids, true) },
+                    { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, false) },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((s: any) => ({
+                        name: s.name || '',
+                        company: s.company || '',
+                        email: s.email || '',
+                        phone: s.phone || '',
+                        address: s.address || '',
+                        status: s.is_active ? 'active' : 'inactive',
+                    })),
+                    'suppliers.csv',
+                )}
+            />
 
             {/* SUPPLIER MODAL (ADD/EDIT) */}
             {(view === 'add' || view === 'edit') && (

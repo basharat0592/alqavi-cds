@@ -9,9 +9,9 @@ import {
     ChevronLeft, ChevronRight, Truck, MapPin, TrendingUp
 } from 'lucide-react';
 import { productService, categoryService, supplierService, inventoryService } from '@/lib/api';
-import { formatCurrency, getImageUrl } from '@/lib/utils';
+import { formatCurrency, getImageUrl, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -56,7 +56,7 @@ export default function ProductsPage() {
             };
             const [resp, stockResp, catProdData] = await Promise.all([
                 productService.getAll(params),
-                inventoryService.getInventory(),
+                inventoryService.getInventory({ no_pagination: 'true' }),
                 productService.getAllSupplier({ no_pagination: 'true' })
             ]);
 
@@ -82,13 +82,14 @@ export default function ProductsPage() {
         return () => clearTimeout(t);
     }, [loadData]);
 
-    // Live Telemetry: Auto-update every 2 seconds
+    // Auto-refresh (30s). A 2s poll re-pulled the entire inventory + supplier
+    // catalog every tick — far too heavy for the value it added.
     useEffect(() => {
         const timer = setInterval(() => {
             if (!loading && !syncing && !deleting) {
                 loadData();
             }
-        }, 2000);
+        }, 30000);
         return () => clearInterval(timer);
     }, [loading, syncing, deleting, loadData]);
 
@@ -103,30 +104,58 @@ export default function ProductsPage() {
         } catch { toast.error('Failed to delete product'); } finally { setDeleting(false); }
     };
 
-    // Grouped Products: Merge by [Name + Selling Price]
+    // Grouped Products: Merge by [Name + Selling Price].
+    // Current units come from the REAL Stock table (warehouse + tenant scoped),
+    // counted once per [name|weight|size] variant — the same source the POS and
+    // Current Stocks read. This avoids the denormalized Product.total_quantity
+    // drifting / double-counting across duplicate product rows.
     const groupedProducts = useMemo(() => {
+        const stockMap = new Map<string, number>();
+        (allStocks || []).forEach((s: any) => {
+            const vk = `${(s.product_name || '').toLowerCase().trim()}|${(s.weight || '').trim()}|${(s.size || '').trim()}`;
+            stockMap.set(vk, (stockMap.get(vk) || 0) + Number(s.total_quantity || 0));
+        });
+
         const groups = new Map();
-
         products.forEach(prod => {
-            const key = `${(prod.product_name || '').toLowerCase().trim()}_${prod.selling_price}`;
-
+            const name = (prod.product_name || '').toLowerCase().trim();
+            const key = `${name}_${prod.selling_price}`;
+            const vkey = `${name}|${(prod.weight || '').trim()}|${(prod.size || '').trim()}`;
             if (!groups.has(key)) {
-                groups.set(key, { ...prod, total_quantity: Number(prod.total_quantity || 0) });
+                groups.set(key, { ...prod, _variants: new Set([vkey]) });
             } else {
                 const g = groups.get(key);
-                g.total_quantity = (g.total_quantity || 0) + Number(prod.total_quantity || 0);
-
-                // Track if multiple warehouses are involved in this price point
-                if (g.warehouse_name !== prod.warehouse_name) {
-                    g.warehouse_name = 'Multiple';
-                }
+                g._variants.add(vkey);
+                if (g.warehouse_name !== prod.warehouse_name) g.warehouse_name = 'Multiple';
             }
         });
 
-        return Array.from(groups.values());
-    }, [products]);
+        return Array.from(groups.values()).map((g: any) => {
+            let units = 0, matched = false;
+            g._variants.forEach((vk: string) => {
+                if (stockMap.has(vk)) { units += stockMap.get(vk)!; matched = true; }
+            });
+            delete g._variants;
+            // Fall back to the denormalized field only when no stock row matched.
+            return { ...g, current_units: matched ? units : Number(g.total_quantity || 0) };
+        });
+    }, [products, allStocks]);
 
     const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
+
+    const sel = useTableSelection(groupedProducts);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => productService.delete(id)));
+        toast.success(`${ids.length} product(s) deleted`);
+        loadData();
+    };
+
+    const bulkStatus = async (ids: string[], status: 'ACTIVE' | 'INACTIVE') => {
+        await Promise.allSettled(ids.map(id => productService.update(id, { status })));
+        toast.success(`Marked ${ids.length} product(s) ${status === 'ACTIVE' ? 'Active' : 'Inactive'}`);
+        loadData();
+    };
 
     return (
         <div className="pb-20">
@@ -141,7 +170,7 @@ export default function ProductsPage() {
                                 <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Refresh
                             </Button>
                             <Button variant="primary" size="sm" onClick={() => router.push('/admin/products/add')}>
-                                <Plus size={14} /> Add Product
+                                <Plus size={14} /> Add Listing
                             </Button>
                         </>
                     }
@@ -176,22 +205,25 @@ export default function ProductsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Cost Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Sale Price</th>
+                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Net Profit</th>
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">Status</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Current Units</th>
                                     <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && products.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
                                 ) : products.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
                                 ) : (
                                     groupedProducts.map(prod => {
                                         return (
                                             <tr key={prod.id} className="hover:bg-slate-50 transition-colors group">
+                                                <RowCheckboxTd sel={sel} id={prod.id} />
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
                                                     <div className="flex items-center gap-2 sm:gap-4">
                                                         <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-slate-200 rounded-lg flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
@@ -226,14 +258,25 @@ export default function ProductsPage() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
-                                                    <div className="text-[14px] sm:text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(prod.selling_price)}</div>
-                                                    <div className="flex items-center gap-1 mt-0.5">
-                                                        <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
-                                                        <span className="text-[10px] font-bold text-emerald-700 leading-none tabular-nums">
-                                                            {Number(prod.profit_margin).toFixed(1)}% <span className="hidden sm:inline">profit</span>
-                                                        </span>
-                                                    </div>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    <div className="text-[13px] sm:text-[14px] font-bold text-slate-600 tabular-nums">{formatCurrency(prod.cost_price)}</div>
+                                                </td>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    <div className="text-[13px] sm:text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(prod.selling_price)}</div>
+                                                </td>
+                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                    {(() => {
+                                                        const np = Number(prod.selling_price || 0) - Number(prod.cost_price || 0);
+                                                        return (
+                                                            <>
+                                                                <div className={`text-[13px] sm:text-[14px] font-black tabular-nums ${np >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(np)}</div>
+                                                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                                                    <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
+                                                                    <span className="text-[10px] font-bold text-emerald-700 leading-none tabular-nums">{Number(prod.profit_margin).toFixed(1)}%</span>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-center">
                                                     <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold uppercase border ${
@@ -245,12 +288,6 @@ export default function ProductsPage() {
                                                     }`} title={prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}>
                                                         <span className="max-sm:hidden">{prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}</span>
                                                     </span>
-                                                </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className={`text-[14px] sm:text-[16px] font-black tabular-nums ${(prod.total_quantity || 0) < 10 ? 'text-rose-600' : 'text-slate-900'}`}>
-                                                        {(prod.total_quantity || 0).toLocaleString()}
-                                                    </div>
-                                                    <div className="hidden sm:block text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Unit Balance</div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
                                                     <div className="flex items-center justify-end gap-2.5 transition-opacity">
@@ -280,6 +317,29 @@ export default function ProductsPage() {
                     )}
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="products"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkStatus(ids, 'ACTIVE') },
+                    { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, 'INACTIVE') },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        name: p.product_name || '',
+                        sku: p.sku || '',
+                        selling_price: p.selling_price ?? '',
+                        profit_margin: p.profit_margin ?? '',
+                        status: p.status || '',
+                        supplier: p.supplier_name || '',
+                        warehouse: p.warehouse_name || '',
+                        quantity: p.current_units ?? p.total_quantity ?? 0,
+                    })),
+                    'products.csv',
+                )}
+            />
 
             {/* Delete Modal */}
             <Modal open={!!deleteProd} onClose={() => setDeleteProd(null)} size="sm">

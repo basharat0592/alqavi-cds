@@ -1,12 +1,29 @@
 from django.db import models
+from django.conf import settings
 from core.models import BaseModel
 from modules.supplier.models import Supplier
 
 
 class Warehouse(BaseModel):
-    """Warehouse location for stock storage"""
+    """Warehouse location for stock storage.
+
+    Doubles as the *branch* unit for multi-branch isolation: each city's shop
+    maps to one (or more) warehouses, and admins are scoped to the warehouses
+    they're assigned (see users.User.warehouses).
+    """
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
+    # City / territory this warehouse belongs to (used to group branches).
+    area = models.ForeignKey(
+        'company.Area', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='warehouses'
+    )
+    is_active = models.BooleanField(default=True)
+    # Owning Admin (tenant) — each Admin has their own warehouses. NULL = legacy/shared.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_warehouses'
+    )
 
     class Meta:
         db_table = 'warehouses'
@@ -42,8 +59,19 @@ class Stock(BaseModel):
     
     weight = models.CharField(max_length=50, null=True, blank=True)
     size = models.CharField(max_length=50, null=True, blank=True)
-    
+
     date = models.DateField()
+    # Staff member this stock is attributed to (the purchase creator who brought it
+    # in, or whoever added it manually). Lets a branch admin see only their own stock.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='created_stocks'
+    )
+    # Owning Admin (tenant) — per-Admin stock isolation.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_stocks'
+    )
 
     class Meta:
         db_table = 'stocks'
@@ -73,6 +101,11 @@ class StockMovement(BaseModel):
     to_warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, related_name='movements_in')
     date = models.DateField()
     description = models.TextField(null=True, blank=True)
+    # Owning Admin (tenant) — per-Admin movement isolation.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_stock_movements'
+    )
 
     class Meta:
         db_table = 'stock_movements'

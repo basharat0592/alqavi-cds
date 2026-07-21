@@ -5,7 +5,7 @@ import {
     Search, Plus, RefreshCw, Package, Truck, MapPin, Save,
     ChevronRight, ChevronLeft, ChevronDown, Trash, Loader2, Info, Box, Barcode,
     Building2, Activity, Filter, Trash2, AlertTriangle, X, Calendar,
-    ShieldCheck, TrendingUp, Warehouse, History as HistoryIcon
+    ShieldCheck, TrendingUp, Warehouse, History as HistoryIcon, ShoppingCart
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { inventoryService } from '@/services/inventory.service';
@@ -15,9 +15,9 @@ import { productService } from '@/services/product.service';
 import { userService } from '@/services/user.service';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { formatCurrency, getImageUrl } from '@/lib/utils';
+import { formatCurrency, getImageUrl, exportToCSV } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card } from '@/components/admin/ui';
+import { PageHeader, Card, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - CURRENT STOCK
@@ -155,25 +155,25 @@ const AssignLocationModal = ({ isOpen, onClose, onConfirm, warehouses, loading }
                         <div className="w-9 h-9 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
                             <MapPin size={18} />
                         </div>
-                        <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Assign Storage Location</h3>
+                        <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Assign Branch</h3>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={18} /></button>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Select Warehouse</label>
+                        <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Select Branch</label>
                         <select
                             className={selectCls + " text-[14px]"}
                             value={selected}
                             onChange={e => setSelected(e.target.value)}
                             autoFocus
                         >
-                            <option value="" disabled>Choose target location...</option>
+                            <option value="" disabled>Choose target branch...</option>
                             {warehouses.map((w: any) => (
                                 <option key={w.id} value={w.id}>{w.name}</option>
                             ))}
                         </select>
-                        <p className="text-[11px] text-slate-400 italic mt-2">This will move the selected batch signature to the physical location chosen above.</p>
+                        <p className="text-[11px] text-slate-400 italic mt-2">This will assign the selected batch signature to the branch chosen above.</p>
                     </div>
                 </div>
                 <div className="px-8 py-5 bg-slate-50/60 border-t border-slate-100 flex justify-end gap-3">
@@ -203,6 +203,10 @@ export default function InventoryListPage() {
     const [search, setSearch] = useState('');
     const [selectedWarehouse, setSelectedWarehouse] = useState(initialWarehouseId);
     const [selectedSupplier, setSelectedSupplier] = useState('');
+    // Stock-level filter: all | out | low | healthy | custom (below `customThreshold`).
+    const [stockFilter, setStockFilter] = useState<'all' | 'out' | 'low' | 'healthy' | 'custom'>('all');
+    const [customThreshold, setCustomThreshold] = useState('100');
+    const LOW_STOCK_LEVEL = 50; // qty at/below this (but > 0) counts as Low Stock
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
@@ -212,10 +216,25 @@ export default function InventoryListPage() {
     const [editingId, setEditingId] = useState<string | number | null>(null);
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [deleteModal, setDeleteModal] = useState({ open: false, ids: [] as any[], name: '' });
-    const [viewingStock, setViewingStock] = useState<any | null>(null);
     const [warehouseModal, setWarehouseModal] = useState<{ open: boolean, stockId: any }>({ open: false, stockId: null });
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
+
+    const actionParam = searchParams.get('action');
+    useEffect(() => {
+        if (actionParam === 'add') {
+            setForm({
+                product_name: '', category: '', supplier: '', warehouse: selectedWarehouse || '',
+                purchase_type: 'single', cartons: '', items_per_carton: '', total_quantity: '',
+                price_per_carton: '', price_per_item: '', date: new Date().toISOString().slice(0, 10),
+                supplier_product_id: ''
+            });
+            setIsEditing(false);
+            setView('form');
+        } else {
+            setView('list');
+        }
+    }, [actionParam, selectedWarehouse]);
 
     const [form, setForm] = useState<any>({
         product_name: '', category: '', supplier: '', warehouse: '', purchase_type: 'single',
@@ -273,12 +292,12 @@ export default function InventoryListPage() {
 
     useEffect(() => { loadData(); setCurrentPage(1); }, [loadData, search, selectedWarehouse, selectedSupplier]);
 
-    // AUTO-SYNC (2s)
+    // AUTO-SYNC (30s) — was 2s, which re-pulled the full no-pagination stock list every tick.
     useEffect(() => {
         if (view !== 'list') return;
         const interval = setInterval(() => {
             if (!loading && !isSubmitting) loadData(true);
-        }, 2000);
+        }, 30000);
         return () => clearInterval(interval);
     }, [view, loading, isSubmitting, loadData]);
 
@@ -397,8 +416,39 @@ export default function InventoryListPage() {
                 }
             }
         });
-        return Array.from(groups.values());
-    }, [stocks, search, selectedSupplier, selectedWarehouse]);
+        // Stock-level filter, applied on each group's combined quantity.
+        const threshold = parseInt(customThreshold) || 0;
+        return Array.from(groups.values()).filter((g: any) => {
+            const qty = Number(g.total_quantity || 0);
+            if (stockFilter === 'out') return qty <= 0;
+            if (stockFilter === 'low') return qty > 0 && qty <= LOW_STOCK_LEVEL;
+            if (stockFilter === 'healthy') return qty > LOW_STOCK_LEVEL;
+            if (stockFilter === 'custom') return qty < threshold;
+            return true;
+        });
+    }, [stocks, search, selectedSupplier, selectedWarehouse, stockFilter, customThreshold]);
+
+    // Reorder → open Add Purchase pre-filled with this exact batch (supplier +
+    // product + cost/weight/size). When that PO is received, its quantity merges
+    // straight into THIS stock line's total units (same name+cost+weight+size).
+    const reorderUrl = (s: any) => {
+        const p = new URLSearchParams();
+        if (s.supplier) p.set('supplier', String(s.supplier));
+        if (s.sku) p.set('sku', s.sku);
+        p.set('product_name', s.product_name || '');
+        if (s.price_per_item) p.set('price', String(s.price_per_item));
+        if (s.weight) p.set('weight', s.weight);
+        if (s.size) p.set('size', s.size);
+        if (s.warehouse) p.set('warehouse', String(s.warehouse));
+        return `/admin/purchases/add?${p.toString()}`;
+    };
+
+    // Stock-status badge (Out / Low / Healthy) shown per row.
+    const stockStatus = (qty: number) => {
+        if (qty <= 0) return { label: 'Out of Stock', cls: 'bg-rose-50 text-rose-700 border-rose-200' };
+        if (qty <= LOW_STOCK_LEVEL) return { label: 'Low Stock', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+        return { label: 'Healthy', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    };
 
     // Only show products in catalog that are already in our stock list
     const catalogProductsInStock = React.useMemo(() => {
@@ -415,6 +465,18 @@ export default function InventoryListPage() {
     }, [filtered, currentPage]);
 
     const totalPages = Math.ceil(filtered.length / pageSize);
+
+    const sel = useTableSelection(paginatedData);
+
+    const bulkDeleteStocks = async (ids: string[]) => {
+        // Each selected row is a grouped batch; expand to its underlying stock record ids.
+        const stockIds = paginatedData
+            .filter((s: any) => ids.includes(String(s.id)))
+            .flatMap((s: any) => (s.items || [s]).map((i: any) => i.id));
+        await Promise.allSettled(stockIds.map((id: any) => inventoryService.deleteInventory(id)));
+        toast.success(`${ids.length} stock item(s) deleted`);
+        loadData();
+    };
 
     return (
         <div className="pb-20 text-left text-slate-800">
@@ -457,16 +519,45 @@ export default function InventoryListPage() {
                                 />
                             </div>
                             <div className="h-8 w-px bg-slate-100 mx-2 hidden md:block" />
-                            <div className="relative flex-1 md:flex-initial md:min-w-[200px]">
+                            {/* Stock-level filter */}
+                            <div className="relative flex-1 md:flex-initial md:min-w-[180px]">
                                 <select
-                                    value={selectedWarehouse}
-                                    onChange={e => setSelectedWarehouse(e.target.value)}
+                                    value={stockFilter}
+                                    onChange={e => { setStockFilter(e.target.value as any); setCurrentPage(1); }}
                                     className={`${selectCls} font-semibold`}
                                 >
-                                    <option value="">All Warehouses</option>
-                                    {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
+                                    <option value="all">All Stock Levels</option>
+                                    <option value="healthy">Healthy Stock (&gt;{LOW_STOCK_LEVEL})</option>
+                                    <option value="low">Low Stock (≤{LOW_STOCK_LEVEL})</option>
+                                    <option value="out">Out of Stock</option>
+                                    <option value="custom">Custom (below…)</option>
                                 </select>
                             </div>
+                            {stockFilter === 'custom' && (
+                                <div className="relative flex-1 md:flex-initial md:w-[130px]">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={customThreshold}
+                                        onChange={e => { setCustomThreshold(e.target.value); setCurrentPage(1); }}
+                                        placeholder="e.g. 100"
+                                        className={`${inputCls} text-center font-semibold`}
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">units</span>
+                                </div>
+                            )}
+                            {warehouses.length > 1 && (
+                                <div className="relative flex-1 md:flex-initial md:min-w-[200px]">
+                                    <select
+                                        value={selectedWarehouse}
+                                        onChange={e => setSelectedWarehouse(e.target.value)}
+                                        className={`${selectCls} font-semibold`}
+                                    >
+                                        <option value="">All Branches</option>
+                                        {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
+                                    </select>
+                                </div>
+                            )}
                             <div className="relative flex-1 md:flex-initial md:min-w-[200px]">
                                 <select
                                     value={selectedSupplier}
@@ -508,7 +599,7 @@ export default function InventoryListPage() {
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-baseline gap-1.5 flex-wrap" onClick={() => setViewingStock(s)}>
+                                                <div className="flex items-baseline gap-1.5 flex-wrap" onClick={() => router.push(`/admin/inventory/${s.id}`)}>
                                                     <h3 className="text-[14px] font-bold text-slate-900 hover:text-indigo-600 hover:underline cursor-pointer">
                                                         {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                     </h3>
@@ -555,7 +646,7 @@ export default function InventoryListPage() {
                                                         onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
                                                         className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-indigo-400 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded text-[9px] font-bold transition-all"
                                                     >
-                                                        <Plus size={8} strokeWidth={3} /> Assign Location
+                                                        <Plus size={8} strokeWidth={3} /> Assign Branch
                                                     </button>
                                                 )}
                                             </div>
@@ -574,7 +665,13 @@ export default function InventoryListPage() {
                                         {/* Row 4: Action Controls */}
                                         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                                             <button
-                                                onClick={() => setViewingStock(s)}
+                                                onClick={() => router.push(reorderUrl(s))}
+                                                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1.5 rounded-lg mr-auto"
+                                            >
+                                                <ShoppingCart size={12} /> Reorder
+                                            </button>
+                                            <button
+                                                onClick={() => router.push(`/admin/inventory/${s.id}`)}
                                                 className="text-[12px] font-bold text-slate-600 hover:underline"
                                             >
                                                 View
@@ -610,32 +707,34 @@ export default function InventoryListPage() {
                         <Card className="hidden md:block overflow-hidden animate-in fade-in duration-700">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/60 border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                        <th className="px-6 py-3 w-[80px]">Image</th>
-                                        <th className="px-6 py-3">Item Detail</th>
-                                        <th className="px-6 py-3 text-right">Stock Level</th>
-                                        <th className="px-6 py-3 text-right">Price</th>
-                                        <th className="px-6 py-3">Shipping & Storage</th>
-                                        <th className="px-6 py-3">Last Updated</th>
-                                        <th className="px-6 py-3 text-right">Controls</th>
+                                    <tr className="bg-slate-50/60 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                        <SelectAllTh sel={sel} />
+                                        <th className="px-5 py-2.5 w-[80px]">Image</th>
+                                        <th className="px-5 py-2.5">Item Detail</th>
+                                        <th className="px-5 py-2.5 text-right">Stock Level</th>
+                                        <th className="px-5 py-2.5 text-right">Price</th>
+                                        <th className="px-5 py-2.5">Shipping & Storage</th>
+                                        <th className="px-5 py-2.5">Last Updated</th>
+                                        <th className="px-5 py-2.5 text-right">Controls</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading && stocks.length === 0 ? (
-                                        <tr><td colSpan={7} className="py-24 text-center">
+                                        <tr><td colSpan={8} className="py-24 text-center">
                                             <Loader2 size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
                                             <p className="text-[13px] text-slate-500 font-medium italic">Syncing Current Stock...</p>
                                         </td></tr>
                                     ) : paginatedData.length === 0 ? (
-                                        <tr><td colSpan={7} className="py-24 text-center">
+                                        <tr><td colSpan={8} className="py-24 text-center">
                                             <div className="mb-4 text-slate-200"><Box size={60} className="mx-auto" /></div>
                                             <p className="text-[14px] text-slate-500 font-medium">No stock records match your search.</p>
                                         </td></tr>
                                     ) : (
                                         paginatedData.map(s => (
-                                            <tr key={s.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
-                                                <td className="px-6 py-4">
-                                                    <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
+                                            <tr key={s.id} className="hover:bg-slate-50 transition-colors group text-[12px]">
+                                                <RowCheckboxTd sel={sel} id={s.id} />
+                                                <td className="px-5 py-3">
+                                                    <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
                                                         {s.product_image ? (
                                                             <img
                                                                 src={getImageUrl(s.product_image)}
@@ -643,13 +742,13 @@ export default function InventoryListPage() {
                                                                 alt=""
                                                             />
                                                         ) : (
-                                                            <Package size={20} className="text-slate-200" />
+                                                            <Package size={18} className="text-slate-200" />
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-baseline gap-1.5 cursor-pointer" onClick={() => setViewingStock(s)}>
-                                                        <div className="text-[14px] font-bold text-slate-900 group-hover:text-indigo-600 group-hover:underline">
+                                                <td className="px-5 py-3">
+                                                    <div className="flex items-baseline gap-1.5 cursor-pointer" onClick={() => router.push(`/admin/inventory/${s.id}`)}>
+                                                        <div className="text-[13px] font-bold text-slate-900 group-hover:text-indigo-600 group-hover:underline">
                                                             {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                         </div>
                                                         {(s.weight || s.size) && (
@@ -660,18 +759,18 @@ export default function InventoryListPage() {
                                                     </div>
                                                     <div className="text-[11px] text-slate-400 uppercase font-bold mt-1 tracking-tighter">{s.category_name || 'Category not set'}</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="text-[16px] font-bold text-slate-900 tabular-nums">{s.total_quantity.toLocaleString()} <span className="text-[11px] text-slate-400 font-normal ml-0.5">Units</span></div>
-                                                    <div className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1">
-                                                        {s.purchase_type === 'carton' ? `${s.cartons} Boxes` : 'Loose Units'}
-                                                    </div>
+                                                <td className="px-5 py-3 text-right">
+                                                    <div className="text-[14px] font-bold text-slate-900 tabular-nums">{s.total_quantity.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal ml-0.5">Units</span></div>
+                                                    {(() => { const st = stockStatus(Number(s.total_quantity || 0)); return (
+                                                        <span className={`inline-block mt-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
+                                                    ); })()}
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="font-bold text-slate-900 text-[15px] tabular-nums">{formatCurrency(s.price_per_item)}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">Single Unit Cost</div>
+                                                <td className="px-5 py-3 text-right">
+                                                    <div className="font-bold text-slate-900 text-[13px] tabular-nums">{formatCurrency(s.price_per_item)}</div>
+                                                    <div className="text-[9px] text-slate-400 font-bold uppercase mt-1">Single Unit Cost</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-[12px]">
-                                                    <div className="text-slate-900 font-bold flex items-center gap-1.5"><Truck size={14} className="text-slate-400" /> {getSupplierName(s.supplier, s.supplier_name)}</div>
+                                                <td className="px-5 py-3 text-[11px]">
+                                                    <div className="text-slate-900 font-bold flex items-center gap-1.5"><Truck size={13} className="text-slate-400" /> {getSupplierName(s.supplier, s.supplier_name)}</div>
                                                     <div className="text-slate-600 flex items-center gap-1.5 mt-1.5">
                                                         <MapPin size={12} className="text-slate-400" />
                                                         {s.warehouse_name ? (
@@ -681,23 +780,30 @@ export default function InventoryListPage() {
                                                                 onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
                                                                 className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 border border-dashed border-indigo-400 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-solid rounded-lg text-[10px] font-bold transition-all animate-pulse shadow-sm"
                                                             >
-                                                                <Plus size={10} strokeWidth={3} /> Assign Location
+                                                                <Plus size={10} strokeWidth={3} /> Assign Branch
                                                             </button>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-[12px] text-slate-900 font-bold">
+                                                <td className="px-5 py-3">
+                                                    <div className="text-[11px] text-slate-900 font-bold">
                                                         {new Date(s.updated_at || s.created_at || s.date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                     </div>
                                                     <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-tighter">
                                                         {new Date(s.updated_at || s.created_at || s.date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="px-5 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-2.5">
                                                         <button
-                                                            onClick={() => setViewingStock(s)}
+                                                            onClick={() => router.push(reorderUrl(s))}
+                                                            title="Create a purchase order to restock this item"
+                                                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
+                                                        >
+                                                            <ShoppingCart size={12} /> Reorder
+                                                        </button>
+                                                        <button
+                                                            onClick={() => router.push(`/admin/inventory/${s.id}`)}
                                                             className="text-[12px] font-bold text-slate-600 hover:underline"
                                                         >
                                                             View
@@ -726,6 +832,26 @@ export default function InventoryListPage() {
                                 </tbody>
                             </table>
                         </Card>
+
+                        <BulkBar
+                            sel={sel}
+                            entity="stock items"
+                            onDelete={bulkDeleteStocks}
+                            onExport={() => exportToCSV(
+                                sel.selectedItems.map((s: any) => ({
+                                    product: s.product_name,
+                                    category: s.category_name || '',
+                                    supplier: getSupplierName(s.supplier, s.supplier_name),
+                                    warehouse: s.warehouse_name || '',
+                                    quantity: s.total_quantity ?? 0,
+                                    unit_price: s.price_per_item ?? 0,
+                                    valuation: (s.total_quantity || 0) * (s.price_per_item || 0),
+                                    purchase_type: s.purchase_type || '',
+                                    date: s.date || '',
+                                })),
+                                'inventory.csv',
+                            )}
+                        />
 
                         {/* ── Pagination Controls ── */}
                         <div className="px-4 py-4 sm:px-6 bg-slate-50/60 border border-slate-200/70 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -814,9 +940,9 @@ export default function InventoryListPage() {
                                                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                             </select>
                                         </Field>
-                                        <Field label="Target Warehouse" required>
+                                        <Field label="Target Branch" required>
                                             <select className={selectCls} value={form.warehouse} onChange={(e) => setForm((f: any) => ({ ...f, warehouse: e.target.value }))}>
-                                                <option value="">Select Storehouse</option>
+                                                <option value="">Select Branch</option>
                                                 {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                                             </select>
                                         </Field>
@@ -886,7 +1012,7 @@ export default function InventoryListPage() {
 
                             <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-[12px] text-indigo-700 leading-relaxed shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <p className="font-bold mb-2 uppercase tracking-wide">Stock Policy</p>
-                                Adding stock arrival will automatically increase the recorded units in the specific warehouse chosen.
+                                Adding stock arrival will automatically increase the recorded units in the specific branch chosen.
                             </div>
                         </div>
                     </div>
@@ -899,7 +1025,7 @@ export default function InventoryListPage() {
                 onConfirm={handleDelete}
                 loading={isSubmitting}
                 title={`Delete '${deleteModal.name.replace(/\s*\(.*?\)\s*$/, '')}'?`}
-                message={`Yeh product TAMAM (allover) warehouses se khatam ho jayega. Are you sure you want to permanently remove this product from the entire global inventory?`}
+                message={`This will remove the product from ALL branches. Are you sure you want to permanently delete it from the entire inventory?`}
             />
 
             <AssignLocationModal
@@ -910,176 +1036,6 @@ export default function InventoryListPage() {
                 warehouses={warehouses}
             />
 
-            {viewingStock && (
-                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 text-left animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl border border-slate-200 max-w-[850px] w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-
-                        {/* ── Simple Header ── */}
-                        <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Package size={20} className="text-slate-400" />
-                                <div>
-                                    <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">{viewingStock.product_name.replace(/\s*\(.*?\)\s*$/, '')}</h3>
-                                    <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">{viewingStock.category_name || 'General Inventory'}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setViewingStock(null)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        {/* ── Content ── */}
-                        <div className="max-h-[80vh] overflow-y-auto">
-                            <div className="p-6 space-y-8">
-
-                                {/* 1. Key Metrics Row */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-slate-200/70 rounded-2xl divide-y md:divide-y-0 md:divide-x divide-slate-100 overflow-hidden">
-                                    <div className="p-5">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Current Stock</p>
-                                        <p className="text-[28px] font-bold text-slate-900 tabular-nums">{viewingStock.total_quantity.toLocaleString()} <span className="text-[13px] font-normal text-slate-400">Units</span></p>
-                                    </div>
-                                    <div className="p-5">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Unit Cost</p>
-                                        <p className="text-[28px] font-bold text-slate-900 tabular-nums">{formatCurrency(viewingStock.price_per_item)}</p>
-                                    </div>
-                                    <div className="p-5 bg-slate-50">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Total Valuation</p>
-                                        <p className="text-[28px] font-bold text-indigo-600 tabular-nums">{formatCurrency(viewingStock.total_quantity * viewingStock.price_per_item)}</p>
-                                    </div>
-                                </div>
-
-                                 {/* 2. Distribution & Details */}
-                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                     <div className="space-y-4">
-                                         <h4 className="text-[13px] font-bold text-slate-900 border-b border-slate-100 pb-2">Location Breakdown</h4>
-                                         <div className="space-y-2">
-                                             {Object.entries((viewingStock.items || []).reduce((acc: any, curr: any) => {
-                                                 const name = curr.warehouse_name || 'Unassigned';
-                                                 acc[name] = (acc[name] || 0) + curr.total_quantity;
-                                                 return acc;
-                                             }, {})).map(([whName, whTotal]: [string, any]) => (
-                                                 <div key={whName} className="flex items-center justify-between text-[13px] py-1">
-                                                     <div className="flex items-center gap-2 text-slate-600">
-                                                         <MapPin size={14} className="text-slate-400" />
-                                                         <span>{whName}</span>
-                                                     </div>
-                                                     <span className="font-bold text-slate-900 tabular-nums">{whTotal.toLocaleString()} units</span>
-                                                 </div>
-                                             ))}
-                                         </div>
-                                     </div>
-
-                                     <div className="space-y-4">
-                                         <h4 className="text-[13px] font-bold text-slate-900 border-b border-slate-100 pb-2">Partner Breakdown</h4>
-                                         <div className="space-y-2">
-                                             {Object.entries((viewingStock.items || []).reduce((acc: any, curr: any) => {
-                                                 const name = getSupplierName(curr.supplier, curr.supplier_name) || 'Unknown';
-                                                 acc[name] = (acc[name] || 0) + curr.total_quantity;
-                                                 return acc;
-                                             }, {})).map(([supName, supTotal]: [string, any]) => (
-                                                 <div key={supName} className="flex items-center justify-between text-[13px] py-1">
-                                                     <div className="flex items-center gap-2 text-slate-600">
-                                                         <Truck size={14} className="text-slate-400" />
-                                                         <span>{supName}</span>
-                                                     </div>
-                                                     <span className="font-bold text-emerald-600 tabular-nums">{supTotal.toLocaleString()} units</span>
-                                                 </div>
-                                             ))}
-                                         </div>
-                                     </div>
-
-                                     <div className="space-y-4">
-                                         <h4 className="text-[13px] font-bold text-slate-900 border-b border-slate-100 pb-2">Technical Specs</h4>
-                                         <div className="grid grid-cols-2 gap-4 text-[12px]">
-                                             <div>
-                                                 <p className="text-slate-400 mb-0.5">Weight</p>
-                                                 <p className="font-bold text-slate-900">{viewingStock.weight || '---'}</p>
-                                             </div>
-                                             <div>
-                                                 <p className="text-slate-400 mb-0.5">Variant / Type</p>
-                                                 <p className="font-bold text-slate-900">{viewingStock.size || '---'}</p>
-                                             </div>
-                                             <div>
-                                                 <p className="text-slate-400 mb-0.5">SKU</p>
-                                                 <p className="font-bold text-slate-900">{viewingStock.sku || '---'}</p>
-                                             </div>
-                                             <div>
-                                                 <p className="text-slate-400 mb-0.5">Barcode</p>
-                                                 <p className="font-bold text-slate-900">{viewingStock.barcode || '---'}</p>
-                                             </div>
-                                         </div>
-                                     </div>
-                                 </div>
-
-                                 {/* 3. Arrival Log */}
-                                 <div className="space-y-4">
-                                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                         <h4 className="text-[13px] font-bold text-slate-900">Source & Arrival Log</h4>
-                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Global Traceability</span>
-                                     </div>
-                                     <div className="border border-slate-200/70 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                         <table className="w-full text-left text-[12px] border-collapse">
-                                             <thead>
-                                                 <tr className="bg-slate-50/60 border-b border-slate-200 font-bold text-slate-400 uppercase tracking-wider">
-                                                     <th className="px-4 py-3">Arrival Date & Time</th>
-                                                     <th className="px-4 py-3">Source Supplier</th>
-                                                     <th className="px-4 py-3">Destination</th>
-                                                     <th className="px-4 py-3 text-right">Batch Qty</th>
-                                                     <th className="px-4 py-3 text-right">Unit Price</th>
-                                                 </tr>
-                                             </thead>
-                                             <tbody className="divide-y divide-slate-100">
-                                                 {(viewingStock.items || [viewingStock]).sort((a: any, b: any) => new Date(b.updated_at || b.date).getTime() - new Date(a.updated_at || a.date).getTime()).map((item: any, idx: number) => (
-                                                     <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                                                         <td className="px-4 py-3">
-                                                             <div className="font-bold text-slate-900">{new Date(item.updated_at || item.date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                                             <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
-                                                                 {new Date(item.updated_at || item.date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-4 py-3 font-medium text-indigo-600 group-hover:underline cursor-default">
-                                                             <div className="flex items-center gap-2">
-                                                                 <Truck size={14} className="text-slate-300" />
-                                                                 {getSupplierName(item.supplier, item.supplier_name)}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-4 py-3 text-slate-600">
-                                                             <div className="flex items-center gap-2 font-medium">
-                                                                 <MapPin size={12} className="text-slate-300" />
-                                                                 {item.warehouse_name}
-                                                             </div>
-                                                         </td>
-                                                         <td className="px-4 py-3 text-right">
-                                                             <div className="font-black text-emerald-600 tabular-nums">+{item.total_quantity.toLocaleString()}</div>
-                                                             <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Units</div>
-                                                         </td>
-                                                         <td className="px-4 py-3 text-right font-black text-slate-900 tabular-nums">
-                                                             {formatCurrency(item.price_per_item)}
-                                                         </td>
-                                                     </tr>
-                                                 ))}
-                                             </tbody>
-                                         </table>
-                                     </div>
-                                 </div>
-                            </div>
-                        </div>
-
-                        {/* ── Simple Footer ── */}
-                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
-                            <button
-                                onClick={() => setViewingStock(null)}
-                                className="h-10 px-8 bg-indigo-600 border border-transparent rounded-lg text-[13px] font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-600/20"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

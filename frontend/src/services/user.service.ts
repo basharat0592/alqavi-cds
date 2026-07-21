@@ -32,8 +32,8 @@ export const userService = {
         const { data } = await api.get(`v1/users/${id}/`);
         return data;
     },
-    create: async (userData: Partial<AppUser> & { password?: string, password_confirm?: string }): Promise<AppUser> => {
-        const payload = {
+    create: async (userData: Partial<AppUser> & { password?: string, password_confirm?: string, areas?: number[], page_permissions?: string[], page_edit_permissions?: string[] }): Promise<AppUser> => {
+        const payload: any = {
             username: userData.email,
             email: userData.email,
             first_name: userData.first_name || '',
@@ -43,6 +43,10 @@ export const userService = {
             password: userData.password,
             password_confirm: userData.password_confirm || userData.password,
         };
+        if (userData.page_permissions !== undefined) payload.page_permissions = userData.page_permissions;
+        if (userData.page_edit_permissions !== undefined) payload.page_edit_permissions = userData.page_edit_permissions;
+        if (userData.areas !== undefined) payload.areas = userData.areas;
+        if ((userData as any).warehouses !== undefined) payload.warehouses = (userData as any).warehouses;
         const { data } = await api.post('v1/users/create/', payload);
         return data.user || data;
     },
@@ -60,8 +64,11 @@ export const userService = {
         const { data } = await api.patch(`v1/users/${id}/update/`, payload);
         return data;
     },
-    delete: async (id: number): Promise<void> => {
-        await api.delete(`v1/users/${id}/delete/`);
+    delete: async (id: number): Promise<{ deactivated?: boolean; message?: string }> => {
+        const { data } = await api.delete(`v1/users/${id}/delete/`);
+        // 204 (hard delete) has no body; 200 with { deactivated } means the user owned
+        // records and was deactivated instead.
+        return data || {};
     },
     activate: async (id: number): Promise<AppUser> => {
         const { data } = await api.post(`v1/users/${id}/activate/`);

@@ -1,51 +1,75 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense, useRef } from 'react';
 import {
-    BarChart3, Calendar, Printer, FileStack, FileSpreadsheet,
+    BarChart3, Calendar, Printer, FileSpreadsheet,
     ListFilter, Search, Download, ClipboardList, Info, CheckCircle,
     ChevronRight, ChevronLeft, LayoutDashboard, AlertTriangle, Clock,
-    User, CreditCard, ShoppingBag, Package, Boxes, TrendingUp, RotateCcw,
-    Truck, Building2, Tag, DollarSign
+    ShoppingBag, Package, Boxes, RotateCcw,
+    Truck, Tag, DollarSign
 } from 'lucide-react';
-import Logo from '@/components/ui/Logo';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
     productService, orderService,
-    purchaseService, supplierService, categoryService
+    purchaseService, supplierService, categoryService, userService, paymentService
 } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
 import { companyService } from '@/services/company.service';
-import { exportToCSV, formatCurrency, formatDate } from '@/lib/utils';
+import { authService } from '@/lib/auth';
+import { exportToCSV, exportToExcel, formatCurrency, formatDate } from '@/lib/utils';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - MANUAL REPORT GENERATOR
    ───────────────────────────────────────────────────────────────────────────── */
 const inputCls = ui.inputBase;
 
+// Grouped in a logical order: Sales → Purchases → Inventory → People → Finance.
+// (The Category dropdown appends Income, Expense and System Users after these.)
 const CATEGORIES = [
+    // Sales
     { id: 'sales', label: 'Sale Order' },
-    { id: 'purchases', label: 'Purchase Order' },
-    { id: 'customers', label: 'Customers' },
     { id: 'returns', label: 'Returns' },
-    { id: 'payments', label: 'Payments' },
+    // Purchases
+    { id: 'purchases', label: 'Purchase Order' },
     { id: 'suppliers', label: 'Suppliers' },
+    // Inventory
     { id: 'products', label: 'Products' },
     { id: 'stock', label: 'Stock' },
+    // People
+    { id: 'customers', label: 'Customers' },
+    // Finance
+    { id: 'payments', label: 'Payments' },
+    // Delivery
+    { id: 'delivery', label: 'Delivery' },
 ];
+
+// When the "Personal" branch is selected, the report covers the Super Admin's own
+// ledger (income / expense entries not tied to any branch) instead of a branch.
+const PERSONAL_CATEGORIES = [
+    { id: 'income', label: 'Income' },
+    { id: 'expense', label: 'Expense' },
+];
+
+// Extra category shown for a branch / All Branches: the branch's system users (staff).
+const SYSTEM_USER_CATEGORY = { id: 'system_users', label: 'System Users' };
 
 const SUB_OPTIONS: Record<string, string[]> = {
     sales: ['Offline Sales', 'Online Sales'],
     purchases: ['Purchase Order By Date', 'Purchase Order By Invoice', 'By Supplier'],
     customers: ['Walk-in Customer', 'Registered Customer'],
     returns: ['Sales Returns', 'Purchase Returns'],
-    payments: ['Sales Payment', 'Purchase Payment'],
+    payments: ['Sales Payment', 'Purchase Payment', 'Net Profit'],
+    delivery: ['By Date Range'],
     suppliers: ['All Suppliers', 'By Category', 'Outstanding Balance'],
     products: ['All Products', 'By Category', 'By Supplier', 'By Price Range'],
     stock: ['By Date Range', 'Stock Status', 'By Product Name', 'By Supplier', 'By Price Range', 'By Brand'],
+    income: ['All Records', 'By Date Range'],
+    expense: ['All Records', 'By Date Range'],
+    system_users: ['All Staff'],
 };
 
 const MODES: Record<string, string[]> = {
@@ -80,11 +104,16 @@ const VIEW_FIELDS: Record<string, string[]> = {
     'Pending': ['dateRange'],
     'Delivered': ['dateRange'],
     'Cancelled': ['dateRange'],
+    'Net Profit': ['dateRange'],
 };
+
+// Payment-category views that open a full dedicated report page instead of
+// generating inline on this screen.
+const NAV_VIEWS: Record<string, string> = {};
 
 /* Defensive field readers — report rows come from many different endpoints. */
 const rowDateVal = (r: any) => r.created_at || r.order_date || r.date || r.return_date || r.purchase_date || r.date_joined || r.updated_at || null;
-const rowAmount = (r: any) => Number(r.total_amount ?? r.total_refund_amount ?? r.grand_total ?? r.price_per_item ?? r.price ?? r.selling_price ?? 0);
+const rowAmount = (r: any) => Number(r.total_amount ?? r.total_refund_amount ?? r.grand_total ?? r.price_per_item ?? r.price ?? r.selling_price ?? r.amount ?? 0);
 const rowQty = (r: any): number => {
     if (Array.isArray(r.items) && r.items.length) return r.items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0);
     return Number(r.total_quantity ?? r.stock_quantity ?? r.quantity ?? 0);
@@ -92,14 +121,40 @@ const rowQty = (r: any): number => {
 const rowTitle = (r: any) =>
     r.product_name || r.company ||
     [r.first_name, r.last_name].filter(Boolean).join(' ').trim() ||
-    r.name || r.customer_display_name || r.customer_name || r.supplier_name || r.full_name || r.username || 'Record';
-const rowSubtitle = (r: any, category: string) =>
-    r.return_number || r.order_number || r.purchase_number ||
-    (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
-    r.reason || r.phone || r.email || r.tracking_id || category;
+    r.name || r.customer_display_name || r.customer_name || r.supplier_name || r.full_name || r.username ||
+    r.category_name || r.payer_payee || r.description || 'Record';
+const rowSubtitle = (r: any, category: string) => {
+    // System users: surface the role (Sales Manager, etc.) + a contact.
+    if (category === 'system_users') {
+        return [r.role_name, r.email || r.phone].filter(Boolean).join(' · ') || 'Staff';
+    }
+    // Delivery: rider performance summary.
+    if (category === 'delivery') {
+        return `${r.delivered || 0} delivered · ${r.pending || 0} pending · ${r.total_orders || 0} orders`;
+    }
+    return r.return_number || r.order_number || r.purchase_number ||
+        (r.warehouse_name ? `Warehouse: ${r.warehouse_name}` : '') ||
+        r.reason || r.phone || r.email || r.tracking_id || r.payer_payee || r.reference_number || category;
+};
+
+// One line of the Net Profit panel.
+function ProfitRow({ label, value, sub, bold, neg }: { label: string; value: number; sub?: string; bold?: boolean; neg?: boolean }) {
+    return (
+        <div className="flex items-center justify-between px-4 py-2.5">
+            <div>
+                <p className={bold ? 'text-[13px] font-bold text-slate-900' : 'text-[13px] font-medium text-slate-600'}>{label}</p>
+                {sub && <p className="text-[10.5px] text-slate-400 mt-0.5">{sub}</p>}
+            </div>
+            <p className={`text-[13.5px] tabular-nums ${bold ? 'font-black text-slate-900' : neg ? 'font-bold text-rose-600' : 'font-bold text-slate-700'}`}>
+                {neg ? '− ' : ''}{formatCurrency(value)}
+            </p>
+        </div>
+    );
+}
 
 function ReportsEngineInner() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [hasGenerated, setHasGenerated] = useState(false);
@@ -107,8 +162,16 @@ function ReportsEngineInner() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [stocks, setStocks] = useState<any[]>([]);
+    // Super-Admin branch scope: pick a branch and the whole report follows it.
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<any[]>([]);
+    // Per-customer profile (total bought / dues / orders) shown when a customer is picked.
+    const [customerSummary, setCustomerSummary] = useState<any | null>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     const [filters, setFilters] = useState({
+        branch: '',
         category: (searchParams.get('type') || '') as string,
         view: '',
         subView: '',
@@ -129,27 +192,81 @@ function ReportsEngineInner() {
     });
 
     const [reportResult, setReportResult] = useState<any[]>([]);
+    // Net Profit view produces a P&L summary instead of a row list.
+    const [profitSummary, setProfitSummary] = useState<any | null>(null);
 
     const loadMeta = useCallback(async () => {
-        try {
-            const [s, c, st] = await Promise.all([
-                supplierService.getAll({ no_pagination: 'true' }),
-                categoryService.getAll({ no_pagination: 'true' }),
-                inventoryService.getInventory({ no_pagination: 'true' })
-            ]);
-            setSuppliers(Array.isArray(s) ? s : (s as any).results || []);
-            setCategories(Array.isArray(c) ? c : (c as any).results || []);
-            setStocks(st || []);
-        } catch { console.error('Meta sync failure'); }
-        finally { setLoading(false); }
+        setIsSuperAdmin(authService.isSuperAdmin());
+        // Each lookup is independent — one failing endpoint (e.g. a 500 on
+        // categories) must NOT blank out the others (suppliers, stock, branches).
+        const [s, c, st, wh, u, cust] = await Promise.all([
+            supplierService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
+            categoryService.getAll({ no_pagination: 'true' }).catch(() => [] as any[]),
+            inventoryService.getInventory({ no_pagination: 'true' }).catch(() => [] as any[]),
+            inventoryService.getWarehouses().catch(() => [] as any[]),
+            userService.getAll?.().catch(() => [] as any[]) ?? Promise.resolve([] as any[]),
+            companyService.getCustomers().catch(() => [] as any[]),
+        ]);
+        setSuppliers(Array.isArray(s) ? s : (s as any).results || []);
+        setCategories(Array.isArray(c) ? c : (c as any).results || []);
+        setStocks(st || []);
+        setWarehouses(Array.isArray(wh) ? wh : (wh as any)?.results || []);
+        setUsers(Array.isArray(u) ? u : (u as any)?.results || []);
+        setCustomers(Array.isArray(cust) ? cust : (cust as any)?.results || []);
+        setLoading(false);
     }, []);
 
     useEffect(() => { loadMeta(); }, [loadMeta]);
 
+    // Branches the Super Admin can scope to: only warehouses actually assigned to a
+    // (non-super) admin. An unassigned branch has no admin running it, so showing it
+    // here would just produce empty reports.
+    const assignedWarehouses = useMemo(() => {
+        const assigned = new Set<string>();
+        users.forEach((u: any) => {
+            if (u.is_super_admin) return;
+            (u.warehouses || []).forEach((w: any) => assigned.add(String(typeof w === 'object' ? w?.id : w)));
+        });
+        return warehouses.filter((w: any) => assigned.has(String(w.id)));
+    }, [warehouses, users]);
+
+    // Net Profit mode: the Select Branch dropdown picks "Net Profit", and the second
+    // dropdown becomes a SCOPE selector (All Branches / a branch / Personal), held in
+    // filters.category. effectiveBranch is the branch the report is actually scoped to.
+    const isNetProfitMode = filters.branch === 'netprofit';
+    const effectiveBranch = isNetProfitMode ? filters.category : filters.branch;
+
     const isThreeLevel = !!MODES[filters.view];
-    const activeFields = isThreeLevel
-        ? (filters.subView ? (VIEW_FIELDS[filters.subView] || []) : [])
-        : (filters.view ? (VIEW_FIELDS[filters.view] || []) : []);
+    const activeFields = isNetProfitMode
+        ? ['dateRange']
+        : isThreeLevel
+            ? (filters.subView ? (VIEW_FIELDS[filters.subView] || []) : [])
+            : (filters.view ? (VIEW_FIELDS[filters.view] || []) : []);
+
+    // Does a row belong to the chosen branch? (Super-Admin scope; rows with no
+    // branch info — products/customers — always pass so those reports still work.)
+    const inSelectedBranch = (r: any): boolean => {
+        // 'personal' is the Super Admin's own ledger, scoped during fetch — skip here.
+        if (!(isSuperAdmin && effectiveBranch && effectiveBranch !== 'all' && effectiveBranch !== 'personal')) return true;
+        const bid = String(effectiveBranch);
+        const bname = (warehouses.find((w: any) => String(w.id) === bid)?.name || '').toLowerCase();
+        const raw = r.warehouse;
+        const rwId = raw && typeof raw === 'object' ? raw.id : (raw ?? r.warehouse_id);
+        const rwName = String(r.warehouse_name || '').toLowerCase();
+        const hasBranch = (rwId !== undefined && rwId !== null && rwId !== '') || !!rwName;
+        if (!hasBranch) return true;
+        return String(rwId ?? '') === bid || (!!bname && rwName === bname);
+    };
+
+    // Is a row within the selected date range?
+    const inDateRange = (r: any): boolean => {
+        const from = filters.dateFrom ? new Date(filters.dateFrom + 'T00:00:00').getTime() : -Infinity;
+        const to = filters.dateTo ? new Date(filters.dateTo + 'T23:59:59').getTime() : Infinity;
+        const d = rowDateVal(r);
+        if (!d) return true;
+        const t = new Date(d).getTime();
+        return isNaN(t) ? true : (t >= from && t <= to);
+    };
 
     // Apply the selected filters on the client. The backend ignores several params
     // (e.g. date *ranges* on orders), so we narrow the fully-fetched dataset here to
@@ -157,6 +274,9 @@ function ReportsEngineInner() {
     const applyClientFilters = (rows: any[]): any[] => {
         let out = Array.isArray(rows) ? [...rows] : [];
         const mode = isThreeLevel ? filters.subView : filters.view;
+
+        // Super-Admin branch scope (see inSelectedBranch).
+        out = out.filter(inSelectedBranch);
 
         if (activeFields.includes('dateRange') && (filters.dateFrom || filters.dateTo)) {
             const from = filters.dateFrom ? new Date(filters.dateFrom + 'T00:00:00').getTime() : -Infinity;
@@ -259,11 +379,147 @@ function ReportsEngineInner() {
     };
 
     const generateReport = async () => {
-        if (!filters.category || !filters.view) {
+        if (isNetProfitMode) {
+            if (!filters.category) {
+                toast.error('Please select a scope (a branch, All Branches, or Personal).');
+                return;
+            }
+        } else if (!filters.category || !filters.view) {
             toast.error('Please select both Category and View.');
             return;
         }
 
+        // Statements / Receivables / Payables open their own dedicated report page.
+        if (NAV_VIEWS[filters.view]) {
+            router.push(NAV_VIEWS[filters.view]);
+            return;
+        }
+
+        // Net Profit — a P&L summary (not a list). Triggered either by the Net Profit
+        // view under Payments, or by the dedicated "Net Profit" branch mode whose scope
+        // (All Branches / a branch / Personal) lives in filters.category.
+        if (filters.view === 'Net Profit' || isNetProfitMode) {
+            setGenerating(true);
+            setHasGenerated(true);
+            try {
+                const arr = (x: any) => Array.isArray(x) ? x : (x?.results || []);
+
+                // Personal scope: the Super Admin's own P&L = personal income − expense
+                // (ledger entries with no branch attached).
+                if (isNetProfitMode && effectiveBranch === 'personal') {
+                    const [inc, exp] = await Promise.all([
+                        paymentService.getAll({ payment_type: 'inbound', no_pagination: 'true' }),
+                        paymentService.getAll({ payment_type: 'outbound', no_pagination: 'true' }),
+                    ]);
+                    const personalRows = (rows: any[]) => rows.filter((r: any) =>
+                        !(r.warehouse ?? r.warehouse_id) && !r.warehouse_name && inDateRange(r));
+                    const incRows = personalRows(arr(inc));
+                    const expRows = personalRows(arr(exp));
+                    const totalSales = incRows.reduce((s, r) => s + rowAmount(r), 0);
+                    const totalPurchases = expRows.reduce((s, r) => s + rowAmount(r), 0);
+                    setReportResult([]);
+                    setProfitSummary({
+                        personal: true,
+                        totalSales, totalPurchases, salesReturns: 0, purchaseReturns: 0,
+                        netSales: totalSales, netPurchases: totalPurchases,
+                        netProfit: totalSales - totalPurchases,
+                        counts: { sales: incRows.length, purchases: expRows.length, salesReturns: 0, purchaseReturns: 0 },
+                    });
+                    toast.success('Net profit calculated');
+                    return;
+                }
+
+                // Branch / All Branches scope: P&L from transactions. Server filters by
+                // ?warehouse for a super admin, so only the chosen branch's rows return.
+                const branchParam = (isSuperAdmin && effectiveBranch && effectiveBranch !== 'all' && effectiveBranch !== 'personal') ? { warehouse: effectiveBranch } : {};
+                const all = { no_pagination: 'true', ...branchParam };
+                const axiosClient = (await import('@/lib/axios')).default;
+                const [salesRes, purchaseRes, srRes, prRes] = await Promise.all([
+                    orderService.getAll(all),
+                    purchaseService.getAll(all),
+                    axiosClient.get('v1/sales/returns/', { params: all }).then(r => r.data).catch(() => []),
+                    axiosClient.get('v1/sales/purchase-returns/', { params: all }).then(r => r.data).catch(() => []),
+                ]);
+                const scoped = (rows: any[]) => rows.filter(r => inSelectedBranch(r) && inDateRange(r));
+                const sum = (rows: any[]) => scoped(rows).reduce((s, r) => s + rowAmount(r), 0);
+
+                const totalSales = sum(arr(salesRes));
+                const totalPurchases = sum(arr(purchaseRes));
+                const salesReturns = sum(arr(srRes));
+                const purchaseReturns = sum(arr(prRes));
+                const netSales = totalSales - salesReturns;
+                const netPurchases = totalPurchases - purchaseReturns;
+                const netProfit = netSales - netPurchases;
+
+                setReportResult([]);
+                setProfitSummary({
+                    personal: false,
+                    totalSales, totalPurchases, salesReturns, purchaseReturns,
+                    netSales, netPurchases, netProfit,
+                    counts: {
+                        sales: scoped(arr(salesRes)).length,
+                        purchases: scoped(arr(purchaseRes)).length,
+                        salesReturns: scoped(arr(srRes)).length,
+                        purchaseReturns: scoped(arr(prRes)).length,
+                    },
+                });
+                toast.success('Net profit calculated');
+            } catch (e) {
+                console.error('Net profit failed:', e);
+                toast.error('Could not calculate net profit.');
+            } finally {
+                setGenerating(false);
+            }
+            return;
+        }
+
+        // Customer profile: pick a customer → full history (bought, paid, dues, orders).
+        if (filters.category === 'customers' && String(filters.view).startsWith('cust:')) {
+            const custId = String(filters.view).slice(5);
+            setGenerating(true);
+            setHasGenerated(true);
+            setProfitSummary(null);
+            try {
+                const ordRes: any = await orderService.getAll({ no_pagination: 'true' });
+                const all = Array.isArray(ordRes) ? ordRes : ordRes?.results || [];
+                const sameCustomer = (o: any) => {
+                    const raw = o.customer;
+                    const cid = raw && typeof raw === 'object' ? raw.id : (raw ?? o.customer_id);
+                    return String(cid ?? '') === custId;
+                };
+                const orders = all.filter(sameCustomer)
+                    .sort((a: any, b: any) => new Date(rowDateVal(b) || 0).getTime() - new Date(rowDateVal(a) || 0).getTime());
+                const live = orders.filter((o: any) => String(o.status || '').toUpperCase() !== 'CANCELLED');
+                // A fully-PAID order counts as paid in full even if amount_paid wasn't
+                // recorded; partial/unpaid orders count only what was received.
+                const paidOf = (o: any) => String(o.payment_status || '').toUpperCase() === 'PAID'
+                    ? rowAmount(o) : Number(o.amount_paid || 0);
+                const totalBought = live.reduce((s: number, o: any) => s + rowAmount(o), 0);
+                const totalPaid = live.reduce((s: number, o: any) => s + paidOf(o), 0);
+                const dues = Math.max(0, totalBought - totalPaid);
+                const delivered = live.filter((o: any) => String(o.status || '').toUpperCase() === 'DELIVERED').length;
+                const cust = customers.find((c: any) => String(c.id) === custId) || {};
+                setReportResult(orders);
+                setCustomerSummary({
+                    name: [cust.first_name, cust.last_name].filter(Boolean).join(' ') || cust.full_name || cust.username || cust.email || 'Customer',
+                    phone: cust.phone || '—', email: cust.email || '—',
+                    address: [cust.address, cust.city].filter(Boolean).join(', ') || '—',
+                    totalBought, totalPaid, dues,
+                    orders: live.length, allOrders: orders.length, delivered,
+                    lastOrder: orders.length ? rowDateVal(orders[0]) : null,
+                });
+                toast.success(`${orders.length} order(s) for ${[cust.first_name, cust.last_name].filter(Boolean).join(' ') || 'customer'}`);
+            } catch (e) {
+                console.error('Customer report failed:', e);
+                toast.error('Could not load customer details.');
+            } finally {
+                setGenerating(false);
+            }
+            return;
+        }
+
+        setProfitSummary(null);
+        setCustomerSummary(null);
         setGenerating(true);
         setHasGenerated(true);
         try {
@@ -271,41 +527,79 @@ function ReportsEngineInner() {
             // visible filter on the client. No narrowing server params are sent, so a
             // backend that ignores (or mismatches) a param can never silently empty the
             // result before the client filters run.
+            // Server-side branch scope: the backend filters branch-scoped models by
+            // ?warehouse for a super admin, so only the selected branch's rows return.
+            // (Products/customers/suppliers aren't warehouse-scoped, so they skip it.)
+            const branchParam = (isSuperAdmin && filters.branch && filters.branch !== 'all' && filters.branch !== 'personal') ? { warehouse: filters.branch } : {};
             const all = { no_pagination: 'true' };
+            const branchAll = { ...all, ...branchParam };
             const axiosClient = (await import('@/lib/axios')).default;
             let result: any[] = [];
 
-            if (filters.category === 'products') {
+            if (filters.category === 'system_users') {
+                // A branch's system users (staff). Server returns the branch's staff +
+                // owning admin when a warehouse is given, or everyone for All Branches.
+                const params: any = { include_staff: 'true' };
+                if (effectiveBranch && effectiveBranch !== 'all') params.warehouse = effectiveBranch;
+                const res: any = await userService.getAll(params);
+                result = Array.isArray(res) ? res : res.results || [];
+            } else if (filters.category === 'income' || filters.category === 'expense') {
+                // Income/Expense ledger:
+                //   • Personal     → the Super Admin's own entries (no branch attached)
+                //   • A branch      → that branch's ledger (server filters by ?warehouse)
+                //   • All Branches  → everything
+                const ptype = filters.category === 'income' ? 'inbound' : 'outbound';
+                // "All Branches" must aggregate across every branch — the payments
+                // endpoint otherwise scopes a super admin to their OWN ledger only.
+                const payParams: any = { payment_type: ptype, ...branchAll };
+                if (filters.branch === 'all') payParams.scope = 'all';
+                const res: any = await paymentService.getAll(payParams);
+                const rows = Array.isArray(res) ? res : res.results || [];
+                result = filters.branch === 'personal'
+                    ? rows.filter((r: any) => !(r.warehouse ?? r.warehouse_id) && !r.warehouse_name)
+                    : rows;
+            } else if (filters.category === 'products') {
                 const res: any = await productService.getAll(all);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'stock') {
-                const res: any = await inventoryService.getInventory(all);
+                const res: any = await inventoryService.getInventory(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'sales') {
-                const res: any = await orderService.getAll(all);
+                const res: any = await orderService.getAll(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'purchases') {
-                const res: any = await purchaseService.getAll(all);
+                const res: any = await purchaseService.getAll(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'customers') {
                 result = await companyService.getCustomers();
             } else if (filters.category === 'suppliers') {
                 result = await companyService.getSuppliers();
             } else if (filters.category === 'returns' && filters.view === 'Sales Returns') {
-                const { data } = await axiosClient.get('v1/sales/returns/', { params: all });
+                const { data } = await axiosClient.get('v1/sales/returns/', { params: branchAll });
                 result = data.results || data || [];
             } else if (filters.category === 'returns' && filters.view === 'Purchase Returns') {
-                const { data } = await axiosClient.get('v1/sales/purchase-returns/', { params: all });
+                const { data } = await axiosClient.get('v1/sales/purchase-returns/', { params: branchAll });
                 result = data.results || data || [];
             } else if (filters.category === 'payments' && filters.view === 'Sales Payment') {
                 // Sales payments are derived from real orders (amount = order total).
-                const res: any = await orderService.getAll(all);
+                const res: any = await orderService.getAll(branchAll);
                 result = Array.isArray(res) ? res : res.results || [];
             } else if (filters.category === 'payments' && filters.view === 'Purchase Payment') {
                 // Purchase payments are derived from purchase orders (amount = paid amount).
-                const res: any = await purchaseService.getAll(all);
+                const res: any = await purchaseService.getAll(branchAll);
                 result = (Array.isArray(res) ? res : res.results || [])
                     .map((r: any) => ({ ...r, total_amount: r.paid_amount ?? r.total_amount }));
+            } else if (filters.category === 'delivery') {
+                // Per-rider delivery performance (orders, delivered, pending, earnings).
+                const params: any = { ...branchParam };
+                if (filters.dateFrom) params.date_from = filters.dateFrom;
+                if (filters.dateTo) params.date_to = filters.dateTo;
+                const res: any = await axiosClient.get('v1/sales/reports/delivery/', { params });
+                result = (res.data?.results || []).map((r: any) => ({
+                    ...r,
+                    name: r.delivery_person,
+                    total_amount: r.earnings,
+                }));
             }
 
             const filtered = applyClientFilters(Array.isArray(result) ? result : []);
@@ -320,9 +614,22 @@ function ReportsEngineInner() {
         }
     };
 
+    // Quick date presets for reports (Daily / Weekly / Monthly / Yearly).
+    const applyPreset = (preset: 'today' | 'week' | 'month' | 'year') => {
+        const now = new Date();
+        const iso = (d: Date) => d.toISOString().split('T')[0];
+        let from = new Date(now);
+        if (preset === 'today') from = now;
+        else if (preset === 'week') from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+        else if (preset === 'month') from = new Date(now.getFullYear(), now.getMonth(), 1);
+        else if (preset === 'year') from = new Date(now.getFullYear(), 0, 1);
+        setFilters(f => ({ ...f, dateFrom: iso(from), dateTo: iso(now) }));
+        setHasGenerated(false);
+    };
+
     const resetFilters = () => {
         setFilters({
-            category: '', view: '', subView: '',
+            branch: '', category: '', view: '', subView: '',
             dateFrom: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
             dateTo: new Date().toISOString().split('T')[0],
             productSearch: '', supplierId: '', customerId: '', categoryId: '',
@@ -330,8 +637,12 @@ function ReportsEngineInner() {
             invoiceNo: '', salesmanSearch: '', reasonSearch: '', accountSearch: '',
         });
         setReportResult([]);
+        setProfitSummary(null);
+        setCustomerSummary(null);
         setHasGenerated(false);
     };
+
+    const sel = useTableSelection(reportResult, (r) => String(reportResult.indexOf(r)));
 
     if (loading) return <PageLoader />;
 
@@ -339,17 +650,36 @@ function ReportsEngineInner() {
         <div className="pb-20">
             <div className="max-w-[1440px] mx-auto">
 
+                <div className="hidden print:block mb-4">
+                    <InvoiceHeader docTitle="Reports" date={formatDate(new Date().toISOString())} />
+                </div>
+
                 <div className="no-print">
                     <PageHeader
                         title="Reports & Analytics"
                         breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Reports' }]}
                         actions={
                             <>
-                                <Button variant="outline" size="sm" onClick={() => exportToCSV(reportResult, 'Report.csv')} disabled={reportResult.length === 0}>
-                                    <FileSpreadsheet size={14} /> Export CSV
+                                <Button variant="outline" size="sm" onClick={() => router.push('/admin/reports/ledger')}>
+                                    <ClipboardList size={14} /> Customer Ledger
                                 </Button>
-                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0}>
-                                    <Printer size={14} /> Print Report
+                                <Button variant="outline" size="sm"
+                                    onClick={() => profitSummary
+                                        ? exportToExcel([
+                                            { metric: 'Total Sales', amount: profitSummary.totalSales },
+                                            { metric: 'Sales Returns', amount: profitSummary.salesReturns },
+                                            { metric: 'Net Sales', amount: profitSummary.netSales },
+                                            { metric: 'Total Purchases', amount: profitSummary.totalPurchases },
+                                            { metric: 'Purchase Returns', amount: profitSummary.purchaseReturns },
+                                            { metric: 'Net Purchases', amount: profitSummary.netPurchases },
+                                            { metric: 'Net Profit', amount: profitSummary.netProfit },
+                                        ], 'net-profit', 'Net Profit')
+                                        : exportToExcel(reportResult, 'report', 'Report')}
+                                    disabled={reportResult.length === 0 && !profitSummary}>
+                                    <FileSpreadsheet size={14} /> Export Excel
+                                </Button>
+                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0 && !profitSummary}>
+                                    <Printer size={14} /> Print / PDF
                                 </Button>
                             </>
                         }
@@ -359,30 +689,79 @@ function ReportsEngineInner() {
                 <Card className="p-6 mb-6 no-print">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-end">
 
+                        {/* Super Admin: branch scope comes first — the report follows it. */}
+                        {isSuperAdmin && (
+                            <div className="space-y-1.5">
+                                <label className="text-[13px] font-bold text-slate-900">Select Branch</label>
+                                <select
+                                    value={filters.branch}
+                                    onChange={e => { setFilters({ ...filters, branch: e.target.value, category: '', view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); setReportResult([]); }}
+                                    className={inputCls}
+                                >
+                                    <option value="">Select Branch...</option>
+                                    <option value="all">All Branches</option>
+                                    {assignedWarehouses.map((w: any) => (
+                                        <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
+                                    ))}
+                                    <option value="personal">Personal</option>
+                                    <option value="netprofit">Net Profit</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-slate-900">1. Select Category</label>
+                            <label className="text-[13px] font-bold text-slate-900">{isNetProfitMode ? 'Select Scope' : '1. Select Category'}</label>
                             <select
                                 value={filters.category}
-                                onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); }}
-                                className={inputCls}
+                                onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
+                                disabled={isSuperAdmin && !filters.branch}
+                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"}
                             >
-                                <option value="">Choose Category...</option>
-                                {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                                {isNetProfitMode ? (
+                                    <>
+                                        <option value="">Select Scope...</option>
+                                        <option value="all">All Branches</option>
+                                        {assignedWarehouses.map((w: any) => (
+                                            <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
+                                        ))}
+                                        <option value="personal">Personal</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
+                                        {(filters.branch === 'personal' ? PERSONAL_CATEGORIES : [...CATEGORIES, ...PERSONAL_CATEGORIES, SYSTEM_USER_CATEGORY]).map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                                    </>
+                                )}
                             </select>
                         </div>
 
+                        {!isNetProfitMode && (
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-slate-900">2. Select View</label>
+                            <label className="text-[13px] font-bold text-slate-900">{filters.category === 'customers' ? '2. Select Customer' : '2. Select View'}</label>
                             <select
                                 value={filters.view}
-                                onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); }}
+                                onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); setCustomerSummary(null); }}
                                 disabled={!filters.category}
                                 className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400"}
                             >
-                                <option value="">Select Option...</option>
-                                {filters.category && SUB_OPTIONS[filters.category]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                {filters.category === 'customers' ? (
+                                    <>
+                                        <option value="">Select Customer...</option>
+                                        <option value="__all__">All Customers</option>
+                                        {customers.map((c: any) => {
+                                            const nm = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.full_name || c.username || c.email || 'Customer';
+                                            return <option key={c.id} value={`cust:${c.id}`}>{nm}{c.phone ? ` · ${c.phone}` : ''}</option>;
+                                        })}
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="">Select Option...</option>
+                                        {filters.category && SUB_OPTIONS[filters.category]?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </>
+                                )}
                             </select>
                         </div>
+                        )}
 
                         {isThreeLevel && (
                             <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
@@ -411,6 +790,14 @@ function ReportsEngineInner() {
                                             <input type="date" value={filters.dateFrom} onChange={e => { setFilters({ ...filters, dateFrom: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1 px-2"} />
                                             <span className="text-[12px] font-bold text-slate-400 shrink-0">to</span>
                                             <input type="date" value={filters.dateTo} onChange={e => { setFilters({ ...filters, dateTo: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1 px-2"} />
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                            {([['today', 'Today'], ['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year']] as const).map(([key, label]) => (
+                                                <button key={key} type="button" onClick={() => applyPreset(key)}
+                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors">
+                                                    {label}
+                                                </button>
+                                            ))}
                                         </div>
                                     </>
                                 )}
@@ -490,11 +877,11 @@ function ReportsEngineInner() {
                             <Button
                                 variant="primary"
                                 onClick={generateReport}
-                                disabled={generating || !filters.view}
+                                disabled={generating || (isNetProfitMode ? !filters.category : !filters.view)}
                                 className="flex-1"
                             >
                                 <BarChart3 className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-                                Generate Report
+                                {NAV_VIEWS[filters.view] ? 'Open Report' : 'Generate Report'}
                             </Button>
                             <Button
                                 variant="outline"
@@ -509,7 +896,85 @@ function ReportsEngineInner() {
                     </div>
                 </Card>
 
-                {reportResult.length > 0 ? (
+                {/* ── CUSTOMER PROFILE SUMMARY (when a specific customer is picked) ── */}
+                {customerSummary && (
+                    <div className="animate-in fade-in duration-500 mb-6">
+                        <Card className="overflow-hidden">
+                            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 text-[16px] font-black">
+                                    {(customerSummary.name || 'C').slice(0, 1).toUpperCase()}
+                                </span>
+                                <div className="min-w-0">
+                                    <h3 className="text-[16px] font-bold text-slate-900">{customerSummary.name}</h3>
+                                    <p className="text-[12px] text-slate-500 truncate">{customerSummary.phone} · {customerSummary.email}{customerSummary.address !== '—' ? ` · ${customerSummary.address}` : ''}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100">
+                                {[
+                                    { label: 'Total Bought', value: formatCurrency(customerSummary.totalBought), tone: 'text-slate-900' },
+                                    { label: 'Total Paid', value: formatCurrency(customerSummary.totalPaid), tone: 'text-emerald-600' },
+                                    { label: 'Dues', value: formatCurrency(customerSummary.dues), tone: customerSummary.dues > 0 ? 'text-rose-600' : 'text-slate-900' },
+                                    { label: 'Orders', value: String(customerSummary.allOrders), tone: 'text-slate-900' },
+                                    { label: 'Delivered', value: String(customerSummary.delivered), tone: 'text-emerald-600' },
+                                    { label: 'Last Order', value: customerSummary.lastOrder ? formatDate(customerSummary.lastOrder) : '—', tone: 'text-slate-700' },
+                                ].map((m) => (
+                                    <div key={m.label} className="px-5 py-4 text-center">
+                                        <p className={`text-[18px] font-black tabular-nums ${m.tone}`}>{m.value}</p>
+                                        <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{m.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
+                )}
+
+                {profitSummary ? (
+                    <div className="animate-in fade-in duration-500">
+                        <Card className="overflow-hidden">
+                            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100"><DollarSign size={20} /></span>
+                                <div>
+                                    <h3 className="text-[15px] font-bold text-slate-900">Net Profit</h3>
+                                    <p className="text-[12px] text-slate-500">
+                                        {profitSummary.personal
+                                            ? 'Personal'
+                                            : (effectiveBranch && effectiveBranch !== 'all'
+                                                ? (warehouses.find((w: any) => String(w.id) === String(effectiveBranch))?.name || 'Branch')
+                                                : 'All Branches')} · {filters.dateFrom} → {filters.dateTo}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="px-4 py-2.5 bg-emerald-50/60 border-b border-slate-100 text-[12px] font-bold text-emerald-700 uppercase tracking-wider">{profitSummary.personal ? 'Income' : 'Sales'}</div>
+                                        <div className="divide-y divide-slate-100">
+                                            <ProfitRow label={profitSummary.personal ? 'Total Income' : 'Total Sales'} value={profitSummary.totalSales} sub={`${profitSummary.counts.sales} ${profitSummary.personal ? 'entry(s)' : 'order(s)'}`} />
+                                            {!profitSummary.personal && <ProfitRow label="Sales Returns" value={profitSummary.salesReturns} sub={`${profitSummary.counts.salesReturns} return(s)`} neg />}
+                                            <ProfitRow label={profitSummary.personal ? 'Net Income' : 'Net Sales'} value={profitSummary.netSales} bold />
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-slate-100 text-[12px] font-bold text-amber-700 uppercase tracking-wider">{profitSummary.personal ? 'Expense' : 'Purchases'}</div>
+                                        <div className="divide-y divide-slate-100">
+                                            <ProfitRow label={profitSummary.personal ? 'Total Expense' : 'Total Purchases'} value={profitSummary.totalPurchases} sub={`${profitSummary.counts.purchases} ${profitSummary.personal ? 'entry(s)' : 'order(s)'}`} />
+                                            {!profitSummary.personal && <ProfitRow label="Purchase Returns" value={profitSummary.purchaseReturns} sub={`${profitSummary.counts.purchaseReturns} return(s)`} neg />}
+                                            <ProfitRow label={profitSummary.personal ? 'Net Expense' : 'Net Purchases'} value={profitSummary.netPurchases} bold />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 ${profitSummary.netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                                    <div>
+                                        <p className="text-[12px] font-bold uppercase tracking-wider text-slate-600">Net Profit</p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">{profitSummary.personal ? 'Income − Expense' : 'Net Sales − Net Purchases'}</p>
+                                    </div>
+                                    <p className={`text-[26px] font-black tabular-nums ${profitSummary.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(profitSummary.netProfit)}</p>
+                                </div>
+                            </div>
+                        </Card>
+                        <style jsx global>{`@media print { .no-print { display: none !important; } @page { margin: 1.5cm; } }`}</style>
+                    </div>
+                ) : reportResult.length > 0 ? (
                     <div className="animate-in fade-in duration-700">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2 mb-4 no-print">
                              <div className="flex items-center gap-2">
@@ -532,6 +997,7 @@ function ReportsEngineInner() {
                              <table className="w-full text-left border-collapse">
                                  <thead>
                                      <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                         <SelectAllTh sel={sel} />
                                          <th className="px-4 py-2.5 w-16">ID</th>
                                          <th className="px-4 py-2.5 w-28">Date</th>
                                          <th className="px-4 py-2.5">Details / Description</th>
@@ -542,6 +1008,7 @@ function ReportsEngineInner() {
                                  <tbody className="divide-y divide-slate-100">
                                      {reportResult.map((row, idx) => (
                                          <tr key={idx} className="hover:bg-slate-50 transition-colors group text-[10px]">
+                                             <RowCheckboxTd sel={sel} id={String(idx)} />
                                              <td className="px-4 py-2 font-bold text-indigo-600 tabular-nums">
                                                  #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
                                              </td>
@@ -571,34 +1038,27 @@ function ReportsEngineInner() {
                              </table>
                          </Card>
 
+                        <div className="no-print">
+                            <BulkBar
+                                sel={sel}
+                                entity="rows"
+                                onExport={() => exportToCSV(
+                                    sel.selectedItems.map((row: any) => ({
+                                        id: row.return_number || row.order_number || (row.id != null ? String(row.id).slice(0, 8) : ''),
+                                        date: formatDate(rowDateVal(row)),
+                                        details: rowTitle(row),
+                                        description: rowSubtitle(row, filters.category),
+                                        status: row.status || (row.is_active ? 'Active' : 'Pending'),
+                                        amount: rowAmount(row),
+                                        quantity: rowQty(row),
+                                    })),
+                                    'report-selection.csv',
+                                )}
+                            />
+                        </div>
+
                         {/* ── PRINT ONLY INVOICE STYLE REPORT ── */}
                         <div className="hidden print:block bg-white p-2">
-                            {/* Visual Header */}
-                            <div className="flex justify-between items-start mb-10">
-                                <div className="w-1/3">
-                                    <Logo size="lg" className="!items-start" />
-                                </div>
-
-                                <div className="w-1/3 text-center">
-                                    <h1 className="text-[32px] font-bold leading-[1.8] mb-1 text-[#111] urdu-text">
-                                        القوی ٹریڈرز
-                                    </h1>
-                                    <p className="text-[11px] font-bold text-[#565959] uppercase tracking-widest urdu-text">
-                                        کاسمیٹکس ڈیلر گلگت بلتستان
-                                    </p>
-                                </div>
-
-                                <div className="w-1/3 text-right">
-                                    <h2 className="text-[20px] font-black uppercase tracking-tighter text-[#111]">Report Console</h2>
-                                    <div className="text-[11px] text-gray-500 mt-2 space-y-0.5 font-medium">
-                                        <p>Syed Sakhawat & Associates</p>
-                                        <p>0313-8692190 | 0335-1240190</p>
-                                    </div>
-                                    <p className="text-[13px] text-[#111] font-bold mt-4 tracking-tight uppercase">Category: {filters.category}</p>
-                                    <p className="text-[11px] text-[#565959] font-medium">Generated: {formatDate(new Date().toISOString())}</p>
-                                </div>
-                            </div>
-
                             {/* Metadata */}
                             <div className="grid grid-cols-4 gap-8 mb-10 border-y-2 border-black py-6">
                                 <div className="col-span-2">
@@ -668,37 +1128,11 @@ function ReportsEngineInner() {
                                 </table>
                             </div>
 
-                            {/* Urdu Footer Note */}
-                            <div className="mb-12 px-1">
-                                <p className="text-[10px] leading-[2.1] text-justify text-[#444] urdu-text" dir="rtl">
-                                    <span className="font-black border-b-2 ml-3 text-[14px]">نوٹ:-</span>
-                                    یہ رپورٹ القوی ٹریڈرز کے آفیشل ڈیٹا بیس سے تیار کی گئی ہے۔ تمام دکاندار اور سپلائرز حضرات بل یا رپورٹ میں کسی بھی قسم کی کمی بیشی کی صورت میں فوری طور پر ہیڈ آفس سے رابطہ کریں۔ بغیر دستخط اور مہر کے یہ رپورٹ قانونی طور پر قابلِ قبول نہیں ہوگی۔ القوی ٹریڈرز گلگت کے ساتھ تعاون کا شکریہ--
-                                </p>
-                            </div>
-
-                            {/* Signatures */}
-                            <div className="mt-20 pt-12 border-t-2 border-dashed border-black">
-                                <div className="flex justify-between items-start gap-32">
-                                    <div className="flex-1 space-y-3">
-                                        <p className="text-[12px] font-bold text-gray-500">Authorized Distribution Signature</p>
-                                        <div className="w-full border-b border-black pt-8"></div>
-                                        <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Reports In-charge</p>
-                                    </div>
-                                    <div className="flex-1 space-y-3 text-right">
-                                        <p className="text-[12px] font-bold text-gray-500">Managing Director Stamp</p>
-                                        <div className="w-full border-b border-black pt-8"></div>
-                                        <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Verification Area</p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-16 text-center border-t border-slate-100 pt-6">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">
-                                        System Generated Official Report • Al-Qavi Traders Gilgit
-                                    </p>
-                                </div>
-                            </div>
+                            {/* Branded stationery footer */}
+                            <InvoiceFooter pinned={false} />
                         </div>
 
+                        <style jsx global>{invoiceStyles}</style>
                         <style jsx global>{`
                             @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
                             

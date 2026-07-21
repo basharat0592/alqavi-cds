@@ -13,6 +13,9 @@ import Footer from '@/components/layout/Footer';
 import { useCart } from '@/context/CartContext';
 import { getImageUrl } from '@/lib/utils';
 import { salesService, settingsService } from '@/lib/api';
+import { inventoryService } from '@/services/inventory.service';
+import { productService } from '@/services/product.service';
+import { installmentService } from '@/services/payment.service';
 
 const STORAGE_KEY = 'alqavi_checkout_info';
 
@@ -42,11 +45,71 @@ export default function CheckoutPage() {
         whatsapp: '',
         address: '',
         city: '',
+        branchId: '',
     });
+    // Active branches the Super Admin created — the customer picks which branch
+    // fulfils the order. Stock, assignment and deduction all follow this branch.
+    const [branches, setBranches] = useState<any[]>([]);
+    // Branches that belong to the shopper's selected city. When a city has more than
+    // one branch, the customer can pick between them (defaulting to the branch that
+    // the cart's products came from); a single-branch city stays locked.
+    const [cityBranches, setCityBranches] = useState<any[]>([]);
+    useEffect(() => {
+        const load = async () => {
+            const list = await inventoryService.getPublicBranches().catch(() => []);
+            const arr = Array.isArray(list) ? list : [];
+            setBranches(arr);
+
+            let city = '';
+            try { city = localStorage.getItem('deliver_to_city') || ''; } catch { }
+            const inCity = city
+                ? arr.filter((b: any) => (b.area || '').toLowerCase() === city.toLowerCase())
+                : [];
+            setCityBranches(inCity);
+
+            // Resolve the branch the cart's products actually belong to, so we can
+            // default the dropdown to it (each storefront product row is one branch's).
+            let cartBranchId = '';
+            try {
+                const raw = localStorage.getItem('qavi_cart');
+                const cartItems: any[] = raw ? JSON.parse(raw) : [];
+                if (cartItems.length) {
+                    const resp = await productService.getAll({ no_pagination: 'true' });
+                    const prods: any[] = Array.isArray(resp) ? resp : (resp?.results || []);
+                    const map: Record<string, string> = {};
+                    prods.forEach((p: any) => { if (p?.id != null && p?.warehouse != null) map[String(p.id)] = String(p.warehouse); });
+                    for (const it of cartItems) {
+                        const w = map[String(it.id)];
+                        if (w) { cartBranchId = w; break; }
+                    }
+                }
+            } catch { }
+
+            if (inCity.length === 1) {
+                // Single branch in the city → fixed / locked.
+                setShippingInfo(prev => ({ ...prev, branchId: String(inCity[0].id), city: inCity[0].area || prev.city }));
+                setCityLocked(true);
+            } else if (inCity.length > 1) {
+                // Multiple branches → selectable dropdown, default to the cart's branch.
+                const def = inCity.some((b: any) => String(b.id) === cartBranchId) ? cartBranchId : String(inCity[0].id);
+                const chosen = inCity.find((b: any) => String(b.id) === def);
+                setShippingInfo(prev => ({ ...prev, branchId: def, city: chosen?.area || city || prev.city }));
+                setCityLocked(false);
+            } else if (cartBranchId) {
+                // No city match but we know the cart's branch — default to it (unlocked).
+                setShippingInfo(prev => ({ ...prev, branchId: cartBranchId }));
+                setCityLocked(false);
+            }
+        };
+        load();
+    }, []);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showReview, setShowReview] = useState(false);
     const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+    // When a city is chosen in the storefront navbar, the branch is fixed to it here.
+    const [cityLocked, setCityLocked] = useState(false);
 
     // Payment Specific State
     const [selectedEasypaisaNum, setSelectedEasypaisaNum] = useState('');
@@ -76,7 +139,8 @@ export default function CheckoutPage() {
 
         settingsService.getProfile().then((profile: any) => {
             if (profile) {
-                setShippingInfo({
+                setShippingInfo(prev => ({
+                    ...prev,
                     firstName: profile.first_name || '',
                     lastName: profile.last_name || '',
                     email: profile.email || '',
@@ -84,13 +148,17 @@ export default function CheckoutPage() {
                     whatsapp: profile.whatsapp || profile.phone || profile.phone_number || '',
                     address: profile.address || '',
                     city: profile.city || '',
-                });
+                }));
             }
         }).catch(() => { });
     }, [isLoggedIn]);
 
     const shipping = cartTotal > 5000 ? 0 : 350;
     const total = cartTotal + shipping;
+
+    // In a known city, the dropdown offers only that city's branches; otherwise every branch.
+    const inCityMode = cityBranches.length > 0;
+    const dropdownBranches = inCityMode ? cityBranches : branches;
 
     const handleCopy = () => {
         if (placedOrderNumber) {
@@ -102,6 +170,7 @@ export default function CheckoutPage() {
 
     const handlePlaceOrder = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!shippingInfo.branchId) { alert('Please select a branch to receive your order from.'); return; }
         if (payMethod === 'easypaisa') {
             if (!selectedEasypaisaNum) { alert('Please select an Easypaisa account number.'); return; }
             if (!receiptImage) { alert('Please upload or capture your transaction receipt.'); return; }
@@ -130,6 +199,9 @@ export default function CheckoutPage() {
                 phone_number: shippingInfo.phone,
                 whatsapp_number: shippingInfo.whatsapp,
                 payment_method: payMethod === 'cod' ? 'COD' : 'ONLINE',
+                // Route the order to the customer-selected branch: it lands in that
+                // branch's admin panel and deducts that branch's stock on delivery.
+                warehouse_id: shippingInfo.branchId,
                 notes: `Email: ${shippingInfo.email} | Auth: ${isLoggedIn ? 'User' : 'Guest'} | PayInfo: ${paymentNotes}`,
                 items: items.map((i: any) => ({
                     id: i.id,
@@ -139,6 +211,31 @@ export default function CheckoutPage() {
             };
 
             const response = await salesService.createOrder(payload);
+
+            // Attach the Easypaisa transaction receipt as a PENDING payment against
+            // the new order, so it lands in the admin's receipt-verification queue
+            // (same slip flow as the customer dashboard). Previously the uploaded
+            // receipt image was captured but silently discarded.
+            if (payMethod === 'easypaisa' && receiptImage && response?.id) {
+                try {
+                    const fd = new FormData();
+                    fd.append('source_type', 'order');
+                    fd.append('source_id', String(response.id));
+                    fd.append('amount', String(total));
+                    fd.append('method', 'mobile_wallet');
+                    if (shippingInfo.branchId) fd.append('warehouse', String(shippingInfo.branchId));
+                    fd.append('reference', selectedEasypaisaNum || '');
+                    fd.append('note', 'Easypaisa receipt uploaded at checkout');
+                    fd.append('direction', 'inbound');
+                    fd.append('status', 'pending');
+                    fd.append('slip', receiptImage);
+                    await installmentService.create(fd);
+                } catch (slipErr) {
+                    // Order is already placed — don't fail checkout if the slip upload hiccups.
+                    console.warn('Receipt upload failed (order still placed):', slipErr);
+                }
+            }
+
             setPlacedOrderNumber(response.tracking_id);
             clearCart();
             setShowReview(false);
@@ -207,7 +304,7 @@ export default function CheckoutPage() {
             <div className="max-w-[1100px] mx-auto px-6 py-8">
                 <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-5 min-w-0 w-full">
-                        <div className={cardCls}>
+                        <div className={cardCls + ' !overflow-visible'}>
                             <div className={headerCls}>
                                 <h3 className="text-[14px] font-bold text-[#0f1111]">1. Shipping Address</h3>
                                 <p className="text-[12px] text-[#565959]">Please enter the delivery destination.</p>
@@ -242,30 +339,62 @@ export default function CheckoutPage() {
                                         />
                                     </AmazonField>
                                 </div>
-                                <AmazonField label="City" id="city" required>
-                                    <div className="relative">
-                                        <select
-                                            id="city"
-                                            className={selectCls}
-                                            required
-                                            value={shippingInfo.city}
-                                            onChange={(e: any) => setShippingInfo({ ...shippingInfo, city: e.target.value })}
-                                        >
-                                            <option value="">Select City</option>
-                                            <option value="Skardu">Skardu</option>
-                                            <option value="Gilgit">Gilgit</option>
-                                            <option value="Islamabad">Islamabad</option>
-                                            <option value="Rawalpindi">Rawalpindi</option>
-                                            <option value="Lahore">Lahore</option>
-                                            <option value="Karachi">Karachi</option>
-                                            <option value="Peshawar">Peshawar</option>
-                                            <option value="Quetta">Quetta</option>
-                                            <option value="Other">Other (Northern Areas)</option>
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                            <ChevronDown size={18} />
+                                <AmazonField label={(cityLocked || inCityMode) ? 'Delivery Branch (from your city)' : 'Select Branch'} id="branch" required>
+                                    {cityLocked ? (
+                                        <div className="w-full h-[46px] px-4 flex items-center justify-between rounded-[8px] border border-[#D5D9D9] bg-slate-50 text-[14px] font-semibold text-slate-700 select-none cursor-not-allowed">
+                                            <span className="truncate">
+                                                {(() => { const b = branches.find((x: any) => String(x.id) === shippingInfo.branchId); return b ? (b.name + (b.area ? ` - ${b.area}` : '')) : (shippingInfo.city || 'Selected branch'); })()}
+                                            </span>
+                                            <Lock size={15} className="text-slate-400 shrink-0" />
                                         </div>
+                                    ) : (
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            id="branch"
+                                            onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
+                                            className="w-full h-[46px] px-4 flex items-center justify-between rounded-[8px] border border-[#D5D9D9] bg-white text-[14px] font-medium text-slate-700 outline-none hover:border-[#119AB8] focus:border-[#119AB8] transition-all cursor-pointer select-none text-left"
+                                        >
+                                            <span className="truncate">
+                                                {shippingInfo.branchId ? (() => {
+                                                    const b = dropdownBranches.find((x: any) => String(x.id) === shippingInfo.branchId);
+                                                    return b ? (b.name + (b.area ? ` - ${b.area}` : '')) : 'Select Branch';
+                                                })() : 'Select Branch'}
+                                            </span>
+                                            <ChevronDown size={18} className="text-slate-400" />
+                                        </button>
+                                        {branchDropdownOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-[100]" onClick={() => setBranchDropdownOpen(false)} />
+                                                <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-[#D5D9D9] rounded-[8px] shadow-lg z-[110] divide-y divide-slate-100 text-[14px] font-medium text-[#0f1111] animate-in fade-in slide-in-from-top-1 duration-150">
+                                                    {!inCityMode && (
+                                                        <div
+                                                            onClick={() => {
+                                                                setShippingInfo({ ...shippingInfo, branchId: '' });
+                                                                setBranchDropdownOpen(false);
+                                                            }}
+                                                            className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!shippingInfo.branchId ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                                        >
+                                                            Select Branch
+                                                        </div>
+                                                    )}
+                                                    {dropdownBranches.map((b: any) => (
+                                                        <div
+                                                            key={b.id}
+                                                            onClick={() => {
+                                                                setShippingInfo({ ...shippingInfo, branchId: String(b.id), city: b.area || b.name || shippingInfo.city });
+                                                                setBranchDropdownOpen(false);
+                                                            }}
+                                                            className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors truncate ${String(shippingInfo.branchId) === String(b.id) ? 'bg-indigo-50 text-indigo-700 font-bold' : ''}`}
+                                                        >
+                                                            {b.name}{b.area ? ` - ${b.area}` : ''}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
+                                    )}
                                 </AmazonField>
                             </div>
                         </div>

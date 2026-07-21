@@ -3,6 +3,24 @@ User management serializers.
 """
 from rest_framework import serializers
 from .models import User, Role, Permission, UserActivityLog, UserSettings
+from modules.company.models import Area
+from modules.inventory.models import Warehouse
+
+
+def _warehouse_brief(obj):
+    """Compact branch list for a user: id + name + location (address) + city/area label."""
+    return [
+        {'id': str(w.id), 'name': w.name, 'location': w.location, 'area': (w.area.name if w.area_id else None)}
+        for w in obj.warehouses.all()
+    ]
+
+
+def _is_super_admin(user):
+    return bool(
+        getattr(user, 'is_superuser', False)
+        or (getattr(user, 'role', None)
+            and (user.role.name or '').strip().lower() in {'super admin', 'superadmin'})
+    )
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -47,16 +65,30 @@ class UserDetailSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
     permissions = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    
+    areas = serializers.SerializerMethodField()
+    warehouses = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'phone',
             'avatar', 'address', 'city', 'country', 'postal_code', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'permissions', 'page_permissions',
+            'status', 'status_display', 'is_active', 'is_staff', 'permissions',
+            'page_permissions', 'page_edit_permissions',
+            'areas', 'warehouses', 'is_super_admin',
             'date_joined', 'last_login', 'last_login_ip', 'last_login_at', 'plain_password'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'last_login_ip', 'last_login_at']
+
+    def get_areas(self, obj):
+        return [{'id': a.id, 'name': a.name, 'code': a.code} for a in obj.areas.all()]
+
+    def get_warehouses(self, obj):
+        return _warehouse_brief(obj)
+
+    def get_is_super_admin(self, obj):
+        return _is_super_admin(obj)
     
     def get_permissions(self, obj):
         """Get user's permissions through their role."""
@@ -69,53 +101,108 @@ class UserListSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     full_name = serializers.CharField(source='get_full_name', read_only=True)
-    
+    warehouses = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'full_name', 'phone', 'avatar', 'role', 'role_name',
-            'status', 'status_display', 'is_active', 'date_joined', 'last_login', 'plain_password'
+            'status', 'status_display', 'is_active', 'date_joined', 'last_login', 'plain_password',
+            'warehouses', 'is_super_admin'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login']
+
+    def get_warehouses(self, obj):
+        return _warehouse_brief(obj)
+
+    def get_is_super_admin(self, obj):
+        return _is_super_admin(obj)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new users."""
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, required=True)
-    
+    areas = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Area.objects.all()
+    )
+    warehouses = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Warehouse.objects.all()
+    )
+
     class Meta:
         model = User
         fields = [
             'username', 'email', 'password', 'password_confirm', 'first_name',
             'last_name', 'phone', 'avatar', 'address', 'city', 'country', 'postal_code', 'role',
-            'page_permissions'
+            'page_permissions', 'page_edit_permissions', 'areas', 'warehouses'
         ]
-    
+
     def validate(self, data):
         """Validate passwords match."""
         if data['password'] != data.pop('password_confirm'):
             raise serializers.ValidationError('Passwords do not match.')
         return data
-    
+
     def create(self, validated_data):
         """Create user with hashed password and store plain version."""
         password = validated_data.pop('password')
+        areas = validated_data.pop('areas', None)
+        warehouses = validated_data.pop('warehouses', None)
+        # Only a global Super Admin may assign branches.
+        request = self.context.get('request')
+        if warehouses is not None and not _is_super_admin(getattr(request, 'user', None) if request else None):
+            warehouses = None
         user = User.objects.create_user(password=password, **validated_data)
         user.plain_password = password
+        # Internal users created here are staff so they can reach the admin panel;
+        # page_permissions + area/branch scoping handle what they can actually see.
+        user.is_staff = True
+        # Tenant (owning Admin): a staff sub-user inherits the creating Admin's
+        # tenant so they share that Admin's workspace. An Admin/Super-Admin is
+        # created with tenant NULL and resolves to their own id (Admin) or
+        # cross-tenant (Super Admin) via core.scoping.tenant_id_for — so when the
+        # creator is the platform operator / public signup, the new account
+        # correctly owns its own tenant.
+        from core.scoping import tenant_id_for
+        creator = getattr(request, 'user', None) if request else None
+        user.tenant_id = tenant_id_for(creator)
         user.save()
+        if areas is not None:
+            user.areas.set(areas)
+        if warehouses is not None:
+            user.warehouses.set(warehouses)
         return user
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user information."""
-    
+    areas = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Area.objects.all()
+    )
+    warehouses = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Warehouse.objects.all()
+    )
+
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'email', 'phone', 'avatar', 'address',
-            'city', 'country', 'postal_code', 'role', 'page_permissions'
+            'city', 'country', 'postal_code', 'role', 'page_permissions',
+            'page_edit_permissions', 'areas', 'warehouses', 'is_active', 'status'
         ]
+
+    def update(self, instance, validated_data):
+        # Keep the textual status in sync with the Active toggle so the list
+        # filters and the status badge agree.
+        if 'is_active' in validated_data and 'status' not in validated_data:
+            validated_data['status'] = 'active' if validated_data['is_active'] else 'inactive'
+        # Only a global Super Admin may (re)assign branches.
+        request = self.context.get('request')
+        if not _is_super_admin(getattr(request, 'user', None) if request else None):
+            validated_data.pop('warehouses', None)
+        return super().update(instance, validated_data)
 
 
 class UserPasswordChangeSerializer(serializers.Serializer):
@@ -162,14 +249,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         from django.utils import timezone
         from modules.supplier.models import Supplier
         from modules.customer.models import Customer
+        from django.db.models import Q
         from rest_framework import serializers
 
         # 1. Attempt Standard User Login (Admins, Employees, etc.)
-        user_obj = None
-        if '@' in username:
-            user_obj = User.objects.filter(email=username).first()
-        else:
-            user_obj = User.objects.filter(username=username).first()
+        user_obj = User.objects.filter(Q(email=username) | Q(username=username)).first()
 
         if user_obj:
             try:
@@ -179,11 +263,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 data = super().validate(auth_attrs)
                 user = self.user
                 
+                # Prefer the user's actual role name so restricted staff roles
+                # (Sales Manager, Area Manager, …) keep their page/area scoping.
+                # Only fall back to 'admin' for staff with no explicit role.
                 role = 'customer'
-                if user.is_superuser or user.is_staff:
-                    role = 'admin'
-                elif user.role:
+                if user.role:
                     role = user.role.name.lower()
+                elif user.is_superuser or user.is_staff:
+                    role = 'admin'
 
                 data['user'] = {
                     'id': str(user.id),
@@ -194,6 +281,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'is_staff': user.is_staff,
                     'is_superuser': user.is_superuser,
                     'page_permissions': user.page_permissions or [],
+                    'page_edit_permissions': user.page_edit_permissions or [],
+                    'areas': [{'id': a.id, 'name': a.name, 'code': a.code} for a in user.areas.all()],
+                    'warehouses': _warehouse_brief(user),
+                    'is_super_admin': _is_super_admin(user),
                 }
                 return data
             except Exception:
@@ -201,11 +292,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 pass
 
         # 2. Attempt Direct Supplier Login
-        supplier = None
-        if '@' in username:
-            supplier = Supplier.objects.filter(email=username, is_active=True).first()
-        else:
-            supplier = Supplier.objects.filter(username=username, is_active=True).first()
+        supplier = Supplier.objects.filter(Q(email=username) | Q(username=username), is_active=True).first()
 
         if supplier and check_password(password, supplier.password):
             supplier.last_login = timezone.now()
@@ -228,11 +315,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             }
 
         # 3. Attempt Direct Customer Login
-        customer = None
-        if '@' in username:
-            customer = Customer.objects.filter(email=username, is_active=True).first()
-        else:
-            customer = Customer.objects.filter(username=username, is_active=True).first()
+        customer = Customer.objects.filter(Q(email=username) | Q(username=username), is_active=True).first()
 
         if customer and check_password(password, customer.password):
             customer.last_login = timezone.now()
@@ -254,6 +337,35 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 }
             }
 
-        # 4. If all fail, raise standard error
-        raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})
+        # 4. Attempt Direct Delivery Rider Login — accept email, username OR phone so a
+        # rider can sign in with whichever identifier the admin gave them (riders very
+        # often only know their phone number). Guard the phone match against a blank
+        # value so an empty phone field can never match an empty input.
+        from modules.delivery.models import DeliveryPerson
+        _rider_q = Q(email=username) | Q(username=username)
+        if username:
+            _rider_q |= Q(phone=username)
+        rider = DeliveryPerson.objects.filter(_rider_q, is_active=True).first()
+
+        if rider and check_password(password, rider.password):
+            rider.last_login = timezone.now()
+            rider.save()
+            refresh = RefreshToken()
+            refresh['user_id'] = f"del_{rider.id}"
+            refresh['role'] = 'delivery'
+            return {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': {
+                    'id': rider.id,
+                    'name': rider.name,
+                    'email': rider.email,
+                    'avatar': rider.avatar.url if rider.avatar else None,
+                    'role': 'delivery',
+                    'is_staff': False,
+                    'is_superuser': False,
+                }
+            }
+
+        # 5. If all fail, raise standard error
         raise serializers.ValidationError({'detail': 'No active account found with the given credentials'})

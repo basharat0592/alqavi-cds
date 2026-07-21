@@ -30,6 +30,14 @@ class Supplier(BaseModel):
     last_login = models.DateTimeField(null=True, blank=True)
     plain_password = models.CharField(max_length=255, blank=True, null=True)
 
+    # Owning Admin (tenant) — per-Admin isolation axis. Each admin sees only their
+    # own suppliers; NULL = legacy/unclaimed (visible to the Super Admin only once
+    # the registry is tenant-scoped). Stamped at creation from the creating admin.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tenant_suppliers'
+    )
+
     class Meta:
         db_table = 'suppliers'
         verbose_name = 'Supplier'

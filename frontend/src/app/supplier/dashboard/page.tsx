@@ -460,17 +460,29 @@ export default function SupplierDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {(viewOrder.items || []).map((item: any, idx: number) => (
-                                            <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                                                <td className="px-5 py-4">
-                                                    <div className="text-[13px] font-bold text-slate-900">{item.product_name}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">SKU: {item.sku || 'N/A'}</div>
-                                                </td>
-                                                <td className="px-5 py-4 text-center text-[13px] font-black text-slate-900">{item.quantity}</td>
-                                                <td className="px-5 py-4 text-right text-[12px] font-bold text-slate-500">{fmt(parseFloat(item.price))}</td>
-                                                <td className="px-5 py-4 text-right text-[13px] font-black text-slate-900">{fmt(item.quantity * parseFloat(item.price))}</td>
-                                            </tr>
-                                        ))}
+                                        {(viewOrder.items || []).map((item: any, idx: number) => {
+                                            // Mirror the admin invoice: carton lines bill total pieces
+                                            // (cartons × pcs-per-carton), not the raw carton count.
+                                            const price = parseFloat(item.price || 0);
+                                            const qty = item.quantity || 1;
+                                            const units = item.total_units ?? (item.packaging_type === 'CARTON' ? qty * (item.items_per_carton || 1) : qty);
+                                            const amt = item.subtotal ?? (price * units);
+                                            return (
+                                                <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                                                    <td className="px-5 py-4">
+                                                        <div className="text-[13px] font-bold text-slate-900">{item.product_name}</div>
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">SKU: {item.sku || 'N/A'}</div>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center text-[13px] font-black text-slate-900">
+                                                        {item.packaging_type === 'CARTON' ? (
+                                                            <span>{units} pcs <span className="block text-[10px] font-medium text-slate-400">({qty} ctn × {item.items_per_carton || 1})</span></span>
+                                                        ) : units}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right text-[12px] font-bold text-slate-500">{fmt(price)}</td>
+                                                    <td className="px-5 py-4 text-right text-[13px] font-black text-slate-900">{fmt(amt)}</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

@@ -2,11 +2,11 @@
 
 import { useState, useEffect, use } from 'react';
 import { orderService, Order } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import { Printer, Share2, Check } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
-import Logo from '@/components/ui/Logo';
-import { PageHeader, Button } from '@/components/admin/ui';
+import { PageHeader, Button, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
 import toast from 'react-hot-toast';
 
 export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,12 +15,25 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     const [loading, setLoading] = useState(true);
     const [shared, setShared] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+    // This customer's outstanding balance from OTHER orders (previous dues) + its due date.
+    const [prevBalance, setPrevBalance] = useState(0);
+    const [prevDueDate, setPrevDueDate] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOrder = async () => {
             try {
                 const data = await orderService.getById(id);
                 setOrder(data);
+                // Registered customer → look up their previous outstanding balance
+                // (all their other unpaid orders) + earliest due date.
+                const custId = (data as any)?.customer;
+                if (custId) {
+                    try {
+                        const bal = await orderService.getCustomerBalance(String(custId), String((data as any).id));
+                        setPrevBalance(Number(bal?.previous_balance || 0));
+                        setPrevDueDate(bal?.due_date || null);
+                    } catch { /* non-blocking */ }
+                }
             } catch (error) {
                 console.error("Failed to load order", error);
             } finally {
@@ -58,24 +71,41 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
         }
     };
 
+    const items: any[] = order?.items || [];
+    const sel = useTableSelection(items, (item) => String(items.indexOf(item)));
+
     if (loading) return <PageLoader />;
     if (!order) return <div className="p-20 text-center font-bold">Order not found.</div>;
 
     const c = order.customer as any;
     const customerName = (order as any).customer_name || (c?.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c?.username || 'Guest');
-    const customerCell = c?.phone || c?.phone_number || 'N/A';
-    const items = order.items || [];
+    const customerCell = c?.phone || c?.phone_number || '';
     const totalAmount = parseFloat(order.total_amount || '0');
+    // Cancelled / rejected sales are void — no payment was collected (paid 0).
+    const voided = ['CANCELLED', 'REJECTED'].includes(String((order as any).status || '').toUpperCase());
+    // A PAID sale is settled in full — treat it as fully paid even on older rows
+    // whose amount_paid field was never stamped. Otherwise read the real settlement
+    // (`amount_paid`; fall back to legacy `paid_amount`) and server remaining.
+    const isPaid = !voided && String((order as any).payment_status || 'PAID').toUpperCase() === 'PAID';
+    const paidAmount = voided
+        ? 0
+        : (isPaid
+            ? totalAmount
+            : parseFloat((order as any).amount_paid ?? (order as any).paid_amount ?? '0'));
+    const balance = (voided || isPaid)
+        ? 0
+        : ((order as any).remaining_amount != null
+            ? Math.max(0, parseFloat((order as any).remaining_amount))
+            : Math.max(0, totalAmount - paidAmount));
 
     return (
-        <div className="min-h-screen bg-white pb-20 font-sans text-[#111] selection:bg-indigo-100 text-left">
+        <div className="pb-20 font-sans text-slate-900 text-left">
 
             {/* Integrated Action Bar */}
-            <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
+            <div className="max-w-[850px] mx-auto pt-2 px-4 print:hidden">
                 <PageHeader
                     title="Sales Invoice"
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Sales Invoice' }]}
-                    className="mb-0 pb-6 border-b border-slate-100"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Sales', href: '/admin/sales' }, { label: 'Invoice' }]}
                     actions={
                         <>
                             <select
@@ -103,151 +133,182 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
             </div>
 
             {/* Paper Container */}
-            <div className="max-w-[850px] mx-auto bg-white p-8 print:border-none print:shadow-none print:p-0">
+            <div className="max-w-[850px] mx-auto bg-white p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:p-0">
 
-                {/* Visual Header */}
-                <div className="flex justify-between items-start mb-12">
-                    <div className="w-1/3">
-                        <Logo size="lg" className="!items-start" />
-                    </div>
+                <InvoiceHeader
+                    docTitle="Sales Invoice"
+                    metaLines={['Gilgit-Baltistan Distribution']}
+                    refLabel="Invoice No"
+                    refValue={order.order_number || String(order.id).split('-')[0]}
+                    date={formatDate(order.created_at)}
+                />
 
-                    <div className="w-1/3 text-center">
-                        <h1 className="text-[34px] font-bold leading-[1.8] mb-1 text-[#111] urdu-text">
-                            القوی ٹریڈرز
-                        </h1>
-                        <p className="text-[12px] font-bold text-[#565959] uppercase tracking-widest urdu-text">
-                            کاسمیٹکس ڈیلر گلگت بلتستان
-                        </p>
-                    </div>
-
-                    <div className="w-1/3 text-right">
-                        <h2 className="text-[20px] font-black uppercase tracking-tighter text-[#111]">Invoice</h2>
-                        <div className="text-[12px] text-gray-500 mt-2 space-y-0.5 font-medium">
-                            <p>Syed Sakhawat & Associates</p>
-                            <p>0313-8692190 | 0335-1240190</p>
-                        </div>
-                        <p className="text-[14px] text-[#111] font-bold mt-4 tracking-tight">Invoice No: {order.order_number || order.id.toString().split('-')[0]}</p>
-                        <p className="text-[12px] text-[#565959] font-medium">{formatDate(order.created_at)}</p>
-                    </div>
-                </div>
-
-                {/* 2. Customer & Metadata Grid */}
-                <div className="grid grid-cols-4 gap-8 mb-16">
+                {/* Customer & Metadata Grid — compact */}
+                <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
                     <div className="col-span-2">
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Billing Details</h3>
-                        <p className="text-[18px] font-black text-black leading-none">{customerName}</p>
-                        {order.market && <p className="text-[13px] text-[#565959] mt-2 font-bold">{order.market}</p>}
-                        <p className="text-[13px] font-medium text-black mt-1">{customerCell}</p>
-                        <p className="text-[11px] text-gray-400 mt-2 w-64 leading-relaxed italic">{order.shipping_address || 'Gilgit-Baltistan Distribution Network'}</p>
-                    </div>
-                    <div>
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Financials</h3>
-                        <div className="space-y-2">
-                            <p className="text-[11px] text-[#565959] font-bold">Payment Method</p>
-                            <p className="text-[13px] font-black uppercase text-black">{order.payment_method || 'Cash on Delivery'}</p>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bill To</p>
+                        <p className="text-[15px] font-black text-slate-900 leading-tight">{customerName}</p>
+                        {customerCell && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{customerCell}</p>}
+                        {(order as any).salesperson_name && (
+                            <p className="text-[11px] font-medium text-slate-500 mt-1">Salesman: <span className="font-bold text-slate-700">{(order as any).salesperson_name}</span></p>
+                        )}
                     </div>
                     <div className="text-right">
-                        <h3 className="text-[10px] font-black text-[#bbb] uppercase mb-4 tracking-widest border-b border-[#eee] pb-1">Logistics</h3>
-                        <div className="space-y-2">
-                            <p className="text-[11px] text-[#565959] font-bold">Current Status</p>
-                            <div className="inline-block px-3 py-1 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-full">
-                                {order.status || 'Verified'}
-                            </div>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment</p>
+                        <p className="text-[12px] font-black uppercase text-slate-900">{order.payment_method || 'Cash'}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 mb-1">Sale Date</p>
+                        <p className="text-[12px] font-bold text-slate-700 tabular-nums">{formatDate((order as any).sale_date || order.created_at)}</p>
                     </div>
                 </div>
 
-                {/* 3. Items Table: Streamlined Distribution Style */}
-                <div className="mb-12">
-                    <table className="w-full text-left border-collapse">
+                {/* Items Table */}
+                <div className="mb-6">
+                    <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
                         <thead>
-                            <tr className="border-b-2 border-black text-[12px] font-black uppercase tracking-wider text-black bg-gray-50/50">
-                                <th className="py-4 px-2 w-12 text-center opacity-40">#</th>
-                                <th className="py-4 px-3">Description of Goods</th>
-                                <th className="py-4 px-3 text-center w-28">Quantity</th>
-                                <th className="py-4 px-3 text-right w-32">Unit Price</th>
-                                <th className="py-4 px-3 text-right w-32">Total Amount</th>
+                            <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                                <SelectAllTh sel={sel} className="print:hidden" />
+                                <th className="py-1.5 px-2 w-12 text-center">#</th>
+                                <th className="py-1.5 px-3">Item Description</th>
+                                <th className="py-1.5 px-3 text-center w-16">Qty</th>
+                                <th className="py-1.5 px-3 text-center w-16">Bonus</th>
+                                <th className="py-1.5 px-3 text-right w-24">Unit Price</th>
+                                <th className="py-1.5 px-3 text-right w-24">Disc</th>
+                                <th className="py-1.5 px-3 text-right w-28">Total</th>
                             </tr>
                         </thead>
-                        <tbody className="text-[14px]">
+                        <tbody className="text-[13px]">
                             {items.map((item: any, i: number) => {
                                 const price = parseFloat(item.price || item.unit_price || 0);
                                 const qty = item.quantity || 1;
-                                const amt = price * qty;
+                                const bonus = parseInt(item.bonus_quantity || 0) || 0;
+                                const disc = parseFloat(item.discount || 0) || 0;
+                                const net = item.line_net != null ? parseFloat(item.line_net) : (price * qty - disc);
                                 return (
-                                    <tr key={i} className="hover:bg-gray-50/50">
-                                        <td className="py-4 px-1 text-center text-gray-400">{i + 1}</td>
-                                        <td className="py-4 px-2 font-bold text-[#111]">{item.product_name || item.name}</td>
-                                        <td className="py-4 px-2 text-center">{qty}</td>
-                                        <td className="py-4 px-2 text-right text-gray-600">{formatCurrency(price)}</td>
-                                        <td className="py-4 px-1 text-right font-black text-[#111]">{formatCurrency(amt)}</td>
+                                    <tr key={i} className="hover:bg-slate-50">
+                                        <RowCheckboxTd sel={sel} id={String(i)} className="print:hidden" />
+                                        <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
+                                        <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">{item.product_name || item.name}</td>
+                                        <td className="py-1.5 px-3 text-center tabular-nums">{qty}</td>
+                                        <td className="py-1.5 px-3 text-center tabular-nums text-emerald-700 font-bold">{bonus > 0 ? `+${bonus}` : '—'}</td>
+                                        <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                        <td className="py-1.5 px-3 text-right tabular-nums text-rose-600">{disc > 0 ? `-${formatCurrency(disc)}` : '—'}</td>
+                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(net)}</td>
                                     </tr>
                                 );
                             })}
-                            {/* Integrated Grand Total Row */}
-                            <tr className="border-t-2 border-black font-black text-[#111] bg-gray-50/30">
-                                <td colSpan={4} className="py-4 px-2 text-right text-[14px] uppercase tracking-wider">Grand Total</td>
-                                <td className="py-4 px-1 text-right text-[16px]">{formatCurrency(totalAmount)}</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-
-                {/* Urdu Professional Note */}
-                <div className="mb-6 px-1">
-                    <p className="text-[10px] leading-[2.1] text-justify text-[#444] urdu-text" dir="rtl">
-                        <span className="font-black border-b-2 ml-3 text-[14px]">نوٹ:-</span>
-                        تمام دکاندار حضرات اس بات کو نوٹ کر لیں جتنی بھی چیزیں القوی ٹریڈرز گلگت سے خریدی ہیں انکو ایکسپائری سے تین مہینے پہلے تبدیل کرنا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کا ذمہ وار نہیں ہوگا۔ نیز امپورٹڈ چیزیں سمیت پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں سامان اور بل میں کمی بیشی ہونے کی صورت میں فورا رابطہ کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کا ذمہ دار نہیں ہوگا۔ آپ کے تعاون کا شکریہ--
-                    </p>
+                {/* Summary: notes (left) + totals (right) */}
+                <div className="flex justify-between items-start gap-6 mb-6">
+                    <div className="flex-1 pt-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                        <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{(order as any).notes || 'Thank you for your business.'}</p>
+                    </div>
+                    <div className="w-[280px] text-[12px] space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
+                            <span className="font-bold text-slate-700 tabular-nums">{formatCurrency(items.reduce((s, i) => s + (i.line_net != null ? parseFloat(i.line_net) : (parseFloat(i.price || i.unit_price || 0) * (i.quantity || 1) - parseFloat(i.discount || 0))), 0))}</span>
+                        </div>
+                        {items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0) > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Bonus Units</span>
+                                <span className="font-bold text-emerald-700 tabular-nums">+{items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0)} free</span>
+                            </div>
+                        )}
+                        {items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0) > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Line Discounts</span>
+                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0))}</span>
+                            </div>
+                        )}
+                        {parseFloat((order as any).shipping_cost || '0') > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Delivery Charges</span>
+                                <span className="font-bold text-slate-700 tabular-nums">+{formatCurrency(parseFloat((order as any).shipping_cost))}</span>
+                            </div>
+                        )}
+                        {parseFloat((order as any).discount || '0') > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Discount</span>
+                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(parseFloat((order as any).discount))}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                            <span className="text-slate-900 font-black uppercase text-[12px]">Total Amount</span>
+                            <span className="font-black text-indigo-600 text-[16px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        </div>
+                        {paidAmount > 0 && (
+                            <div className="flex justify-between pt-1">
+                                <span className="text-emerald-600 font-bold uppercase text-[11px]">Total Paid</span>
+                                <span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</span>
+                            </div>
+                        )}
+                        {balance > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-rose-600 font-black uppercase text-[11px]">Remaining Balance</span>
+                                <span className="font-black text-rose-600 tabular-nums">{formatCurrency(balance)}</span>
+                            </div>
+                        )}
+                        {balance > 0 && (order as any).due_date && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Due Date</span>
+                                <span className="font-bold text-slate-700 tabular-nums">{formatDate((order as any).due_date)}</span>
+                            </div>
+                        )}
+                        {prevBalance > 0 && (
+                            <>
+                                <div className="flex justify-between pt-2 border-t border-slate-200">
+                                    <span className="text-amber-600 font-bold uppercase text-[11px]">Previous Balance</span>
+                                    <span className="font-bold text-amber-600 tabular-nums">{formatCurrency(prevBalance)}</span>
+                                </div>
+                                {prevDueDate && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-bold uppercase text-[11px]">Prev. Due Date</span>
+                                        <span className="font-bold text-slate-700 tabular-nums">{formatDate(prevDueDate)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between pt-1 border-t border-slate-200">
+                                    <span className="text-rose-700 font-black uppercase text-[11px]">Net Balance</span>
+                                    <span className="font-black text-rose-700 text-[15px] tabular-nums">{formatCurrency(prevBalance + balance)}</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
-                {/* 5. Formal Signatures Area */}
-                <div className="mt-16 pt-12 border-t-2 border-dashed border-black">
-                    <div className="flex justify-between items-start gap-32">
-                        <div className="flex-1 space-y-3">
-                            <p className="text-[12px] font-bold text-gray-500">Authorized Distribution Signature</p>
-                            <div className="w-full border-b border-black pt-8"></div>
-                            <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Store Manager</p>
-                        </div>
-                        <div className="flex-1 space-y-3 text-right">
-                            <p className="text-[12px] font-bold text-gray-500">Receiver's Confirmation Stamp</p>
-                            <div className="w-full border-b border-black pt-8"></div>
-                            <p className="text-[13px] font-black uppercase tracking-widest text-black pt-2">Authorized Dealer</p>
-                        </div>
-                    </div>
-
-                    <div className="mt-16 text-center border-t border-slate-100 pt-6">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]">
-                            System Generated Professional Copy • Al-Qavi Traders Gilgit
-                        </p>
-                    </div>
+                <div className="print:hidden">
+                    <BulkBar
+                        sel={sel}
+                        entity="line items"
+                        onExport={() => exportToCSV(
+                            sel.selectedItems.map((item: any, idx: number) => {
+                                const price = parseFloat(item.price || item.unit_price || 0);
+                                const qty = item.quantity || 1;
+                                const bonus = parseInt(item.bonus_quantity || 0) || 0;
+                                const disc = parseFloat(item.discount || 0) || 0;
+                                const net = item.line_net != null ? parseFloat(item.line_net) : (price * qty - disc);
+                                return {
+                                    line: idx + 1,
+                                    invoice: order.order_number || String(order.id),
+                                    product: item.product_name || item.name || '',
+                                    quantity: qty,
+                                    bonus_units: bonus,
+                                    unit_price: price,
+                                    discount: disc,
+                                    total: net,
+                                };
+                            }),
+                            `invoice-${order.order_number || order.id}-items.csv`,
+                        )}
+                    />
                 </div>
+
+                <InvoiceFooter />
             </div>
 
-            <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-                
-                @media print {
-                    .print\\:hidden { display: none !important; }
-                    body { padding: 0; margin: 0; background-color: white !important; }
-                    .max-w-[850px] { max-width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-                    .PaperContainer { box-shadow: none !important; border: none !important; }
-                    @page { margin: 1.5cm; }
-                }
-
-                body {
-                    font-family: 'Inter', sans-serif;
-                }
-
-                .urdu-text {
-                    font-family: 'Noto Nastaliq Urdu', serif;
-                    font-weight: 700;
-                    line-height: 2.4;
-                }
-            `}</style>
+            <style jsx global>{invoiceStyles}</style>
         </div>
     );
 }

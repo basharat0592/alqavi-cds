@@ -314,6 +314,7 @@ export default function ProductForm({ id }: ProductFormProps) {
         category: '',
         sections: [] as string[],
         selling_price: '',
+        original_price: '',
         sku: '',
         barcode: '',
         badge: '',
@@ -341,11 +342,13 @@ export default function ProductForm({ id }: ProductFormProps) {
     useEffect(() => {
         const fetchResources = async () => {
             try {
+                // Each lookup is independent — one failing endpoint (e.g. a 500 on
+                // categories) must not blank out the others (stock, suppliers, catalog).
                 const [stockData, supData, catData, catProdData] = await Promise.all([
-                    inventoryService.getInventory(),
-                    companyService.getSuppliers(),
-                    categoryService.getAll(),
-                    productService.getAllSupplier({ no_pagination: 'true' })
+                    inventoryService.getInventory().catch(() => []),
+                    companyService.getSuppliers().catch(() => []),
+                    categoryService.getAll().catch(() => []),
+                    productService.getAllSupplier({ no_pagination: 'true' }).catch(() => [])
                 ]);
                 setAllStocks(stockData || []);
                 setFilteredStocks(stockData || []);
@@ -368,6 +371,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                         category: String(catId),
                         sections: Array.isArray(prod.sections) ? prod.sections.map((s: any) => String(typeof s === 'object' ? s.id : s)) : [],
                         selling_price: prod.selling_price || '',
+                        original_price: prod.original_price || '',
                         sku: prod.sku || '',
                         barcode: prod.barcode || '',
                         badge: prod.badge || '',
@@ -537,7 +541,6 @@ export default function ProductForm({ id }: ProductFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.stock) return toast.error("Please select a stock entry");
-        if (!formData.category) return toast.error("Please select a category");
         if (!formData.selling_price) return toast.error("Please set the selling price");
 
         setSaving(true);
@@ -546,6 +549,11 @@ export default function ProductForm({ id }: ProductFormProps) {
             Object.keys(formData).forEach(key => {
                 if (key === 'sections') {
                     formData.sections.forEach(s => data.append('sections', s));
+                } else if (key === 'category' && !(formData as any).category) {
+                    // Category is optional — omit when blank so the backend falls back
+                    // to the linked stock's category (or leaves it empty).
+                } else if (key === 'original_price' && !(formData as any).original_price) {
+                    // Optional compare-at price — omit when blank ('' fails Decimal validation).
                 } else {
                     data.append(key, (formData as any)[key]);
                 }
@@ -595,7 +603,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                     <ChevronRight size={10} />
                     <Link href="/admin/products" className="hover:text-[#4338ca] hover:underline">Product Registry</Link>
                     <ChevronRight size={10} />
-                    <span className="text-[#4338ca]">{isEdit ? 'Update Product' : 'Add Product'}</span>
+                    <span className="text-[#4338ca]">{isEdit ? 'Update Listing' : 'Add Listing'}</span>
                 </div>
 
                 <div className="flex items-center justify-between mb-4">
@@ -635,7 +643,6 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                                     <ProfessionalSelect
                                         label="Product Category"
-                                        required
                                         value={formData.category}
                                         options={allCategories.map(c => ({ id: c.id, name: c.name }))}
                                         onChange={(val: string) => setFormData(p => ({ ...p, category: val }))}
@@ -692,6 +699,20 @@ export default function ProductForm({ id }: ProductFormProps) {
                                         <input type="number" step="0.01" value={sellingPrice} onChange={e => handleSellingPriceChange(e.target.value)} className={inputCls} disabled={pricingMode === 'percent'} />
                                     </Field>
                                 </div>
+
+                                <Field label="Compare-at / “Was” Price (Rs.) — optional">
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.original_price}
+                                        onChange={e => setFormData(prev => ({ ...prev, original_price: e.target.value }))}
+                                        className={inputCls}
+                                        placeholder="Leave blank for no discount"
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-1">
+                                        Set higher than the selling price to show a strikethrough discount and list the item under Deals.
+                                    </p>
+                                </Field>
 
                                 {sellingPrice && costPrice > 0 && (
                                     <div className={`p-5 rounded-lg border flex items-center justify-between ${parseFloat(sellingPrice) >= costPrice ? 'bg-green-50/30 border-green-100' : 'bg-red-50 border-red-100 animate-pulse'}`}>
@@ -819,7 +840,7 @@ export default function ProductForm({ id }: ProductFormProps) {
 
                                 <div className="mt-8 space-y-3 pt-6 border-t border-slate-100">
                                     <Btn className="w-full text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
-                                        <Save size={14} /> {isEdit ? 'Update Product' : 'Add Product'}
+                                        <Save size={14} /> {isEdit ? 'Update Listing' : 'Add Listing'}
                                     </Btn>
                                     <button onClick={() => router.push('/admin/products')} className="w-full text-[12px] text-[#64748b] hover:text-[#4338ca] hover:underline text-center">
                                         Discard

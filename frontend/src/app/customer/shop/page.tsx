@@ -337,6 +337,8 @@ function ShopContent() {
                                         image={getImageUrl(p.image_url || p.image || p.catalog_image || '') || undefined}
                                         price={parseFloat(p.selling_price || p.price || 0)}
                                         category={p.category_name || 'Cosmetic'}
+                                        city={p.warehouse_area}
+                                        branch={p.warehouse_name}
                                         weight={p.weight}
                                         size={p.size || p.type}
                                         batch={p.batch_number || p.batch}

@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import * as XLSX from 'xlsx';
 
 /** Merge Tailwind classes without conflicts. */
 export function cn(...inputs: ClassValue[]): string {
@@ -112,10 +113,10 @@ export function checkIsVideo(url: string | null | undefined): boolean {
            cleanUrl.includes('/video');
 }
 
-// Module-level cache buster, evaluated once per page load/import
-const CACHE_BUSTER = typeof window !== 'undefined' 
-    ? ((window as any).__CACHE_BUSTER || ((window as any).__CACHE_BUSTER = Date.now())) 
-    : Date.now();
+// NOTE: No cache-buster is appended to media URLs. Uploaded files already get
+// unique, collision-suffixed filenames from Django storage, so a stable URL is
+// safe to cache forever (paired with long-lived Cache-Control headers in nginx).
+// This lets the browser reuse images across visits instead of re-downloading them.
 
 /**
  * Handle media URLs, prepending the API base URL if relative.
@@ -159,9 +160,9 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
             // backend (:8000) with no /media proxy, so keep the absolute backend URL.
             if (typeof window !== 'undefined' && window.location.origin !== domain &&
                 (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-                return `${domain}${relPath}?v=${CACHE_BUSTER}`;
+                return `${domain}${relPath}`;
             }
-            return `${relPath}?v=${CACHE_BUSTER}`;
+            return `${relPath}`;
         }
         // External absolute URL (CDN, social, etc.) — leave untouched
         return url;
@@ -182,7 +183,7 @@ export function getImageUrl(url: string | null | undefined): string | undefined 
     }
 
     // Join and return
-    return `${domain}/${cleanPath}?v=${CACHE_BUSTER}`;
+    return `${domain}/${cleanPath}`;
 }
 
 /**
@@ -218,6 +219,37 @@ export function exportToCSV(data: any[], filename = 'export.csv') {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+/** Export an array of row-objects to a real .xlsx workbook (SheetJS, fully offline). */
+export function exportToExcel(data: any[], filename = 'export', sheetName = 'Sheet1') {
+    if (!data || data.length === 0) return;
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
+    XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+}
+
+/** Export a titled table to PDF via a print window (no external service). */
+export function exportToPDF(title: string, columns: string[], rows: (string | number | null)[][]) {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const style = `<style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#0f172a;}
+        h1{font-size:18px;margin:0 0 4px;} .meta{color:#64748b;font-size:11px;margin-bottom:16px;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left;}
+        th{background:#f1f5f9;text-transform:uppercase;font-size:10px;letter-spacing:.04em;color:#475569;}
+        tr:nth-child(even) td{background:#f8fafc;}
+    </style>`;
+    const esc = (v: any) => String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
+    const thead = `<tr>${columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
+    const tbody = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+    w.document.write(`<html><head><title>${esc(title)}</title>${style}</head><body>
+        <h1>${esc(title)}</h1><div class="meta">${rows.length} row(s)</div>
+        <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+        <script>window.onload=function(){window.print();}</script></body></html>`);
+    w.document.close();
 }
 
 

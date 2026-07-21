@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { User, Building2, ShieldCheck, ChevronRight, ArrowLeft } from 'lucide-react';
+import { User, Building2, Truck, ChevronRight, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
 export default function RegisterChoicePage() {
@@ -46,15 +46,15 @@ export default function RegisterChoicePage() {
                         </div>
                     </Link>
 
-                    {/* Authority */}
-                    <Link href="/register/admin"
+                    {/* Rider */}
+                    <Link href="/register/rider"
                         className="group relative block p-8 bg-white border border-slate-200 rounded-2xl hover:border-[#13B0D1] hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
                         <div className="flex flex-col items-center text-center">
                             <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#13B0D1]/10 group-hover:text-[#13B0D1] transition-colors">
-                                <ShieldCheck className="h-6 w-6 text-slate-400 group-hover:text-[#13B0D1]" />
+                                <Truck className="h-6 w-6 text-slate-400 group-hover:text-[#13B0D1]" />
                             </div>
-                            <h2 className="text-lg font-bold text-slate-800 mb-2">Authority</h2>
-                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">System operations, analytics, and distributor management.</p>
+                            <h2 className="text-lg font-bold text-slate-800 mb-2">Become a Rider</h2>
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Deliver orders, manage shipments, and earn per delivery.</p>
                         </div>
                     </Link>
                 </div>

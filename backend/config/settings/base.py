@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'modules.company',
     'modules.supplier.apps.SupplierConfig',
     'modules.customer.apps.CustomerConfig',
+    'modules.delivery.apps.DeliveryConfig',
     'modules.cms.apps.CmsConfig',
 ]
 

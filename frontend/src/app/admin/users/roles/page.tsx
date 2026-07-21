@@ -6,9 +6,10 @@ import {
     Search, Trash2, Plus, RefreshCw, Layers, ShieldCheck
 } from 'lucide-react';
 import { roleService, AppRole } from '@/lib/api';
+import { exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function UserRolesPage() {
     const [roles, setRoles] = useState<AppRole[]>([]);
@@ -32,8 +33,6 @@ export default function UserRolesPage() {
 
     useEffect(() => { loadData(); }, []);
 
-    if (loading && roles.length === 0) return <PageLoader />;
-
     const confirmDelete = async () => {
         if (!deleteRole) return;
         setDeleting(true);
@@ -49,10 +48,20 @@ export default function UserRolesPage() {
         }
     };
 
-    const filtered = roles.filter(r => 
-        r.name?.toLowerCase().includes(search.toLowerCase()) || 
+    const filtered = roles.filter(r =>
+        r.name?.toLowerCase().includes(search.toLowerCase()) ||
         r.description?.toLowerCase().includes(search.toLowerCase())
     );
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: (string | number)[]) => {
+        await Promise.allSettled(ids.map(id => roleService.delete(id)));
+        setRoles(prev => prev.filter(r => !ids.map(String).includes(String(r.id))));
+        toast.success(`${ids.length} role(s) deleted`);
+    };
+
+    if (loading && roles.length === 0) return <PageLoader />;
 
     return (
         <div className="text-left">
@@ -99,6 +108,7 @@ export default function UserRolesPage() {
                     <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Security Segment</th>
                                 <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Protocol Class</th>
                                 <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Actions</th>
@@ -108,14 +118,14 @@ export default function UserRolesPage() {
                             {loading && filtered.length === 0 ? (
                                 Array(3).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={3} className="px-2.5 sm:px-6 py-8">
+                                        <td colSpan={4} className="px-2.5 sm:px-6 py-8">
                                             <div className="h-4 bg-slate-100 rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={3} className="px-10 py-24 text-center text-slate-600">
+                                    <td colSpan={4} className="px-10 py-24 text-center text-slate-600">
                                         <Layers className="w-10 h-10 text-slate-200 mx-auto mb-3" />
                                         <h3 className="text-[14px] font-bold text-slate-900">No Tiers Configured</h3>
                                         <p className="text-[11px] text-slate-400 mt-1">Initialize a security role to begin.</p>
@@ -124,6 +134,7 @@ export default function UserRolesPage() {
                             ) : (
                                 filtered.map(role => (
                                     <tr key={role.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <RowCheckboxTd sel={sel} id={role.id} />
                                         <td className="px-2.5 sm:px-6 py-3.5">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
@@ -167,6 +178,21 @@ export default function UserRolesPage() {
                     </table>
                 </div>
             </Card>
+
+            <BulkBar
+                sel={sel}
+                entity="roles"
+                onDelete={bulkDelete}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((r: any) => ({
+                        name: r.name || '',
+                        description: r.description || '',
+                        type: r.is_default ? 'Core Default' : 'Custom',
+                        permissions: Array.isArray(r.permissions) ? r.permissions.length : (r.permissions_count ?? 0),
+                    })),
+                    'roles.csv',
+                )}
+            />
 
             {/* Delete Modal */}
             <Modal

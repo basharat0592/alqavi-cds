@@ -14,9 +14,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
     weight = serializers.ReadOnlyField(source='product.weight')
     size = serializers.ReadOnlyField(source='product.size')
 
+    line_net = serializers.ReadOnlyField()
+    profit = serializers.ReadOnlyField()
+
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'price', 'cost_price', 'weight', 'size']
+        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'bonus_quantity', 'price', 'discount', 'line_net', 'profit', 'cost_price', 'weight', 'size']
 
     def get_product_name(self, obj):
         return obj.product.product_name if obj.product else 'Deleted Product'
@@ -31,16 +34,81 @@ class OrderSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     order_number = serializers.CharField(source='tracking_id', read_only=True)
     customer_display_name = serializers.SerializerMethodField()
+    remaining_amount = serializers.ReadOnlyField()
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
+    delivery_person_name = serializers.SerializerMethodField()
+    # 'registered' when tied to a real customer/user account, else 'walkin'
+    # (a counter guest with no account). Drives the Sales list sub-label.
+    customer_type = serializers.SerializerMethodField()
+    # Contact number for the buyer — prefers the linked account, then the snapshot.
+    customer_phone = serializers.SerializerMethodField()
+    # Proof-of-delivery photo — absolute URL for the admin views.
+    proof_image_url = serializers.SerializerMethodField()
+    # Pickup branch (warehouse) details — used by the rider dispatch/detail views.
+    warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
+    warehouse_location = serializers.ReadOnlyField(source='warehouse.location')
+    warehouse_area = serializers.ReadOnlyField(source='warehouse.area.name')
+    salesperson_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'order_number', 'tracking_id', 'status', 'status_display', 'payment_method', 'total_amount',
-            'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'notes',
+            'amount_paid', 'payment_status', 'due_date', 'remaining_amount', 'is_overdue', 'days_overdue',
+            'customer', 'shipping_address', 'phone_number', 'customer_name', 'customer_display_name', 'customer_type', 'customer_phone', 'notes',
+            'delivery_person', 'delivery_person_name', 'discount', 'shipping_cost', 'delivery_fee',
+            'salesperson', 'salesperson_name', 'sale_date',
+            'rider_reported_delivered', 'rider_reported_cancelled', 'customer_reported_delivered',
+            'proof_image_url', 'proof_lat', 'proof_lng', 'proof_at',
+            'warehouse', 'warehouse_name', 'warehouse_location', 'warehouse_area',
             'items', 'created_at', 'updated_at',
             'whatsapp_number', 'whatsapp_sent', 'whatsapp_status', 'whatsapp_sent_at'
         ]
         read_only_fields = ['id', 'tracking_id', 'order_number', 'created_at', 'updated_at']
+
+    def get_delivery_person_name(self, obj):
+        return obj.delivery_person.name if obj.delivery_person_id else None
+
+    def get_salesperson_name(self, obj):
+        u = getattr(obj, 'salesperson', None)
+        if not u:
+            return None
+        full_name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        return full_name or u.username
+
+    def get_proof_image_url(self, obj):
+        if not obj.proof_image:
+            return None
+        try:
+            url = obj.proof_image.url
+        except Exception:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(url) if request else url
+
+    def get_customer_type(self, obj):
+        # Registered ONLY when a real Customer account was selected (POS dropdown),
+        # or an online buyer User that is NOT the staff who created the sale. A POS
+        # walk-in falls back to stamping the creating staff as `user`, so a user_id
+        # equal to created_by must NOT count as a registered customer.
+        if obj.customer_id:
+            return 'registered'
+        if obj.user_id and obj.user_id != obj.created_by_id:
+            return 'registered'
+        return 'walkin'
+
+    def get_customer_phone(self, obj):
+        # Prefer the linked account's phone (real customer / online buyer, not the
+        # staff creator), then fall back to the order's snapshot phone.
+        if obj.customer_id and getattr(obj.customer, 'phone', None):
+            return obj.customer.phone
+        if obj.user_id and obj.user_id != obj.created_by_id:
+            ph = getattr(obj.user, 'phone', None)
+            if ph:
+                return ph
+        snap = (obj.phone_number or '').strip()
+        return snap if snap and snap.upper() != 'N/A' else None
 
     def get_customer_display_name(self, obj):
         """Resolve the real customer name: prefer the linked account, then the
@@ -62,7 +130,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id']
+        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date', 'discount', 'shipping_cost', 'salesperson', 'sale_date']
 
     def create(self, validated_data):
         from django.db import transaction, IntegrityError
@@ -118,9 +186,51 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     'whatsapp_number': validated_data.get('whatsapp_number', ''),
                     'notes': validated_data.get('notes', ''),
                     'payment_method': validated_data.get('payment_method', 'COD'),
-                    'status': validated_data.get('status', 'PENDING')
+                    'status': validated_data.get('status', 'PENDING'),
+                    # COD is collected at the doorstep, so it stays UNPAID until the
+                    # order is delivered/received. Prepaid/online orders and POS sales
+                    # created already-DELIVERED keep the PAID default unless the caller
+                    # sent an explicit payment_status.
+                    'payment_status': (
+                        validated_data.get('payment_status')
+                        or ('UNPAID' if str(validated_data.get('payment_method', 'COD')).upper() == 'COD'
+                            and status_val != 'DELIVERED' else 'PAID')
+                    ),
+                    'amount_paid': validated_data.get('amount_paid', 0) or 0,
+                    'due_date': validated_data.get('due_date'),
+                    # Stamp the branch this sale was made from (drives multi-branch
+                    # isolation). Falls back to null for legacy/online flows.
+                    'warehouse_id': ((validated_data.get('warehouse_id') or '').strip() or None),
+                    'discount': validated_data.get('discount', 0) or 0,
+                    'shipping_cost': validated_data.get('shipping_cost', 0) or 0,
+                    'salesperson': validated_data.get('salesperson'),
+                    'sale_date': validated_data.get('sale_date'),
                 }
-                
+
+                # Stamp the staff member who rang up this sale (POS) so a branch
+                # admin can see the sales they personally created.
+                _actor = getattr(request, 'user', None) if request else None
+                if (_actor and getattr(_actor, 'is_authenticated', False) and getattr(_actor, 'is_staff', False)
+                        and not getattr(_actor, 'is_supplier', False) and not getattr(_actor, 'is_customer', False)):
+                    params['created_by'] = _actor
+
+                # Tenant (owning-Admin) isolation. For staff (POS) the tenant is the
+                # actor's. For a storefront/customer order (tenant_id_for -> None) we
+                # route it to the OWNING ADMIN of the branch the customer chose, so the
+                # order shows in that branch's panel and deducts that branch's stock.
+                from core.scoping import tenant_id_for
+                _tid = tenant_id_for(_actor)
+                if _tid is None and params.get('warehouse_id'):
+                    from modules.users.models import User
+                    _badmin = (User.objects.filter(warehouses__id=params['warehouse_id'])
+                               .exclude(is_superuser=True)
+                               .exclude(role__name__iexact='customer')
+                               .order_by('id').first())
+                    if _badmin:
+                        _tid = tenant_id_for(_badmin)
+                if _tid is not None:
+                    params['tenant_id'] = _tid
+
                 if customer_obj:
                     params['customer'] = customer_obj
                     # We EXCLUDE 'user' to bypass the failing FK constraint
@@ -137,24 +247,30 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         product = Product.objects.get(id=item.get('id'))
                         price = float(item.get('price', product.selling_price))
                         quantity = int(item.get('quantity', 1))
-                        
+                        bonus = int(item.get('bonus_quantity', 0) or 0)
+                        line_discount = float(item.get('discount', 0) or 0)
+                        # Physical units that leave stock = paid qty + free bonus.
+                        deduct_units = quantity + bonus
+
                         OrderItem.objects.create(
                             order=order,
                             product=product,
                             quantity=quantity,
+                            bonus_quantity=bonus,
                             price=price,
+                            discount=line_discount,
                             cost_price=product.cost_price or 0
                         )
-                        total_amount += (price * quantity)
+                        # Charge the line net of its own discount; bonus units are free.
+                        total_amount += (price * quantity) - line_discount
                         
-                        # 3. Handle Reservation / Deduction based on initial status
-                        acceptance_statuses = ["CONFIRMED", "PROCESSING", "SHIPPED"]
-                        if status_val in acceptance_statuses:
-                            product.reserved_quantity = F("reserved_quantity") + quantity
-                            product.save()
-                            order.is_reserved = True
-                        
-                        elif status_val == 'DELIVERED':
+                        # 3. Handle Reservation / Deduction based on initial status.
+                        # DELIVERED deducts physical stock immediately; every other
+                        # ACTIVE status (PENDING included) RESERVES it the moment the
+                        # order is placed so available_quantity drops right away;
+                        # CANCELLED/REJECTED hold nothing.
+                        released_statuses = ["CANCELLED", "REJECTED"]
+                        if status_val == 'DELIVERED':
                             warehouse_id = validated_data.get('warehouse_id')
                             if warehouse_id and warehouse_id.strip():
                                 from modules.inventory.models import Stock
@@ -166,47 +282,51 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                                 except ValueError:
                                     raise serializers.ValidationError(f"Invalid warehouse ID format: {warehouse_id}")
 
-                                # Deduct from Stock entry in SELECTED warehouse (Matching ALL specs)
+                                # Deduct from the SELECTED branch's stock line for this
+                                # product. Identity is NAME + warehouse only (NOT weight/
+                                # size) — the same identity the storefront quantity and the
+                                # sync signal use. Matching on weight/size here made valid
+                                # orders fail with "not registered" whenever a Stock row's
+                                # weight/size drifted from the Product's. Pick the line with
+                                # the most stock so the deduction lands where the units are.
                                 stock = Stock.objects.filter(
                                     product_name__iexact=product.product_name,
-                                    weight=product.weight,
-                                    size=product.size,
                                     warehouse_id=warehouse_id
-                                ).first()
-                                
+                                ).order_by('-total_quantity').first()
+
                                 if not stock:
                                     raise drf_serializers.ValidationError(f"Product '{product.product_name}' is not registered in the selected warehouse.")
                                 
-                                if stock.total_quantity < quantity:
-                                    raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}' in selected warehouse. (Available: {stock.total_quantity}, Required: {quantity})")
-                                
-                                stock.total_quantity = F('total_quantity') - quantity
+                                if stock.total_quantity < deduct_units:
+                                    raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}' in selected warehouse. (Available: {stock.total_quantity}, Required: {deduct_units})")
+
+                                stock.total_quantity = F('total_quantity') - deduct_units
                                 stock.save()
-                                
+
                                 # Deduct from Supplier Product
                                 if hasattr(stock, 'product') and stock.product:
                                     sp_prod = stock.product
-                                    sp_prod.quantity = F('quantity') - quantity
+                                    sp_prod.quantity = F('quantity') - deduct_units
                                     sp_prod.save()
-                                
+
                                 # Trigger Product re-aggregation
                                 product.save()
                             else:
                                 # Fallback to default stock if no warehouse provided (though UI should prevent this)
                                 if product.stock:
                                     stock = product.stock
-                                    if stock.total_quantity < quantity:
-                                        raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}'. (Available: {stock.total_quantity}, Required: {quantity})")
-                                    
-                                    stock.total_quantity = F('total_quantity') - quantity
+                                    if stock.total_quantity < deduct_units:
+                                        raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}'. (Available: {stock.total_quantity}, Required: {deduct_units})")
+
+                                    stock.total_quantity = F('total_quantity') - deduct_units
                                     stock.save()
-                                    
+
                                     if hasattr(stock, 'product') and stock.product:
                                         sp_prod = stock.product
-                                        sp_prod.quantity = F('quantity') - quantity
+                                        sp_prod.quantity = F('quantity') - deduct_units
                                         sp_prod.save()
-                                        
-                                product.total_quantity = F('total_quantity') - quantity
+
+                                product.total_quantity = F('total_quantity') - deduct_units
                                 product.save()
 
                             # 4. Sync to CustomerBoughtProduct Table
@@ -217,15 +337,31 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                                 defaults={
                                     'customer': customer_obj,
                                     'user': user_obj,
-                                    'quantity': quantity,
+                                    'quantity': deduct_units,
                                     'price': price
                                 }
                             )
-                            
+
+                        elif status_val not in released_statuses:
+                            # Reserve on placement (PENDING + every active status).
+                            # available_quantity (max(0, total - reserved)) drops now.
+                            product.reserved_quantity = F("reserved_quantity") + deduct_units
+                            product.save()
+                            order.is_reserved = True
+
                     except (Product.DoesNotExist, ValueError, TypeError, KeyError):
                         continue
                 
-                order.total_amount = total_amount
+                from decimal import Decimal
+                dec_discount = Decimal(str(order.discount or 0))
+                dec_shipping = Decimal(str(order.shipping_cost or 0))
+                order.total_amount = Decimal(str(total_amount)) + dec_shipping - dec_discount
+                # Full (PAID) sales are settled in full at the counter — record the
+                # payment so the remaining balance is zero. POS sales are created
+                # already DELIVERED, so the delivery-time settlement never runs for
+                # them; partial / on-credit sales keep their provided amount_paid.
+                if str(order.payment_status).upper() == 'PAID':
+                    order.amount_paid = order.total_amount
                 order.save()
                 return order
                 
@@ -247,7 +383,9 @@ class PurchaseOrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PurchaseOrderItem
-        fields = ['id', 'product', 'product_name', 'product_image', 'packaging_type', 'items_per_carton', 'quantity', 'price', 'selling_price', 'total_units', 'subtotal']
+        fields = ['id', 'product', 'product_name', 'product_image', 'packaging_type', 'items_per_carton',
+                  'quantity', 'bonus_quantity', 'price', 'selling_price', 'retail_rate', 'expiry_date',
+                  'total_units', 'received_units', 'profit_percent', 'subtotal']
 
     def get_product_image(self, obj):
         if obj.product and obj.product.image:
@@ -255,7 +393,9 @@ class PurchaseOrderItemSerializer(serializers.ModelSerializer):
         return None
 
     def get_subtotal(self, obj):
-        return float(obj.quantity * obj.price)
+        # total_units already accounts for carton packaging (qty × pcs-per-carton);
+        # price is per-piece, so subtotal = total_units × price.
+        return float(obj.total_units * obj.price)
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
@@ -266,19 +406,46 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.SerializerMethodField()
     order_number = serializers.CharField(source='purchase_number', read_only=True)
     remaining_amount = serializers.ReadOnlyField()
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
+    created_by_name = serializers.SerializerMethodField()
+    staff_name = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrder
         fields = [
             'id', 'order_number', 'purchase_number', 'supplier', 'supplier_name', 'reference_number',
             'warehouse', 'warehouse_name', 'total_amount', 'shipping_cost', 'tax_amount',
-            'status', 'payment_status', 'payment_method', 'order_date', 'expected_delivery_date', 'notes', 'items',
-            'supplier_phone', 'supplier_email', 'paid_amount', 'remaining_amount', 'payment_date', 
-            'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed'
+            'extra_discount', 'staff', 'staff_name',
+            'status', 'payment_status', 'payment_method', 'order_date', 'expected_delivery_date',
+            'due_date', 'is_overdue', 'days_overdue', 'notes', 'items',
+            'supplier_phone', 'supplier_email', 'paid_amount', 'remaining_amount', 'payment_date',
+            'payment_notes', 'payment_slip', 'transaction_id', 'payment_confirmed',
+            'created_by', 'created_by_name'
         ]
+        # Ownership fields are server-stamped — clients cannot spoof them.
+        read_only_fields = ['created_by', 'warehouse']
+
+    def get_staff_name(self, obj):
+        u = getattr(obj, 'staff', None)
+        if not u:
+            return None
+        full_name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        return full_name or u.username
+
+    def get_created_by_name(self, obj):
+        u = getattr(obj, 'created_by', None)
+        if not u:
+            return None
+        full_name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        return full_name or u.username
 
     def get_supplier_name(self, obj):
-        return obj.supplier.username if obj.supplier else 'Internal'
+        if not obj.supplier:
+            return 'Internal'
+        s = obj.supplier
+        full_name = f"{s.first_name or ''} {s.last_name or ''}".strip()
+        return s.name or s.company or full_name or s.username
 
     def get_warehouse_name(self, obj):
         return obj.warehouse.name if obj.warehouse else 'Default Warehouse'
@@ -308,16 +475,23 @@ class PurchaseReturnSerializer(serializers.ModelSerializer):
     items = PurchaseReturnItemSerializer(many=True, read_only=True)
     supplier_name = serializers.SerializerMethodField()
     purchase_number = serializers.ReadOnlyField(source='purchase_order.purchase_number')
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
 
     class Meta:
         model = PurchaseReturn
         fields = [
             'id', 'return_number', 'supplier', 'supplier_name', 'purchase_order', 'purchase_number',
-            'status', 'reason', 'return_date', 'total_refund_amount', 'items', 'created_at'
+            'status', 'reason', 'return_date', 'total_refund_amount', 'items', 'created_at',
+            'refund_status', 'refund_method', 'due_date', 'settled_at', 'is_overdue', 'days_overdue',
         ]
 
     def get_supplier_name(self, obj):
-        return obj.supplier.username if obj.supplier else 'Unknown'
+        if not obj.supplier:
+            return 'Unknown'
+        s = obj.supplier
+        full_name = f"{s.first_name or ''} {s.last_name or ''}".strip()
+        return s.name or s.company or full_name or s.username
 
 class CustomerBoughtProductSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.product_name')
@@ -352,14 +526,24 @@ class SaleReturnSerializer(serializers.ModelSerializer):
     items = SaleReturnItemSerializer(many=True, read_only=True)
     customer_name = serializers.SerializerMethodField()
     order_tracking_id = serializers.ReadOnlyField(source='order.tracking_id')
+    refund_total = serializers.SerializerMethodField()
+    is_overdue = serializers.ReadOnlyField()
+    days_overdue = serializers.ReadOnlyField()
 
     class Meta:
         model = SaleReturn
         fields = [
             'id', 'return_number', 'order', 'order_tracking_id', 'customer', 'customer_name',
-            'status', 'reason', 'notes', 'items', 'created_at', 'updated_at'
+            'status', 'reason', 'notes', 'items', 'created_at', 'updated_at',
+            'refund_amount', 'refund_total', 'refund_status', 'refund_method', 'due_date',
+            'settled_at', 'is_overdue', 'days_overdue',
         ]
         read_only_fields = ['id', 'return_number', 'created_at', 'updated_at']
+
+    def get_refund_total(self, obj):
+        # Prefer the stored refund amount; fall back to the line-item total.
+        amt = float(obj.refund_amount or 0)
+        return amt if amt > 0 else float(obj.items_total or 0)
 
     def get_customer_name(self, obj):
         if obj.customer: return obj.customer.name

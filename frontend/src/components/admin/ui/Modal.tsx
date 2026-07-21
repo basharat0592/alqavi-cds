@@ -46,11 +46,12 @@ export function Modal({
             <div
                 className={cn(
                     'relative w-full bg-white rounded-2xl shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200',
+                    'max-h-[90vh] flex flex-col overflow-hidden',
                     sizes[size],
                 )}
             >
                 {title && (
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
                         <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">{title}</h3>
                         <button
                             onClick={onClose}
@@ -61,9 +62,9 @@ export function Modal({
                         </button>
                     </div>
                 )}
-                <div className="p-5">{children}</div>
+                <div className="p-5 overflow-y-auto">{children}</div>
                 {footer && (
-                    <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+                    <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl shrink-0">
                         {footer}
                     </div>
                 )}

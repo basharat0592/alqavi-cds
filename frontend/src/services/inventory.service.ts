@@ -7,8 +7,14 @@ import api from '@/lib/axios';
 export const inventoryService = {
     // ── Warehouses ───────────────────────────────────────────────────────────
     getWarehouses: async (params?: any): Promise<any[]> => {
-        const { data } = await api.get('v1/inventory/warehouses/', { params });
+        // Branch pickers/lists need EVERY branch — never just the first page.
+        const { data } = await api.get('v1/inventory/warehouses/', { params: { no_pagination: 'true', ...params } });
         return data.results || data || [];
+    },
+    // Public list of active branches (no auth) — used by the storefront branch picker.
+    getPublicBranches: async (): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/public-branches/');
+        return Array.isArray(data) ? data : (data?.results || []);
     },
     createWarehouse: async (payload: any): Promise<any> => {
         const { data } = await api.post('v1/inventory/warehouses/', payload);
@@ -40,13 +46,16 @@ export const inventoryService = {
         if (!id) return;
         await api.delete(`v1/inventory/stocks/${id}/`);
     },
-    transferStock: async (id: string | number, payload: { destination_warehouse: string | number; quantity: number; date?: string }): Promise<any> => {
-        const { data } = await api.post(`v1/inventory/stocks/${id}/transfer/`, payload);
-        return data;
-    },
+
     getStockMovements: async (stockId: string | number): Promise<any[]> => {
         const { data } = await api.get(`v1/inventory/stocks/${stockId}/movements/`);
         return data;
+    },
+    // Per-branch low-stock alerts (tenant + branch scoped, vs Product.min_count).
+    // Pass { warehouse } to narrow to one branch.
+    getLowStock: async (params?: any): Promise<any[]> => {
+        const { data } = await api.get('v1/inventory/stocks/low_stock/', { params });
+        return Array.isArray(data) ? data : (data?.results || []);
     },
 
     // Legacy or placeholder methods - keeping for safety but may be removed if not used

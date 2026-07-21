@@ -144,6 +144,8 @@ function DealsContent() {
                                         price={parseFloat(p.selling_price || p.price || 0)}
                                         originalPrice={p.original_price}
                                         category={p.category_name || 'Beauty'}
+                                        city={p.warehouse_area}
+                                        branch={p.warehouse_name}
                                         stock={p.quantity_in_stock || p.total_quantity}
                                     />
                                 ))}

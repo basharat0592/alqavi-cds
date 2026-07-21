@@ -2,6 +2,7 @@
 Users module models.
 """
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from core.models import BaseModel
 from core.mixins import StatusMixin
@@ -61,6 +62,12 @@ class Role(models.Model):
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Owning Admin (tenant) — NULL = global/system role (Admin, Super Admin,
+    # Supplier, …) shared by all tenants; set = a tenant's own custom role.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_roles'
+    )
     
     class Meta:
         ordering = ['name']
@@ -116,8 +123,27 @@ class User(AbstractUser, StatusMixin):
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_login_at = models.DateTimeField(null=True, blank=True)
     plain_password = models.CharField(max_length=255, blank=True, null=True)
+    # Pages the user may VIEW (open). Page hrefs, e.g. "/admin/orders".
     page_permissions = models.JSONField(default=list, blank=True)
-    
+    # Subset of those pages the user may also EDIT (perform writes on).
+    page_edit_permissions = models.JSONField(default=list, blank=True)
+    # Areas an Area Manager is responsible for (empty for non-area roles).
+    areas = models.ManyToManyField('company.Area', blank=True, related_name='managers')
+    # Branches (warehouses) this admin manages. Drives multi-branch data
+    # isolation: a non-super-admin only ever sees data for these warehouses.
+    # Empty + not super admin == sees nothing (fail closed).
+    warehouses = models.ManyToManyField('inventory.Warehouse', blank=True, related_name='admins')
+    # The owning Admin (tenant) — the PRIMARY data-isolation axis. A staff
+    # sub-user's tenant points at the Admin they belong to (so they share that
+    # Admin's workspace). An Admin AND the Super Admin both leave this NULL: an
+    # Admin resolves to their OWN id and the Super Admin is the cross-tenant
+    # platform operator (see core.scoping.tenant_id_for). PROTECT stops deleting
+    # an Admin who still owns staff.
+    tenant = models.ForeignKey(
+        'self', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_members'
+    )
+
     class Meta:
         ordering = ['-date_joined']
         indexes = [
@@ -173,7 +199,13 @@ class UserActivityLog(models.Model):
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    
+    # Owning Admin (tenant) — stamped from the actor's tenant; scopes the activity
+    # feed per-Admin. NULL for guest/CMS/system events.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tenant_activity_logs'
+    )
+
     class Meta:
         ordering = ['-timestamp']
         indexes = [
@@ -182,6 +214,21 @@ class UserActivityLog(models.Model):
             models.Index(fields=['-timestamp']),
         ]
     
+    def save(self, *args, **kwargs):
+        # Auto-stamp the owning Admin (tenant) from the acting user so the
+        # notification feed is isolated per-Admin without every call site having
+        # to pass it. A staff/admin actor resolves to their tenant; the platform
+        # operator (super admin) and shadow/guest users resolve to None (NULL =
+        # global/system event, visible only to the super admin). Guest storefront
+        # events that DO belong to a branch pass tenant_id explicitly at creation.
+        if self.tenant_id is None and self.user_id is not None:
+            try:
+                from core.scoping import tenant_id_for
+                self.tenant_id = tenant_id_for(self.user)
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user} - {self.action} - {self.timestamp}"
 

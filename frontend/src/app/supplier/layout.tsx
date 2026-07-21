@@ -199,8 +199,8 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
                                                 <User size={18} className="text-slate-400 group-hover:text-[#00b4d8]" />
                                                 <span className="text-[13px] font-bold">My Profile</span>
                                             </Link>
-                                            <Link 
-                                                href="/supplier/settings" 
+                                            <Link
+                                                href="/supplier/profile"
                                                 onClick={() => setIsProfileOpen(false)}
                                                 className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-[#00b4d8] transition-all group"
                                             >

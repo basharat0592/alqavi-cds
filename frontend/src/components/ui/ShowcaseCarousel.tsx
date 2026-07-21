@@ -18,13 +18,15 @@ export default function ShowcaseCarousel({ products }: ShowcaseCarouselProps) {
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
     const [active, setActive] = useState(() => Math.floor((products?.length || 1) / 2));
     const [imgIdx, setImgIdx] = useState<Record<string, number>>({});
+    // Swipe / drag navigation (works with touch and mouse).
+    // NOTE: every hook must run before any early return — otherwise the hook
+    // count changes between an empty-products render and a populated one,
+    // which throws React error #300 and white-screens the page.
+    const dragStartX = useRef<number | null>(null);
 
     if (!products || products.length === 0) return null;
 
     const clampActive = (i: number) => Math.max(0, Math.min(products.length - 1, i));
-
-    // Swipe / drag navigation (works with touch and mouse)
-    const dragStartX = useRef<number | null>(null);
     const onPointerDown = (e: React.PointerEvent) => { dragStartX.current = e.clientX; };
     const onPointerUp = (e: React.PointerEvent) => {
         if (dragStartX.current === null) return;

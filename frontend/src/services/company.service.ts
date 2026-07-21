@@ -70,7 +70,7 @@ export const companyService = {
 
     // ── Suppliers ───────────────────────────────────────────────────────────
     getSuppliers: async (): Promise<any[]> => {
-        const { data } = await api.get('/v1/company/suppliers/');
+        const { data } = await api.get('/v1/company/suppliers/', { params: { no_pagination: 'true' } });
         return Array.isArray(data) ? data : data.results || [];
     },
     getSupplierById: async (id: number | string): Promise<any> => {

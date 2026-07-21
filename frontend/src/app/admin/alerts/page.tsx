@@ -1,33 +1,55 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { productService, orderService, userService } from '@/lib/api';
+import { orderService, userService, inventoryService } from '@/lib/api';
 import { purchaseService } from '@/services/purchase.service';
+import { paymentsDueService } from '@/services/payment.service';
 import {
     AlertTriangle, ShoppingBag, CheckCircle2, Clock,
     RefreshCw, Plus, Activity, ClipboardList,
-    ShoppingCart, UserPlus, XCircle, ShieldCheck
+    ShoppingCart, UserPlus, XCircle, ShieldCheck,
+    Wallet, CalendarClock, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import PageLoader from '@/components/ui/PageLoader';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
+
+const DUE_LINK: Record<string, string> = {
+    sale: '/admin/sales',
+    purchase: '/admin/purchases',
+    sale_return: '/admin/sale-returns',
+    purchase_return: '/admin/purchases/returns',
+};
+const DUE_TYPE_LABEL: Record<string, string> = {
+    sale: 'Sale', purchase: 'Purchase', sale_return: 'Sale Refund', purchase_return: 'Purchase Refund',
+};
+const money = (n: number) => `Rs ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
 export default function AlertsPage() {
     const [loading, setLoading] = useState(true);
     const [alerts, setAlerts] = useState<any[]>([]);
     const [activities, setActivities] = useState<any[]>([]);
+    const [due, setDue] = useState<any[]>([]);
+    const [dueSummary, setDueSummary] = useState<any>({ overdue: 0, due_soon: 0, upcoming: 0, total_outstanding: 0, overdue_amount: 0 });
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const pollingRef = useRef<any>(null);
 
     const fetchData = async (isSilent = false) => {
         if (!isSilent) setLoading(true);
         try {
-            const [pRes, oRes, uRes, purRes] = await Promise.allSettled([
-                productService.getAll(),
+            const [pRes, oRes, uRes, purRes, dueRes] = await Promise.allSettled([
+                inventoryService.getLowStock(),
                 orderService.getAll(),
                 userService.getAll(),
-                purchaseService.getAll()
+                purchaseService.getAll(),
+                paymentsDueService.get('all'),
             ]);
+
+            if (dueRes.status === 'fulfilled' && dueRes.value) {
+                setDue(Array.isArray(dueRes.value.results) ? dueRes.value.results : []);
+                setDueSummary(dueRes.value.summary || {});
+            }
 
             const newAlerts: any[] = [];
             const newActivities: any[] = [];
@@ -40,28 +62,30 @@ export default function AlertsPage() {
                 return [];
             };
 
-            const products = getArr(pRes);
-            products.forEach((p: any) => {
-                const stock = parseInt(p.quantity_in_stock ?? p.stock ?? 0);
-                if (stock < 10) {
-                    newAlerts.push({
-                        id: `stock-${p.id}`,
-                        productId: p.id,
-                        type: stock === 0 ? 'Out of Stock' : 'Low Stock',
-                        priority: stock === 0 ? 'high' : 'medium',
-                        title: stock === 0 ? 'Out of Stock' : 'Low Stock',
-                        product: p.name,
-                        remaining: stock,
-                        supplierName: p.supplier_name || p.company_name || 'Al-Qavi Hub',
-                        sku: p.sku || 'No Identifier',
-                        time: 'Live',
-                        href: `/admin/products?search=${p.name}`,
-                        icon: stock === 0 ? XCircle : AlertTriangle,
-                        color: stock === 0 ? 'text-red-600' : 'text-amber-600',
-                        bg: stock === 0 ? 'bg-red-50' : 'bg-amber-50',
-                        border: stock === 0 ? 'border-red-200' : 'border-amber-200',
-                    });
-                }
+            // Per-branch low stock from the server (tenant + branch scoped, vs each
+            // product's min_count) — not a hardcoded client-side threshold.
+            const lowStock = getArr(pRes);
+            lowStock.forEach((p: any) => {
+                const qty = parseInt(p.qty ?? 0);
+                const isOut = qty <= 0;
+                newAlerts.push({
+                    id: `stock-${p.product_name}`,
+                    type: isOut ? 'Out of Stock' : 'Low Stock',
+                    priority: isOut ? 'high' : 'medium',
+                    title: isOut ? 'Out of Stock' : 'Low Stock',
+                    product: p.product_name,
+                    remaining: qty,
+                    min: p.min,
+                    supplierName: p.supplier || 'Al-Qavi Hub',
+                    supplierId: p.supplier || '',
+                    sku: p.sku || 'No Identifier',
+                    time: 'Live',
+                    href: `/admin/products?search=${encodeURIComponent(p.product_name || '')}`,
+                    icon: isOut ? XCircle : AlertTriangle,
+                    color: isOut ? 'text-red-600' : 'text-amber-600',
+                    bg: isOut ? 'bg-red-50' : 'bg-amber-50',
+                    border: isOut ? 'border-red-200' : 'border-amber-200',
+                });
             });
 
             const orders = getArr(oRes);
@@ -130,6 +154,18 @@ export default function AlertsPage() {
     const outOfStockCount = alerts.filter(a => a.priority === 'high').length;
     const lowStockCount = alerts.length - outOfStockCount;
 
+    // Real system status — anything out of stock or overdue is critical; low stock
+    // or a payment due soon is a warning. Only a genuinely clean board reads green.
+    const overdueCount = Number(dueSummary.overdue || 0);
+    const dueSoonCount = Number(dueSummary.due_soon || 0);
+    const criticalCount = outOfStockCount + overdueCount;
+    const warningCount = lowStockCount + dueSoonCount;
+    const status = criticalCount > 0
+        ? { tone: 'red' as const, label: `${criticalCount} Need${criticalCount === 1 ? 's' : ''} Action`, Icon: AlertTriangle }
+        : warningCount > 0
+            ? { tone: 'amber' as const, label: `${warningCount} Need${warningCount === 1 ? 's' : ''} Attention`, Icon: Clock }
+            : { tone: 'green' as const, label: 'All Systems Good', Icon: ShieldCheck };
+
     return (
         <div className="text-left">
 
@@ -139,8 +175,8 @@ export default function AlertsPage() {
                 breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'System Alerts' }]}
                 actions={
                     <div className="flex items-center gap-3">
-                        <Badge tone="green">
-                            <ShieldCheck className="h-3.5 w-3.5" /> All Systems Good
+                        <Badge tone={status.tone}>
+                            <status.Icon className="h-3.5 w-3.5" /> {status.label}
                         </Badge>
                         <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading}>
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -151,6 +187,68 @@ export default function AlertsPage() {
 
             <div className="space-y-8">
 
+                {/* PAYMENTS DUE & OVERDUE */}
+                <section className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                <Wallet className="h-4 w-4 text-indigo-600" /> Payments Due
+                            </h2>
+                            <p className="text-[12px] text-slate-500 mt-0.5">Outstanding settlements across sales, purchases and refunds</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {dueSummary.overdue > 0 && <Badge tone="red">{dueSummary.overdue} Overdue · {money(dueSummary.overdue_amount)}</Badge>}
+                            {dueSummary.due_soon > 0 && <Badge tone="amber">{dueSummary.due_soon} Due Soon</Badge>}
+                            <Badge tone="neutral">{money(dueSummary.total_outstanding)} Outstanding</Badge>
+                        </div>
+                    </div>
+
+                    {due.length === 0 ? (
+                        <Card className="p-10 text-center">
+                            <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                                <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                            </div>
+                            <p className="text-[13px] font-semibold text-slate-500">No outstanding payments. Everything is settled.</p>
+                        </Card>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {due.slice(0, 12).map((d, i) => {
+                                const overdue = d.bucket === 'overdue';
+                                const soon = d.bucket === 'due_soon';
+                                const tone = overdue ? { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' }
+                                    : soon ? { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' }
+                                        : { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200' };
+                                return (
+                                    <Link key={`${d.type}-${d.ref}-${i}`} href={DUE_LINK[d.type] || '/admin/payments'}
+                                        className={`group block rounded-xl border bg-white p-3.5 hover:shadow-md transition-all ${tone.border}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${tone.text} ${tone.bg} ${tone.border}`}>
+                                                {DUE_TYPE_LABEL[d.type] || d.type}
+                                            </span>
+                                            <span className={`text-[10px] font-bold flex items-center gap-1 ${tone.text}`}>
+                                                {overdue ? <><AlertTriangle className="h-3 w-3" /> {d.days_overdue}d late</>
+                                                    : soon ? <><CalendarClock className="h-3 w-3" /> Due soon</>
+                                                        : d.due_date ? <><CalendarClock className="h-3 w-3" /> {formatDate(d.due_date)}</> : 'No due date'}
+                                            </span>
+                                        </div>
+                                        <p className="text-[13px] font-bold text-slate-900 truncate">{d.party}</p>
+                                        <p className="text-[10.5px] text-slate-400 font-medium mb-2">#{d.ref}</p>
+                                        <div className="flex items-end justify-between">
+                                            <div>
+                                                <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Remaining</p>
+                                                <p className={`text-[15px] font-bold tabular-nums ${tone.text}`}>{money(d.remaining)}</p>
+                                            </div>
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 group-hover:gap-1.5 transition-all">
+                                                Settle <ArrowRight className="h-3 w-3" />
+                                            </span>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
+
                 {/* INVENTORY MESH MONITOR */}
                 <section className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -160,8 +258,13 @@ export default function AlertsPage() {
                             </h2>
                             <p className="text-[12px] text-slate-500 mt-0.5">Products running low or out of stock</p>
                         </div>
-                        <Badge tone="red" className="self-start sm:self-auto">
-                            {outOfStockCount} Out of Stock / {lowStockCount} Low Stock
+                        <Badge
+                            tone={outOfStockCount > 0 ? 'red' : lowStockCount > 0 ? 'amber' : 'green'}
+                            className="self-start sm:self-auto"
+                        >
+                            {alerts.length === 0
+                                ? 'All stocked'
+                                : `${outOfStockCount} Out of Stock · ${lowStockCount} Low Stock`}
                         </Badge>
                     </div>
 
@@ -195,7 +298,11 @@ export default function AlertsPage() {
                                         </div>
                                     </div>
                                     <div className="p-4 pt-0">
-                                        <Link href={`/admin/purchases/add?product_id=${a.productId}&product_name=${encodeURIComponent(a.product)}&quantity=0`} className="block w-full">
+                                        <Link href={`/admin/purchases/add?${new URLSearchParams({
+                                            ...(a.supplierId ? { supplier: String(a.supplierId) } : {}),
+                                            ...(a.sku && a.sku !== 'No Identifier' ? { sku: a.sku } : {}),
+                                            product_name: a.product || '',
+                                        }).toString()}`} className="block w-full">
                                             <Button variant="outline" size="sm" className="w-full uppercase tracking-wider text-[11px]">
                                                 <Plus size={13} /> Order Stock
                                             </Button>
@@ -230,8 +337,8 @@ export default function AlertsPage() {
                                                 <Badge tone="neutral">{act.type}</Badge>
                                                 <h3 className="text-[13px] font-bold text-slate-900 tracking-tight">{act.title}</h3>
                                             </div>
-                                            <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider tabular-nums">
-                                                <Clock size={11} className="text-indigo-600" /> {act.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 tracking-wider tabular-nums whitespace-nowrap">
+                                                <Clock size={11} className="text-indigo-600" /> {formatDateTime(act.time.toISOString())}
                                             </div>
                                         </div>
                                         <p className="text-[12px] text-slate-600 font-medium leading-relaxed">{act.message}</p>

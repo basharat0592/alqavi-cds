@@ -3,7 +3,7 @@ import { Order, PaginatedResponse } from '@/types';
 
 export const orderService = {
     getAll: async (params?: any) => {
-        const response = await api.get('v1/sales/orders/', { params });
+        const response = await api.get('v1/sales/orders/', { params: { no_pagination: 'true', ...params } });
         return response.data.results || response.data || [];
     },
     getPaginated: async (params?: any): Promise<PaginatedResponse<Order>> => {
@@ -33,6 +33,11 @@ export const orderService = {
         const response = await api.patch(`v1/sales/orders/${id}/`, data);
         return response.data;
     },
+    // Dedicated settlement-date update (works even on locked/delivered orders).
+    setDueDate: async (id: string, due_date: string) => {
+        const response = await api.patch(`v1/sales/orders/${id}/set_due_date/`, { due_date });
+        return response.data;
+    },
     delete: async (id: string) => {
         await api.delete(`v1/sales/orders/${id}/`);
     },
@@ -43,5 +48,13 @@ export const orderService = {
     getBoughtProducts: async () => {
         const response = await api.get('v1/sales/orders/bought_products/');
         return response.data.results || response.data || [];
-    }
+    },
+    // Outstanding balance (previous unpaid dues) for a registered customer — POS Prev. Bal.
+    // Pass excludeOrderId to leave the current sale out (invoice / detail views).
+    getCustomerBalance: async (customerId: string, excludeOrderId?: string) => {
+        const params: any = { customer: customerId };
+        if (excludeOrderId) params.exclude = excludeOrderId;
+        const response = await api.get('v1/sales/orders/customer_balance/', { params });
+        return response.data;
+    },
 };

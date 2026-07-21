@@ -16,6 +16,7 @@ export interface DashboardData {
     recentUsers: any[];
     topProducts: any[];
     products: any[];
+    lowStock: any[];
     orders: any[];
     revenueData: RevenueDataPoint[];
     revenueData30: RevenueDataPoint[];
@@ -46,6 +47,7 @@ export const useAdminDashboard = (filters: { date?: string; payment_method?: str
         recentUsers: [],
         topProducts: [],
         products: [],
+        lowStock: [],
         orders: [],
         revenueData: [],
         revenueData30: [],
@@ -96,6 +98,7 @@ export const useAdminDashboard = (filters: { date?: string; payment_method?: str
                 recentUsers: users.slice(-5).reverse(),
                 topProducts: statsData.top_products || [],
                 products: products,
+                lowStock: statsData.low_stock || [],
                 orders: statsData.recent_orders || [],
                 revenueData: history.slice(-7),
                 revenueData30: history,

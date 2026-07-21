@@ -97,7 +97,7 @@ export default function AddReturnPage() {
                     Back to Returns
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-normal text-[#111]">Request a Return</h1>
+                    <h1 className="text-2xl font-semibold text-[#111]">Request a Return</h1>
                     <p className="text-sm text-gray-600 mt-1 italic">
                         Select an item purchased and <span className="font-bold text-[#111]">delivered</span> within the last 30 days to initiate a return request.
                     </p>

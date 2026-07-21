@@ -5,10 +5,12 @@ import { createPortal } from 'react-dom';
 import { Package, Clock, MapPin, LayoutDashboard, Globe, MoreHorizontal, User, Phone, CheckCircle2, XCircle, AlertCircle, AlertTriangle, RefreshCw, Filter, ArrowRight, Eye, Printer, Hash, CreditCard, ShoppingCart, ChevronDown, Loader2, Truck, X, CheckCircle, Info, Lock, Trash2, MessageCircle, Send } from 'lucide-react';
 import Link from 'next/link';
 import { salesService, orderService, inventoryService } from '@/lib/api';
+import { deliveryService } from '@/services/delivery.service';
+import { authService } from '@/lib/auth';
 import PageLoader from '@/components/ui/PageLoader';
 import { Modal } from '@/components/ui/Modal';
 import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
-import { formatDate, formatCurrency } from '@/lib/utils';
+import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ function StatusDropdown({ order, updating, onSelect }: { order: any; updating: b
 export default function AdminOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ACTIVE');
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -148,6 +150,27 @@ export default function AdminOrdersPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
 
+    // Branch context of the logged-in admin (drives branch-isolated delivery:
+    // a branch admin fulfils from their OWN branch, auto-selected — no picker).
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [myWarehouses, setMyWarehouses] = useState<any[]>([]);
+
+    // Ship → assign rider (optional) modal
+    const [shipModal, setShipModal] = useState<{ orderId: string; order?: any } | null>(null);
+    const [shipMode, setShipMode] = useState<'specific' | 'all'>('all');
+    const [shipRiderId, setShipRiderId] = useState<string>('');
+    const [shipFee, setShipFee] = useState<string>('');
+    const [shippingNow, setShippingNow] = useState(false);
+
+    // Pickup point for an order = its branch (warehouse) address.
+    const pickupOf = (order: any) => {
+        const wid = order?.warehouse || order?.warehouse_id;
+        const wh = warehouses.find((w: any) => String(w.id) === String(wid));
+        const name = wh?.name || order?.warehouse_name || 'Branch';
+        const loc = wh?.location || wh?.address || '';
+        return { name, loc };
+    };
+
     // Delete States
     const [deleteTarget, setDeleteTarget] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -155,10 +178,21 @@ export default function AdminOrdersPage() {
     // WhatsApp confirmation popup
     const [waModal, setWaModal] = useState<{ number: string; message: string; tracking: string } | null>(null);
 
+    // Delivery riders (for assigning an order to a rider)
+    const [riders, setRiders] = useState<any[]>([]);
+
     useEffect(() => {
         loadOrders();
         inventoryService.getWarehouses().then(setWarehouses).catch(() => []);
         inventoryService.getInventory().then(setAllStocks).catch(() => []);
+        deliveryService.getAll().then(setRiders).catch(() => setRiders([]));
+        // Resolve the admin's branch context (client-only — reads sessionStorage).
+        setIsSuperAdmin(authService.isSuperAdmin());
+        setMyWarehouses((authService.getUser() as any)?.warehouses || []);
+        // Live sync: silently refresh so a rider's "reported delivered" (and any other
+        // status change) shows up without a manual refresh.
+        const id = setInterval(() => loadOrders(true), 12000);
+        return () => clearInterval(id);
     }, []);
 
     const activeOrders = useMemo(() => {
@@ -172,7 +206,42 @@ export default function AdminOrdersPage() {
     const handleStatusUpdateWithLoading = async (id: string, newStatus: string) => {
         const order = orders.find((o: any) => o.id?.toString() === id.toString());
         if (newStatus.toLowerCase() === 'delivered') {
-            setDeliveryModal({ orderId: id, status: newStatus, order });
+            // Super admin must pick which branch fulfils the order → show the picker.
+            if (isSuperAdmin) {
+                setSelectedWarehouse('');
+                setDeliveryModal({ orderId: id, status: newStatus, order });
+                return;
+            }
+            // Branch admin: deliver directly, NO popup. The backend auto-deducts
+            // from their OWN branch and books the sale to their branch accounts.
+            setUpdatingRow(id);
+            try {
+                await orderService.update(id, { status: 'DELIVERED' });
+                toast.success('Order delivered & stock deducted');
+                loadOrders();
+            } catch (err: any) {
+                const code = err?.response?.status;
+                const msg = err?.response?.data?.error || 'Delivery update failed';
+                // 400 = branch couldn't be auto-resolved (admin manages several) →
+                // fall back to the picker so they can choose one of THEIR branches.
+                if (code === 400) {
+                    setSelectedWarehouse('');
+                    setDeliveryModal({ orderId: id, status: newStatus, order });
+                } else {
+                    toast.error(msg);
+                }
+            } finally {
+                setUpdatingRow(null);
+            }
+            return;
+        }
+        // Shipping out → dispatch modal: assign a specific rider OR offer to all riders.
+        if (newStatus.toLowerCase() === 'shipped') {
+            const hasRider = !!order?.delivery_person;
+            setShipMode(hasRider ? 'specific' : 'all');
+            setShipRiderId(hasRider ? String(order.delivery_person) : '');
+            setShipFee(order?.delivery_fee && Number(order.delivery_fee) > 0 ? String(order.delivery_fee) : '');
+            setShipModal({ orderId: id, order });
             return;
         }
 
@@ -184,12 +253,38 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const loadOrders = async () => {
-        setLoading(true);
+    // Confirm "Shipped": either assign to ONE rider, or offer to ALL riders (rider left
+    // unassigned so it shows in every branch rider's feed to claim). The offered price
+    // (delivery_fee) is saved either way so riders see what's on offer.
+    const confirmShip = async () => {
+        if (!shipModal) return;
+        if (shipMode === 'specific' && !shipRiderId) { toast.error('Pick a rider, or switch to "Offer to all riders".'); return; }
+        setShippingNow(true);
+        setUpdatingRow(shipModal.orderId);
+        try {
+            // specific → assign that rider; all → clear rider (null) so it broadcasts.
+            const riderId = shipMode === 'specific' ? shipRiderId : null;
+            // System (salaried) riders carry no per-delivery charge.
+            const isSystem = shipMode === 'specific' && !!riders.find((r: any) => String(r.id) === shipRiderId)?.is_system;
+            await deliveryService.assignToOrder(shipModal.orderId, riderId, isSystem ? 0 : (shipFee || 0));
+            await handleStatusUpdate(shipModal.orderId, 'SHIPPED');
+            setShipModal(null);
+            setShipRiderId('');
+            setShipFee('');
+        } catch {
+            toast.error('Failed to ship order');
+        } finally {
+            setShippingNow(false);
+            setUpdatingRow(null);
+        }
+    };
+
+    const loadOrders = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const data = await salesService.getAdminOrders({ no_pagination: 'true' });
             setOrders(data || []);
-        } catch (err) { toast.error("Failed to load orders"); } finally { setLoading(false); }
+        } catch (err) { if (!silent) toast.error("Failed to load orders"); } finally { if (!silent) setLoading(false); }
     };
 
     const handleStatusUpdate = async (id: string, newStatus: string) => {
@@ -292,9 +387,18 @@ export default function AdminOrdersPage() {
     const warehouseStockInfo = getWarehouseStockInfo();
     const hasEnoughStock = warehouseStockInfo.every((i: { insufficient: boolean }) => !i.insufficient);
 
+    // The delivery picker only appears for the super admin (who chooses any
+    // branch) or as a fallback when a multi-branch admin's branch couldn't be
+    // auto-resolved — in which case limit the options to THEIR own branches.
+    const deliveryWarehouseOptions = isSuperAdmin ? warehouses : myWarehouses;
+
     const filtered = (orders || []).filter(o => {
-        const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
-        return matchesStatus;
+        const st = (o.status || '').toUpperCase();
+        // 'ACTIVE' = the fulfilment pipeline (everything except finished orders).
+        // Selecting DELIVERED / CANCELLED makes completed orders reachable here too.
+        if (statusFilter === 'ACTIVE') return st !== 'DELIVERED' && st !== 'CANCELLED';
+        if (statusFilter === 'ALL') return true;
+        return st === statusFilter;
     });
 
     // Reset to page 1 when filters change
@@ -309,10 +413,10 @@ export default function AdminOrdersPage() {
         <div className="pb-20">
             <div className="max-w-[1440px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
                 <PageHeader
-                    title="Orders"
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Orders' }]}
+                    title="Recent Orders"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Recent Orders' }]}
                     actions={
-                        <Button variant="outline" onClick={loadOrders} disabled={loading} className="w-full sm:w-auto">
+                        <Button variant="outline" onClick={() => loadOrders()} disabled={loading} className="w-full sm:w-auto">
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Pipeline
                         </Button>
                     }
@@ -322,16 +426,32 @@ export default function AdminOrdersPage() {
                 <Card className="overflow-hidden mb-8">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Active Orders Pipeline</h2>
+                            <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Recent Orders</h2>
                             {activeOrders.filter(o => o.status === 'PENDING').length > 0 && (
                                 <Badge tone="amber" className="animate-pulse">
                                     {activeOrders.filter(o => o.status === 'PENDING').length} Pending Acceptance
                                 </Badge>
                             )}
                         </div>
-                        <span className="text-[12px] text-slate-500 font-semibold">
-                            Showing {activeOrders.length} active orders
-                        </span>
+                        <div className="flex items-center gap-3">
+                            <select
+                                value={statusFilter}
+                                onChange={e => setStatusFilter(e.target.value)}
+                                className="h-9 px-3 text-[12px] font-semibold bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer"
+                            >
+                                <option value="ACTIVE">Active pipeline</option>
+                                <option value="ALL">All orders</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="CONFIRMED">Confirmed</option>
+                                <option value="PROCESSING">Processing</option>
+                                <option value="SHIPPED">Shipped</option>
+                                <option value="DELIVERED">Delivered</option>
+                                <option value="CANCELLED">Cancelled</option>
+                            </select>
+                            <span className="text-[12px] text-slate-500 font-semibold whitespace-nowrap">
+                                {filtered.length} order{filtered.length === 1 ? '' : 's'}
+                            </span>
+                        </div>
                     </div>
 
 
@@ -348,8 +468,8 @@ export default function AdminOrdersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {activeOrders.length > 0 ? (
-                                    activeOrders.map((order: any) => (
+                                {paginatedData.length > 0 ? (
+                                    paginatedData.map((order: any) => (
                                         <tr key={order.id} className={`transition-colors duration-200 ${(order.status || '').toUpperCase() === 'CANCEL_REQUESTED' ? 'bg-rose-50/30 border-l-4 border-l-rose-400' : 'hover:bg-slate-50'}`}>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
@@ -376,6 +496,21 @@ export default function AdminOrdersPage() {
                                                     updating={updatingRow === order.id?.toString()}
                                                     onSelect={(s) => handleStatusUpdateWithLoading(order.id?.toString(), s)}
                                                 />
+                                                {order.rider_reported_delivered && (order.status || '').toUpperCase() !== 'DELIVERED' && (
+                                                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600" title="The rider reported this order delivered — confirm by setting status to Delivered.">
+                                                        <CheckCircle size={11} /> Rider reported delivered
+                                                    </div>
+                                                )}
+                                                {order.rider_reported_cancelled && !['CANCELLED', 'DELIVERED'].includes((order.status || '').toUpperCase()) && (
+                                                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-rose-600" title="The customer cancelled at the door (reported by the rider) — confirm by setting status to Cancelled.">
+                                                        <XCircle size={11} /> Cancel by customer
+                                                    </div>
+                                                )}
+                                                {order.customer_reported_delivered && (order.status || '').toUpperCase() !== 'DELIVERED' && (
+                                                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600" title="The customer confirmed they received this order — confirm by setting status to Delivered.">
+                                                        <CheckCircle size={11} /> Delivered to customer
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -410,7 +545,7 @@ export default function AdminOrdersPage() {
                                 ) : (
                                     <tr>
                                         <td colSpan={4} className="py-12 text-center text-[12px] text-slate-400 italic">
-                                            No active orders in the pipeline right now.
+                                            No orders match this filter.
                                         </td>
                                     </tr>
                                 )}
@@ -420,8 +555,8 @@ export default function AdminOrdersPage() {
 
                     {/* Mobile View Card List */}
                     <div className="block md:hidden divide-y divide-slate-100">
-                        {activeOrders.length > 0 ? (
-                            activeOrders.map((order: any) => {
+                        {paginatedData.length > 0 ? (
+                            paginatedData.map((order: any) => {
                                 const status = (order.status || '').toUpperCase();
                                 return (
                                     <div key={order.id} className="py-3 px-4 hover:bg-slate-50 transition-colors">
@@ -467,151 +602,39 @@ export default function AdminOrdersPage() {
                                 );
                             })
                         ) : (
-                            <div className="py-8 text-center text-[12px] text-slate-400 italic">No active orders.</div>
+                            <div className="py-8 text-center text-[12px] text-slate-400 italic">No orders match this filter.</div>
                         )}
                     </div>
-                </Card>
-
-                {/* Order Table (with integrated Filter Bar header) */}
-                <Card className="overflow-hidden">
-                    {/* Integrated Filter Bar Header */}
-                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
-                        <div className="flex flex-wrap items-center gap-4">
-
-                            <div className="flex items-center gap-2">
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status Filter</label>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className={inputCls + " w-[160px] cursor-pointer"}
-                                >
-                                    <option value="ALL">All Orders</option>
-                                    {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                            <div className="h-6 w-[1px] bg-slate-200" />
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">
-                                Showing <span className="text-slate-900">{filtered.length}</span> Results
-                            </div>
-                        </div>
-                    </div>
-
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                <th className="px-5 py-3 w-[280px]">Customer & Tracking</th>
-                                <th className="px-5 py-3">Shipping Logistics</th>
-                                <th className="px-5 py-3 w-36">Value</th>
-                                <th className="px-5 py-3 w-40 text-center">Lifecycle Status</th>
-                                <th className="px-5 py-3 text-right w-32">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {paginatedData.length === 0 ? (
-                                <tr><td colSpan={5} className="py-24 text-center text-[12px] text-slate-400 font-medium italic">No active orders found in this pipeline.</td></tr>
-                            ) : (
-                                paginatedData.map((order) => {
-                                    const st = STATUS_OPTIONS.find(s => s.value === order.status);
-                                    return (
-                                        <tr key={order.id} className="hover:bg-slate-50 transition-colors group text-[11px]">
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4">
-                                                <div className="flex items-center gap-2 sm:gap-3">
-                                                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 group-hover:border-slate-300 group-hover:text-slate-700 transition-all flex-shrink-0">
-                                                        <Package size={14} className="sm:w-4 sm:h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[9px] sm:text-[10px] font-bold text-indigo-700 uppercase tracking-tighter bg-indigo-50 px-1 sm:px-1.5 py-0.5 rounded">#{order.tracking_id}</span>
-                                                        </div>
-                                                        <p className="font-bold text-slate-900 mt-1 text-[11px] sm:text-[12px]">{order.customer_name}</p>
-                                                        <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1 mt-1"><Phone size={9} /> {order.phone_number}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4">
-                                                <div className="flex items-start gap-1.5 max-w-[140px] sm:max-w-[300px]">
-                                                    <MapPin size={10} className="text-slate-400 shrink-0 mt-0.5" />
-                                                    <p className="line-clamp-2 text-slate-600 font-medium leading-relaxed text-[10px] sm:text-[11px]">{order.shipping_address}</p>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 mt-2 text-[8.5px] sm:text-[9.5px] text-slate-400 font-bold uppercase tracking-wide">
-                                                    <Clock size={9} /> Ordered on {formatDate(order.created_at)}
-                                                </div>
-                                            </td>
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4">
-                                                <div className="font-bold text-slate-900 text-[12px] sm:text-[13px] tabular-nums">{formatCurrency(order.total_amount)}</div>
-                                                <div className="text-[8.5px] sm:text-[9.5px] text-emerald-600 font-bold uppercase tracking-tighter mt-1">{order.items?.length || 0} ITEMS</div>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <StatusDropdown
-                                                        order={order}
-                                                        updating={updatingRow === order.id?.toString()}
-                                                        onSelect={(s) => handleStatusUpdateWithLoading(order.id?.toString(), s)}
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="px-2.5 sm:px-5 py-3 sm:py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2.5 transition-all">
-                                                    <button
-                                                        onClick={() => { setSelectedOrder(order); setIsViewModalOpen(true); }}
-                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
-                                                    >
-                                                        View
-                                                    </button>
-                                                    <span className="text-slate-300">|</span>
-                                                    <Link
-                                                        href={`/admin/sales/${order.id}/invoice`}
-                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
-                                                    >
-                                                        Print
-                                                    </Link>
-                                                    <span className="text-slate-300">|</span>
-                                                    <button
-                                                        onClick={() => setDeleteTarget(order)}
-                                                        className="text-[12px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1"
-                                                    >
-                                                        <Trash2 size={12} /> Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
 
                     {/* Pagination */}
-                    <div className="bg-slate-50/60 border-t border-slate-100 px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-tight text-center sm:text-left">
-                            Showing <span className="text-slate-900">{filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to <span className="text-slate-900">{Math.min(currentPage * pageSize, filtered.length)}</span> of <span className="text-slate-900">{filtered.length}</span> Records
-                        </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                                className="flex-1 sm:flex-initial"
-                            >
-                                Previous
-                            </Button>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-3 py-1 rounded-lg whitespace-nowrap">
-                                Page {currentPage}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between text-[12px]">
+                            <span className="text-slate-500">
+                                Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                                >
+                                    Prev
+                                </button>
+                                <span className="text-slate-500 font-semibold">Page {currentPage} / {totalPages}</span>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                                >
+                                    Next
+                                </button>
                             </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages || 1))}
-                                disabled={currentPage >= (totalPages || 1)}
-                                className="flex-1 sm:flex-initial"
-                            >
-                                Next
-                            </Button>
                         </div>
-                    </div>
+                    )}
                 </Card>
+
             </div>
+
 
             {/* Order Details Modal */}
             <Modal
@@ -650,6 +673,26 @@ export default function AdminOrdersPage() {
                                 <p className="text-[11px] text-slate-600 leading-relaxed">{selectedOrder.shipping_address}</p>
                             </div>
                         </div>
+
+                        {/* Proof of delivery (rider photo + GPS location) */}
+                        {selectedOrder.proof_image_url && (
+                            <div className="space-y-2">
+                                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 pb-1">
+                                    <MapPin size={12} /> Proof of Delivery
+                                </h4>
+                                <div className="flex items-start gap-3">
+                                    <a href={selectedOrder.proof_image_url} target="_blank" rel="noreferrer">
+                                        <img src={selectedOrder.proof_image_url} alt="Delivery proof" className="w-20 h-20 rounded-lg object-cover border border-slate-200" />
+                                    </a>
+                                    <div className="text-[11px] text-slate-600 space-y-1">
+                                        {selectedOrder.proof_at && <p>Captured: {formatDate(selectedOrder.proof_at)}</p>}
+                                        {selectedOrder.proof_lat && selectedOrder.proof_lng ? (
+                                            <a href={`https://maps.google.com/?q=${selectedOrder.proof_lat},${selectedOrder.proof_lng}`} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline font-semibold inline-flex items-center gap-1"><MapPin size={11} /> {selectedOrder.proof_lat}, {selectedOrder.proof_lng}</a>
+                                        ) : <p className="text-slate-400">Location unavailable</p>}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Items Table */}
                         <div className="space-y-3">
@@ -707,6 +750,125 @@ export default function AdminOrdersPage() {
                     </div>
                 )}
             </Modal>
+
+            {/* Ship → choose rider (optional) */}
+            {shipModal && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 text-left">
+                    <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                                    <Truck size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Dispatch Order</h3>
+                                    <p className="text-[12px] text-slate-400 font-medium">
+                                        Assign a rider or offer to all riders
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => { setShipModal(null); setShipRiderId(''); }} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <p className="text-[12.5px] text-slate-600">
+                                Order <span className="font-bold text-slate-900">#{shipModal.order?.tracking_id || shipModal.order?.order_number}</span> will be marked <span className="font-bold text-sky-600">Shipped</span>.
+                            </p>
+
+                            {/* Auto-fetched pickup + delivery locations */}
+                            {(() => { const p = pickupOf(shipModal.order); return (
+                                <div className="grid grid-cols-1 gap-2.5">
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">
+                                            <MapPin size={12} /> Pickup
+                                        </div>
+                                        <p className="text-[12.5px] font-semibold text-slate-800">{p.name}</p>
+                                        {p.loc && <p className="text-[11px] text-slate-500 leading-snug">{p.loc}</p>}
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-600 uppercase tracking-widest mb-1">
+                                            <MapPin size={12} /> Delivery
+                                        </div>
+                                        <p className="text-[12.5px] font-semibold text-slate-800">{shipModal.order?.customer_name || 'Customer'}</p>
+                                        <p className="text-[11px] text-slate-500 leading-snug">{shipModal.order?.shipping_address || '—'}</p>
+                                    </div>
+                                </div>
+                            ); })()}
+
+                            {/* Mode: specific rider vs offer to all */}
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Who delivers this?</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button type="button" onClick={() => setShipMode('specific')}
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
+                                        Specific rider
+                                    </button>
+                                    <button type="button" onClick={() => setShipMode('all')}
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
+                                        All riders
+                                    </button>
+                                </div>
+                            </div>
+
+                            {shipMode === 'specific' ? (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery Rider</label>
+                                    <select value={shipRiderId} onChange={e => setShipRiderId(e.target.value)} className={inputCls}>
+                                        <option value="">— Select a rider —</option>
+                                        {[...riders].sort((a: any, b: any) => (b.is_system ? 1 : 0) - (a.is_system ? 1 : 0)).map(r => (
+                                            <option key={r.id} value={r.id}>
+                                                {r.is_system ? '★ ' : ''}{r.name}{r.is_system ? ' · system' : ''}{r.vehicle_type ? ` · ${r.vehicle_type}` : ''}{!r.is_active ? ' · inactive' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {riders.length === 0 && (
+                                        <p className="text-[10.5px] text-slate-400 mt-1.5">
+                                            No riders yet — create them in <Link href="/admin/delivery" className="text-indigo-600 font-semibold hover:underline">Delivery Persons</Link>.
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">
+                                    This delivery will appear in <span className="font-semibold text-sky-700">every branch rider&apos;s feed</span> — the first one to accept it gets the job.
+                                </p>
+                            )}
+
+                            {/* Price the admin offers — hidden for a System (salaried) rider */}
+                            {!(shipMode === 'specific' && riders.find((r: any) => String(r.id) === shipRiderId)?.is_system) ? (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery price you offer (Rs)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                        <input type="number" min="0" step="0.01" value={shipFee}
+                                            onChange={e => setShipFee(e.target.value)}
+                                            placeholder="0.00"
+                                            className={inputCls + ' pl-9'} />
+                                    </div>
+                                    <p className="text-[10.5px] text-slate-400 mt-1.5">The payout offered to the rider for this delivery — shown to riders and counted toward their earnings.</p>
+                                </div>
+                            ) : (
+                                <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 leading-snug">
+                                    System rider — no per-delivery charge (they&apos;re on salary).
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">
+                            <button onClick={() => { setShipModal(null); setShipRiderId(''); }} disabled={shippingNow}
+                                className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                                Cancel
+                            </button>
+                            <button onClick={confirmShip} disabled={shippingNow}
+                                className="h-10 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold inline-flex items-center gap-2 disabled:opacity-50">
+                                {shippingNow ? <Loader2 size={15} className="animate-spin" /> : <Truck size={15} />}
+                                {shipMode === 'specific' ? 'Assign & Ship' : 'Offer & Ship'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {deliveryModal && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 text-left">
@@ -791,7 +953,7 @@ export default function AdminOrdersPage() {
                                         className="w-full h-11 px-4 border border-slate-200 rounded-lg text-[13.5px] font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="" className="text-slate-400">Choose a warehouse...</option>
-                                        {warehouses.map((w: any) => (
+                                        {deliveryWarehouseOptions.map((w: any) => (
                                             <option key={w.id} value={w.id} className="text-slate-800">{w.name}</option>
                                         ))}
                                     </select>

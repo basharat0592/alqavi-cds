@@ -12,6 +12,7 @@ import {
     Check, X as XIcon, ChevronDown
 } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
+import { installmentService } from '@/services/payment.service';
 import { companyService } from '@/services/company.service';
 import { productService } from '@/services/product.service';
 import { formatDate, formatDateTime, formatCurrency, exportToCSV, getImageUrl } from '@/lib/utils';
@@ -19,7 +20,7 @@ import { inventoryService } from '@/services/inventory.service';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - PURCHASES (indigo accent, slate neutrals)
@@ -162,6 +163,8 @@ export default function PurchasesPage() {
     const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
 
     const [viewRow, setViewRow] = useState<any | null>(null);
+    const [viewPayments, setViewPayments] = useState<any[]>([]);
+    const [viewPaymentsLoading, setViewPaymentsLoading] = useState(false);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
     const [deleting, setDeleting] = useState(false);
 
@@ -170,6 +173,19 @@ export default function PurchasesPage() {
 
     const [whModal, setWhModal] = useState<{ open: boolean, purchase: any | null }>({ open: false, purchase: null });
     const [assigningWh, setAssigningWh] = useState(false);
+
+    // Custom dropdown states
+    const [paymentDropdownOpen, setPaymentDropdownOpen] = useState(false);
+    const [supplierDropdownOpen, setSupplierDropdownOpen] = useState(false);
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset pagination to first page when search filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, paymentFilter, supplierFilter]);
 
     const load = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -220,6 +236,14 @@ export default function PurchasesPage() {
         try {
             const data = await purchaseService.getById(id);
             setViewRow(data);
+            // Load the individual payment records (installments) for this purchase so
+            // each payment shows separately with its own date/time/amount/method.
+            setViewPayments([]);
+            setViewPaymentsLoading(true);
+            installmentService.list('purchaseorder', id)
+                .then((rows: any[]) => setViewPayments(Array.isArray(rows) ? rows : []))
+                .catch(() => setViewPayments([]))
+                .finally(() => setViewPaymentsLoading(false));
         } catch { toast.error('Failed to load details'); }
     };
 
@@ -237,7 +261,7 @@ export default function PurchasesPage() {
         setPaying(true);
         try {
             await purchaseService.update(payModal.purchase.id, formData);
-            toast.success('Payment recorded. Waiting for supplier verification.');
+            toast.success('Payment recorded.');
             setPayModal({ open: false, purchase: null });
             load();
         } catch (err: any) {
@@ -248,14 +272,12 @@ export default function PurchasesPage() {
     };
 
     const handleStatusChange = async (id: string, newStatus: string) => {
-        if (newStatus === 'RECEIVED') {
-            const p = filtered.find(x => x.id === id);
-            setWhModal({ open: true, purchase: p });
-            return;
-        }
+        // RECEIVED deposits the purchase stock straight into the PO's own branch
+        // warehouse (set when the PO was created) and into Current Stocks — no
+        // warehouse picker popup.
         try {
             await purchaseService.update(id, { status: newStatus });
-            toast.success('Order status updated');
+            toast.success(newStatus === 'RECEIVED' ? 'Stock received — added to Current Stocks' : 'Order status updated');
             load(true);
         } catch (err: any) {
             toast.error(err.response?.data?.error || 'Failed to update status');
@@ -283,6 +305,22 @@ export default function PurchasesPage() {
 
     const purchasesList: any[] = Array.isArray(purchases) ? purchases : (purchases as any)?.results ? (purchases as any).results : [];
     const filtered = purchasesList;
+    const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+
+    const sel = useTableSelection(filtered);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => purchaseService.delete(id)));
+        toast.success(`${ids.length} purchase(s) deleted`);
+        load(true);
+    };
+
+    const bulkStatus = async (ids: string[], status: string) => {
+        await Promise.allSettled(ids.map(id => purchaseService.update(id, { status })));
+        toast.success(`Marked ${ids.length} order(s) ${STATUS_CONFIG[status]?.label || status}`);
+        load(true);
+    };
 
     return (
         <div className="pb-20 text-slate-800">
@@ -317,27 +355,87 @@ export default function PurchasesPage() {
                             />
                         </div>
                     </div>
-                    <div className="flex flex-row gap-4 flex-1 md:flex-initial">
-                        <div className="flex-1 md:w-[160px]">
+                    <div className="flex flex-col sm:flex-row gap-4 flex-1 md:flex-initial">
+                        {/* Custom Payment Dropdown */}
+                        <div className="flex-1 md:w-[160px] relative">
                             <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Payment</label>
-                            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className={inputCls + " cursor-pointer"}>
-                                <option value="All">All Payments</option>
-                                <option value="unpaid">Unpaid</option>
-                                <option value="partial">Partial</option>
-                                <option value="paid">Paid</option>
-                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentDropdownOpen(!paymentDropdownOpen)}
+                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 transition-all cursor-pointer select-none text-left"
+                            >
+                                <span className="capitalize">{paymentFilter === 'All' ? 'All Payments' : paymentFilter}</span>
+                                <ChevronDown size={14} className="text-slate-400" />
+                            </button>
+                            {paymentDropdownOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-[100]" onClick={() => setPaymentDropdownOpen(false)} />
+                                    <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-[110] divide-y divide-slate-100 overflow-hidden text-[13px] font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                                        {['All', 'unpaid', 'partial', 'paid'].map(val => (
+                                            <div
+                                                key={val}
+                                                onClick={() => {
+                                                    setPaymentFilter(val);
+                                                    setPaymentDropdownOpen(false);
+                                                }}
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors capitalize ${paymentFilter === val ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                            >
+                                                {val === 'All' ? 'All Payments' : val}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
-                        <div className="flex-1 md:w-[180px]">
+
+                        {/* Custom Supplier Dropdown */}
+                        <div className="flex-1 md:w-[180px] relative">
                             <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Supplier</label>
-                            <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} className={inputCls + " cursor-pointer w-full"}>
-                                <option value="All">All Suppliers</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.company ? `${s.company} - ` : ''}{s.name}</option>
-                                ))}
-                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
+                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 transition-all cursor-pointer select-none text-left"
+                            >
+                                <span className="truncate block max-w-[140px]">
+                                    {supplierFilter === 'All' ? 'All Suppliers' : (() => {
+                                        const s = suppliers.find(sup => String(sup.id) === String(supplierFilter));
+                                        return s ? (s.company ? `${s.company} - ${s.name}` : s.name) : 'All Suppliers';
+                                    })()}
+                                </span>
+                                <ChevronDown size={14} className="text-slate-400" />
+                            </button>
+                            {supplierDropdownOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-[100]" onClick={() => setSupplierDropdownOpen(false)} />
+                                    <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg z-[110] divide-y divide-slate-100 text-[13px] font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                                        <div
+                                            onClick={() => {
+                                                setSupplierFilter('All');
+                                                setSupplierDropdownOpen(false);
+                                            }}
+                                            className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors ${supplierFilter === 'All' ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                        >
+                                            All Suppliers
+                                        </div>
+                                        {suppliers.map(s => (
+                                            <div
+                                                key={s.id}
+                                                onClick={() => {
+                                                    setSupplierFilter(s.id);
+                                                    setSupplierDropdownOpen(false);
+                                                }}
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors truncate ${String(supplierFilter) === String(s.id) ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                            >
+                                                {s.company ? `${s.company} - ` : ''}{s.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
+
                         <div className="flex items-end shrink-0">
-                            <Button variant="outline" onClick={() => load()} disabled={loading} className="px-3.5">
+                            <Button variant="outline" onClick={() => load()} disabled={loading} className="px-3.5 h-10">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                             </Button>
                         </div>
@@ -380,7 +478,7 @@ export default function PurchasesPage() {
                             <p className="text-[13px] text-slate-600 italic">No purchases found.</p>
                         </Card>
                     ) : (
-                        filtered.map((p: any) => (
+                        paginated.map((p: any) => (
                             <Card key={p.id} className="p-4 space-y-3 text-left">
                                 {/* Row 1: First Item Image + Order # & Date */}
                                 <div className="flex gap-3">
@@ -427,20 +525,9 @@ export default function PurchasesPage() {
                                     </div>
                                     <div className="space-y-1 text-right flex flex-col items-end">
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Payment Status</span>
-                                        {p.payment_status && p.payment_status.toUpperCase() !== 'UNPAID' && !p.payment_confirmed ? (
-                                            <div className="flex flex-col gap-0.5 items-end">
-                                                <span className="text-[9px] font-bold bg-sky-50 text-sky-700 border border-sky-100 px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
-                                                    Pending Verify
-                                                </span>
-                                                <span className="text-[8px] text-slate-400 font-semibold">
-                                                    {p.payment_method?.replace('_', ' ') || 'CASH'} Submitted
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-indigo-600'}`}>
-                                                {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
-                                            </div>
-                                        )}
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : p.payment_status?.toLowerCase() === 'partial' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>
+                                            {p.payment_status || 'UNPAID'}
+                                        </span>
 
                                         {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
                                             <button
@@ -459,7 +546,6 @@ export default function PurchasesPage() {
                                         <span className="font-medium text-slate-600">Remaining Balance:</span>
                                         <div className="flex items-center gap-1.5">
                                             <span className="font-bold text-rose-600 tabular-nums">{formatCurrency(p.remaining_amount)}</span>
-                                            {p.payment_confirmed && <CheckCircle2 size={12} className="text-emerald-500" />}
                                         </div>
                                     </div>
                                 )}
@@ -481,6 +567,15 @@ export default function PurchasesPage() {
                                     </button>
                                     <span className="text-slate-300">|</span>
                                     <button
+                                        onClick={() => p.status !== 'RECEIVED' && router.push(`/admin/purchases/add?id=${p.id}`)}
+                                        disabled={p.status === 'RECEIVED'}
+                                        title={p.status === 'RECEIVED' ? 'Received orders cannot be edited' : 'Edit purchase order'}
+                                        className={`text-[12px] font-bold ${p.status === 'RECEIVED' ? 'text-slate-300 cursor-not-allowed' : 'text-indigo-600 hover:underline'}`}
+                                    >
+                                        Edit
+                                    </button>
+                                    <span className="text-slate-300">|</span>
+                                    <button
                                         onClick={() => setDeleteRow(p)}
                                         className="text-[12px] font-bold text-[#c40000] hover:underline"
                                     >
@@ -492,11 +587,33 @@ export default function PurchasesPage() {
                     )}
                 </div>
 
+                {/* Mobile Pagination Footer Controls */}
+                {totalPages > 1 && (
+                    <div className="md:hidden flex items-center justify-between gap-3 text-[11.5px] text-slate-500 bg-white p-3 rounded-xl border border-slate-150/60 shadow-sm mb-6 text-left">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
+                        >
+                            Previous
+                        </button>
+                        <span className="font-semibold text-slate-700">Page {currentPage} of {totalPages}</span>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
+
                 {/* Desktop Table */}
                 <Card className="hidden md:block text-left mb-6 relative z-10 overflow-hidden">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                <SelectAllTh sel={sel} />
                                 <th className="px-6 py-3 w-[80px]">Item</th>
                                 <th className="px-6 py-3">Order #</th>
                                 <th className="px-6 py-3">Order Status</th>
@@ -506,11 +623,12 @@ export default function PurchasesPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {loading && filtered.length === 0 ? <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">Loading purchases...</td></tr> : filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
+                            {loading && filtered.length === 0 ? <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">Loading purchases...</td></tr> : filtered.length === 0 ? (
+                                <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
                             ) : (
-                                filtered.map((p: any) => (
+                                paginated.map((p: any) => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <RowCheckboxTd sel={sel} id={p.id} />
                                         <td className="px-6 py-4">
                                             <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
                                                 {(() => {
@@ -545,30 +663,10 @@ export default function PurchasesPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-0.5">
-                                                {p.payment_status && p.payment_status.toUpperCase() !== 'UNPAID' && !p.payment_confirmed ? (
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter animate-pulse">
-                                                                Waiting for Confirmation
-                                                            </span>
-                                                        </div>
-                                                        <span className="text-[9px] text-slate-400 font-bold ml-0.5">
-                                                            {p.payment_method?.replace('_', ' ') || 'CASH'} Submitted
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className={`text-[10px] font-bold uppercase tracking-widest ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-indigo-600'}`}>
-                                                            {p.payment_status || 'UNPAID'} • {p.payment_method?.replace('_', ' ') || 'CASH'}
-                                                        </div>
-                                                        {p.payment_status?.toLowerCase() === 'partial' && (
-                                                            <span className="text-[9px] text-slate-400 font-bold tabular-nums">
-                                                                Paid {formatCurrency(p.paid_amount || 0)} of {formatCurrency(p.total_amount || 0)}
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                )}
+                                            <div className="flex flex-col gap-0.5 items-start">
+                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : p.payment_status?.toLowerCase() === 'partial' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>
+                                                    {p.payment_status || 'UNPAID'}
+                                                </span>
 
                                                 {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
                                                     <button
@@ -587,11 +685,11 @@ export default function PurchasesPage() {
                                                     <div className="text-[10px] font-bold text-rose-600 uppercase tracking-tighter tabular-nums">
                                                         Bal: {formatCurrency(p.remaining_amount)}
                                                     </div>
-                                                    {p.payment_confirmed && (
-                                                        <div title="Supplier Verified">
-                                                            <CheckCircle2 size={12} className="text-emerald-500" />
-                                                        </div>
-                                                    )}
+                                                </div>
+                                            )}
+                                            {p.remaining_amount > 0 && p.due_date && (
+                                                <div className={`text-[9.5px] font-bold mt-0.5 tabular-nums ${p.is_overdue ? 'text-rose-600' : 'text-slate-400'}`}>
+                                                    {p.is_overdue ? `${p.days_overdue}d overdue` : `Due ${p.due_date}`}
                                                 </div>
                                             )}
                                         </td>
@@ -601,6 +699,13 @@ export default function PurchasesPage() {
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => handleViewDetails(p.id)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                 <span className="text-slate-300">|</span>
+                                                <button
+                                                    onClick={() => p.status !== 'RECEIVED' && router.push(`/admin/purchases/add?id=${p.id}`)}
+                                                    disabled={p.status === 'RECEIVED'}
+                                                    title={p.status === 'RECEIVED' ? 'Received orders cannot be edited' : 'Edit purchase order'}
+                                                    className={`text-[12px] font-bold ${p.status === 'RECEIVED' ? 'text-slate-300 cursor-not-allowed' : 'text-indigo-600 hover:underline'}`}
+                                                >Edit</button>
+                                                <span className="text-slate-300">|</span>
                                                 <button onClick={() => setDeleteRow(p)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </td>
@@ -609,88 +714,193 @@ export default function PurchasesPage() {
                             )}
                         </tbody>
                     </table>
+
+                    {/* Desktop Pagination Footer Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-100 text-[12px] text-slate-500 font-medium">
+                            <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                                <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
+                                <span className="font-semibold text-slate-700">{filtered.length}</span> purchases
+                            </div>
+                            <div className="flex items-center gap-2.5 order-1 sm:order-2 w-full sm:w-auto">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                >
+                                    Previous
+                                </button>
+                                <div className="text-[11.5px] font-extrabold text-slate-800 tracking-wider tabular-nums px-2">
+                                    {currentPage} / {totalPages}
+                                </div>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
+
+            <BulkBar
+                sel={sel}
+                entity="purchase orders"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Processing', apply: (ids) => bulkStatus(ids, 'PROCESSING') },
+                    { label: 'Mark Shipped', apply: (ids) => bulkStatus(ids, 'SHIPPED') },
+                    { label: 'Mark Delivered', apply: (ids) => bulkStatus(ids, 'DELIVERED') },
+                    { label: 'Mark Cancelled', apply: (ids) => bulkStatus(ids, 'CANCELLED') },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((p: any) => ({
+                        purchase_number: p.purchase_number,
+                        supplier: p.supplier_name || '',
+                        status: p.status || '',
+                        payment_status: p.payment_status || 'UNPAID',
+                        payment_method: p.payment_method || '',
+                        total_amount: p.total_amount ?? 0,
+                        paid_amount: p.paid_amount ?? 0,
+                        remaining_amount: p.remaining_amount ?? 0,
+                        date: formatDateTime(p.created_at || p.order_date || p.date),
+                    })),
+                    'purchases.csv',
+                )}
+            />
 
             {/* View Details Modal */}
             {viewRow && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-4xl bg-slate-50 rounded-2xl shadow-2xl overflow-hidden text-left border border-slate-200">
-                        <div className="border-b border-slate-100 p-6 flex justify-between items-center bg-white">
-                            <div className="flex flex-col gap-0.5">
+                    <div className="w-full max-w-4xl max-h-[86vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden text-left border border-slate-200">
+                        <div className="border-b border-slate-100 px-6 py-4 flex justify-between items-center bg-white shrink-0">
+                            <div className="flex flex-col gap-1">
                                 <h2 className="text-[16px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                    Purchase Order Details
-                                    <span className="text-indigo-600">#{viewRow.purchase_number}</span>
-                                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-[9px] font-bold uppercase tracking-tighter ml-2 animate-pulse">
-                                        Last Updated: {new Date(viewRow.updated_at || viewRow.created_at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                    </span>
+                                    Purchase Order <span className="text-indigo-600">#{viewRow.purchase_number}</span>
                                 </h2>
-                                <div className="flex items-center gap-4">
-                                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <Calendar size={12} className="text-slate-300" /> Created: {formatDateTime(viewRow.created_at || viewRow.order_date || viewRow.date)}
-                                    </p>
-                                    <div className="w-[1px] h-3 bg-slate-200" />
-                                    <p className="text-[11px] text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <RefreshCw size={12} className="text-indigo-600/50" /> Updated: {formatDateTime(viewRow.updated_at || viewRow.created_at)}
-                                    </p>
-                                </div>
+                                <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1.5">
+                                    <Calendar size={12} className="text-slate-300" /> {formatDateTime(viewRow.created_at || viewRow.order_date || viewRow.date)}
+                                </p>
                             </div>
                             <button onClick={() => setViewRow(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={24} /></button>
                         </div>
-                        <div className="p-8 flex flex-col lg:flex-row gap-8">
-                            <div className="flex-1 space-y-6">
-                                <Card className="p-6">
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">Products</p>
-                                    <table className="w-full text-[13px]">
-                                        <thead><tr className="text-left text-slate-500"><th className="pb-3 px-2">Name</th><th className="pb-3 text-center">Qty</th><th className="pb-3 text-right">Total</th></tr></thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {viewRow.items?.map((item: any) => {
-                                                const img = item.product_image;
-                                                return (
-                                                    <tr key={item.id}>
-                                                        <td className="py-3 px-2 font-bold text-slate-900">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 bg-white border border-slate-100 rounded-lg flex-shrink-0 flex items-center justify-center p-1">
-                                                                    {img ? <img src={getImageUrl(img)} alt="" className="w-full h-full object-contain" /> : <Package size={16} className="text-slate-200" />}
-                                                                </div>
-                                                                <span>{item.product_name}</span>
+                        <div className="p-6 flex flex-col lg:flex-row gap-8 overflow-y-auto text-[12px]">
+                            {/* Left: products + supplier/status */}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Products</p>
+                                <table className="w-full text-[12px]">
+                                    <thead><tr className="text-left text-slate-400 text-[10px] uppercase tracking-wider border-b border-slate-100"><th className="pb-2">Name</th><th className="pb-2 text-center">Qty</th><th className="pb-2 text-right">Unit Cost</th><th className="pb-2 text-right">Total</th></tr></thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {viewRow.items?.map((item: any) => {
+                                            const img = item.product_image;
+                                            const price = parseFloat(item.price || 0);
+                                            const qty = item.quantity || 0;
+                                            const isCarton = item.packaging_type === 'CARTON';
+                                            const units = item.total_units ?? (isCarton ? qty * (item.items_per_carton || 1) : qty);
+                                            const subtotal = item.subtotal ?? (price * units);
+                                            return (
+                                                <tr key={item.id}>
+                                                    <td className="py-2.5 font-bold text-slate-900">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-8 h-8 bg-white border border-slate-100 rounded-lg flex-shrink-0 flex items-center justify-center p-1">
+                                                                {img ? <img src={getImageUrl(img)} alt="" className="w-full h-full object-contain" /> : <Package size={14} className="text-slate-200" />}
                                                             </div>
-                                                        </td>
-                                                        <td className="py-3 text-center tabular-nums">{item.quantity}</td>
-                                                        <td className="py-3 text-right font-bold text-indigo-600 tabular-nums">{formatCurrency(item.subtotal)}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </Card>
-                                <div className="grid grid-cols-3 gap-6">
-                                    <Card className="p-6">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Supplier</p>
-                                        <p className="font-bold text-slate-900">{viewRow.supplier_name || '—'}</p>
-                                        <p className="text-[12px] text-slate-600 mt-1">{viewRow.supplier_phone || '—'}</p>
-                                    </Card>
+                                                            <span>{item.product_name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2.5 text-center tabular-nums">
+                                                        {isCarton ? (
+                                                            <div className="flex flex-col leading-tight">
+                                                                <span className="font-bold text-slate-900">{units} pcs</span>
+                                                                <span className="text-[9px] text-slate-400">{qty} ctn × {item.items_per_carton || 1}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span>{qty}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2.5 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                                    <td className="py-2.5 text-right font-bold text-indigo-600 tabular-nums">{formatCurrency(subtotal)}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
 
-                                    <Card className="p-6">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Status</p>
-                                        <div className="flex flex-col gap-2">
-                                            <div><StatusPill status={viewRow.status} /></div>
-                                            <p className="text-[12px] font-bold text-emerald-600 uppercase tracking-widest">{viewRow.payment_status || 'UNPAID'}</p>
+                                <div className="grid grid-cols-2 gap-6 mt-5 pt-4 border-t border-slate-100">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Supplier</p>
+                                        <p className="font-bold text-slate-900 text-[13px]">{viewRow.supplier_name || '—'}</p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">{viewRow.supplier_phone || '—'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Status</p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <StatusPill status={viewRow.status} />
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${(viewRow.payment_status || 'UNPAID').toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : (viewRow.payment_status || '').toLowerCase() === 'partial' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>{viewRow.payment_status || 'UNPAID'}</span>
                                         </div>
-                                    </Card>
+                                    </div>
                                 </div>
                             </div>
-                            <aside className="w-full lg:w-[320px] space-y-6">
-                                <Card className="p-6">
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Summary</p>
-                                    <div className="space-y-3 text-[13px]">
-                                        <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="tabular-nums">{formatCurrency((viewRow.total_amount || 0) - (viewRow.tax_amount || 0) - (viewRow.shipping_cost || 0))}</span></div>
-                                        <div className="flex justify-between text-slate-600"><span>Shipping</span><span className="tabular-nums">{formatCurrency(viewRow.shipping_cost || 0)}</span></div>
-                                        <div className="flex justify-between text-slate-600"><span>Tax</span><span className="tabular-nums">{formatCurrency(viewRow.tax_amount || 0)}</span></div>
-                                        <div className="flex justify-between font-bold text-slate-900 pt-3 border-t border-slate-100 mt-3 text-[18px]"><span>Total</span><span className="text-indigo-600 tabular-nums">{formatCurrency(viewRow.total_amount || 0)}</span></div>
-                                    </div>
-                                </Card>
-                                <Button className="w-full" onClick={() => window.print()}><Printer size={16} /> Print Invoice</Button>
+
+                            {/* Right: summary + payment history (divider, not a box) */}
+                            <aside className="w-full lg:w-[340px] lg:border-l lg:border-slate-100 lg:pl-8 shrink-0">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">Summary</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="tabular-nums">{formatCurrency((viewRow.total_amount || 0) - (viewRow.tax_amount || 0) - (viewRow.shipping_cost || 0))}</span></div>
+                                    <div className="flex justify-between text-slate-600"><span>Shipping</span><span className="tabular-nums">{formatCurrency(viewRow.shipping_cost || 0)}</span></div>
+                                    <div className="flex justify-between text-slate-600"><span>Tax</span><span className="tabular-nums">{formatCurrency(viewRow.tax_amount || 0)}</span></div>
+                                    <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-100 mt-2 text-[15px]"><span>Total</span><span className="text-indigo-600 tabular-nums">{formatCurrency(viewRow.total_amount || 0)}</span></div>
+                                </div>
+                                {(() => {
+                                    const total = Number(viewRow.total_amount || 0);
+                                    const paid = Number(viewRow.paid_amount || (viewRow.payment_status === 'PAID' ? viewRow.total_amount : 0) || 0);
+                                    const due = Math.max(0, total - paid);
+                                    const payDate = viewRow.payment_date ? formatDateTime(viewRow.payment_date) : '—';
+                                    return (
+                                        <div className="space-y-1.5 mt-2.5 pt-2.5 border-t border-slate-100">
+                                            <div className="flex justify-between text-slate-600"><span>Paid Amount</span><span className="tabular-nums font-bold text-emerald-600">{formatCurrency(paid)}</span></div>
+                                            <div className="flex justify-between text-slate-600"><span>Remaining / Due</span><span className={`tabular-nums font-bold ${due > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(due)}</span></div>
+                                            <div className="flex justify-between text-slate-600"><span>Payment Date</span><span className="font-bold text-slate-700">{payDate}</span></div>
+                                            <div className="flex justify-between text-slate-600"><span>Method</span><span className="font-bold text-slate-700 capitalize">{(viewRow.payment_method || '—').toString().replace('_', ' ').toLowerCase()}</span></div>
+                                            {viewRow.transaction_id && (
+                                                <div className="flex justify-between text-slate-600"><span>Ref</span><span className="font-bold text-slate-700 font-mono">{viewRow.transaction_id}</span></div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Individual payment records — each with its own date & time */}
+                                <div className="mt-2.5 pt-2.5 border-t border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment History</p>
+                                    {viewPaymentsLoading ? (
+                                        <p className="text-[11px] text-slate-400">Loading payments…</p>
+                                    ) : viewPayments.length === 0 ? (
+                                        <p className="text-[11px] text-slate-400 italic">
+                                            {Number(viewRow.paid_amount || 0) > 0 ? 'Amount was set on the order.' : 'No payments recorded yet.'}
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            {viewPayments.map((pay: any) => (
+                                                <div key={pay.id} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-50 last:border-0">
+                                                    <div className="min-w-0">
+                                                        <p className="text-[12px] font-bold text-emerald-700 tabular-nums">{formatCurrency(pay.amount || 0)}</p>
+                                                        <p className="text-[10px] text-slate-500">{formatDateTime(pay.paid_at || pay.created_at)}</p>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-[10px] font-semibold text-slate-600 capitalize">{(pay.method || '—').toString().replace('_', ' ').toLowerCase()}</p>
+                                                        <span className={`text-[9px] font-bold uppercase tracking-wider ${pay.status === 'confirmed' ? 'text-emerald-600' : pay.status === 'pending' ? 'text-amber-600' : pay.status === 'rejected' ? 'text-rose-600' : 'text-slate-400'}`}>{pay.status || ''}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <Button className="w-full mt-4" onClick={() => router.push(`/admin/purchases/${viewRow.id}/invoice`)}><Printer size={16} /> View Invoice</Button>
                             </aside>
                         </div>
                     </div>
@@ -747,6 +957,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
     const [paymentMethod, setPaymentMethod] = useState<string>('CASH');
     const [paymentSlip, setPaymentSlip] = useState<File | null>(null);
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+    const [dueDate, setDueDate] = useState('');
     const [transactionId, setTransactionId] = useState('');
     const [thisPayment, setThisPayment] = useState(0); // amount paid in THIS transaction
     const [paymentNotes, setPaymentNotes] = useState('');
@@ -760,6 +971,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
             setPaymentStatus('');
             setPaymentMethod(purchase.payment_method?.toUpperCase() || 'CASH');
             setPaymentDate(new Date().toISOString().slice(0, 10));
+            setDueDate(purchase.due_date || '');
             setTransactionId('');
             setThisPayment(0);
             setPaymentNotes(purchase.payment_notes || '');
@@ -782,11 +994,12 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
         formData.append('payment_method', paymentMethod);
         formData.append('paid_amount', newPaidTotal.toString());
         formData.append('payment_date', paymentDate);
+        if (dueDate) formData.append('due_date', dueDate);
         formData.append('payment_notes', paymentNotes);
         if (transactionId) formData.append('transaction_id', transactionId);
         if (paymentSlip) formData.append('payment_slip', paymentSlip);
-        // Distributor just submitted/updated — supplier must verify again.
-        formData.append('payment_confirmed', 'false');
+        // The branch admin records the payment directly — no supplier verification step.
+        formData.append('payment_confirmed', 'true');
         onSubmit(formData);
     };
 
@@ -875,6 +1088,13 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                     <label className="text-[13px] font-bold text-slate-900">Payment Date</label>
                                     <input type="date" className={inputCls} value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
                                 </div>
+
+                                {newBalance > 0 && (
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[13px] font-bold text-slate-900">Balance Due Date <span className="text-slate-400 font-medium">— when the remaining {formatCurrency(newBalance)} must be cleared</span></label>
+                                        <input type="date" className={inputCls} value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                                    </div>
+                                )}
 
                                 <div className="col-span-2 space-y-1.5">
                                     <label className="text-[13px] font-bold text-slate-900">

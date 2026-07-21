@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import {
     RotateCcw,
     Loader2,
@@ -214,8 +214,8 @@ export default function SupplierReturns() {
                                     const isExpanded = expanded === ret.id;
                                     const statusStyle = getStatusStyles(ret.status);
                                     return (
-                                        <>
-                                            <tr key={ret.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <Fragment key={ret.id}>
+                                            <tr className="hover:bg-slate-50/50 transition-colors group">
                                                 <td className="px-5 py-4">
                                                     <button
                                                         onClick={() => setExpanded(isExpanded ? null : ret.id)}
@@ -327,7 +327,7 @@ export default function SupplierReturns() {
                                                     </td>
                                                 </tr>
                                             )}
-                                        </>
+                                        </Fragment>
                                     );
                                 })}
                             </tbody>

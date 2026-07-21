@@ -7,10 +7,11 @@ import {
     LayoutGrid, ChevronLeft
 } from 'lucide-react';
 import { settingsService, companyService } from '@/lib/api';
-import { authService } from '@/lib/auth';
+import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, Badge, ui } from '@/components/admin/ui';
+import { ADMIN_PAGE_GROUPS, SUPER_ONLY_HREFS, SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
 
 /* ─── Button (kit) ─── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
@@ -89,6 +90,7 @@ export default function SettingsPage() {
     const [animations, setAnimations] = useState(true);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -96,7 +98,8 @@ export default function SettingsPage() {
             try {
                 const user = authService.getUser();
                 setCurrentUser(user);
-                const stored = localStorage.getItem('sidebar_visibility');
+                setIsSuperAdmin(authService.isSuperAdmin());
+                const stored = localStorage.getItem(sidebarVisibilityKey());
                 if (stored) setSidebarVisibility(JSON.parse(stored));
 
                 const [pRes, cRes, sRes] = await Promise.allSettled([
@@ -136,7 +139,12 @@ export default function SettingsPage() {
             fd.append('phone', profile.phone);
             if (selectedAvatar) fd.append('avatar', selectedAvatar);
             const updated = await settingsService.updateProfile(Number(currentUser.id), fd as any);
-            authService.setSession(sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '', updated);
+            // update_user returns role as a numeric FK id (+ role_name string). Keep
+            // role as the string name the sidebar/guards rely on, and merge over the
+            // existing session user so login-only fields aren't dropped.
+            const prev = authService.getUser() as any;
+            const merged = { ...(prev || {}), ...updated, role: updated?.role_name || prev?.role || '' };
+            authService.setSession(sessionStorage.getItem('accessToken') || '', sessionStorage.getItem('refreshToken') || '', merged as any);
             window.dispatchEvent(new Event('profileUpdated'));
             toast.success('Profile updated');
         } catch { toast.error('Failed to update profile'); } finally { setProfileSaving(false); }
@@ -195,7 +203,12 @@ export default function SettingsPage() {
                 {/* ── MAIN HUB ── */}
                 {activeTab === 'main' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {TABS.filter(t => !isSupplier || (t.id !== 'store' && t.id !== 'all-pages')).map(tab => (
+                        {TABS.filter(t => {
+                            // Business Info edits the single shared Company record — Super Admin only.
+                            if (t.id === 'store' && !isSuperAdmin) return false;
+                            if (isSupplier && (t.id === 'store' || t.id === 'all-pages')) return false;
+                            return true;
+                        }).map(tab => (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group w-full">
                                 <Card className="p-5 hover:border-indigo-300 transition-all">
                                     <div className="flex items-start gap-3">
@@ -271,7 +284,7 @@ export default function SettingsPage() {
                 )}
 
                 {/* ── BUSINESS INFO ── */}
-                {activeTab === 'store' && (
+                {activeTab === 'store' && isSuperAdmin && (
                     <Card className="overflow-hidden">
                         <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
                             <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Business Information</h2>
@@ -443,77 +456,18 @@ export default function SettingsPage() {
                         </div>
                         <div className="p-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
-                                {[
-                                    {
-                                        group: 'Main',
-                                        items: [
-                                            { n: 'Dashboard', h: '/admin/dashboard' },
-                                            { n: 'Customers', h: '/admin/company/customers' },
-                                            { n: 'Recent Activity', h: '/admin/sales/recent' },
-                                            { n: 'Order List', h: '/admin/orders' },
-                                            { n: 'All Sales', h: '/admin/sales' },
-                                            { n: 'Order Tracking', h: '/admin/tracking' },
-                                        ]
-                                    },
-                                    {
-                                        group: 'Inventory',
-                                        items: [
-                                            { n: 'Product Categories', h: '/admin/products/categories' },
-                                            { n: 'Product List', h: '/admin/products' },
-                                            { n: 'Add Product', h: '/admin/products/add' },
-                                            { n: 'Product Sections', h: '/admin/products/sections' },
-                                            { n: 'Current Stocks', h: '/admin/inventory/list' },
-                                            { n: 'Warehouses', h: '/admin/inventory/warehouses' },
-                                        ]
-                                    },
-                                    {
-                                        group: 'Procurement',
-                                        items: [
-                                            { n: 'Supplier List', h: '/admin/company/suppliers' },
-                                            { n: 'New Purchase', h: '/admin/purchases/add' },
-                                            { n: 'Purchase History', h: '/admin/purchases' },
-                                            { n: 'Supplier Catalog', h: '/admin/supplier-products' },
-                                            { n: 'Returns / Refunds', h: '/admin/purchases/returns' },
-                                        ]
-                                    },
-                                    {
-                                        group: 'Sales Console',
-                                        items: [
-                                            { n: 'Point of Sale', h: '/admin/sale' },
-                                            { n: 'Invoices', h: '/admin/invoices' },
-                                            { n: 'Global Payments', h: '/admin/payments' },
-                                            { n: 'Company Categories', h: '/admin/company/categories' },
-                                            { n: 'Sale Returns', h: '/admin/sale-returns' },
-                                        ]
-                                    },
-                                    {
-                                        group: 'Security & Logs',
-                                        items: [
-                                            { n: 'User Registry', h: '/admin/users' },
-                                            { n: 'Staff Roles', h: '/admin/users/roles' },
-                                            { n: 'Permissions', h: '/admin/users/permissions' },
-                                            { n: 'System Alerts', h: '/admin/alerts' },
-                                            { n: 'Company Hub', h: '/admin/company' },
-                                        ]
-                                    },
-                                    {
-                                        group: 'Detailed Reports',
-                                        items: [
-                                            { n: 'Reports Center', h: '/admin/reports' },
-                                            { n: 'Sales Reports', h: '/admin/reports/sales' },
-                                            { n: 'Purchase Reports', h: '/admin/reports/purchases' },
-                                            { n: 'Inventory Reports', h: '/admin/reports/inventory' },
-                                            { n: 'Customer Reports', h: '/admin/reports/customers' },
-                                            { n: 'Accounting Reports', h: '/admin/reports/accounting' },
-                                            { n: 'Returns Reports', h: '/admin/reports/sales-returns' },
-                                            { n: 'Data Hub', h: '/admin/reports/data-hub' },
-                                        ]
-                                    },
-                                ].map(g => (
+                                {ADMIN_PAGE_GROUPS.map(g => {
+                                    // Branch admins can't see/toggle Super-Admin-only pages;
+                                    // a super admin can't toggle pages hidden from them either.
+                                    const items = g.items.filter(i =>
+                                        (isSuperAdmin || !SUPER_ONLY_HREFS.includes(i.h)) &&
+                                        !(isSuperAdmin && SUPER_ADMIN_HIDDEN_HREFS.includes(i.h)));
+                                    if (items.length === 0) return null;
+                                    return (
                                     <div key={g.group}>
                                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">{g.group}</p>
                                         <div className="divide-y divide-slate-100">
-                                            {g.items.map(i => {
+                                            {items.map(i => {
                                                 const vis = sidebarVisibility[i.h] !== false;
                                                 return (
                                                     <div key={i.h} className="flex items-center justify-between py-2.5">
@@ -524,13 +478,14 @@ export default function SettingsPage() {
                                             })}
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             <div className="mt-8 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                                 <p className="text-[12px] text-slate-600 text-center sm:text-left">Toggling off a page will hide it from the sidebar but not delete it.</p>
                                 <Btn onClick={() => {
-                                    localStorage.setItem('sidebar_visibility', JSON.stringify(sidebarVisibility));
+                                    localStorage.setItem(sidebarVisibilityKey(), JSON.stringify(sidebarVisibility));
                                     window.dispatchEvent(new Event('sidebar_visibility_change'));
                                     toast.success('Navigation layout saved');
                                 }} className="w-full sm:w-auto justify-center px-6">

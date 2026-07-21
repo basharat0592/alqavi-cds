@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Plus, Search, Mail, Phone, MapPin,
     Trash2, X, CheckCircle,
     RefreshCw, ChevronRight, ChevronLeft, User, Shield, Pencil, Save, Loader2
 } from 'lucide-react';
 import { companyService } from '@/lib/api';
+import { areaService, Area } from '@/services/area.service';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { exportToCSV } from '@/lib/utils';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CUSTOMER MANAGEMENT (MASTER DIRECTORY)
@@ -31,6 +34,7 @@ const Field = ({ label, required = false, children }: { label: string; required?
 const inputCls = ui.inputBase;
 
 export default function CustomersPage() {
+    const router = useRouter();
     const [customers, setCustomers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -55,8 +59,11 @@ export default function CustomersPage() {
         password: '',
         status: 'active',
         is_active: true,
+        area: '' as number | string,
         avatar: null as File | string | null
     });
+
+    const [areas, setAreas] = useState<Area[]>([]);
 
     const loadCustomers = useCallback(async () => {
         setLoading(true);
@@ -74,6 +81,10 @@ export default function CustomersPage() {
         loadCustomers();
     }, [loadCustomers]);
 
+    useEffect(() => {
+        areaService.getActive().then(setAreas).catch(() => setAreas([]));
+    }, []);
+
     // Reset pagination on search
     useEffect(() => {
         setCurrentPage(1);
@@ -85,13 +96,13 @@ export default function CustomersPage() {
         try {
             if (editTarget) {
                 // Update
-                const payload = { ...formData };
-                if (!payload.password) delete (payload as any).password;
+                const payload: any = { ...formData, area: formData.area === '' ? null : Number(formData.area) };
+                if (!payload.password) delete payload.password;
                 await companyService.updateCustomer(editTarget.id, payload);
                 toast.success('Customer updated');
             } else {
                 // Create
-                const payload = { ...formData };
+                const payload: any = { ...formData, area: formData.area === '' ? null : Number(formData.area) };
                 if (!payload.password) payload.password = 'Password123';
                 await companyService.createCustomer(payload);
                 toast.success('Customer registered successfully');
@@ -121,7 +132,7 @@ export default function CustomersPage() {
 
     const openAdd = () => {
         setEditTarget(null);
-        setFormData({ first_name: '', last_name: '', email: '', phone: '', address: '', city: '', country: '', postal_code: '', password: '', status: 'active', is_active: true, avatar: null });
+        setFormData({ first_name: '', last_name: '', email: '', phone: '', address: '', city: '', country: '', postal_code: '', password: '', status: 'active', is_active: true, area: '', avatar: null });
         setShowModal(true);
     };
 
@@ -139,6 +150,7 @@ export default function CustomersPage() {
             password: '',
             status: c.status || 'active',
             is_active: c.is_active !== false,
+            area: c.area ?? '',
             avatar: c.avatar || null
         });
         setShowModal(true);
@@ -168,6 +180,20 @@ export default function CustomersPage() {
     const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
     const paginatedItems = filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+    const sel = useTableSelection(paginatedItems);
+
+    const bulkDelete = async (ids: string[]) => {
+        await Promise.allSettled(ids.map(id => companyService.deleteCustomer(id)));
+        toast.success(`${ids.length} customer(s) deleted`);
+        loadCustomers();
+    };
+
+    const bulkStatus = async (ids: string[], active: boolean) => {
+        await Promise.allSettled(ids.map(id => companyService.updateCustomer(id, { status: active ? 'active' : 'inactive', is_active: active })));
+        toast.success(`Marked ${ids.length} ${active ? 'active' : 'inactive'}`);
+        loadCustomers();
+    };
+
     return (
         <div className="pb-12 text-left text-slate-800">
             <div className="max-w-[1200px] mx-auto">
@@ -176,7 +202,7 @@ export default function CustomersPage() {
                     title="Customers"
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Customers' }]}
                     actions={
-                        <Button onClick={openAdd} className="whitespace-nowrap">
+                        <Button onClick={() => router.push('/admin/company/customers/add')} className="whitespace-nowrap">
                             <Plus size={16} /> Add New Customer
                         </Button>
                     }
@@ -275,6 +301,7 @@ export default function CustomersPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                    <SelectAllTh sel={sel} />
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Customer Profile</th>
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contact Details</th>
                                     <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Primary Location</th>
@@ -284,12 +311,13 @@ export default function CustomersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && customers.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-24 text-center text-[14px] text-slate-500 font-medium">Loading master customer directory...</td></tr>
+                                    <tr><td colSpan={6} className="py-24 text-center text-[14px] text-slate-500 font-medium">Loading master customer directory...</td></tr>
                                 ) : filteredCustomers.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-24 text-center text-[14px] text-slate-500 font-medium">No customer accounts found.</td></tr>
+                                    <tr><td colSpan={6} className="py-24 text-center text-[14px] text-slate-500 font-medium">No customer accounts found.</td></tr>
                                 ) : (
                                     paginatedItems.map(cust => (
                                         <tr key={cust.id} className="hover:bg-slate-50 transition-colors group">
+                                            <RowCheckboxTd sel={sel} id={cust.id} />
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 border border-slate-200 font-bold text-lg overflow-hidden">
@@ -377,6 +405,28 @@ export default function CustomersPage() {
                 )}
             </div>
 
+            <BulkBar
+                sel={sel}
+                entity="customers"
+                onDelete={bulkDelete}
+                statusActions={[
+                    { label: 'Mark Active', apply: (ids) => bulkStatus(ids, true) },
+                    { label: 'Mark Inactive', apply: (ids) => bulkStatus(ids, false) },
+                ]}
+                onExport={() => exportToCSV(
+                    sel.selectedItems.map((c: any) => ({
+                        name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
+                        email: c.email || '',
+                        phone: c.phone || '',
+                        address: c.address || '',
+                        city: c.city || '',
+                        country: c.country || '',
+                        status: c.is_active !== false ? 'active' : 'inactive',
+                    })),
+                    'customers.csv',
+                )}
+            />
+
             {/* Form Modal (Add/Edit) */}
             <Modal
                 open={showModal}
@@ -445,6 +495,14 @@ export default function CustomersPage() {
                                 <select className={inputCls + " cursor-pointer"} value={formData.status} onChange={e => setFormData({...formData, status: e.target.value, is_active: e.target.value === 'active'})}>
                                     <option value="active">Active / Verified</option>
                                     <option value="inactive">Suspended / Inactive</option>
+                                </select>
+                            </Field>
+                            <Field label="Area / Territory">
+                                <select className={inputCls + " cursor-pointer"} value={formData.area} onChange={e => setFormData({...formData, area: e.target.value})}>
+                                    <option value="">No area assigned</option>
+                                    {areas.map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ''}</option>
+                                    ))}
                                 </select>
                             </Field>
                         </div>

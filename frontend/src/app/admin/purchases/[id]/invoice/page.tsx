@@ -8,8 +8,8 @@ import { Printer, ArrowLeft, Share2, Check, Hash, Calendar, Phone, Mail, Buildin
 import PageLoader from '@/components/ui/PageLoader';
 import Logo from '@/components/ui/Logo';
 import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
-import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
+import { cn, exportToCSV } from '@/lib/utils';
+import { PageHeader, Card, Button, Badge, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 
 export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -37,6 +37,9 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
         };
         fetchPurchase();
     }, [id]);
+
+    const lineItems: any[] = (purchase?.items || []).map((it: any, idx: number) => ({ ...it, _rowId: it.id ?? idx }));
+    const sel = useTableSelection(lineItems, (it: any) => it._rowId);
 
     const handlePrint = () => { window.print(); };
 
@@ -88,199 +91,246 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
             </div>
 
             {/* Paper Container */}
-            <Card className="max-w-[850px] mx-auto p-8 print:border-none print:shadow-none print:rounded-none print:p-0">
+            <Card className="max-w-[850px] mx-auto p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:rounded-none print:p-0">
 
                 {/* Visual Header */}
-                <div className="flex justify-between items-start mb-12">
+                <div className="flex justify-between items-center mb-3">
                     <div className="w-1/3">
-                        <Logo size="lg" className="!items-start" />
+                        <img
+                            src="/images/invoice-logo.png"
+                            alt="Alqavi Traders"
+                            className="h-11 w-auto object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/images/logo.png'; }}
+                        />
+                        <p className="text-[12px] font-black text-emerald-700 tracking-wide mt-1">Alqavi Traders</p>
                     </div>
 
-                    <div className="w-1/3 text-center">
-                        <h1 className="text-[34px] font-bold leading-[1.8] mb-1 text-slate-900 urdu-text">
+                    <div className="w-1/3 text-center py-1">
+                        <h1 className="text-[22px] font-bold text-slate-900 urdu-text mb-1.5" style={{ lineHeight: 2 }}>
                             القوی ٹریڈرز
                         </h1>
-                        <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest urdu-text">
-                            کاسمیٹکس اسٹوک سپلائی
+                        <p className="text-[10px] font-bold text-slate-500 tracking-widest urdu-text" style={{ lineHeight: 1.8 }}>
+                            کاسمیٹکس ڈیلر گلگت بلتستان
                         </p>
                     </div>
 
                     <div className="w-1/3 text-right">
-                        <h2 className="text-[20px] font-black uppercase tracking-tighter text-slate-900">Purchase Order</h2>
-                        <div className="text-[12px] text-slate-500 mt-2 space-y-0.5 font-medium">
+                        <h2 className="text-[15px] font-black uppercase tracking-tighter text-slate-900">Purchase Order</h2>
+                        <div className="text-[10px] text-slate-500 mt-0.5 font-medium leading-tight">
                             <p>Distributor: Al-Qavi Traders Gilgit</p>
                             <p>Warehouse: {purchase.warehouse_name || 'Main Warehouse'}</p>
                         </div>
-                        <p className="text-[14px] text-slate-900 font-bold mt-4 tracking-tight">PO No: {purchase.purchase_number}</p>
-                        <p className="text-[12px] text-slate-500 font-medium">{formatDate(purchase.order_date || purchase.created_at)}</p>
+                        <p className="text-[12px] text-slate-900 font-bold mt-1 tracking-tight">PO No: {purchase.purchase_number}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">{formatDate(purchase.order_date || purchase.created_at)}</p>
                     </div>
                 </div>
 
-                {/* 2. Supplier & Metadata Grid */}
-                <div className="grid grid-cols-4 gap-8 mb-16 px-1">
+                {/* 2. Supplier & Metadata Grid — compact single line per column */}
+                <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
                     <div className="col-span-2">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest border-b border-slate-100 pb-1">Supplier Information</h3>
-                        <p className="text-[18px] font-black text-slate-900 leading-none">{purchase.supplier_name}</p>
-                        {purchase.supplier_company && <p className="text-[13px] text-slate-500 mt-2 font-bold">{purchase.supplier_company}</p>}
-                        <p className="text-[13px] font-medium text-slate-900 mt-1">{purchase.supplier_phone || 'N/A'}</p>
-                        <p className="text-[11px] text-slate-400 mt-2 w-64 leading-relaxed italic">{purchase.supplier_address || 'Verified Wholesale Partner'}</p>
-                    </div>
-                    <div>
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest border-b border-slate-100 pb-1">Order Status</h3>
-                        <div className="space-y-3">
-                            <div>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">State</p>
-                                <Badge tone="indigo">{purchase.status || 'ORDERED'}</Badge>
-                            </div>
-                            <div>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Payment</p>
-                                <span className={cn(
-                                    "text-[10px] font-black uppercase tracking-widest",
-                                    purchase.payment_status === 'PAID' ? 'text-emerald-600' : 'text-rose-600'
-                                )}>
-                                    {purchase.payment_status || 'UNPAID'}
-                                </span>
-                            </div>
-                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Supplier</p>
+                        <p className="text-[15px] font-black text-slate-900 leading-tight">{purchase.supplier_name}</p>
+                        {purchase.supplier_phone && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{purchase.supplier_phone}</p>}
                     </div>
                     <div className="text-right">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest border-b border-slate-100 pb-1">Reception</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Inventory Sync</p>
-                                {purchase.is_inventory_synced ? (
-                                    <div className="flex items-center justify-end gap-1 text-emerald-600 font-black text-[10px] uppercase">
-                                        <CheckCircle2 size={12} /> Synced to Stock
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-end">
-                                        <Badge tone="amber">Pending Sync</Badge>
-                                    </div>
-                                )}
-                            </div>
-                            {purchase.reference_number && (
-                                <div>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Ext Ref</p>
-                                    <p className="text-[12px] font-bold text-slate-900">{purchase.reference_number}</p>
-                                </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Inventory</p>
+                        <div className="flex justify-end">
+                            {purchase.is_inventory_synced ? (
+                                <span className="flex items-center gap-1 text-emerald-600 font-black text-[10px] uppercase"><CheckCircle2 size={12} /> Synced</span>
+                            ) : (
+                                <Badge tone="amber">Pending Sync</Badge>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* 3. Items Table */}
-                <div className="mb-12">
-                    <table className="w-full text-left border-collapse">
+                <div className="mb-6">
+                    <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
                         <thead>
                             <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
-                                <th className="py-4 px-2 w-12 text-center">#</th>
-                                <th className="py-4 px-3">Item Description</th>
-                                <th className="py-4 px-3 text-center w-28">Quantity</th>
-                                <th className="py-4 px-3 text-right w-32">Unit Cost</th>
-                                <th className="py-4 px-3 text-right w-32">Subtotal</th>
+                                <SelectAllTh sel={sel} className="print:hidden" />
+                                <th className="py-1.5 px-2 w-12 text-center">#</th>
+                                <th className="py-1.5 px-3">Item Description</th>
+                                <th className="py-1.5 px-3 text-center w-28">Quantity</th>
+                                <th className="py-1.5 px-3 text-right w-32">Unit Cost</th>
+                                <th className="py-1.5 px-3 text-right w-32">Subtotal</th>
                             </tr>
                         </thead>
-                        <tbody className="text-[14px]">
-                            {items.map((item: any, i: number) => {
+                        <tbody className="text-[13px]">
+                            {lineItems.map((item: any, i: number) => {
                                 const price = parseFloat(item.price || 0);
                                 const qty = item.quantity || 1;
-                                const amt = item.subtotal || (price * qty);
+                                const units = item.total_units ?? (item.packaging_type === 'CARTON' ? qty * (item.items_per_carton || 1) : qty);
+                                const amt = item.subtotal ?? (price * units);
                                 return (
                                     <tr key={i} className="hover:bg-slate-50 border-b border-slate-100">
-                                        <td className="py-4 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
-                                        <td className="py-4 px-3 font-bold text-slate-900">
+                                        <RowCheckboxTd sel={sel} id={item._rowId} className="print:hidden" />
+                                        <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
+                                        <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">
                                             {item.product_name}
-                                            <div className="text-[10px] font-medium text-slate-400 mt-0.5">Packaging: {item.packaging_type?.toLowerCase()}</div>
+                                            <span className="text-[10px] font-medium text-slate-400 ml-1.5">({item.packaging_type?.toLowerCase()})</span>
                                         </td>
-                                        <td className="py-4 px-3 text-center font-bold text-emerald-600 tabular-nums">{qty}</td>
-                                        <td className="py-4 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
-                                        <td className="py-4 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(amt)}</td>
+                                        <td className="py-1.5 px-3 text-center font-bold text-emerald-600 tabular-nums whitespace-nowrap">
+                                            {item.packaging_type === 'CARTON' ? (
+                                                <span>{units} pcs <span className="text-[10px] font-medium text-slate-400">({qty} ctn × {item.items_per_carton || 1})</span></span>
+                                            ) : qty}
+                                        </td>
+                                        <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(amt)}</td>
                                     </tr>
                                 );
                             })}
 
-                            {/* Totals Section */}
-                            <tr className="border-t-2 border-slate-300">
-                                <td colSpan={3} className="pt-8"></td>
-                                <td className="py-2 text-right text-[12px] font-bold text-slate-500 uppercase">Subtotal</td>
-                                <td className="py-2 text-right font-black text-slate-900 tabular-nums">{formatCurrency(totalAmount - (purchase.shipping_cost || 0) - (purchase.tax_amount || 0))}</td>
-                            </tr>
-                            {purchase.shipping_cost > 0 && (
-                                <tr>
-                                    <td colSpan={3}></td>
-                                    <td className="py-2 text-right text-[12px] font-bold text-slate-500 uppercase">Shipping Fees</td>
-                                    <td className="py-2 text-right font-black text-slate-900 tabular-nums">{formatCurrency(purchase.shipping_cost)}</td>
-                                </tr>
-                            )}
-                            <tr className="bg-slate-50/60">
-                                <td colSpan={3} className="py-4 px-3 italic text-[11px] text-slate-400">
-                                    Notes: {purchase.notes || 'Bulk stock replenishment order.'}
-                                </td>
-                                <td className="py-4 px-3 text-right text-[14px] font-black uppercase tracking-wider text-slate-900">Total Amount</td>
-                                <td className="py-4 px-3 text-right text-[18px] font-black text-indigo-600 tabular-nums">{formatCurrency(totalAmount)}</td>
-                            </tr>
-
-                            {/* Payment Status Row */}
-                            <tr className="border-t border-slate-100">
-                                <td colSpan={3}></td>
-                                <td className="py-2 text-right text-[12px] font-bold text-emerald-600 uppercase">Total Paid</td>
-                                <td className="py-2 text-right font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</td>
-                            </tr>
-                            {balance > 0 && (
-                                <tr>
-                                    <td colSpan={3}></td>
-                                    <td className="py-2 text-right text-[12px] font-black text-rose-600 uppercase italic">Remaining Balance</td>
-                                    <td className="py-2 text-right font-black text-rose-600 tabular-nums">{formatCurrency(balance)}</td>
-                                </tr>
-                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Terms Area */}
-                <div className="mt-12 mb-6 px-1 border-l-4 border-indigo-600 pl-5">
-                    <p className="text-[12px] font-bold text-slate-900 uppercase mb-1">Company Settlement Policy</p>
-                    <p className="text-[10px] leading-relaxed text-slate-500 max-w-lg">
-                        This purchase order is subject to the standard procurement terms of Al-Qavi Traders. Payment settlements reach finality only upon verification of bank transfer or physical receipt by the finance department. Please include PO #{purchase.purchase_number} in all payment references.
-                    </p>
+                {/* Summary: notes (left) + totals list box (right) */}
+                <div className="flex justify-between items-start gap-6 mb-6">
+                    <div className="flex-1 pt-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                        <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{purchase.notes || 'Bulk stock replenishment order.'}</p>
+                    </div>
+                    <div className="w-[280px] text-[12px] space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
+                            <span className="font-black text-slate-900 tabular-nums">{formatCurrency(totalAmount - (purchase.shipping_cost || 0) - (purchase.tax_amount || 0))}</span>
+                        </div>
+                        {purchase.shipping_cost > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Shipping Fees</span>
+                                <span className="font-black text-slate-900 tabular-nums">{formatCurrency(purchase.shipping_cost)}</span>
+                            </div>
+                        )}
+                        {purchase.tax_amount > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Tax</span>
+                                <span className="font-black text-slate-900 tabular-nums">{formatCurrency(purchase.tax_amount)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-slate-300">
+                            <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
+                            <span className="font-black text-indigo-600 text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1">
+                            <span className="text-emerald-600 font-bold uppercase text-[11px]">Total Paid</span>
+                            <span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</span>
+                        </div>
+                        {balance > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-rose-600 font-black uppercase text-[11px]">Remaining Balance</span>
+                                <span className="font-black text-rose-600 tabular-nums">{formatCurrency(balance)}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Formal Signatures Area */}
-                <div className="mt-16 pt-12 border-t-2 border-dashed border-slate-200">
-                    <div className="flex justify-between items-start gap-32">
-                        <div className="flex-1 space-y-3 text-center">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase">Supplier Confirmation</p>
-                            <div className="w-full border-b border-slate-300 pt-10"></div>
-                            <p className="text-[12px] font-black uppercase tracking-widest text-slate-900 pt-2">Authorized Sign/Stamp</p>
+                {/* Footer — Alqavi Traders official stationery (replicated) — pinned to page bottom */}
+                <div className="mt-auto pt-6 print-exact invoice-footer">
+                    {/* Banner band: branch arrows on both ends + centered tagline */}
+                    <div className="flex items-stretch mb-2 overflow-hidden print-exact" style={{ height: '46px' }}>
+                        {/* Left branch arrow (points left) */}
+                        <div
+                            className="text-white flex items-center justify-center px-6 print-exact"
+                            style={{ backgroundColor: '#0f172a', clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 16% 100%, 0 50%)' }}
+                        >
+                            <span className="text-[9px] font-bold urdu-text whitespace-nowrap">قاضی مارکیٹ CMH روڈ خومر گلگت</span>
                         </div>
-                        <div className="flex-1 space-y-3 text-center">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase">Company Audit Verification</p>
-                            <div className="w-full border-b border-slate-300 pt-10"></div>
-                            <p className="text-[12px] font-black uppercase tracking-widest text-slate-900 pt-2">Gilgit Finance Desk</p>
+                        {/* Tagline bar */}
+                        <div
+                            className="text-white flex-1 flex items-center justify-center gap-3 print-exact"
+                            style={{ backgroundColor: '#1e293b' }}
+                        >
+                            <span className="inline-block w-2 h-2 rotate-45 print-exact" style={{ backgroundColor: '#1d4ed8' }}></span>
+                            <span className="text-[13px] font-bold urdu-text">مشہور اور با اعتماد ملکی وغیر ملکی کاسمیٹکس کا مرکز</span>
+                            <span className="inline-block w-2 h-2 rotate-45 print-exact" style={{ backgroundColor: '#1d4ed8' }}></span>
+                        </div>
+                        {/* Right branch arrow (points right) */}
+                        <div
+                            className="text-white flex items-center justify-center px-6 print-exact"
+                            style={{ backgroundColor: '#0f172a', clipPath: 'polygon(0 0, 84% 0, 100% 50%, 84% 100%, 0 100%)' }}
+                        >
+                            <span className="text-[9px] font-bold urdu-text whitespace-nowrap">ابراہیم مارکیٹ کنفکشن بل سکردو</span>
                         </div>
                     </div>
 
-                    <div className="mt-20 text-center border-t border-slate-100 pt-6">
-                        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-[0.5em]">
-                            Global Professional Standard • Internal Procurement Document
+                    {/* Distributors box (removed) */}
+                    <div className="hidden">
+                        <div className="px-2 py-[3px] border-b border-slate-800 font-bold">
+                            Distributors: <span className="font-medium">{purchase.supplier_name || ''}</span>
+                        </div>
+                        <div className="px-2 py-[3px] border-b border-slate-800">{purchase.supplier_phone || ' '}</div>
+                        <div className="px-2 py-[3px]">{purchase.supplier_address || ' '}</div>
+                    </div>
+
+                    {/* Note / Terms (Urdu, justified) */}
+                    <div dir="rtl" className="mt-2 mb-10">
+                        <p className="text-[11px] text-slate-900 urdu-text text-justify" style={{ lineHeight: 2.2 }}>
+                            <span className="font-black">نوٹ:۔ </span>
+                            تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں الْقوی ٹریڈرز گلگت سے خریدی ہیں انہیں ایکسپائری سے تین مہینے پہلے تبدیل کرنا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیل کرنے کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بمعہ پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی کمی بیشی کی صورت میں فوراً رابطہ کریں، بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ۔
+                        </p>
+                    </div>
+
+                    {/* Signatures: Store Manager (left) and Saleman (right) */}
+                    <div className="flex justify-between items-end mt-12 px-2">
+                        <div className="w-44">
+                            <div className="border-t border-slate-700 mb-1.5"></div>
+                            <span className="text-[13px] font-black text-slate-900">Store Manager</span>
+                        </div>
+                        <div className="w-44 text-right">
+                            <div className="border-t border-slate-700 mb-1.5"></div>
+                            <span className="text-[13px] font-black text-slate-900">Saleman</span>
+                        </div>
+                    </div>
+
+                    {/* Contact strip */}
+                    <div className="mt-3 text-center">
+                        <p className="text-[8px] text-slate-400 font-medium tracking-wide">
+                            Branch 1: Qazi Market, CMH Road, Khomer Gilgit&nbsp;&nbsp;•&nbsp;&nbsp;Branch 2: Ibrahim Market, Confection Bil, Skardu
                         </p>
                     </div>
                 </div>
             </Card>
 
+            <div className="print:hidden">
+                <BulkBar
+                    sel={sel}
+                    entity="line items"
+                    onExport={() => exportToCSV(
+                        sel.selectedItems.map((it: any) => {
+                            const price = parseFloat(it.price || 0);
+                            const qty = it.quantity || 1;
+                            const units = it.total_units ?? (it.packaging_type === 'CARTON' ? qty * (it.items_per_carton || 1) : qty);
+                            return {
+                                purchase_number: purchase.purchase_number,
+                                product: it.product_name || '',
+                                packaging: it.packaging_type || '',
+                                quantity: qty,
+                                unit_cost: price,
+                                subtotal: it.subtotal ?? (price * units),
+                            };
+                        }),
+                        `purchase-${purchase.purchase_number}-items.csv`,
+                    )}
+                />
+            </div>
+
             <style jsx global>{`
                 @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700;900&display=swap');
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-                
+
                 @media print {
                     .print\\:hidden { display: none !important; }
                     body { padding: 0 !important; margin: 0 !important; background-color: white !important; }
                     .max-w-[850px] { max-width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+                    .invoice-footer { position: fixed; bottom: 0; left: 0; right: 0; margin: 0 !important; padding-top: 0 !important; }
                     @page { margin: 1cm; }
                 }
 
                 body { font-family: 'Inter', sans-serif; }
-                .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; font-weight: 700; line-height: 2.1; }
+                .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; font-weight: 700; line-height: 1.5; }
+                .print-exact { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             `}</style>
         </div>
     );

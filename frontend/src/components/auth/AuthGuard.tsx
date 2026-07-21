@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { getUserPagePerms, isPathAllowed, firstAllowedPath } from '@/lib/access';
 
 export default function AuthGuard({ children, allowedRoles }: {
     children: React.ReactNode;
@@ -63,6 +64,25 @@ export default function AuthGuard({ children, allowedRoles }: {
         setAuthorized(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount only — NOT on every route change
+
+    // Page-level access enforcement for admin routes: a restricted staff user
+    // (custom role + page_permissions) cannot reach a page by typing its URL,
+    // not just have it hidden from the sidebar. Re-runs on every navigation.
+    useEffect(() => {
+        if (authorized !== true) return;
+        if (!pathname.startsWith('/admin')) return;
+        try {
+            const userStr = sessionStorage.getItem('cosmetic_distro_user');
+            if (!userStr || userStr === 'undefined' || userStr === 'null') return;
+            const user = JSON.parse(userStr);
+            const perms = getUserPagePerms(user);
+            if (!isPathAllowed(perms, pathname)) {
+                router.replace(firstAllowedPath(perms));
+            }
+        } catch (e) {
+            console.error('AuthGuard page-access check failed:', e);
+        }
+    }, [pathname, authorized, router]);
 
     if (authorized === null) {
         return (

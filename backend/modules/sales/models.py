@@ -1,9 +1,30 @@
 import uuid
 import random
 import string
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from modules.products.models import Product
+
+
+def _settlement_alert(due_date, remaining):
+    """Shared due-date logic used by all settleable transactions.
+
+    Returns (is_overdue, days_overdue, is_due_soon). A transaction is only
+    flagged when money is still outstanding (remaining > 0).
+    """
+    try:
+        rem = Decimal(str(remaining or 0))
+    except Exception:
+        rem = Decimal('0')
+    if not due_date or rem <= 0:
+        return False, 0, False
+    today = timezone.localdate()
+    if due_date < today:
+        return True, (today - due_date).days, False
+    return False, 0, (0 <= (due_date - today).days <= 3)
+
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -37,11 +58,88 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    # Branch (warehouse) this sale was made from. Stamped at POS create time from
+    # the selected source warehouse; drives multi-branch data isolation.
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse',
+        on_delete=models.SET_NULL,
+        related_name='orders',
+        null=True,
+        blank=True
+    )
+    # Staff member who created this sale (POS). Distinct from `user`/`customer`
+    # (the buyer); used so a branch admin can see only the sales they made.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='created_orders',
+        null=True,
+        blank=True
+    )
+    # Owning Admin (tenant) — the per-Admin isolation axis. NULL for storefront /
+    # anonymous orders (which stay public/unscoped). See core.scoping.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_orders'
+    )
+    # Rider assigned to deliver this order (managed by admin; drives the rider dashboard).
+    delivery_person = models.ForeignKey(
+        'delivery.DeliveryPerson',
+        on_delete=models.SET_NULL,
+        related_name='deliveries',
+        null=True,
+        blank=True
+    )
     tracking_id = models.CharField(max_length=20, unique=True, db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    # The rider tapped "Delivered" but the admin hasn't confirmed yet. This does NOT
+    # finalize the order (no stock deduction / payment settlement) — it just flags the
+    # order so the rider sees "waiting for response" and the admin knows to confirm.
+    rider_reported_delivered = models.BooleanField(default=False)
+    # The rider tapped "Cancel" — a request the admin confirms. Nothing is finalized
+    # (reservation stays) until the admin actually sets the order to CANCELLED.
+    rider_reported_cancelled = models.BooleanField(default=False)
+    # The CUSTOMER confirmed they received the order from their account. Like the rider
+    # report, this doesn't finalize anything — the admin confirms delivery to settle it.
+    customer_reported_delivered = models.BooleanField(default=False)
+    # Proof of delivery — the photo the rider takes at the doorstep, plus where/when it
+    # was captured. Shown to the admin (active orders + sales history) as verification.
+    proof_image = models.ImageField(upload_to='delivery/proofs/', null=True, blank=True)
+    proof_lat = models.CharField(max_length=32, blank=True, default='')
+    proof_lng = models.CharField(max_length=32, blank=True, default='')
+    proof_at = models.DateTimeField(null=True, blank=True)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='COD')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # The payout the branch admin offers the delivery rider for THIS order — set
+    # dynamically per order, separate from the customer-facing shipping_cost. Drives
+    # the rider's earnings. 0 = no payout (e.g. the branch's own in-house rider).
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Settlement — supports partial / on-credit sales. amount_paid is the sum of
+    # confirmed installments (see payments.TransactionPayment); kept in sync by
+    # payments.services.recompute_parent. Existing rows default to fully paid.
+    PAYMENT_STATUS_CHOICES = [
+        ('UNPAID', 'Unpaid'),
+        ('PARTIAL', 'Partially Paid'),
+        ('PAID', 'Paid'),
+    ]
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='PAID')
+    due_date = models.DateField(null=True, blank=True)
+
+    # Salesman who booked this sale (desktop POS "Saleman" dropdown). Distinct from
+    # created_by (which is always the logged-in staff); lets a shop attribute the
+    # sale to a specific salesperson for commission/reporting.
+    salesperson = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='salesperson_orders'
+    )
+    # Optional back-dated sale date (desktop "Sale Date" checkbox). Falls back to
+    # created_at for display when unset.
+    sale_date = models.DateField(null=True, blank=True)
+
     # Shipping info
     shipping_address = models.TextField()
     phone_number = models.CharField(max_length=20)
@@ -63,6 +161,24 @@ class Order(models.Model):
         ('FAILED', 'Failed')
     ])
     whatsapp_sent_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def remaining_amount(self):
+        # total_amount may be a float (POS accumulator) while amount_paid is a
+        # Decimal — coerce both so the subtraction never raises.
+        return Decimal(str(self.total_amount or 0)) - Decimal(str(self.amount_paid or 0))
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[2]
 
     def save(self, *args, **kwargs):
         if not self.tracking_id:
@@ -96,12 +212,29 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=10, decimal_places=2)      # Snapshotted selling price
+    # Free bonus units given with this line (desktop "Bon(U)"). Leave stock but are
+    # not charged for.
+    bonus_quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2)      # Snapshotted selling price / "Unit TP"
+    # Per-line discount AMOUNT (desktop "Disc.Amt"); the % is a UI convenience.
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Snapshotted purchase cost
 
     @property
+    def line_net(self):
+        """Charged amount for this line: qty × price − line discount (bonus is free)."""
+        return (Decimal(str(self.price or 0)) * self.quantity) - Decimal(str(self.discount or 0))
+
+    @property
+    def received_units(self):
+        """Physical units that leave stock: paid quantity + free bonus."""
+        return (self.quantity or 0) + (self.bonus_quantity or 0)
+
+    @property
     def profit(self):
-        return (self.price - self.cost_price) * self.quantity
+        # Profit is on the charged amount (net of line discount), over cost of all
+        # physical units shipped (paid + bonus).
+        return self.line_net - (Decimal(str(self.cost_price or 0)) * self.received_units)
 
     def __str__(self):
         product_name = self.product.product_name if self.product else "Deleted Product"
@@ -140,15 +273,22 @@ class PurchaseOrder(models.Model):
     ]
 
     purchase_number = models.CharField(max_length=20, unique=True)
-    supplier = models.ForeignKey('supplier.Supplier', on_delete=models.CASCADE, related_name='purchase_orders')
+    supplier = models.ForeignKey('supplier.Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders')
     reference_number = models.CharField(max_length=50, null=True, blank=True)
     
     warehouse = models.ForeignKey('inventory.Warehouse', on_delete=models.SET_NULL, null=True, blank=True)
     
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # "Freight"
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)      # "Extra Tax Amt"
+    # Extra flat discount given by the supplier on the whole bill ("Extra Disc").
+    extra_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # Staff member who handled/booked this purchase (desktop "Staff" dropdown).
+    staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='handled_purchase_orders'
+    )
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     is_inventory_synced = models.BooleanField(default=False)
     payment_status = models.CharField(max_length=20, choices=[
@@ -166,7 +306,20 @@ class PurchaseOrder(models.Model):
     
     order_date = models.DateTimeField(auto_now_add=True)
     expected_delivery_date = models.DateField(null=True, blank=True)
+    # Payment deadline for settling this purchase with the supplier.
+    due_date = models.DateField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
+
+    # The admin/user who created this purchase order (shown to the supplier as "From").
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='created_purchase_orders'
+    )
+    # Owning Admin (tenant) — per-Admin isolation axis.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_purchase_orders'
+    )
 
     # Payment Details
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -180,7 +333,19 @@ class PurchaseOrder(models.Model):
 
     @property
     def remaining_amount(self):
-        return self.total_amount - self.paid_amount
+        return Decimal(str(self.total_amount or 0)) - Decimal(str(self.paid_amount or 0))
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.remaining_amount)[2]
 
     def save(self, *args, **kwargs):
         if not self.purchase_number:
@@ -212,17 +377,36 @@ class PurchaseOrderItem(models.Model):
     items_per_carton = models.PositiveIntegerField(default=1) # If carton, how many pieces inside?
     
     quantity = models.PositiveIntegerField(default=1) # Number of cartons or items
-    price = models.DecimalField(max_digits=10, decimal_places=2) # Cost Price (from supplier)
-    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Planned Sale Price for distributor
+    # Free bonus units received on top of the paid quantity ("Bonus (U)").
+    bonus_quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Cost Price / "Pur.Rate"
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0) # Planned "Sale Rate"
+    retail_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)   # "Retail.Rate"
+    # Batch expiry for this received lot ("Exp Date").
+    expiry_date = models.DateField(null=True, blank=True)
 
     weight = models.CharField(max_length=50, null=True, blank=True)
     size = models.CharField(max_length=50, null=True, blank=True)
 
     @property
     def total_units(self):
+        """Paid units (excludes free bonus) — the basis for costing/subtotal."""
         if self.packaging_type == 'CARTON':
             return self.quantity * self.items_per_carton
         return self.quantity
+
+    @property
+    def received_units(self):
+        """Units that actually enter stock: paid units + free bonus units."""
+        return self.total_units + (self.bonus_quantity or 0)
+
+    @property
+    def profit_percent(self):
+        """Margin over cost: (sale − cost) / cost × 100."""
+        cost = float(self.price or 0)
+        if cost <= 0:
+            return 0.0
+        return round((float(self.selling_price or 0) - cost) / cost * 100, 2)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name if self.product else 'Deleted'}"
@@ -238,16 +422,57 @@ class PurchaseReturn(models.Model):
 
     return_number = models.CharField(max_length=20, unique=True, db_index=True)
     supplier = models.ForeignKey('supplier.Supplier', on_delete=models.CASCADE, related_name='returns')
+    # Owning Admin (tenant) — per-Admin isolation axis.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_purchase_returns'
+    )
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='returns')
     
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='WAITING_FOR_SUPPLIER')
     reason = models.TextField(null=True, blank=True)
     return_date = models.DateField()
-    
+
     total_refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
+
+    # Refund settlement — supplier owes this money back. refund_status is kept in
+    # sync from confirmed installments by payments.services.recompute_parent.
+    REFUND_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Settled'),
+    ]
+    REFUND_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online'),
+        ('wallet', 'Mobile Wallet'),
+        ('credit_note', 'Credit Note'),
+        ('other', 'Other'),
+    ]
+    refund_status = models.CharField(max_length=10, choices=REFUND_STATUS_CHOICES, default='PENDING')
+    refund_method = models.CharField(max_length=20, choices=REFUND_METHOD_CHOICES, blank=True, default='')
+    due_date = models.DateField(null=True, blank=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def refund_remaining(self):
+        return 0 if self.refund_status == 'PAID' else (self.total_refund_amount or 0)
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[2]
 
     def save(self, *args, **kwargs):
         if not self.return_number:
@@ -294,13 +519,64 @@ class SaleReturn(models.Model):
     # Identify who is returning
     customer = models.ForeignKey('customer.Customer', on_delete=models.SET_NULL, null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    
+    # Owning Admin (tenant) — per-Admin isolation axis. NULL for storefront returns.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_sale_returns'
+    )
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     reason = models.TextField()
     notes = models.TextField(null=True, blank=True)
-    
+
+    # Refund settlement — money we owe the customer back. refund_status is kept
+    # in sync from confirmed installments by payments.services.recompute_parent.
+    REFUND_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Refunded'),
+    ]
+    REFUND_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online'),
+        ('wallet', 'Mobile Wallet'),
+        ('credit_note', 'Store Credit'),
+        ('other', 'Other'),
+    ]
+    refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    refund_status = models.CharField(max_length=10, choices=REFUND_STATUS_CHOICES, default='PENDING')
+    refund_method = models.CharField(max_length=20, choices=REFUND_METHOD_CHOICES, blank=True, default='')
+    due_date = models.DateField(null=True, blank=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def items_total(self):
+        return sum(
+            (Decimal(str(i.price or 0)) * Decimal(str(i.quantity or 0)))
+            for i in self.items.all()
+        )
+
+    @property
+    def refund_remaining(self):
+        if self.refund_status == 'PAID':
+            return 0
+        return (self.refund_amount or 0) or self.items_total
+
+    @property
+    def is_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[0]
+
+    @property
+    def days_overdue(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[1]
+
+    @property
+    def is_due_soon(self):
+        return _settlement_alert(self.due_date, self.refund_remaining)[2]
 
     def save(self, *args, **kwargs):
         if not self.return_number:

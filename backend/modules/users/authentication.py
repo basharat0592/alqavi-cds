@@ -4,6 +4,7 @@ from rest_framework import authentication, exceptions
 from django.contrib.auth import get_user_model
 from modules.supplier.models import Supplier
 from modules.customer.models import Customer
+from modules.delivery.models import DeliveryPerson
 
 User = get_user_model()
 
@@ -95,6 +96,28 @@ class MultiTableJWTAuthentication(authentication.BaseAuthentication):
                     return shadow
             except Exception as e:
                 print(f"DEBUG: Error in Customer auth: {str(e)}")
+                pass
+
+        # 4. Delivery rider (prefixed with del_)
+        if user_id_str.startswith('del_'):
+            try:
+                raw_id = user_id_str.split('_')[1]
+                rider = DeliveryPerson.objects.filter(id=raw_id).first()
+                if rider:
+                    if not rider.is_active:
+                        raise exceptions.AuthenticationFailed('Delivery account is inactive.')
+                    shadow = User(
+                        id=rider.id,
+                        username=rider.username or rider.email.split('@')[0],
+                        email=rider.email,
+                        is_staff=False,
+                        is_active=True,
+                    )
+                    shadow.is_delivery = True
+                    shadow.real_id = rider.id
+                    return shadow
+            except Exception as e:
+                print(f"DEBUG: Error in Delivery auth: {str(e)}")
                 pass
 
         return None
