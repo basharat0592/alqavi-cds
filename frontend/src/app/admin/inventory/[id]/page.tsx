@@ -198,6 +198,7 @@ export default function StockViewPage() {
                                     <th className="px-5 py-2.5">Reference</th>
                                     <th className="px-5 py-2.5">Supplier</th>
                                     <th className="px-5 py-2.5 text-right">Qty</th>
+                                    <th className="px-5 py-2.5 text-right">Rate / Item</th>
                                     <th className="px-5 py-2.5 text-right">Total</th>
                                     <th className="px-5 py-2.5 text-right">Paid</th>
                                     <th className="px-5 py-2.5 text-right">Remaining</th>
@@ -205,13 +206,15 @@ export default function StockViewPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {movementsLoading ? (
-                                    <tr><td colSpan={7} className="px-5 py-6 text-center text-slate-400">Loading purchase history…</td></tr>
+                                    <tr><td colSpan={8} className="px-5 py-6 text-center text-slate-400">Loading purchase history…</td></tr>
                                 ) : visibleRows.length === 0 ? (
-                                    <tr><td colSpan={7} className="px-5 py-6 text-center text-slate-400 italic">No purchases recorded yet.</td></tr>
+                                    <tr><td colSpan={8} className="px-5 py-6 text-center text-slate-400 italic">No purchases recorded yet.</td></tr>
                                 ) : (
                                     visibleRows.map((m: any) => {
                                         const when = m.created_at || m.date;
                                         const isIn = (m.quantity || 0) >= 0 && (m.movement_type || '').toUpperCase() !== 'SALE';
+                                        const qtyAbs = Math.abs(m.quantity || 0);
+                                        const rate = (m.total != null && qtyAbs > 0) ? (Number(m.total) / qtyAbs) : null;
                                         return (
                                             <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-5 py-3">
@@ -220,7 +223,8 @@ export default function StockViewPage() {
                                                 </td>
                                                 <td className="px-5 py-3 font-semibold text-indigo-600">{m.ref ? `#${m.ref}` : (m.movement_type_display || m.movement_type)}</td>
                                                 <td className="px-5 py-3 text-slate-600">{m.supplier}</td>
-                                                <td className={`px-5 py-3 text-right font-black tabular-nums ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>{isIn ? '+' : '−'}{Math.abs(m.quantity || 0).toLocaleString()}</td>
+                                                <td className={`px-5 py-3 text-right font-black tabular-nums ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>{isIn ? '+' : '−'}{qtyAbs.toLocaleString()}</td>
+                                                <td className="px-5 py-3 text-right font-semibold text-slate-600 tabular-nums">{rate != null ? formatCurrency(rate) : '—'}</td>
                                                 <td className="px-5 py-3 text-right font-bold text-slate-900 tabular-nums">{m.total != null ? formatCurrency(m.total) : '—'}</td>
                                                 <td className="px-5 py-3 text-right font-bold text-emerald-700 tabular-nums">{m.paid != null ? formatCurrency(m.paid) : '—'}</td>
                                                 <td className={`px-5 py-3 text-right font-bold tabular-nums ${m.remaining ? 'text-rose-600' : 'text-slate-400'}`}>{m.remaining != null ? formatCurrency(m.remaining) : '—'}</td>
@@ -232,7 +236,7 @@ export default function StockViewPage() {
                             {totals.count > 0 && (
                                 <tfoot>
                                     <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-[12px]">
-                                        <td className="px-5 py-3 text-slate-900" colSpan={4}>Total ({totals.count} order{totals.count === 1 ? '' : 's'})</td>
+                                        <td className="px-5 py-3 text-slate-900" colSpan={5}>Total ({totals.count} order{totals.count === 1 ? '' : 's'})</td>
                                         <td className="px-5 py-3 text-right text-slate-900 tabular-nums">{formatCurrency(totals.total)}</td>
                                         <td className="px-5 py-3 text-right text-emerald-700 tabular-nums">{formatCurrency(totals.paid)}</td>
                                         <td className={`px-5 py-3 text-right tabular-nums ${totals.remaining > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(totals.remaining)}</td>

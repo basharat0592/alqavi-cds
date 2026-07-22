@@ -776,23 +776,26 @@ export default function AdminDashboard() {
     // Super Admin mobile: every visible card that isn't already in the bottom tab bar.
     const superMobileCards = groupedCore.flatMap((g) => g.items).filter((i) => !SUPER_MOBILE_HIDDEN_CARD_HREFS.has(i.href));
 
-    // ── BRANCH-ADMIN DASHBOARD TILES — one enhanced-button section for everything. ──
-    type Tile = { name: string; desc: string; href: string; icon: any; grad: string; ring: string };
+    // ── BRANCH-ADMIN DASHBOARD TILES — one clean, consistent button design ──
+    type Tile = { name: string; href: string; icon: any; color: string };
     const DASH_TILES: Tile[] = [
-        { name: 'POS', desc: 'Sell at counter', href: '/admin/sale', icon: ScanLine, grad: 'from-indigo-500 to-indigo-700', ring: 'shadow-indigo-600/25' },
-        { name: 'Sales', desc: 'Sales history', href: '/admin/sales', icon: TrendingUp, grad: 'from-teal-500 to-teal-700', ring: 'shadow-teal-600/25' },
-        { name: 'Purchase', desc: 'Restock stock', href: '/admin/purchases/add', icon: ShoppingCart, grad: 'from-emerald-500 to-emerald-700', ring: 'shadow-emerald-600/25' },
-        { name: 'Stock', desc: 'Live stock levels', href: '/admin/inventory/list', icon: Boxes, grad: 'from-orange-500 to-orange-700', ring: 'shadow-orange-600/25' },
-        { name: 'Recent Orders', desc: 'Active orders', href: '/admin/orders', icon: ClipboardList, grad: 'from-rose-500 to-rose-700', ring: 'shadow-rose-600/25' },
-        { name: 'Purchase Returns', desc: 'Return to supplier', href: '/admin/purchases/returns', icon: RefreshCcw, grad: 'from-amber-500 to-orange-700', ring: 'shadow-amber-600/25' },
-        { name: 'Sale Returns', desc: 'Customer returns', href: '/admin/sale-returns', icon: RotateCcw, grad: 'from-pink-500 to-rose-700', ring: 'shadow-pink-600/25' },
-        { name: 'Payments', desc: 'Record & track', href: '/admin/payments', icon: CreditCard, grad: 'from-green-500 to-green-700', ring: 'shadow-green-600/25' },
-        { name: 'Reports', desc: 'Analytics & insights', href: '/admin/reports', icon: BarChart3, grad: 'from-violet-500 to-violet-700', ring: 'shadow-violet-600/25' },
-        { name: 'Product List', desc: 'Catalog & SKUs', href: '/admin/products', icon: Package, grad: 'from-sky-500 to-sky-700', ring: 'shadow-sky-600/25' },
-        { name: 'Add Listing', desc: 'Create a new item', href: '/admin/products/add', icon: PackagePlus, grad: 'from-lime-500 to-green-700', ring: 'shadow-lime-600/25' },
-        { name: 'Purchase History', desc: 'Past supplier orders', href: '/admin/purchases', icon: History, grad: 'from-amber-600 to-orange-700', ring: 'shadow-amber-600/25' },
+        { name: 'POS', href: '/admin/sale', icon: ScanLine, color: '#a855f7' },
+        { name: 'Sales', href: '/admin/sales', icon: TrendingUp, color: '#ec4899' },
+        { name: 'Purchase', href: '/admin/purchases/add', icon: ShoppingCart, color: '#10b981' },
+        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes, color: '#f43f5e' },
+        { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, color: '#3b82f6' },
+        { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, color: '#f97316' },
+        { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, color: '#14b8a6' },
+        { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#8b5cf6' },
+        { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#f472b6' },
+        { name: 'Product List', href: '/admin/products', icon: Package, color: '#fb923c' },
+        { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, color: '#ef4444' },
+        { name: 'Purchase History', href: '/admin/purchases', icon: History, color: '#38bdf8' },
     ];
     const dashTiles = DASH_TILES.filter((t) => canSee(t.href));
+
+    // Clean pill button (matches the reference): bright colour body, white circle +
+    // icon poking out on the left, white uppercase label, soft drop shadow.
     const renderTile = (t: Tile) => {
         const Icon = t.icon;
         const active = t.href === '/admin/orders' ? ((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) : 0;
@@ -800,30 +803,17 @@ export default function AdminDashboard() {
             <Link
                 key={t.href}
                 href={t.href}
-                className="group relative flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3 sm:p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_18px_36px_-16px_rgba(15,23,42,0.28)] overflow-hidden"
+                className="group relative flex items-center h-[56px] rounded-full pl-[62px] pr-6 shadow-[0_8px_18px_-4px_rgba(15,23,42,0.28)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_24px_-6px_rgba(15,23,42,0.36)] active:translate-y-0"
+                style={{ backgroundColor: t.color }}
             >
-                {/* faint accent wash that reveals on hover */}
-                <span className={`pointer-events-none absolute -right-8 -top-8 w-24 h-24 rounded-full bg-gradient-to-br ${t.grad} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20`} />
-
-                {/* gradient icon orb with glass gloss */}
-                <div className={`relative shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${t.grad} flex items-center justify-center text-white shadow-lg ${t.ring} ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-[1.06] group-hover:-rotate-3`}>
-                    <span className="pointer-events-none absolute inset-x-1.5 top-1 h-2.5 rounded-full bg-white/30 blur-[1px]" />
-                    <Icon className="relative w-[22px] h-[22px] drop-shadow-sm" strokeWidth={2} />
+                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
+                    <Icon size={24} strokeWidth={2.8} style={{ color: t.color }} />
                     {active > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">
-                            {active}
-                        </span>
+                        <span className="absolute -top-1 -right-1 z-20 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
                     )}
-                </div>
-
-                {/* label + subtitle */}
-                <div className="relative min-w-0 flex-1">
-                    <p className="text-[13px] font-bold text-slate-900 tracking-tight leading-tight truncate">{t.name}</p>
-                    <p className="text-[10.5px] font-medium text-slate-400 leading-tight truncate mt-0.5">{t.desc}</p>
-                </div>
-
-                {/* hover chevron */}
-                <ChevronRight className="relative shrink-0 w-4 h-4 text-slate-300 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 group-hover:text-slate-500" />
+                </span>
+                <span className="flex-1 min-w-0 text-white font-extrabold uppercase tracking-wide text-[13.5px] leading-tight truncate">{t.name}</span>
+                <ChevronRight className="shrink-0 w-4 h-4 text-white/75 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
             </Link>
         );
     };
@@ -866,7 +856,7 @@ export default function AdminDashboard() {
                                     <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{dashTiles.length}</span>
                                     <div className="h-px flex-1 bg-slate-200/70" />
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                     {dashTiles.map(renderTile)}
                                 </div>
                             </div>
