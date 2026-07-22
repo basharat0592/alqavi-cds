@@ -162,8 +162,8 @@ export default function ProductsPage() {
             <div className="max-w-[1100px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5 text-left">
 
                 <PageHeader
-                    title="Products"
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Products' }]}
+                    title="Live Products"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Live Products' }]}
                     actions={
                         <>
                             <Button variant="outline" size="sm" onClick={loadData} disabled={syncing}>

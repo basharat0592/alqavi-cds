@@ -58,6 +58,7 @@ const EMPTY_FORM = {
 };
 
 const EMPTY_ITEM: LineItem = {
+    company: '',
     product: '',
     product_name: '',
     packaging_type: 'SINGLE',
@@ -71,6 +72,7 @@ const EMPTY_ITEM: LineItem = {
 };
 
 type LineItem = {
+    company: string;           // selected company (filters the product list)
     product: string;
     product_name: string;
     packaging_type: 'SINGLE' | 'CARTON';
@@ -83,170 +85,62 @@ type LineItem = {
     expiry_date: string;       // Exp Date (YYYY-MM-DD)
 };
 
-/* ─── Pure Amazon Style Product Selector ─── */
+/* ─── Product Selector — single searchable input (type to filter or write custom) ─── */
 const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const filtered = products.filter((p: any) =>
-        (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
-    );
-
     const selected = String(selectedId).startsWith('__custom__:')
-        ? { id: selectedId, name: selectedId.replace('__custom__:', ''), isCustom: true }
+        ? { id: selectedId, name: String(selectedId).replace('__custom__:', ''), isCustom: true }
         : products.find((p: any) => String(p.id) === String(selectedId));
 
+    const q = search.trim().toLowerCase();
+    const filtered = q
+        ? products.filter((p: any) => (p.name || '').toLowerCase().includes(q) || (p.sku && String(p.sku).toLowerCase().includes(q)))
+        : products;
+
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        const h = (e: MouseEvent) => { if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
     }, []);
 
     return (
         <div className="relative w-full" ref={containerRef}>
-            <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                className={inputCls + " flex items-center justify-between text-left bg-white hover:bg-slate-50 group transition-all duration-200"}
-            >
-                {selected ? (
-                    <div className="flex items-center gap-2 overflow-hidden py-1">
-                        <div className="w-8 h-8 rounded border border-slate-100 overflow-hidden shrink-0 bg-white flex items-center justify-center">
-                            {selected.isCustom ? (
-                                <Plus size={14} className="text-indigo-650" />
-                            ) : selected.image ? (
-                                <img src={getImageUrl(selected.image) || ''} className="w-full h-full object-contain p-0.5" alt="" />
-                            ) : (
-                                <Package size={14} className="text-slate-300 m-auto mt-2" />
-                            )}
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                            <div className="flex items-baseline gap-1 truncate leading-tight">
-                                <span className="text-[11px] font-bold text-slate-900">{selected.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
-                                {selected.isCustom ? (
-                                    <span className="text-[9px] text-indigo-600 font-extrabold uppercase tracking-tight shrink-0">
-                                        (Custom)
-                                    </span>
-                                ) : (selected.weight || selected.size) && (
-                                    <span className="text-[9px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
-                                        - {selected.weight}{selected.weight && selected.size ? ' • ' : ''}{selected.size}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter shrink-0 mt-0.5">
-                                {selected.isCustom ? 'Custom written product' : `SKU: ${selected.sku || 'N/A'}`}
-                            </span>
-                        </div>
-                    </div>
-                ) : <span className="text-slate-400 italic text-[12px]">Search products...</span>}
-                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${open ? 'rotate-180 text-indigo-600' : ''}`} />
-            </button>
+            <div className="relative">
+                <input
+                    className={inputCls + ' pr-8'}
+                    value={open ? search : (selected ? selected.name : '')}
+                    placeholder="Search or type product…"
+                    onFocus={() => setOpen(true)}
+                    onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+                />
+                <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
+            </div>
 
             {open && (
-                <div className="absolute z-[100] w-[180%] left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    {/* Search Header */}
-                    <div className="p-2.5 bg-slate-50 border-b border-slate-100">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                            <input
-                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-lg focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none bg-white transition-all"
-                                placeholder="Type to filter or write custom..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
-                    </div>
-
-                    {/* Results Area */}
-                    <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
-                        {search.trim() && filtered.length > 0 ? (
-                            filtered.map((p: any) => (
-                                <div
-                                    key={p.id}
-                                    className="p-3.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-all flex items-start gap-4 group"
-                                    onClick={() => { onSelect(p.id); setOpen(false); }}
-                                >
-                                    {/* Thumbnail */}
-                                    <div className="w-12 h-12 bg-white rounded border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center group-hover:border-indigo-400 transition-colors">
-                                        {p.image ? (
-                                            <img src={getImageUrl(p.image) || ''} className="w-full h-full object-contain p-1" alt="" />
-                                        ) : (
-                                            <Package size={20} className="text-slate-200" />
-                                        )}
-                                    </div>
-
-                                                <div className="flex-1 flex justify-between gap-4 min-w-0">
-                                        <div className="flex flex-col min-w-0">
-                                            <div className="flex items-baseline gap-1 leading-[1.2] group-hover:text-indigo-600">
-                                                <span className="text-[12px] font-bold text-slate-900 group-hover:underline line-clamp-1">{p.name.replace(/\s*\(.*?\)\s*$/, '')}</span>
-                                                {(p.weight || p.size) && (
-                                                    <span className="text-[9px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
-                                                        - {p.weight}{p.weight && p.size ? ' • ' : ''}{p.size}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-y-0.5 gap-x-2 mt-1">
-                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">SKU: {p.sku || 'N/A'}</span>
-                                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                                <span className={`text-[9px] font-bold ${p.quantity < 10 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                                                    {p.quantity} in stock
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Price Section */}
-                                        <div className="flex flex-col items-end shrink-0">
-                                            <span className="text-[13px] font-black text-slate-900">{formatCurrency(p.retail_price || 0)}</span>
-                                            <span className="text-[8px] text-slate-400 font-medium">Retail Price</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        ) : null}
-
-                        {/* Always offer custom write/typing option if search is not empty */}
-                        {search.trim() && (
+                <div className="absolute z-[100] top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="max-h-[260px] overflow-y-auto custom-scrollbar">
+                        {filtered.slice(0, 60).map((p: any) => (
                             <div
-                                className="p-3.5 hover:bg-indigo-50 cursor-pointer border-t border-slate-100 transition-all flex items-center gap-4 group bg-indigo-50/10"
-                                onClick={() => { onSelect(`__custom__:${search.trim()}`); setOpen(false); }}
+                                key={p.id}
+                                className="px-3 py-2 hover:bg-indigo-50/60 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
+                                onClick={() => { onSelect(p.id); setOpen(false); setSearch(''); }}
                             >
-                                <div className="w-12 h-12 bg-white rounded border border-indigo-200 overflow-hidden shrink-0 flex items-center justify-center text-indigo-650 group-hover:border-indigo-400 transition-colors">
-                                    <Plus size={20} />
+                                <div className="min-w-0">
+                                    <p className="text-[12.5px] font-semibold text-slate-800 truncate">{(p.name || '').replace(/\s*\(.*?\)\s*$/, '')}</p>
+                                    <p className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wide">SKU: {p.sku || 'N/A'} · {p.quantity ?? 0} in stock</p>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <span className="text-[12px] font-bold text-slate-900 block truncate group-hover:text-indigo-600">
-                                        Use Custom: <span className="text-indigo-600">"{search.trim()}"</span>
-                                    </span>
-                                    <span className="text-[9px] text-slate-500">Will be saved to supplier catalog on order creation</span>
-                                </div>
+                                <span className="text-[12px] font-black text-slate-700 shrink-0 tabular-nums">{formatCurrency(p.retail_price || 0)}</span>
+                            </div>
+                        ))}
+
+                        {filtered.length === 0 && (
+                            <div className="px-3 py-6 text-center text-slate-400 text-[12px]">
+                                No products{q ? ' match' : ' for this company'}. Add one via “Add Products”.
                             </div>
                         )}
-
-                        {!search.trim() && (
-                            <div className="p-12 text-center flex flex-col items-center gap-2">
-                                <Search size={24} className="text-slate-300" />
-                                <span className="text-slate-400 text-[13px]">Type to search products or use a custom name.</span>
-                            </div>
-                        )}
-
-                        {search.trim() && filtered.length === 0 && (
-                            <div className="p-12 text-center flex flex-col items-center gap-2">
-                                <Search size={24} className="text-slate-300" />
-                                <span className="text-slate-400 text-[13px]">No matching products found. Type to use custom.</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer View */}
-                    <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-center">
-                        <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Inventory Management Console</span>
                     </div>
                 </div>
             )}
@@ -298,6 +192,57 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
     );
 };
 
+/* ─── Company Selector (searchable — pick a company / brand) ─── */
+const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const selected = companies.find((c: any) => String(c.id) === String(selectedId));
+    const q = search.trim().toLowerCase();
+    const filtered = q ? companies.filter((c: any) => (c.name || '').toLowerCase().includes(q)) : companies;
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) { setOpen(false); setSearch(''); }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div className="relative">
+                <input
+                    className={inputCls + ' pr-8'}
+                    value={open ? search : (selected ? selected.name : '')}
+                    placeholder="Search company…"
+                    onFocus={() => setOpen(true)}
+                    onChange={e => { setSearch(e.target.value); setOpen(true); }}
+                />
+                <ChevronDown size={14} className="text-slate-400 shrink-0 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+            {open && (
+                <div className="absolute z-[100] top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
+                        {filtered.map((c: any) => (
+                            <div key={c.id} className="px-4 py-2 hover:bg-indigo-50/60 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
+                                <span className="font-semibold text-slate-800 truncate">{c.name}</span>
+                                {c.category && <span className="text-[9px] text-slate-400 uppercase font-bold shrink-0">{c.category}</span>}
+                            </div>
+                        ))}
+                        {filtered.length === 0 && (
+                            <div className="px-4 py-6 text-center text-slate-400 text-[11px]">
+                                No companies{q ? ' match your search' : ''}. Add one via “Add Products → Find Company”.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function AddPurchasePage() {
     const router = useRouter();
     const [purchaseMode, setPurchaseMode] = useState<'supplier' | 'custom'>('custom');
@@ -313,6 +258,82 @@ export default function AddPurchasePage() {
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
     const [tempPayload, setTempPayload] = useState<any>(null);
+
+    // ── "Add Products" popup (Product Detail) + inline "Find Company" popup ──
+    const [companies, setCompanies] = useState<any[]>([]);
+    const [showProductModal, setShowProductModal] = useState(false);
+    const [showCompanyModal, setShowCompanyModal] = useState(false);
+    const [pForm, setPForm] = useState({ name: '', company: '', barcode: '', packing: '', reorder: '', category: '', status: 'ACTIVE' });
+    const [cForm, setCForm] = useState({ name: '', category: '' });
+    const [savingCompany, setSavingCompany] = useState(false);
+    const [savingProduct, setSavingProduct] = useState(false);
+
+    useEffect(() => {
+        (companyService as any).getCompanies?.().then((r: any) => setCompanies(Array.isArray(r) ? r : r?.results || [])).catch(() => { });
+    }, []);
+
+    const openAddProduct = () => {
+        setPForm({ name: '', company: '', barcode: '', packing: '', reorder: '', category: '', status: 'ACTIVE' });
+        setShowProductModal(true);
+    };
+    const confirmAddProduct = async () => {
+        if (!pForm.name.trim()) return toast.error('Enter a product name.');
+        if (!form.supplier) return toast.error('Select the supplier (in Order Information) before adding products.');
+        setSavingProduct(true);
+        try {
+            // Create a real supplier product tagged with its company, so it shows up
+            // in the Company → Product dropdowns going forward.
+            const created = await productService.createSupplier({
+                name: pForm.name.trim(),
+                supplier: form.supplier,
+                company: pForm.company || '',
+                sku: pForm.barcode || `SKU-${Date.now().toString().slice(-6)}`,
+                barcode: pForm.barcode || '',
+                status: pForm.status,
+                price: '0',
+                retail_price: '0',
+            });
+            // Refresh the product list so the new one is selectable.
+            try {
+                const res = await productService.getAllSupplier();
+                const raw = res as any;
+                setProducts(Array.isArray(raw) ? raw : raw?.results || []);
+            } catch { /* non-blocking */ }
+            const packing = parseInt(pForm.packing) || 1;
+            const line: LineItem = {
+                ...EMPTY_ITEM,
+                company: pForm.company || '',
+                product: String(created.id),
+                product_name: created.name,
+                packaging_type: packing > 1 ? 'CARTON' : 'SINGLE',
+                items_per_carton: packing,
+            };
+            setItems(prev => {
+                const idx = prev.findIndex(i => !i.product);
+                if (idx >= 0) { const copy = [...prev]; copy[idx] = line; return copy; }
+                return [...prev, line];
+            });
+            setShowProductModal(false);
+            toast.success('Product created and added to the purchase.');
+        } catch (e: any) {
+            toast.error(e?.response?.data?.name?.[0] || e?.response?.data?.detail || 'Failed to create product');
+        } finally { setSavingProduct(false); }
+    };
+    const saveCompanyInline = async () => {
+        if (!cForm.name.trim()) return toast.error('Enter a company name.');
+        setSavingCompany(true);
+        try {
+            const created = await (companyService as any).createCompany({ name: cForm.name.trim(), category: cForm.category.trim() });
+            const list = await (companyService as any).getCompanies();
+            setCompanies(Array.isArray(list) ? list : (list?.results || []));
+            if (created?.id) setPForm(f => ({ ...f, company: String(created.id) }));
+            setCForm({ name: '', category: '' });
+            setShowCompanyModal(false);
+            toast.success('Company added to the list.');
+        } catch (e: any) {
+            toast.error(e?.response?.data?.name?.[0] || e?.response?.data?.detail || 'Failed to add company');
+        } finally { setSavingCompany(false); }
+    };
 
     const handleModeChange = (mode: 'supplier' | 'custom') => {
         setPurchaseMode(mode);
@@ -414,9 +435,6 @@ export default function AddPurchasePage() {
         const price = sp.get('price') || '';
         if (supplier || sku || product_name) {
             setPrefill({ supplier, sku, product_name, price });
-            // A reorder comes with a real supplier + product → use supplier mode so
-            // the product loads from that supplier's catalog and can be matched.
-            if (supplier) setPurchaseMode('supplier');
         }
     }, []);
 
@@ -600,6 +618,10 @@ export default function AddPurchasePage() {
     const updateItem = (i: number, field: string, val: any) => {
         setItems(prev => prev.map((item, idx) => {
             if (idx !== i) return item;
+            // Changing the company resets the chosen product (it may belong to another company).
+            if (field === 'company') {
+                return { ...item, company: val, product: '', product_name: '' };
+            }
             if (field === 'product') {
                 if (String(val).startsWith('__custom__:')) {
                     const name = String(val).replace('__custom__:', '');
@@ -614,6 +636,8 @@ export default function AddPurchasePage() {
                     ...item,
                     product: val,
                     product_name: p?.name || '',
+                    // Adopt the product's own company so the Company field stays in sync.
+                    company: p?.company ? String(p.company) : item.company,
                     unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price,
                 };
             }
@@ -657,21 +681,20 @@ export default function AddPurchasePage() {
                     {/* Row 1 — item number + product + remove */}
                     <div className="flex items-end gap-3">
                         <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-indigo-100">{i + 1}</span>
-                        <div className="flex-1 min-w-0">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</label>
-                            {purchaseMode === 'custom' ? (
-                                <input
-                                    className={inputCls + " font-bold text-slate-800 bg-white"}
-                                    value={item.product_name || ''}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        updateItem(i, 'product', `__custom__:${val}`);
-                                    }}
-                                    placeholder="Type custom product name..."
+                        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Company</label>
+                                <CompanySelector selectedId={item.company} companies={companies} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</label>
+                                <ProductSelector
+                                    selectedId={item.product}
+                                    products={products.filter((p: any) => !item.company || String(p.company ?? '') === String(item.company))}
+                                    inputCls={selectCls}
+                                    onSelect={(val: any) => updateItem(i, 'product', val)}
                                 />
-                            ) : (
-                                <ProductSelector selectedId={item.product} products={products} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'product', val)} />
-                            )}
+                            </div>
                         </div>
                         <button
                             onClick={() => removeItem(i)}
@@ -683,7 +706,7 @@ export default function AddPurchasePage() {
                     </div>
 
                     {/* Row 2 — quantities & pricing grid */}
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
                         {/* Type */}
                         <div className="col-span-2 sm:col-span-1">
                             <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
@@ -738,6 +761,36 @@ export default function AddPurchasePage() {
                             </div>
                         </div>
 
+                        {/* Sale Rate */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Sale Rate</label>
+                            <div className="relative flex items-center">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
+                                <input
+                                    type="number" min="0" step="0.01"
+                                    className={inputCls + " pl-6 text-center tabular-nums"}
+                                    value={item.selling_price || ''}
+                                    onChange={e => updateItem(i, 'selling_price', parseFloat(e.target.value) || 0)}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Retail Rate */}
+                        <div>
+                            <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Retail Rate</label>
+                            <div className="relative flex items-center">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
+                                <input
+                                    type="number" min="0" step="0.01"
+                                    className={inputCls + " pl-6 text-center tabular-nums"}
+                                    value={item.retail_rate || ''}
+                                    onChange={e => updateItem(i, 'retail_rate', parseFloat(e.target.value) || 0)}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+
                         {/* Exp Date */}
                         <div className="col-span-2 sm:col-span-1">
                             <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Exp Date</label>
@@ -765,6 +818,15 @@ export default function AddPurchasePage() {
                                         <span>Current stock: <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
                                     </>
                                 )}
+                                {(item.unit_price > 0 && item.selling_price > 0) && (() => {
+                                    const profit = ((item.selling_price - item.unit_price) / item.unit_price) * 100;
+                                    return (
+                                        <>
+                                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                            <span>%Profit: <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
+                                        </>
+                                    );
+                                })()}
                             </div>
                             <div className="text-[13px] font-bold text-slate-900 tabular-nums">
                                 Subtotal: {formatCurrency(calculateSubtotal(item))}
@@ -776,9 +838,9 @@ export default function AddPurchasePage() {
         });
     };
 
-    /* ─── Order Items card (identical in both modes) ─── */
+    /* ─── Order Items section (identical in both modes) ─── */
     const renderItemsCard = () => (
-        <Card className="relative z-[10] overflow-hidden">
+        <>
             <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
@@ -792,18 +854,18 @@ export default function AddPurchasePage() {
                         <p className="text-[11.5px] text-slate-500">Products, quantities, and pricing.</p>
                     </div>
                 </div>
-                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={addItem}><Plus size={14} /> Add Item</Btn>
+                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={openAddProduct}><Plus size={14} /> Add Products</Btn>
             </div>
             <div className="p-4 sm:p-6 space-y-3.5 bg-slate-50/40">
                 {renderItemsList()}
             </div>
-        </Card>
+        </>
     );
 
-    /* ─── Order Information card — shared shell; only the Supplier field differs per mode ─── */
+    /* ─── Order Information section — shared shell; only the Supplier field differs per mode ─── */
     const renderOrderInfoCard = (supplierField: React.ReactNode) => (
-        <Card className="overflow-hidden">
-            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
+        <>
+            <div className="px-5 sm:px-6 py-4 border-y border-slate-100 flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
                 <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center ring-1 ring-inset ring-slate-200 shrink-0">
                     <Building2 size={17} strokeWidth={2} />
                 </div>
@@ -928,7 +990,7 @@ export default function AddPurchasePage() {
                     </>
                 )}
             </div>
-        </Card>
+        </>
     );
 
     // Both modes require a REGISTERED supplier chosen from the dropdown. The two
@@ -943,113 +1005,95 @@ export default function AddPurchasePage() {
 
     return (
         <div className="pb-20">
-            <div className="max-w-[1100px] mx-auto">
+            <div className="max-w-[1320px] mx-auto">
                 <PageHeader
                     title={editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
                     subtitle={editId ? 'Update this purchase order — supplier, items, and totals.' : 'Create a purchase order with supplier, items, and totals.'}
                     breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: editId ? 'Edit Purchase' : 'New Purchase' }]}
-                    actions={
-                        <div className="bg-slate-100 p-1.5 rounded-xl inline-flex gap-2 border border-slate-250/60 shadow-sm">
-                            <button
-                                type="button"
-                                onClick={() => handleModeChange('supplier')}
-                                className={`px-4 py-2 rounded-lg text-[11px] font-black tracking-wider uppercase transition-all duration-200 flex items-center gap-1.5 ${purchaseMode === 'supplier' ? 'bg-white text-indigo-650 shadow-md border border-slate-200 font-bold scale-[1.01]' : 'text-slate-500 hover:text-slate-800'}`}
-                            >
-                                <Building2 size={13} /> Select from Supplier
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleModeChange('custom')}
-                                className={`px-4 py-2 rounded-lg text-[11px] font-black tracking-wider uppercase transition-all duration-200 flex items-center gap-1.5 ${purchaseMode === 'custom' ? 'bg-white text-indigo-650 shadow-md border border-slate-200 font-bold scale-[1.01]' : 'text-slate-500 hover:text-slate-800'}`}
-                            >
-                                <PackagePlus size={13} /> Custom Purchase
-                            </button>
-                        </div>
-                    }
                 />
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
                 ) : (
-                    <div className="space-y-5">
-
-                            {purchaseMode === 'supplier' ? (
-                                <>
-                                    {renderOrderInfoCard(supplierField)}
-                                    {renderItemsCard()}
-                                </>
-                            ) : (
-                                <>
-                                    {renderItemsCard()}
-                                    {renderOrderInfoCard(supplierField)}
-                                </>
-                            )}
-                                         <Card>
-                                <div className="px-5 py-3 border-b border-slate-100"><h2 className="text-[12px] font-extrabold text-slate-900 tracking-tight">Notes (Optional)</h2></div>
-                                <div className="p-4"><textarea className="w-full p-3 border border-slate-200 rounded-lg text-[12px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" rows={3} placeholder="Any notes for this purchase..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+                    <div className="flex flex-col lg:flex-row gap-5 items-start">
+                        {/* LEFT: items + order info in one card */}
+                        <div className="flex-1 min-w-0">
+                            <Card className="relative z-[10]">
+                                {renderItemsCard()}
+                                {renderOrderInfoCard(supplierField)}
                             </Card>
+                        </div>
 
-                            <Card className="p-4 sm:p-5 bg-slate-50 border border-slate-200">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-left">
-                                    <div className="flex flex-wrap gap-8 text-[12.5px]">
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Items Total</span>
-                                            <span className="font-extrabold text-slate-800 text-[14px] mt-0.5 tabular-nums">{formatCurrency(totalAmount)}</span>
-                                        </div>
-                                        <div className="flex flex-col border-l border-slate-200 pl-8">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Shipping</span>
-                                            <span className={`text-[14px] mt-0.5 font-extrabold tabular-nums ${((form as any).shipping_cost > 0) ? "text-slate-850" : "text-emerald-700 font-black"}`}>
-                                                {(form as any).shipping_cost > 0 ? formatCurrency((form as any).shipping_cost) : 'FREE'}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col border-l border-slate-200 pl-8">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Tax ({(form as any).tax_rate || 0}%)</span>
-                                            <span className="font-extrabold text-slate-800 text-[14px] mt-0.5 tabular-nums">{formatCurrency(taxAmountLive)}</span>
-                                        </div>
-                                        {bonusValue > 0 && (
-                                            <div className="flex flex-col border-l border-slate-200 pl-8">
-                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Amt Bonus</span>
-                                                <span className="font-extrabold text-emerald-700 text-[14px] mt-0.5 tabular-nums">{formatCurrency(bonusValue)}</span>
-                                            </div>
-                                        )}
-                                        {extraDiscount > 0 && (
-                                            <div className="flex flex-col border-l border-slate-200 pl-8">
-                                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Extra Disc.</span>
-                                                <span className="font-extrabold text-rose-600 text-[14px] mt-0.5 tabular-nums">− {formatCurrency(extraDiscount)}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex flex-col border-l border-slate-200 pl-8">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Net Amount</span>
-                                            <span className="text-[18px] font-black text-indigo-650 mt-0.5 tabular-nums">
-                                                {formatCurrency(grandTotal)}
-                                            </span>
-                                        </div>
-                                        {paidNow > 0 && (
-                                            <>
-                                                <div className="flex flex-col border-l border-slate-200 pl-8">
-                                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Paid Now</span>
-                                                    <span className="font-extrabold text-emerald-700 text-[14px] mt-0.5 tabular-nums">{formatCurrency(paidNow)}</span>
-                                                </div>
-                                                <div className="flex flex-col border-l border-slate-200 pl-8">
-                                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Balance Due</span>
-                                                    <span className={`font-black text-[14px] mt-0.5 tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
-                                                </div>
-                                            </>
-                                        )}
-                                        <div className="flex flex-col justify-center border-l border-slate-200 pl-8">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>
-                                                {paymentStatus}
-                                            </span>
-                                        </div>
+                        {/* RIGHT: desktop-style totals panel + actions */}
+                        <div className="w-full lg:w-[340px] shrink-0 lg:sticky lg:top-4">
+                            <Card className="overflow-hidden">
+                                <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent">
+                                    <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
+                                </div>
+                                <div className="p-5 space-y-2.5">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Purchase</span>
+                                        <span className="font-extrabold text-slate-800 tabular-nums text-[13px]">{formatCurrency(totalAmount)}</span>
                                     </div>
-                                    <div className="shrink-0 w-full md:w-auto">
-                                        <Btn className="w-full md:w-[220px] justify-center text-[12px] py-3 uppercase tracking-wider font-extrabold" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>
-                                            {editId ? 'Update Order' : 'Place Order'}
+                                    {bonusValue > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Bonus</span>
+                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(bonusValue)}</span>
+                                        </div>
+                                    )}
+                                    {(form as any).shipping_cost > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Freight</span>
+                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency((form as any).shipping_cost)}</span>
+                                        </div>
+                                    )}
+                                    {taxAmountLive > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
+                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency(taxAmountLive)}</span>
+                                        </div>
+                                    )}
+                                    {extraDiscount > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Extra Disc.</span>
+                                            <span className="font-bold text-rose-600 tabular-nums text-[13px]">−{formatCurrency(extraDiscount)}</span>
+                                        </div>
+                                    )}
+                                    <div className="h-px bg-slate-100 my-1" />
+                                    <div className="flex justify-between items-center pt-0.5">
+                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
+                                        <span className="text-[20px] font-black text-indigo-650 tabular-nums">{formatCurrency(grandTotal)}</span>
+                                    </div>
+                                    {paidNow > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-emerald-600 font-semibold uppercase text-[11px] tracking-wide">Paid Cash</span>
+                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(paidNow)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Balance</span>
+                                        <span className={`text-[16px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-1">
+                                        <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wide">Status</span>
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 font-semibold pt-1">Total Products = {items.filter(i => i.product).length}</div>
+
+                                    <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
+                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px]" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>
+                                            {editId ? 'Update Order' : 'Save Purchase'}
                                         </Btn>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Btn variant="secondary" className="justify-center text-[12px]" onClick={() => router.push('/admin/purchases')}>View</Btn>
+                                            <Btn variant="secondary" className="justify-center text-[12px]" onClick={() => router.push('/admin/purchases')}>Cancel</Btn>
+                                        </div>
+                                        <Btn variant="secondary" className="w-full justify-center text-[11px]" onClick={() => toast('Previous purchase history opens from the supplier ledger.')}>Show Previous Purchase History</Btn>
                                     </div>
                                 </div>
                             </Card>
                         </div>
+                    </div>
                     )}
 
                 <Modal open={!!successOrder} onClose={() => setSuccessOrder(null)} size="sm">
@@ -1064,6 +1108,66 @@ export default function AddPurchasePage() {
                     </div>
                 </Modal>
             </div>
+
+            {/* ── Add Product popup (Product Detail) ── */}
+            <Modal open={showProductModal} onClose={() => setShowProductModal(false)} title="Add Product" size="md">
+                <div className="space-y-4 text-left">
+                    <Field label="Product Name" required>
+                        <input className={inputCls} value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Bio 7day cream large" autoFocus />
+                    </Field>
+                    <Field label="Company">
+                        <div className="flex gap-2">
+                            <select className={selectCls} value={pForm.company} onChange={e => setPForm(f => ({ ...f, company: e.target.value }))}>
+                                <option value="">Select any one</option>
+                                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                            <Btn variant="secondary" className="shrink-0 px-3 text-[12px] whitespace-nowrap" onClick={() => { setCForm({ name: '', category: '' }); setShowCompanyModal(true); }}>
+                                <Building2 size={14} /> Find Company
+                            </Btn>
+                        </div>
+                    </Field>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Bar Code">
+                            <input className={inputCls} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Bar code" />
+                        </Field>
+                        <Field label="Category">
+                            <input className={inputCls} value={pForm.category} onChange={e => setPForm(f => ({ ...f, category: e.target.value }))} placeholder="Category" />
+                        </Field>
+                        <Field label="Packing">
+                            <input className={inputCls} type="number" min="1" value={pForm.packing} onChange={e => setPForm(f => ({ ...f, packing: e.target.value }))} placeholder="1" />
+                        </Field>
+                        <Field label="Re-Order Qty">
+                            <input className={inputCls} type="number" min="0" value={pForm.reorder} onChange={e => setPForm(f => ({ ...f, reorder: e.target.value }))} placeholder="0" />
+                        </Field>
+                        <Field label="Status">
+                            <select className={selectCls} value={pForm.status} onChange={e => setPForm(f => ({ ...f, status: e.target.value }))}>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </Field>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <Btn variant="secondary" onClick={() => setShowProductModal(false)}>Cancel</Btn>
+                        <Btn loading={savingProduct} onClick={confirmAddProduct}><Plus size={14} /> Add to Purchase</Btn>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ── Add New Company popup (nested — opens from "Find Company") ── */}
+            <Modal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} title="Add New Company" size="sm">
+                <div className="space-y-4 text-left">
+                    <Field label="Company Name" required>
+                        <input className={inputCls} value={cForm.name} onChange={e => setCForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Amour Company" autoFocus />
+                    </Field>
+                    <Field label="Company Category">
+                        <input className={inputCls} value={cForm.category} onChange={e => setCForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Local / Imported / Pakistani" />
+                    </Field>
+                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <Btn variant="secondary" onClick={() => setShowCompanyModal(false)}>Cancel</Btn>
+                        <Btn loading={savingCompany} onClick={saveCompanyInline}><Plus size={14} /> Add Company</Btn>
+                    </div>
+                </div>
+            </Modal>
 
             <WarehouseSelectionModal isOpen={isWarehouseModalOpen} onClose={() => setIsWarehouseModalOpen(false)} onConfirm={(whId) => handleSave(whId)} loading={saving} />
         </div>

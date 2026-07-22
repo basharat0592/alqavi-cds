@@ -72,7 +72,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         {
             label: 'Inventory & Stock',
             items: [
-                { name: 'Product List', href: '/admin/products', icon: LayoutDashboard },
+                { name: 'Live Products', href: '/admin/products', icon: LayoutDashboard },
                 { name: 'Add Listing', href: '/admin/products/add', icon: Package },
                 { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
             ],

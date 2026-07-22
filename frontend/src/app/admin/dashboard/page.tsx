@@ -377,7 +377,7 @@ export default function AdminDashboard() {
             keywords: ['staff', 'logins', 'accounts', 'internal users']
         },
         {
-            name: 'Product List',
+            name: 'Live Products',
             desc: 'Catalog & SKUs',
             href: '/admin/products',
             icon: Package,
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
         {
             title: 'Products & Inventory',
             items: [
-                { name: 'Product List', href: '/admin/products', icon: Package, keywords: ['items', 'catalog', 'skus', 'edit'] },
+                { name: 'Live Products', href: '/admin/products', icon: Package, keywords: ['items', 'catalog', 'skus', 'edit'] },
                 { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, keywords: ['create', 'new item', 'upload'] },
                 { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes, keywords: ['volumes', 'quantities', 'adjustments', 'stock'] },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store, keywords: ['storage', 'depots', 'distribution'] },
@@ -776,6 +776,48 @@ export default function AdminDashboard() {
     // Super Admin mobile: every visible card that isn't already in the bottom tab bar.
     const superMobileCards = groupedCore.flatMap((g) => g.items).filter((i) => !SUPER_MOBILE_HIDDEN_CARD_HREFS.has(i.href));
 
+    // ── BRANCH-ADMIN DASHBOARD TILES — one clean, consistent button design ──
+    type Tile = { name: string; href: string; icon: any; color: string };
+    const DASH_TILES: Tile[] = [
+        { name: 'POS', href: '/admin/sale', icon: ScanLine, color: '#a855f7' },
+        { name: 'Sales', href: '/admin/sales', icon: TrendingUp, color: '#ec4899' },
+        { name: 'Purchase', href: '/admin/purchases/add', icon: ShoppingCart, color: '#10b981' },
+        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes, color: '#f43f5e' },
+        { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, color: '#3b82f6' },
+        { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, color: '#f97316' },
+        { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, color: '#14b8a6' },
+        { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#8b5cf6' },
+        { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#f472b6' },
+        { name: 'Live Products', href: '/admin/products', icon: Package, color: '#fb923c' },
+        { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, color: '#ef4444' },
+        { name: 'Purchase History', href: '/admin/purchases', icon: History, color: '#38bdf8' },
+    ];
+    const dashTiles = DASH_TILES.filter((t) => canSee(t.href));
+
+    // Clean pill button (matches the reference): bright colour body, white circle +
+    // icon poking out on the left, white uppercase label, soft drop shadow.
+    const renderTile = (t: Tile) => {
+        const Icon = t.icon;
+        const active = t.href === '/admin/orders' ? ((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) : 0;
+        return (
+            <Link
+                key={t.href}
+                href={t.href}
+                className="group relative flex items-center h-[56px] rounded-full pl-[62px] pr-6 shadow-[0_8px_18px_-4px_rgba(15,23,42,0.28)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_24px_-6px_rgba(15,23,42,0.36)] active:translate-y-0"
+                style={{ backgroundColor: t.color }}
+            >
+                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
+                    <Icon size={24} strokeWidth={2.8} style={{ color: t.color }} />
+                    {active > 0 && (
+                        <span className="absolute -top-1 -right-1 z-20 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
+                    )}
+                </span>
+                <span className="flex-1 min-w-0 text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2">{t.name}</span>
+                <ChevronRight className="shrink-0 w-4 h-4 text-white/75 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
+            </Link>
+        );
+    };
+
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
@@ -806,8 +848,23 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* ── CORE OPERATIONS & KEY PAGES (GROUPED ACCENT BUTTON-CARDS) ── */}
-                        <div className={`space-y-5 md:space-y-7 ${isSuperAdmin ? 'hidden lg:block' : ''}`}>
+                        {/* ── BRANCH ADMIN: single enhanced-button section (all modules) ── */}
+                        {!isSuperAdmin && (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3 select-none">
+                                    <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Quick Actions</h2>
+                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{dashTiles.length}</span>
+                                    <div className="h-px flex-1 bg-slate-200/70" />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                    {dashTiles.map(renderTile)}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── SUPER ADMIN: grouped accent button-cards (unchanged) ── */}
+                        {isSuperAdmin && (
+                        <div className="space-y-5 md:space-y-7 hidden lg:block">
                             {groupedCore.map((grp) => (
                                 <div key={grp.title} className="space-y-3">
                                     <div className="flex items-center gap-3 select-none">
@@ -815,12 +872,13 @@ export default function AdminDashboard() {
                                         <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
                                         <div className="h-px flex-1 bg-slate-200/70" />
                                     </div>
-                                    <div className={`grid gap-2.5 sm:gap-3 ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-3'}`}>
+                                    <div className="grid gap-2.5 sm:gap-3 grid-cols-3">
                                         {grp.items.map(renderNavCard)}
                                     </div>
                                 </div>
                             ))}
                         </div>
+                        )}
                     </div>
 
                     {/* ── RIGHT: SUPER ADMIN → BUSINESS OVERVIEW · BRANCH ADMIN → LOW STOCK ── */}
@@ -1010,51 +1068,8 @@ export default function AdminDashboard() {
                     </aside>
                 </div>
 
-                {/* ── ALL PAGES (CATEGORIES AS COLUMNS) ── */}
-                {/* The super admin works from the prominent cards only — hide the full directory. */}
-                {!isSuperAdmin && (
-                <div className="mt-10 border-t border-slate-200/70 pt-8">
-                    <div className="flex items-center gap-3 select-none mb-6">
-                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">All Pages</h2>
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{totalOtherCount}</span>
-                        <div className="h-px flex-1 bg-slate-200/70" />
-                    </div>
-
-                    {/* Each category is its own column; blocks flow into columns and never split. */}
-                    <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-x-8">
-                        {groupedOther.map((grp) => (
-                            <div key={grp.title} className="break-inside-avoid mb-7">
-                                <div className="flex items-center gap-2 select-none mb-2 pb-2 border-b border-slate-200/70">
-                                    <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">{grp.title}</h3>
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    {grp.items.map((item) => {
-                                        const ItemIcon = item.icon;
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                className="flex items-center justify-between py-1.5 px-2 -mx-1 rounded-lg group/link transition-colors duration-200 hover:bg-slate-50"
-                                            >
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover/link:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
-                                                        <ItemIcon size={13} className="transition-colors shrink-0" />
-                                                    </div>
-                                                    <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-900 transition-colors truncate">
-                                                        {item.name}
-                                                    </span>
-                                                </div>
-                                                <ChevronRight size={12} className="text-slate-300 group-hover/link:text-indigo-600 transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                )}
+                {/* Branch admins now work from the single "Quick Actions" tile section above;
+                    the old "All Pages" directory has been removed. */}
             </div>
         </div>
     );

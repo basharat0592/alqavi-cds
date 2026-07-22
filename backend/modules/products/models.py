@@ -185,6 +185,9 @@ class SupplierProduct(BaseModel):
     barcode = models.CharField(max_length=100, unique=True, null=True, blank=True)
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier_products')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplier_products')
+    # Owning company / brand (e.g. Amour Company). Used to group products by company
+    # in the purchase entry (Company → Products of that company).
+    company = models.ForeignKey('company.Company', on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
     
     image = models.ImageField(upload_to='supplier_products/', null=True, blank=True)
     description = models.TextField(null=True, blank=True)
