@@ -776,6 +776,58 @@ export default function AdminDashboard() {
     // Super Admin mobile: every visible card that isn't already in the bottom tab bar.
     const superMobileCards = groupedCore.flatMap((g) => g.items).filter((i) => !SUPER_MOBILE_HIDDEN_CARD_HREFS.has(i.href));
 
+    // ── BRANCH-ADMIN DASHBOARD TILES — one enhanced-button section for everything. ──
+    type Tile = { name: string; desc: string; href: string; icon: any; grad: string; ring: string };
+    const DASH_TILES: Tile[] = [
+        { name: 'POS', desc: 'Sell at counter', href: '/admin/sale', icon: ScanLine, grad: 'from-indigo-500 to-indigo-700', ring: 'shadow-indigo-600/25' },
+        { name: 'Sales', desc: 'Sales history', href: '/admin/sales', icon: TrendingUp, grad: 'from-teal-500 to-teal-700', ring: 'shadow-teal-600/25' },
+        { name: 'Purchase', desc: 'Restock stock', href: '/admin/purchases/add', icon: ShoppingCart, grad: 'from-emerald-500 to-emerald-700', ring: 'shadow-emerald-600/25' },
+        { name: 'Stock', desc: 'Live stock levels', href: '/admin/inventory/list', icon: Boxes, grad: 'from-orange-500 to-orange-700', ring: 'shadow-orange-600/25' },
+        { name: 'Recent Orders', desc: 'Active orders', href: '/admin/orders', icon: ClipboardList, grad: 'from-rose-500 to-rose-700', ring: 'shadow-rose-600/25' },
+        { name: 'Purchase Returns', desc: 'Return to supplier', href: '/admin/purchases/returns', icon: RefreshCcw, grad: 'from-amber-500 to-orange-700', ring: 'shadow-amber-600/25' },
+        { name: 'Sale Returns', desc: 'Customer returns', href: '/admin/sale-returns', icon: RotateCcw, grad: 'from-pink-500 to-rose-700', ring: 'shadow-pink-600/25' },
+        { name: 'Payments', desc: 'Record & track', href: '/admin/payments', icon: CreditCard, grad: 'from-green-500 to-green-700', ring: 'shadow-green-600/25' },
+        { name: 'Reports', desc: 'Analytics & insights', href: '/admin/reports', icon: BarChart3, grad: 'from-violet-500 to-violet-700', ring: 'shadow-violet-600/25' },
+        { name: 'Product List', desc: 'Catalog & SKUs', href: '/admin/products', icon: Package, grad: 'from-sky-500 to-sky-700', ring: 'shadow-sky-600/25' },
+        { name: 'Add Listing', desc: 'Create a new item', href: '/admin/products/add', icon: PackagePlus, grad: 'from-lime-500 to-green-700', ring: 'shadow-lime-600/25' },
+        { name: 'Purchase History', desc: 'Past supplier orders', href: '/admin/purchases', icon: History, grad: 'from-amber-600 to-orange-700', ring: 'shadow-amber-600/25' },
+    ];
+    const dashTiles = DASH_TILES.filter((t) => canSee(t.href));
+    const renderTile = (t: Tile) => {
+        const Icon = t.icon;
+        const active = t.href === '/admin/orders' ? ((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) : 0;
+        return (
+            <Link
+                key={t.href}
+                href={t.href}
+                className="group relative flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3 sm:p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_18px_36px_-16px_rgba(15,23,42,0.28)] overflow-hidden"
+            >
+                {/* faint accent wash that reveals on hover */}
+                <span className={`pointer-events-none absolute -right-8 -top-8 w-24 h-24 rounded-full bg-gradient-to-br ${t.grad} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20`} />
+
+                {/* gradient icon orb with glass gloss */}
+                <div className={`relative shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${t.grad} flex items-center justify-center text-white shadow-lg ${t.ring} ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-[1.06] group-hover:-rotate-3`}>
+                    <span className="pointer-events-none absolute inset-x-1.5 top-1 h-2.5 rounded-full bg-white/30 blur-[1px]" />
+                    <Icon className="relative w-[22px] h-[22px] drop-shadow-sm" strokeWidth={2} />
+                    {active > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">
+                            {active}
+                        </span>
+                    )}
+                </div>
+
+                {/* label + subtitle */}
+                <div className="relative min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-slate-900 tracking-tight leading-tight truncate">{t.name}</p>
+                    <p className="text-[10.5px] font-medium text-slate-400 leading-tight truncate mt-0.5">{t.desc}</p>
+                </div>
+
+                {/* hover chevron */}
+                <ChevronRight className="relative shrink-0 w-4 h-4 text-slate-300 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 group-hover:text-slate-500" />
+            </Link>
+        );
+    };
+
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
@@ -806,8 +858,23 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* ── CORE OPERATIONS & KEY PAGES (GROUPED ACCENT BUTTON-CARDS) ── */}
-                        <div className={`space-y-5 md:space-y-7 ${isSuperAdmin ? 'hidden lg:block' : ''}`}>
+                        {/* ── BRANCH ADMIN: single enhanced-button section (all modules) ── */}
+                        {!isSuperAdmin && (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3 select-none">
+                                    <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Quick Actions</h2>
+                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{dashTiles.length}</span>
+                                    <div className="h-px flex-1 bg-slate-200/70" />
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4">
+                                    {dashTiles.map(renderTile)}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── SUPER ADMIN: grouped accent button-cards (unchanged) ── */}
+                        {isSuperAdmin && (
+                        <div className="space-y-5 md:space-y-7 hidden lg:block">
                             {groupedCore.map((grp) => (
                                 <div key={grp.title} className="space-y-3">
                                     <div className="flex items-center gap-3 select-none">
@@ -815,12 +882,13 @@ export default function AdminDashboard() {
                                         <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
                                         <div className="h-px flex-1 bg-slate-200/70" />
                                     </div>
-                                    <div className={`grid gap-2.5 sm:gap-3 ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-3'}`}>
+                                    <div className="grid gap-2.5 sm:gap-3 grid-cols-3">
                                         {grp.items.map(renderNavCard)}
                                     </div>
                                 </div>
                             ))}
                         </div>
+                        )}
                     </div>
 
                     {/* ── RIGHT: SUPER ADMIN → BUSINESS OVERVIEW · BRANCH ADMIN → LOW STOCK ── */}
@@ -1010,51 +1078,8 @@ export default function AdminDashboard() {
                     </aside>
                 </div>
 
-                {/* ── ALL PAGES (CATEGORIES AS COLUMNS) ── */}
-                {/* The super admin works from the prominent cards only — hide the full directory. */}
-                {!isSuperAdmin && (
-                <div className="mt-10 border-t border-slate-200/70 pt-8">
-                    <div className="flex items-center gap-3 select-none mb-6">
-                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">All Pages</h2>
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{totalOtherCount}</span>
-                        <div className="h-px flex-1 bg-slate-200/70" />
-                    </div>
-
-                    {/* Each category is its own column; blocks flow into columns and never split. */}
-                    <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-x-8">
-                        {groupedOther.map((grp) => (
-                            <div key={grp.title} className="break-inside-avoid mb-7">
-                                <div className="flex items-center gap-2 select-none mb-2 pb-2 border-b border-slate-200/70">
-                                    <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">{grp.title}</h3>
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    {grp.items.map((item) => {
-                                        const ItemIcon = item.icon;
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                className="flex items-center justify-between py-1.5 px-2 -mx-1 rounded-lg group/link transition-colors duration-200 hover:bg-slate-50"
-                                            >
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover/link:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
-                                                        <ItemIcon size={13} className="transition-colors shrink-0" />
-                                                    </div>
-                                                    <span className="text-[12.5px] font-semibold text-slate-600 group-hover/link:text-slate-900 transition-colors truncate">
-                                                        {item.name}
-                                                    </span>
-                                                </div>
-                                                <ChevronRight size={12} className="text-slate-300 group-hover/link:text-indigo-600 transition-all opacity-0 group-hover/link:opacity-100 transform group-hover/link:translate-x-0.5 shrink-0" />
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                )}
+                {/* Branch admins now work from the single "Quick Actions" tile section above;
+                    the old "All Pages" directory has been removed. */}
             </div>
         </div>
     );

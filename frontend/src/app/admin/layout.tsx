@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
-import AdminSidebar from '@/components/layout/AdminSidebar';
+import { DesktopNavMenu, MobileNavMenu } from '@/components/layout/AdminNavMenu';
 import NotificationPanel, { type ActivityItem } from '@/components/admin/NotificationPanel';
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import ReadOnlyController from '@/components/admin/ReadOnlyController';
@@ -177,8 +177,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isNavigating, setIsNavigating] = useState(false);
 
-    // Sidebar & Profile States
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // Profile & panel states
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -244,7 +243,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const s = await settingsService.getSettings();
                 setTheme('light');
                 setAnimationsEnabled(s.animations ?? true);
-                setSidebarCollapsed(s.sidebar_collapsed ?? false);
             } catch { }
         };
 
@@ -340,14 +338,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         settingsService.updateSettings({ theme: newTheme });
     };
 
-    const toggleSidebar = async () => {
-        const nextState = !sidebarCollapsed;
-        setSidebarCollapsed(nextState);
-        try {
-            await settingsService.updateSettings({ sidebar_collapsed: nextState });
-        } catch { }
-    };
-
     const goToPage = (href: string) => {
         router.push(href);
         setSearchQuery('');
@@ -378,27 +368,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <AuthGuard allowedRoles={['admin', 'staff']}>
             <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
                 
-                {/* ═══ MOBILE SIDEBAR OVERLAY ═══ */}
-                {mobileOpen && (
-                    <div className="fixed inset-0 z-[200] md:hidden print:hidden flex">
-                        {/* Backdrop */}
-                        <div
-                            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                            onClick={() => setMobileOpen(false)}
-                        />
-                        {/* Sidebar Panel */}
-                        <div className="relative z-10 h-full overflow-y-auto shadow-2xl animate-in slide-in-from-left duration-200">
-                            <AdminSidebar isCollapsed={false} onToggle={() => setMobileOpen(false)} onNavigate={() => setMobileOpen(false)} />
-                        </div>
-                    </div>
-                )}
-
-                {/* ═══ SIDEBAR (full height, desktop only) ═══ */}
-                <div className="hidden md:flex flex-col flex-shrink-0 z-[60] print:hidden">
-                    <div className="h-full overflow-hidden shadow-2xl transition-all duration-300">
-                        <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-                    </div>
-                </div>
+                {/* ═══ MOBILE NAV MENU (5 groups, replaces the old sidebar) ═══ */}
+                <MobileNavMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
                 {/* ═══ RIGHT CONTAINER (Navbar + Main Content) ═══ */}
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
@@ -431,14 +402,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="hidden md:flex h-[64px] w-full flex-shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-sm sticky top-0 transition-colors duration-300 print:hidden">
                         
                         <div className="flex items-center gap-4 flex-1">
-                            <button
-                                type="button"
-                                onClick={toggleSidebar}
-                                className="-ml-2 w-10 h-10 rounded-full bg-[#0F172A] hover:bg-[#1B2335] text-white flex items-center justify-center transition-colors shrink-0"
-                                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                            >
-                                {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-                            </button>
+                            <Link href="/admin/dashboard" className="flex items-center gap-2.5 shrink-0 group">
+                                <span className="w-9 h-9 rounded-xl bg-[#0F172A] text-white flex items-center justify-center font-black text-[13px] tracking-tight group-hover:scale-105 transition-transform">AQ</span>
+                                <span className="hidden lg:flex flex-col leading-none">
+                                    <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">Central Console</span>
+                                    <span className="text-[14px] font-extrabold tracking-tight text-slate-800">Al-Qavi <span className="text-indigo-600">Hub</span></span>
+                                </span>
+                            </Link>
 
                             {/* Search Bar */}
                             <div className="relative flex-1 max-w-2xl" ref={searchRef}>
@@ -564,6 +534,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
                     </div>
+
+                    {/* ═══ TOP MENU BAR (5 groups — replaces the sidebar) ═══ */}
+                    <DesktopNavMenu />
 
                     {/* ═══ MAIN CONTENT ═══ */}
                     <main className={cn(
