@@ -108,22 +108,23 @@ class WishlistSerializer(serializers.ModelSerializer):
 class SupplierProductSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source='category.name')
     supplier_name = serializers.ReadOnlyField(source='supplier.name')
+    company_name = serializers.ReadOnlyField(source='company.name')
 
     class Meta:
         model = SupplierProduct
         fields = [
             'id', 'name', 'sku', 'barcode', 'supplier', 'supplier_name',
-            'category', 'category_name', 'image', 'description',
-            'price', 'cost_price', 'retail_price', 'quantity', 
+            'category', 'category_name', 'company', 'company_name', 'image', 'description',
+            'price', 'cost_price', 'retail_price', 'quantity',
             'status', 'batch_number', 'weight', 'size', 'is_approved', 'created_at'
         ]
-        read_only_fields = ['id', 'supplier_name', 'category_name', 'is_approved', 'created_at']
+        read_only_fields = ['id', 'supplier_name', 'category_name', 'company_name', 'is_approved', 'created_at']
 
     def validate(self, attrs):
         print(f"DEBUG: Validating SupplierProduct data: {attrs}")
         try:
             # 1. Convert empty strings to None for optional fields
-            for field in ['sku', 'barcode', 'category']:
+            for field in ['sku', 'barcode', 'category', 'company']:
                 if field in attrs and attrs[field] == '':
                     attrs[field] = None
             

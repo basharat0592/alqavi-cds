@@ -399,21 +399,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )}
 
                     {/* ═══ NAVBAR (takes remaining width) ═══ */}
-                    <div className="hidden md:flex h-[64px] w-full flex-shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-sm sticky top-0 transition-colors duration-300 print:hidden">
-                        
+                    <div className="hidden md:flex h-[66px] w-full flex-shrink-0 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-[0_1px_0_rgba(15,23,42,0.03),0_6px_20px_-12px_rgba(15,23,42,0.15)] sticky top-0 transition-colors duration-300 print:hidden">
+
                         <div className="flex items-center gap-4 flex-1">
-                            <Link href="/admin/dashboard" className="flex items-center gap-2.5 shrink-0 group">
-                                <span className="w-9 h-9 rounded-xl bg-[#0F172A] text-white flex items-center justify-center font-black text-[13px] tracking-tight group-hover:scale-105 transition-transform">AQ</span>
+                            <Link href="/admin/dashboard" className="flex items-center gap-2.5 shrink-0 group pr-1">
+                                <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e293b] to-[#0f172a] text-white flex items-center justify-center font-black text-[13px] tracking-tight shadow-sm ring-1 ring-white/10 group-hover:scale-105 group-hover:shadow-md transition-all">AQ</span>
                                 <span className="hidden lg:flex flex-col leading-none">
                                     <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">Central Console</span>
                                     <span className="text-[14px] font-extrabold tracking-tight text-slate-800">Al-Qavi <span className="text-indigo-600">Hub</span></span>
                                 </span>
                             </Link>
 
+                            <span className="hidden lg:block h-7 w-px bg-slate-200/80 shrink-0" />
+
                             {/* Search Bar */}
                             <div className="relative flex-1 max-w-2xl" ref={searchRef}>
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                    className="group flex items-center gap-2.5 h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl transition-all hover:bg-white focus-within:bg-white focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10">
+                                    className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:shadow-sm">
                                     <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 shrink-0 transition-colors" />
                                     <input type="text" placeholder="Search pages, products, orders..."
                                         className="flex-1 h-full bg-transparent text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
@@ -535,8 +537,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </div>
 
-                    {/* ═══ TOP MENU BAR (5 groups — replaces the sidebar) ═══ */}
-                    <DesktopNavMenu />
+                    {/* ═══ TOP MENU BAR (5 groups) — shown on the dashboard only ═══ */}
+                    {pathname === '/admin/dashboard' && <DesktopNavMenu />}
 
                     {/* ═══ MAIN CONTENT ═══ */}
                     <main className={cn(

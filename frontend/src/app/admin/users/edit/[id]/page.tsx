@@ -37,7 +37,7 @@ const PAGE_GROUPS = [
     {
         label: 'Inventory & Stock',
         items: [
-            { name: 'Product List', href: '/admin/products' },
+            { name: 'Live Products', href: '/admin/products' },
             { name: 'Add Listing', href: '/admin/products/add' },
             { name: 'Current Stocks', href: '/admin/inventory/list' },
             { name: 'Warehouses', href: '/admin/inventory/warehouses' },

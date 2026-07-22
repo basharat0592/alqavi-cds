@@ -2,10 +2,33 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from modules.supplier.models import Supplier
 from modules.supplier.serializers import SupplierSerializer
-from .models import Area
-from .serializers import AreaSerializer
+from .models import Area, Company
+from .serializers import AreaSerializer, CompanySerializer
 from core.permissions import HasModulePermission
 from core.scoping import tenant_id_for, is_platform_operator, scope_to_tenant
+
+
+class CompanyViewSet(viewsets.ModelViewSet):
+    """Admin-facing Company / brand registry (name, contact numbers, category).
+    Tenant-scoped: each admin manages their own companies; the super admin sees all."""
+    serializer_class = CompanySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if (getattr(user, 'is_supplier', False) or getattr(user, 'is_customer', False)
+                or getattr(user, 'is_delivery', False)):
+            return Company.objects.none()
+        return scope_to_tenant(user, Company.objects.all(), 'tenant').order_by('name')
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
+    def perform_create(self, serializer):
+        tid = tenant_id_for(self.request.user)
+        serializer.save(**({'tenant_id': tid} if tid else {}))
 
 
 def _is_portal_login(user):

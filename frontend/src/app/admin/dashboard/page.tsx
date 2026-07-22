@@ -377,7 +377,7 @@ export default function AdminDashboard() {
             keywords: ['staff', 'logins', 'accounts', 'internal users']
         },
         {
-            name: 'Product List',
+            name: 'Live Products',
             desc: 'Catalog & SKUs',
             href: '/admin/products',
             icon: Package,
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
         {
             title: 'Products & Inventory',
             items: [
-                { name: 'Product List', href: '/admin/products', icon: Package, keywords: ['items', 'catalog', 'skus', 'edit'] },
+                { name: 'Live Products', href: '/admin/products', icon: Package, keywords: ['items', 'catalog', 'skus', 'edit'] },
                 { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, keywords: ['create', 'new item', 'upload'] },
                 { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes, keywords: ['volumes', 'quantities', 'adjustments', 'stock'] },
                 { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store, keywords: ['storage', 'depots', 'distribution'] },
@@ -788,7 +788,7 @@ export default function AdminDashboard() {
         { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, color: '#14b8a6' },
         { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#8b5cf6' },
         { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#f472b6' },
-        { name: 'Product List', href: '/admin/products', icon: Package, color: '#fb923c' },
+        { name: 'Live Products', href: '/admin/products', icon: Package, color: '#fb923c' },
         { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, color: '#ef4444' },
         { name: 'Purchase History', href: '/admin/purchases', icon: History, color: '#38bdf8' },
     ];
@@ -812,7 +812,7 @@ export default function AdminDashboard() {
                         <span className="absolute -top-1 -right-1 z-20 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
                     )}
                 </span>
-                <span className="flex-1 min-w-0 text-white font-extrabold uppercase tracking-wide text-[13.5px] leading-tight truncate">{t.name}</span>
+                <span className="flex-1 min-w-0 text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2">{t.name}</span>
                 <ChevronRight className="shrink-0 w-4 h-4 text-white/75 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
             </Link>
         );

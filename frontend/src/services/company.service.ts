@@ -111,6 +111,23 @@ export const companyService = {
         await api.delete(`/v1/company/suppliers/${id}/`);
     },
 
+    // ── Companies / brands (name, numbers, category) ─────────────────────────
+    getCompanies: async (): Promise<any[]> => {
+        const { data } = await api.get('/v1/company/companies/', { params: { no_pagination: 'true' } });
+        return Array.isArray(data) ? data : data.results || [];
+    },
+    createCompany: async (payload: any): Promise<any> => {
+        const { data } = await api.post('/v1/company/companies/', payload);
+        return data;
+    },
+    updateCompany: async (id: number | string, payload: any): Promise<any> => {
+        const { data } = await api.patch(`/v1/company/companies/${id}/`, payload);
+        return data;
+    },
+    deleteCompany: async (id: number | string): Promise<void> => {
+        await api.delete(`/v1/company/companies/${id}/`);
+    },
+
     // ── Customers ───────────────────────────────────────────────────────────
     getCustomers: async (): Promise<any[]> => {
         const { data } = await api.get('/v1/company/customers/');

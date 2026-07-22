@@ -43,10 +43,12 @@ export const NAV_GROUPS: Group[] = [
     },
     {
         label: 'Stock', items: [
-            { name: 'Product List', href: '/admin/products', icon: Package },
+            { name: 'Live Products', href: '/admin/products', icon: Package },
+            { name: 'Products List', href: '/admin/products-list', icon: Boxes },
             { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus },
             { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
             { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
+            { name: 'Companies', href: '/admin/company/companies', icon: Building2 },
         ],
     },
     {
@@ -132,25 +134,27 @@ export function DesktopNavMenu() {
     const groupActive = (g: Group) => g.items.some((i) => isActive(i.href));
 
     return (
-        <div ref={ref} className="hidden md:flex items-center gap-1 h-11 px-4 bg-white border-b border-slate-200/80 z-[45] print:hidden">
+        <div ref={ref} className="hidden md:flex items-center gap-0.5 h-12 px-4 lg:px-6 bg-white/95 backdrop-blur border-b border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.03)] z-[45] print:hidden">
             <Link
                 href="/admin/dashboard"
-                className={cn('flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-bold transition-colors',
-                    pathname === '/admin/dashboard' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100')}
+                className={cn('flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all',
+                    pathname === '/admin/dashboard' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}
             >
                 <LayoutDashboard size={15} /> Dashboard
             </Link>
+
+            <span className="mx-1.5 h-6 w-px bg-slate-200/70" />
 
             {groups.map((g) => (
                 <div key={g.label} className="relative" onMouseEnter={() => setOpen(g.label)}>
                     <button
                         type="button"
                         onClick={() => setOpen((o) => (o === g.label ? null : g.label))}
-                        className={cn('flex items-center gap-1 h-8 px-3 rounded-lg text-[13px] font-bold transition-colors',
-                            groupActive(g) ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100')}
+                        className={cn('flex items-center gap-1 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all',
+                            groupActive(g) || open === g.label ? 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}
                     >
                         {g.label}
-                        <ChevronDown size={13} className={cn('transition-transform', open === g.label && 'rotate-180')} />
+                        <ChevronDown size={13} className={cn('transition-transform duration-200', open === g.label && 'rotate-180')} />
                     </button>
                     {open === g.label && (
                         <div
@@ -181,12 +185,14 @@ export function DesktopNavMenu() {
                 </div>
             ))}
 
-            {/* Order Tracking — stand-alone, pushed to the far right of the menu line */}
+            {/* Order Tracking — stand-alone accent pill, pushed to the far right */}
             {canSee('/admin/tracking') && (
                 <Link
                     href="/admin/tracking"
-                    className={cn('ml-auto flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-bold transition-colors',
-                        isActive('/admin/tracking') ? 'bg-sky-50 text-sky-700' : 'text-slate-600 hover:bg-slate-100')}
+                    className={cn('ml-auto flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all border',
+                        isActive('/admin/tracking')
+                            ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/25'
+                            : 'bg-sky-50 text-sky-700 border-sky-100 hover:bg-sky-100 hover:border-sky-200')}
                 >
                     <Truck size={15} /> Order Tracking
                 </Link>

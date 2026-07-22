@@ -27,3 +27,26 @@ class Area(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+
+class Company(models.Model):
+    """A company / brand / manufacturer (e.g. Aish, Amour Company) with a name,
+    contact number(s) and a free-text category. Tenant-scoped per Admin."""
+    name = models.CharField(max_length=150)
+    numbers = models.CharField(max_length=200, blank=True, default='')   # phone number(s)
+    category = models.CharField(max_length=100, blank=True, default='')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Owning Admin (tenant) — per-Admin company registry.
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_companies'
+    )
+
+    class Meta:
+        db_table = 'companies'
+        ordering = ['name']
+        unique_together = [('tenant', 'name')]
+
+    def __str__(self):
+        return self.name

@@ -75,7 +75,7 @@ export const ADMIN_PAGE_GROUPS: { group: string; items: { n: string; h: string }
     {
         group: 'Inventory & Stock',
         items: [
-            { n: 'Product List', h: '/admin/products' },
+            { n: 'Live Products', h: '/admin/products' },
             { n: 'Add Listing', h: '/admin/products/add' },
             { n: 'Current Stocks', h: '/admin/inventory/list' },
         ],
@@ -137,7 +137,7 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Income', href: '/admin/income', keywords: ['income', 'money in', 'revenue', 'earnings', 'sales income', 'inbound'] },
     { name: 'Expense', href: '/admin/expense', keywords: ['expense', 'money out', 'spending', 'costs', 'outbound', 'payments out'] },
     { name: 'Recent Orders', href: '/admin/orders', keywords: ['orders', 'shipping', 'list', 'recent', 'active'] },
-    { name: 'Product List', href: '/admin/products', keywords: ['items', 'catalog', 'skus', 'edit', 'products'] },
+    { name: 'Live Products', href: '/admin/products', keywords: ['items', 'catalog', 'skus', 'edit', 'products', 'live products'] },
     { name: 'Add Listing', href: '/admin/products/add', keywords: ['create', 'new item', 'upload', 'add product', 'add listing'] },
     { name: 'Current Stocks', href: '/admin/inventory/list', keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory'] },
     { name: 'Branches', href: '/admin/branches', keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch', 'who manages'] },
