@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks';
 import SuperAdminCharts from '@/components/admin/SuperAdminCharts';
+import { NAV_GROUPS, STANDALONE_ITEMS } from '@/components/layout/AdminNavMenu';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
 import { inventoryService, companyService, supplierService } from '@/lib/api';
@@ -779,20 +780,47 @@ export default function AdminDashboard() {
     // ── BRANCH-ADMIN DASHBOARD TILES — one clean, consistent button design ──
     type Tile = { name: string; href: string; icon: any; color: string };
     const DASH_TILES: Tile[] = [
-        { name: 'POS', href: '/admin/sale', icon: ScanLine, color: '#a855f7' },
-        { name: 'Sales', href: '/admin/sales', icon: TrendingUp, color: '#ec4899' },
-        { name: 'Purchase', href: '/admin/purchases/add', icon: ShoppingCart, color: '#10b981' },
-        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes, color: '#f43f5e' },
-        { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, color: '#3b82f6' },
-        { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, color: '#f97316' },
-        { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, color: '#14b8a6' },
-        { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#8b5cf6' },
-        { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#f472b6' },
-        { name: 'Live Products', href: '/admin/products', icon: Package, color: '#fb923c' },
-        { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, color: '#ef4444' },
-        { name: 'Purchase History', href: '/admin/purchases', icon: History, color: '#38bdf8' },
+        { name: 'POS', href: '/admin/sale', icon: ScanLine, color: '#4F46E5' },
+        { name: 'Sales', href: '/admin/sales', icon: TrendingUp, color: '#2563EB' },
+        { name: 'Purchase', href: '/admin/purchases/add', icon: ShoppingCart, color: '#059669' },
+        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes, color: '#E11D48' },
+        { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, color: '#0891B2' },
+        { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw, color: '#EA580C' },
+        { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, color: '#0D9488' },
+        { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#7C3AED' },
+        { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#C026D3' },
+        { name: 'Live Products', href: '/admin/products', icon: Package, color: '#D97706' },
+        { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus, color: '#DC2626' },
+        { name: 'Purchase History', href: '/admin/purchases', icon: History, color: '#0284C7' },
     ];
     const dashTiles = DASH_TILES.filter((t) => canSee(t.href));
+
+    // Super-admin pill colours (bright, distinct) keyed by page — reuses each page's
+    // own icon from `groupedCore`, so the super admin gets the same clean pill buttons.
+    const SUPER_TILE_COLOR: Record<string, string> = {
+        '/admin/branches': '#4F46E5',
+        '/admin/users': '#7C3AED',
+        '/admin/company/suppliers': '#D97706',
+        '/admin/company/customers': '#0284C7',
+        '/admin/company/areas': '#0D9488',
+        '/admin/reports': '#C026D3',
+        '/admin/income': '#059669',
+        '/admin/expense': '#E11D48',
+        '/admin/payments': '#6D28D9',
+        '/admin/website-settings': '#2563EB',
+        '/admin/settings': '#475569',
+        '/admin/alerts': '#EA580C',
+        '/admin/notifications': '#0891B2',
+    };
+    const superTileGroups = groupedCore.map((g) => ({
+        title: g.title,
+        tiles: g.items.map((p) => ({
+            name: p.name,
+            href: p.href,
+            icon: p.icon,
+            color: SUPER_TILE_COLOR[p.href] || '#6366f1',
+        })),
+    }));
 
     // Clean pill button (matches the reference): bright colour body, white circle +
     // icon poking out on the left, white uppercase label, soft drop shadow.
@@ -818,6 +846,22 @@ export default function AdminDashboard() {
         );
     };
 
+    // ── MOBILE (branch admin): the 5 nav groups shown on the dashboard as pills;
+    //    tapping a group expands its pages as pills too (same clean design). ──
+    const NAV_GROUP_META: Record<string, { icon: any; color: string }> = {
+        Sales: { icon: TrendingUp, color: '#2563EB' },
+        Purchase: { icon: ShoppingCart, color: '#059669' },
+        Stock: { icon: Boxes, color: '#E11D48' },
+        Accounts: { icon: CreditCard, color: '#7C3AED' },
+        Setup: { icon: Settings, color: '#475569' },
+    };
+    const mobileNavGroups = NAV_GROUPS
+        .map((g) => ({ ...g, items: g.items.filter((i) => (i as any).action ? true : canSee(i.href)) }))
+        .filter((g) => g.items.length > 0);
+    // Payments + Reports get their own pills on the mobile dashboard (Order Tracking
+    // stays in the header / drawer, not here).
+    const mobileStandalone = STANDALONE_ITEMS.filter((s) => s.href !== '/admin/tracking' && canSee(s.href));
+
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
@@ -838,19 +882,43 @@ export default function AdminDashboard() {
                 {/* ── MAIN: DIRECTORY ── */}
                 <div className="flex-1 min-w-0 space-y-6 md:space-y-12 animate-in fade-in duration-300 text-left px-3 md:px-0">
 
-                        {/* ── SUPER ADMIN: BUSINESS CHARTS (Net-by-Branch on mobile too) ── */}
-                        {isSuperAdmin && <SuperAdminCharts revenueData={revenueData30} />}
-
-                        {/* ── Super Admin mobile: flattened cards (Areas + Notifications share a row) ── */}
-                        {isSuperAdmin && superMobileCards.length > 0 && (
-                            <div className="lg:hidden grid grid-cols-2 gap-2.5">
-                                {superMobileCards.map(renderNavCard)}
+                        {/* ── BRANCH ADMIN — MOBILE: 5 nav groups as pills; tap to expand pages ── */}
+                        {!isSuperAdmin && (
+                            <div className="md:hidden space-y-3">
+                                <div className="flex items-center gap-3 select-none">
+                                    <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Menu</h2>
+                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{mobileNavGroups.length}</span>
+                                    <div className="h-px flex-1 bg-slate-200/70" />
+                                </div>
+                                <div className="space-y-2.5">
+                                    {mobileNavGroups.map((g) => {
+                                        const meta = NAV_GROUP_META[g.label] || { icon: Boxes, color: '#6366f1' };
+                                        const GIcon = meta.icon;
+                                        return (
+                                            <Link
+                                                key={g.label}
+                                                href={`/admin/menu/${encodeURIComponent(g.label)}`}
+                                                className="w-full relative flex items-center h-[56px] rounded-full pl-[62px] pr-5 shadow-[0_8px_18px_-4px_rgba(15,23,42,0.28)] transition-all duration-300 active:scale-[0.99]"
+                                                style={{ backgroundColor: meta.color }}
+                                            >
+                                                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
+                                                    <GIcon size={24} strokeWidth={2.8} style={{ color: meta.color }} />
+                                                </span>
+                                                <span className="flex-1 min-w-0 text-left text-white font-extrabold uppercase tracking-wide text-[13px]">{g.label}</span>
+                                                <span className="shrink-0 text-white/85 text-[11px] font-bold tabular-nums mr-1.5">{g.items.length}</span>
+                                                <ChevronRight className="shrink-0 w-4 h-4 text-white/85" />
+                                            </Link>
+                                        );
+                                    })}
+                                    {/* Payments + Reports — separate pills (not a group) */}
+                                    {mobileStandalone.map((s) => renderTile({ name: s.name, href: s.href, icon: s.icon, color: s.color }))}
+                                </div>
                             </div>
                         )}
 
-                        {/* ── BRANCH ADMIN: single enhanced-button section (all modules) ── */}
+                        {/* ── BRANCH ADMIN — DESKTOP: flat Quick Actions grid (all modules) ── */}
                         {!isSuperAdmin && (
-                            <div className="space-y-3">
+                            <div className="hidden md:block space-y-3">
                                 <div className="flex items-center gap-3 select-none">
                                     <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Quick Actions</h2>
                                     <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{dashTiles.length}</span>
@@ -862,18 +930,18 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* ── SUPER ADMIN: grouped accent button-cards (unchanged) ── */}
+                        {/* ── SUPER ADMIN: same clean pill buttons, grouped by area ── */}
                         {isSuperAdmin && (
-                        <div className="space-y-5 md:space-y-7 hidden lg:block">
-                            {groupedCore.map((grp) => (
+                        <div className="space-y-5 md:space-y-7">
+                            {superTileGroups.map((grp) => (
                                 <div key={grp.title} className="space-y-3">
                                     <div className="flex items-center gap-3 select-none">
                                         <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">{grp.title}</h2>
-                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.items.length}</span>
+                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.tiles.length}</span>
                                         <div className="h-px flex-1 bg-slate-200/70" />
                                     </div>
-                                    <div className="grid gap-2.5 sm:gap-3 grid-cols-3">
-                                        {grp.items.map(renderNavCard)}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                        {grp.tiles.map(renderTile)}
                                     </div>
                                 </div>
                             ))}
@@ -884,34 +952,8 @@ export default function AdminDashboard() {
                     {/* ── RIGHT: SUPER ADMIN → BUSINESS OVERVIEW · BRANCH ADMIN → LOW STOCK ── */}
                     <aside className={`w-full lg:w-[320px] xl:w-[340px] shrink-0 ${isSuperAdmin ? 'hidden lg:block lg:order-last' : ''}`}>
                         {isSuperAdmin ? (
-                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col xl:h-full">
-                            <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3.5 border-b border-slate-100">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                                    <BarChart3 size={16} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="text-[13px] font-bold text-slate-800 tracking-tight">Business Overview</h3>
-                                    <p className="text-[10.5px] text-slate-400 font-medium">Across all branches</p>
-                                </div>
-                            </div>
-                            {/* KPI tiles — 2-up on mobile, stacked on desktop */}
-                            <div className="grid grid-cols-2 lg:grid-cols-1 gap-px bg-slate-100 flex-1">
-                                {businessOverview.map((m) => {
-                                    const MIcon = m.icon;
-                                    return (
-                                        <div key={m.label} className="bg-white px-4 py-3.5 flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${m.color}`}>
-                                                <MIcon size={18} strokeWidth={1.75} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[18px] font-black text-slate-900 tabular-nums leading-none">{m.value === null ? '—' : m.value.toLocaleString('en-US')}</p>
-                                                <p className="text-[11px] font-semibold text-slate-500 truncate mt-1">{m.label}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        /* Charts stacked vertically in the right column (desktop only). */
+                        <SuperAdminCharts revenueData={revenueData30} />
                         ) : (
                         <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
                             {/* Tab Switcher at the top */}

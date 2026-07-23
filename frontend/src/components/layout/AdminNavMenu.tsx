@@ -9,19 +9,27 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard, ScanLine, TrendingUp, RotateCcw, ClipboardList, Truck,
     ShoppingCart, History, RefreshCcw, UserCheck, Package, PackagePlus, Boxes, Store,
     CreditCard, ArrowDownLeft, ArrowUpRight, BarChart3, Users, Bell, AlertTriangle,
-    Building2, User, MapPin, Globe, Settings, ChevronDown, ChevronRight, X,
+    Building2, User, MapPin, Globe, Settings, ChevronDown, ChevronRight, X, Bike, LogOut,
 } from 'lucide-react';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
 import { cn } from '@/lib/utils';
 
-type Item = { name: string; href: string; icon: any };
+type Item = { name: string; href: string; icon: any; action?: 'logout' };
 type Group = { label: string; items: Item[] };
+
+/** Standalone accent buttons shown outside the group dropdowns (right side of the
+ *  desktop bar; separate pills on the mobile dashboard). */
+export const STANDALONE_ITEMS: { name: string; href: string; icon: any; color: string; accent: string; accentActive: string }[] = [
+    { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#C026D3', accent: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100 hover:bg-fuchsia-100', accentActive: 'bg-[#C026D3] text-white border-[#C026D3] shadow-sm shadow-fuchsia-700/25' },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#7C3AED', accent: 'bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100', accentActive: 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-sm shadow-violet-700/25' },
+    { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, color: '#0284C7', accent: 'bg-sky-50 text-sky-700 border-sky-100 hover:bg-sky-100 hover:border-sky-200', accentActive: 'bg-[#0284C7] text-white border-[#0284C7] shadow-sm shadow-sky-700/25' },
+];
 
 export const NAV_GROUPS: Group[] = [
     {
@@ -48,16 +56,14 @@ export const NAV_GROUPS: Group[] = [
             { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus },
             { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
             { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
-            { name: 'Companies', href: '/admin/company/companies', icon: Building2 },
         ],
     },
     {
         label: 'Accounts', items: [
-            { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
-            { name: 'Income', href: '/admin/income', icon: ArrowDownLeft },
-            { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight },
-            { name: 'Reports Center', href: '/admin/reports', icon: BarChart3 },
             { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
+            { name: 'Companies', href: '/admin/company/companies', icon: Building2 },
+            { name: 'Delivery Persons', href: '/admin/delivery', icon: Bike },
+            { name: 'Logout', href: '', icon: LogOut, action: 'logout' },
         ],
     },
     {
@@ -74,7 +80,7 @@ export const NAV_GROUPS: Group[] = [
 ];
 
 /** Access filter — mirrors the dashboard/sidebar rules. */
-function useVisibleGroups(): { groups: Group[]; canSee: (href: string) => boolean } {
+export function useVisibleGroups(): { groups: Group[]; canSee: (href: string) => boolean } {
     const [visibility, setVisibility] = useState<Record<string, boolean>>({});
     const [perms, setPerms] = useState<string[] | null>(null);
     const [isSuper, setIsSuper] = useState(false);
@@ -110,7 +116,7 @@ function useVisibleGroups(): { groups: Group[]; canSee: (href: string) => boolea
     };
 
     const groups = NAV_GROUPS
-        .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.href)) }))
+        .map((g) => ({ ...g, items: g.items.filter((i) => i.action ? true : canSee(i.href)) }))
         .filter((g) => g.items.length > 0);
 
     return { groups, canSee };
@@ -119,6 +125,7 @@ function useVisibleGroups(): { groups: Group[]; canSee: (href: string) => boolea
 /* ── DESKTOP: horizontal menu bar with dropdowns ── */
 export function DesktopNavMenu() {
     const pathname = usePathname();
+    const router = useRouter();
     const { groups, canSee } = useVisibleGroups();
     const [open, setOpen] = useState<string | null>(null);
     const ref = useRef<HTMLDivElement>(null);
@@ -130,8 +137,10 @@ export function DesktopNavMenu() {
     }, []);
     useEffect(() => { setOpen(null); }, [pathname]);
 
-    const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+    const doLogout = () => { authService.logout(); router.push('/login'); };
+    const isActive = (href: string) => !!href && (pathname === href || pathname.startsWith(href + '/'));
     const groupActive = (g: Group) => g.items.some((i) => isActive(i.href));
+    const standalone = STANDALONE_ITEMS.filter((s) => canSee(s.href));
 
     return (
         <div ref={ref} className="hidden md:flex items-center gap-0.5 h-12 px-4 lg:px-6 bg-white/95 backdrop-blur border-b border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.03)] z-[45] print:hidden">
@@ -164,19 +173,23 @@ export function DesktopNavMenu() {
                             {g.items.map((it) => {
                                 const Icon = it.icon;
                                 const active = isActive(it.href);
-                                return (
-                                    <Link
-                                        key={it.href}
-                                        href={it.href}
-                                        onClick={() => setOpen(null)}
-                                        className={cn('flex items-center gap-2.5 px-3.5 py-2 text-[13px] font-medium transition-colors',
-                                            active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900')}
-                                    >
-                                        <div className={cn('w-7 h-7 rounded-md flex items-center justify-center shrink-0',
-                                            active ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-400')}>
-                                            <Icon size={14} />
-                                        </div>
-                                        {it.name}
+                                const cls = cn('flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] font-medium transition-colors text-left',
+                                    it.action === 'logout' ? 'text-rose-600 hover:bg-rose-50'
+                                        : active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900');
+                                const iconBox = (
+                                    <div className={cn('w-7 h-7 rounded-md flex items-center justify-center shrink-0',
+                                        it.action === 'logout' ? 'bg-rose-50 text-rose-500'
+                                            : active ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-400')}>
+                                        <Icon size={14} />
+                                    </div>
+                                );
+                                return it.action === 'logout' ? (
+                                    <button key="logout" type="button" onClick={() => { setOpen(null); doLogout(); }} className={cls}>
+                                        {iconBox}{it.name}
+                                    </button>
+                                ) : (
+                                    <Link key={it.href} href={it.href} onClick={() => setOpen(null)} className={cls}>
+                                        {iconBox}{it.name}
                                     </Link>
                                 );
                             })}
@@ -185,17 +198,23 @@ export function DesktopNavMenu() {
                 </div>
             ))}
 
-            {/* Order Tracking — stand-alone accent pill, pushed to the far right */}
-            {canSee('/admin/tracking') && (
-                <Link
-                    href="/admin/tracking"
-                    className={cn('ml-auto flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all border',
-                        isActive('/admin/tracking')
-                            ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/25'
-                            : 'bg-sky-50 text-sky-700 border-sky-100 hover:bg-sky-100 hover:border-sky-200')}
-                >
-                    <Truck size={15} /> Order Tracking
-                </Link>
+            {/* Stand-alone accent pills (Reports · Payments · Order Tracking), far right */}
+            {standalone.length > 0 && (
+                <div className="ml-auto flex items-center gap-1.5">
+                    {standalone.map((s) => {
+                        const SIcon = s.icon;
+                        return (
+                            <Link
+                                key={s.href}
+                                href={s.href}
+                                className={cn('flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all border',
+                                    isActive(s.href) ? s.accentActive : s.accent)}
+                            >
+                                <SIcon size={15} /> {s.name}
+                            </Link>
+                        );
+                    })}
+                </div>
             )}
         </div>
     );
@@ -204,10 +223,12 @@ export function DesktopNavMenu() {
 /* ── MOBILE: slide-in accordion drawer ── */
 export function MobileNavMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
     const pathname = usePathname();
+    const router = useRouter();
     const { groups, canSee } = useVisibleGroups();
     const [expanded, setExpanded] = useState<string | null>('Sales');
     if (!open) return null;
-    const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+    const isActive = (href: string) => !!href && (pathname === href || pathname.startsWith(href + '/'));
+    const doLogout = () => { onClose(); authService.logout(); router.push('/login'); };
 
     return (
         <div className="fixed inset-0 z-[200] md:hidden print:hidden flex">
@@ -246,6 +267,15 @@ export function MobileNavMenu({ open, onClose }: { open: boolean; onClose: () =>
                                     {g.items.map((it) => {
                                         const Icon = it.icon;
                                         const active = isActive(it.href);
+                                        if (it.action === 'logout') {
+                                            return (
+                                                <button key="logout" type="button" onClick={doLogout}
+                                                    className="flex w-full items-center gap-2.5 pl-6 pr-4 py-2 text-[13px] font-medium text-rose-600 hover:bg-rose-50 text-left">
+                                                    <Icon size={15} className="text-rose-500" />
+                                                    {it.name}
+                                                </button>
+                                            );
+                                        }
                                         return (
                                             <Link key={it.href} href={it.href} onClick={onClose}
                                                 className={cn('flex items-center gap-2.5 pl-6 pr-4 py-2 text-[13px] font-medium',

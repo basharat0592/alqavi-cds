@@ -27,8 +27,11 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
     '/admin/orders',            // Order List
     '/admin/purchases',         // Purchase History
     '/admin/products',          // Product List
+    '/admin/products-list',     // Products List
     '/admin/products/add',      // Add Listing
     '/admin/inventory/list',    // Current Stocks
+    '/admin/inventory/warehouses', // Warehouses
+    '/admin/company/companies', // Companies
     '/admin/users/roles',       // Staff Roles
     // Finance is a branch-admin concern — hidden from the Super Admin side.
     '/admin/payments',          // Global Payments
