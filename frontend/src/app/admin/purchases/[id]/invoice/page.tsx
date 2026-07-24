@@ -91,7 +91,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
             </div>
 
             {/* Paper Container */}
-            <Card className="max-w-[850px] mx-auto p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:rounded-none print:p-0">
+            <Card className="invoice-print-scale max-w-[850px] mx-auto p-6 pt-3 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:rounded-none print:p-0">
 
                 {/* Visual Header */}
                 <div className="flex justify-between items-center mb-3">
@@ -106,10 +106,10 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                     </div>
 
                     <div className="w-1/3 text-center py-1">
-                        <h1 className="text-[22px] font-bold text-slate-900 urdu-text mb-1.5" style={{ lineHeight: 2 }}>
+                        <h1 className="text-[19px] font-bold text-slate-900 urdu-text mb-1.5" style={{ lineHeight: 2 }}>
                             القوی ٹریڈرز
                         </h1>
-                        <p className="text-[10px] font-bold text-slate-500 tracking-widest urdu-text" style={{ lineHeight: 1.8 }}>
+                        <p className="text-[9px] font-bold text-slate-500 tracking-widest urdu-text" style={{ lineHeight: 1.6 }}>
                             کاسمیٹکس ڈیلر گلگت بلتستان
                         </p>
                     </div>
@@ -125,30 +125,11 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                     </div>
                 </div>
 
-                {/* 2. Supplier & Metadata Grid — compact single line per column */}
-                <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
-                    <div className="col-span-2">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Supplier</p>
-                        <p className="text-[15px] font-black text-slate-900 leading-tight">{purchase.supplier_name}</p>
-                        {purchase.supplier_phone && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{purchase.supplier_phone}</p>}
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Inventory</p>
-                        <div className="flex justify-end">
-                            {purchase.is_inventory_synced ? (
-                                <span className="flex items-center gap-1 text-emerald-600 font-black text-[10px] uppercase"><CheckCircle2 size={12} /> Synced</span>
-                            ) : (
-                                <Badge tone="amber">Pending Sync</Badge>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
                 {/* 3. Items Table */}
                 <div className="mb-6">
                     <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
                         <thead>
-                            <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                            <tr className="border-b-2 border-slate-300 text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
                                 <SelectAllTh sel={sel} className="print:hidden" />
                                 <th className="py-1.5 px-2 w-12 text-center">#</th>
                                 <th className="py-1.5 px-3">Item Description</th>
@@ -157,7 +138,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                                 <th className="py-1.5 px-3 text-right w-32">Subtotal</th>
                             </tr>
                         </thead>
-                        <tbody className="text-[13px]">
+                        <tbody className="text-[10px]">
                             {lineItems.map((item: any, i: number) => {
                                 const price = parseFloat(item.price || 0);
                                 const qty = item.quantity || 1;
@@ -167,9 +148,10 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                                     <tr key={i} className="hover:bg-slate-50 border-b border-slate-100">
                                         <RowCheckboxTd sel={sel} id={item._rowId} className="print:hidden" />
                                         <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
-                                        <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">
-                                            {item.product_name}
-                                            <span className="text-[10px] font-medium text-slate-400 ml-1.5">({item.packaging_type?.toLowerCase()})</span>
+                                        <td className="py-1.5 px-3 font-bold text-slate-900">
+                                            <span>{item.product_name}</span>
+                                            <span className="text-[9px] font-medium text-slate-400 ml-1.5">({item.packaging_type?.toLowerCase()})</span>
+                                            {item.company_name && <div className="text-[9px] font-semibold text-slate-400">{item.company_name}</div>}
                                         </td>
                                         <td className="py-1.5 px-3 text-center font-bold text-emerald-600 tabular-nums whitespace-nowrap">
                                             {item.packaging_type === 'CARTON' ? (
@@ -189,37 +171,37 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                 {/* Summary: notes (left) + totals list box (right) */}
                 <div className="flex justify-between items-start gap-6 mb-6">
                     <div className="flex-1 pt-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
-                        <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{purchase.notes || 'Bulk stock replenishment order.'}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                        <p className="text-[10px] text-slate-500 italic max-w-xs leading-relaxed">{purchase.notes || 'Bulk stock replenishment order.'}</p>
                     </div>
-                    <div className="w-[280px] text-[12px] space-y-2">
+                    <div className="w-[280px] text-[10px] space-y-1.5">
                         <div className="flex justify-between">
-                            <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
+                            <span className="text-slate-500 font-bold uppercase text-[10px]">Subtotal</span>
                             <span className="font-black text-slate-900 tabular-nums">{formatCurrency(totalAmount - (purchase.shipping_cost || 0) - (purchase.tax_amount || 0))}</span>
                         </div>
                         {purchase.shipping_cost > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Shipping Fees</span>
+                                <span className="text-slate-500 font-bold uppercase text-[10px]">Shipping Fees</span>
                                 <span className="font-black text-slate-900 tabular-nums">{formatCurrency(purchase.shipping_cost)}</span>
                             </div>
                         )}
                         {purchase.tax_amount > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Tax</span>
+                                <span className="text-slate-500 font-bold uppercase text-[10px]">Tax</span>
                                 <span className="font-black text-slate-900 tabular-nums">{formatCurrency(purchase.tax_amount)}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-slate-300">
-                            <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
-                            <span className="font-black text-indigo-600 text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                            <span className="text-slate-900 font-black uppercase text-[11px]">Total Amount</span>
+                            <span className="font-black text-indigo-600 text-[13px] tabular-nums">{formatCurrency(totalAmount)}</span>
                         </div>
                         <div className="flex justify-between pt-1">
-                            <span className="text-emerald-600 font-bold uppercase text-[11px]">Total Paid</span>
+                            <span className="text-emerald-600 font-bold uppercase text-[10px]">Total Paid</span>
                             <span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</span>
                         </div>
                         {balance > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-rose-600 font-black uppercase text-[11px]">Remaining Balance</span>
+                                <span className="text-rose-600 font-black uppercase text-[10px]">Remaining Balance</span>
                                 <span className="font-black text-rose-600 tabular-nums">{formatCurrency(balance)}</span>
                             </div>
                         )}
@@ -235,7 +217,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                             className="text-white flex items-center justify-center px-6 print-exact"
                             style={{ backgroundColor: '#0f172a', clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 16% 100%, 0 50%)' }}
                         >
-                            <span className="text-[9px] font-bold urdu-text whitespace-nowrap">قاضی مارکیٹ CMH روڈ خومر گلگت</span>
+                            <span className="text-[8px] font-bold urdu-text whitespace-nowrap">قاضی مارکیٹ CMH روڈ خومر گلگت</span>
                         </div>
                         {/* Tagline bar */}
                         <div
@@ -243,7 +225,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                             style={{ backgroundColor: '#1e293b' }}
                         >
                             <span className="inline-block w-2 h-2 rotate-45 print-exact" style={{ backgroundColor: '#1d4ed8' }}></span>
-                            <span className="text-[13px] font-bold urdu-text">مشہور اور با اعتماد ملکی وغیر ملکی کاسمیٹکس کا مرکز</span>
+                            <span className="text-[8.5px] font-bold urdu-text">مشہور اور با اعتماد ملکی وغیر ملکی کاسمیٹکس کا مرکز</span>
                             <span className="inline-block w-2 h-2 rotate-45 print-exact" style={{ backgroundColor: '#1d4ed8' }}></span>
                         </div>
                         {/* Right branch arrow (points right) */}
@@ -251,7 +233,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                             className="text-white flex items-center justify-center px-6 print-exact"
                             style={{ backgroundColor: '#0f172a', clipPath: 'polygon(0 0, 84% 0, 100% 50%, 84% 100%, 0 100%)' }}
                         >
-                            <span className="text-[9px] font-bold urdu-text whitespace-nowrap">ابراہیم مارکیٹ کنفکشن بل سکردو</span>
+                            <span className="text-[8px] font-bold urdu-text whitespace-nowrap">ابراہیم مارکیٹ کنفکشن بل سکردو</span>
                         </div>
                     </div>
 
@@ -266,7 +248,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
 
                     {/* Note / Terms (Urdu, justified) */}
                     <div dir="rtl" className="mt-2 mb-10">
-                        <p className="text-[11px] text-slate-900 urdu-text text-justify" style={{ lineHeight: 2.2 }}>
+                        <p className="text-[9px] text-slate-900 urdu-text text-justify" style={{ lineHeight: 1.9 }}>
                             <span className="font-black">نوٹ:۔ </span>
                             تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں الْقوی ٹریڈرز گلگت سے خریدی ہیں انہیں ایکسپائری سے تین مہینے پہلے تبدیل کرنا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیل کرنے کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بمعہ پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی کمی بیشی کی صورت میں فوراً رابطہ کریں، بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ۔
                         </p>
@@ -275,12 +257,13 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                     {/* Signatures: Store Manager (left) and Saleman (right) */}
                     <div className="flex justify-between items-end mt-12 px-2">
                         <div className="w-44">
+                            {purchase.staff_name && <p className="text-[12px] font-bold text-slate-900 mb-1 truncate">{purchase.staff_name}</p>}
                             <div className="border-t border-slate-700 mb-1.5"></div>
-                            <span className="text-[13px] font-black text-slate-900">Store Manager</span>
+                            <span className="text-[13px] font-black text-slate-900">Saleman</span>
                         </div>
                         <div className="w-44 text-right">
                             <div className="border-t border-slate-700 mb-1.5"></div>
-                            <span className="text-[13px] font-black text-slate-900">Saleman</span>
+                            <span className="text-[13px] font-black text-slate-900">Store Manager</span>
                         </div>
                     </div>
 
@@ -322,10 +305,32 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
 
                 @media print {
                     .print\\:hidden { display: none !important; }
-                    body { padding: 0 !important; margin: 0 !important; background-color: white !important; }
-                    .max-w-[850px] { max-width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-                    .invoice-footer { position: fixed; bottom: 0; left: 0; right: 0; margin: 0 !important; padding-top: 0 !important; }
-                    @page { margin: 1cm; }
+                    /* Half-page, rotated 90°: the invoice is laid out at LANDSCAPE half-page
+                       size (210 × 148 mm) where the content fits nicely, then rotated 90° to
+                       fill an A5 PORTRAIT sheet. Rotate the printed paper to read it upright. */
+                    html, body {
+                        margin: 0 !important; padding: 0 !important; background-color: white !important;
+                        width: 210mm !important; height: 297mm !important; overflow: hidden !important;
+                    }
+                    /* Normal PORTRAIT sheet; the CONTENT is rotated 90° and placed in the
+                       TOP HALF (the bottom half stays blank) — a clean half-page. */
+                    @page { size: A4 portrait; margin: 0; }
+                    .invoice-print-scale {
+                        position: fixed !important;
+                        top: 25% !important; left: 50% !important;
+                        box-sizing: border-box !important;
+                        display: flex !important; flex-direction: column !important;
+                        width: 148mm !important; max-width: 148mm !important;
+                        height: 205mm !important; min-height: 205mm !important;
+                        padding: 6mm !important;
+                        margin: 0 !important;
+                        border: none !important; box-shadow: none !important; border-radius: 0 !important;
+                        overflow: hidden !important;
+                        transform: translate(-50%, -50%) rotate(90deg);
+                        transform-origin: center center;
+                        font-size: 8.5px !important;
+                    }
+                    .invoice-footer { position: static !important; margin-top: auto !important; padding-top: 0 !important; }
                 }
 
                 body { font-family: 'Inter', sans-serif; }

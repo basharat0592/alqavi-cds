@@ -10,7 +10,7 @@ import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
-    Home, Globe, Settings
+    Home, Globe, Settings, ScanLine, TrendingUp, Boxes
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -18,25 +18,30 @@ import { authService } from '@/lib/auth';
 import { userService, settingsService } from '@/lib/api';
 import { ADMIN_PAGES, SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
 import { getImageUrl, cn } from '@/lib/utils';
+import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 
 /* ═══════════════════════════════════════════════
    MOBILE TOP BAR (CLEAN LIGHT THEME)
    ═══════════════════════════════════════════════ */
-function MobileTopBar({ onMenuToggle, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile, showBack, onBack }: {
-    onMenuToggle: () => void; adminName: string; adminAvatar: string | null; unreadCount: number;
+function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile, showBack, onBack }: {
+    onMenuToggle: () => void; showMenu?: boolean; adminName: string; adminAvatar: string | null; unreadCount: number;
     onToggleNotifications: () => void; onToggleProfile: () => void;
     showBack: boolean; onBack: () => void;
 }) {
     return (
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-800 dark:text-white px-4 py-3 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm transition-colors duration-300">
-            <button 
-                onClick={onMenuToggle} 
-                className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-            >
-                <Menu className="h-5 w-5" />
-            </button>
+            {showMenu ? (
+                <button
+                    onClick={onMenuToggle}
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                >
+                    <Menu className="h-5 w-5" />
+                </button>
+            ) : (
+                <span className="w-9 h-9 shrink-0" aria-hidden />
+            )}
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center group">
                 <span className="font-extrabold text-sm tracking-widest text-slate-800 dark:text-white group-hover:opacity-85 transition-opacity">
                     AL-QAVI <span className="bg-gradient-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent">TRADES</span>
@@ -130,39 +135,71 @@ function SessionTimer({ className = '', onTimeout }: { className?: string; onTim
 /* ═══════════════════════════════════════════════
    SUPER-ADMIN MOBILE BOTTOM NAV (app-style tab bar)
    ═══════════════════════════════════════════════ */
-function SuperAdminBottomNav({ pathname }: { pathname: string }) {
-    const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
-    const Tab = ({ href, label, icon: Icon }: { href: string; label: string; icon: any }) => (
-        <Link
-            href={href}
-            className={cn(
-                "flex flex-col items-center justify-center gap-0.5 h-16 transition-colors active:scale-95",
-                isActive(href) ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
-            )}
-        >
-            <Icon size={20} />
-            <span className="text-[9.5px] font-bold tracking-tight">{label}</span>
+/* A bottom-tab that echoes the gradient pill buttons: the active tab is a mini
+   gradient circle with a white icon; inactive tabs show a colour-inked icon. */
+function BottomTab({ href, label, icon: Icon, active }: { href: string; label: string; icon: any; active: boolean }) {
+    const g = gradientFor(href);
+    return (
+        <Link href={href} className="flex flex-col items-center justify-center gap-1 h-16 active:scale-95 transition-transform">
+            <span
+                className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-all", active && "shadow-[0_3px_9px_rgba(15,23,42,0.28)]")}
+                style={active ? { backgroundImage: gradientCss(g), border: `1.5px solid ${g.ink}` } : {}}
+            >
+                <Icon size={19} strokeWidth={active ? 2.6 : 2.1} style={{ color: active ? '#0f172a' : g.ink }} />
+            </span>
+            <span className={cn("text-[9.5px] font-bold tracking-tight", active ? "text-slate-900" : "text-slate-400")}>{label}</span>
         </Link>
     );
-    const homeActive = isActive('/admin/dashboard');
+}
+
+const HOME_GRADIENT = 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)';
+
+function SuperAdminBottomNav({ pathname }: { pathname: string }) {
+    const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
     return (
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
             <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="grid grid-cols-5">
-                    <Tab href="/admin/users" label="Admins" icon={Users} />
-                    <Tab href="/admin/branches" label="Branches" icon={Building2} />
+                    <BottomTab href="/admin/users" label="Admins" icon={Users} active={isActive('/admin/users')} />
+                    <BottomTab href="/admin/branches" label="Branches" icon={Building2} active={isActive('/admin/branches')} />
                     <div aria-hidden />{/* center slot for the raised Home button */}
-                    <Tab href="/admin/website-settings" label="CMS" icon={Globe} />
-                    <Tab href="/admin/settings" label="Settings" icon={Settings} />
+                    <BottomTab href="/admin/website-settings" label="CMS" icon={Globe} active={isActive('/admin/website-settings')} />
+                    <BottomTab href="/admin/settings" label="Settings" icon={Settings} active={isActive('/admin/settings')} />
                 </div>
-                {/* Raised center Home */}
+                {/* Raised center Home — gradient fill to match the pill buttons */}
                 <Link
                     href="/admin/dashboard"
                     aria-label="Dashboard"
-                    className={cn(
-                        "absolute left-1/2 -translate-x-1/2 -top-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white transition-colors active:scale-95",
-                        homeActive ? "bg-indigo-600 text-white" : "bg-slate-900 text-white hover:bg-slate-800"
-                    )}
+                    className="absolute left-1/2 -translate-x-1/2 -top-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white text-white transition-transform active:scale-95"
+                    style={{ backgroundImage: HOME_GRADIENT }}
+                >
+                    <Home size={22} />
+                </Link>
+            </div>
+        </nav>
+    );
+}
+
+/* App-style bottom tab bar for BRANCH ADMINS (mobile only) — same design as the
+   super-admin bar, but with the branch's day-to-day quick actions. */
+function BranchAdminBottomNav({ pathname }: { pathname: string }) {
+    const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+    return (
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
+            <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                <div className="grid grid-cols-5">
+                    <BottomTab href="/admin/sale" label="POS" icon={ScanLine} active={isActive('/admin/sale')} />
+                    <BottomTab href="/admin/sales" label="Sales" icon={TrendingUp} active={isActive('/admin/sales')} />
+                    <div aria-hidden />{/* center slot for the raised Home button */}
+                    <BottomTab href="/admin/inventory/list" label="Stock" icon={Boxes} active={isActive('/admin/inventory/list')} />
+                    <BottomTab href="/admin/purchases/add" label="Purchase" icon={ShoppingCart} active={isActive('/admin/purchases/add')} />
+                </div>
+                {/* Raised center Home — gradient fill to match the pill buttons */}
+                <Link
+                    href="/admin/dashboard"
+                    aria-label="Dashboard"
+                    className="absolute left-1/2 -translate-x-1/2 -top-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white text-white transition-transform active:scale-95"
+                    style={{ backgroundImage: HOME_GRADIENT }}
                 >
                     <Home size={22} />
                 </Link>
@@ -368,16 +405,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <AuthGuard allowedRoles={['admin', 'staff']}>
             <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
                 
-                {/* ═══ MOBILE NAV MENU (5 groups, replaces the old sidebar) ═══ */}
-                <MobileNavMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
                 {/* ═══ RIGHT CONTAINER (Navbar + Main Content) ═══ */}
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
-                    <MobileTopBar
-                        onMenuToggle={() => setMobileOpen(!mobileOpen)} adminName={adminName} adminAvatar={adminAvatar}
-                        unreadCount={unreadCount} onToggleNotifications={() => setNotifOpen(!notifOpen)} onToggleProfile={() => setProfileOpen(!profileOpen)}
-                        showBack={pathname !== '/admin/dashboard'} onBack={() => router.back()}
-                    />
+                    {/* Mobile top bar is hidden for everyone — nav is via the dashboard
+                        pills/tiles + the fixed bottom tab bar on all mobile pages. */}
 
                     {/* ═══ MOBILE NOTIFICATIONS PANEL ═══ */}
                     {notifOpen && (
@@ -551,8 +583,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </main>
                 </div>
 
-                {/* App-style bottom tab bar — super admin, mobile only */}
-                {isSuperAdminUser && <SuperAdminBottomNav pathname={pathname} />}
+                {/* App-style bottom tab bar — mobile only (per role) */}
+                {isSuperAdminUser
+                    ? <SuperAdminBottomNav pathname={pathname} />
+                    : <BranchAdminBottomNav pathname={pathname} />}
             </div>
         </AuthGuard>
 

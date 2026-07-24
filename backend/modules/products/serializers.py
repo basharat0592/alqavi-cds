@@ -124,7 +124,7 @@ class SupplierProductSerializer(serializers.ModelSerializer):
         print(f"DEBUG: Validating SupplierProduct data: {attrs}")
         try:
             # 1. Convert empty strings to None for optional fields
-            for field in ['sku', 'barcode', 'category', 'company']:
+            for field in ['sku', 'barcode', 'category', 'company', 'supplier']:
                 if field in attrs and attrs[field] == '':
                     attrs[field] = None
             

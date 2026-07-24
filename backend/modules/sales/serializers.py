@@ -378,12 +378,16 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
 class PurchaseOrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
+    company_name = serializers.ReadOnlyField(source='product.company.name')
+    # A product's category comes from its owning company (Local / Imported / Pakistani…).
+    category_name = serializers.ReadOnlyField(source='product.company.category')
+    barcode = serializers.ReadOnlyField(source='product.barcode')
     product_image = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrderItem
-        fields = ['id', 'product', 'product_name', 'product_image', 'packaging_type', 'items_per_carton',
+        fields = ['id', 'product', 'product_name', 'company_name', 'category_name', 'barcode', 'product_image', 'packaging_type', 'items_per_carton',
                   'quantity', 'bonus_quantity', 'price', 'selling_price', 'retail_rate', 'expiry_date',
                   'total_units', 'received_units', 'profit_percent', 'subtotal']
 

@@ -990,6 +990,13 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     # Branch admins see only the purchases they personally created.
     creator_field = 'created_by'
 
+    def paginate_queryset(self, queryset):
+        # Allow the client to fetch every purchase (?no_pagination=true) so the
+        # purchase-history table can paginate all of them client-side.
+        if self.request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
     def get_queryset(self):
         user = self.request.user
         qs = PurchaseOrder.objects.all()
@@ -1427,6 +1434,10 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'payment_confirmed', 'is_inventory_synced'
             ]
             final_data = {k: v for k, v in data.items() if k in allowed_fields}
+
+            # Purchases are received immediately: force RECEIVED so the created order
+            # always syncs into stock (same product → adds, new product → new entry).
+            final_data['status'] = 'RECEIVED'
 
             # Record which admin/user created this PO (shown to the supplier as "From").
             if getattr(request, 'user', None) and request.user.is_authenticated:

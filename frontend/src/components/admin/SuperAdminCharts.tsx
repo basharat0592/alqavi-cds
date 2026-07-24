@@ -78,70 +78,8 @@ export default function SuperAdminCharts({ revenueData }: { revenueData: Revenue
     const avgDay = trend.length ? totalSales / trend.length : 0;
 
     return (
-        <>
-        {/* ── Mobile-only Sales Snapshot hero (30-day total + sparkline) ── */}
-        <div className="lg:hidden mb-4 rounded-2xl bg-gradient-to-br from-[#232F3E] to-[#37475A] text-white p-4 shadow-[0_6px_20px_rgba(35,47,62,0.25)] overflow-hidden">
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/55">Sales · last 30 days</p>
-                    <p className="text-[27px] font-black tabular-nums leading-none mt-1.5 truncate">{formatCurrency(totalSales)}</p>
-                    <p className="text-[11px] font-semibold text-white/55 mt-1.5">{totalOrders.toLocaleString()} orders · all branches</p>
-                </div>
-                <div className="w-[92px] h-[52px] shrink-0 -mt-0.5">
-                    {hasTrend && (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trend} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="heroSpark" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#7DD3FC" stopOpacity={0.5} />
-                                        <stop offset="100%" stopColor="#7DD3FC" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <Area type="monotone" dataKey="sales" stroke="#7DD3FC" strokeWidth={2} fill="url(#heroSpark)" dot={false} isAnimationActive={false} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
-            </div>
-            <div className="mt-3.5 pt-3 border-t border-white/10 grid grid-cols-2 gap-3">
-                <div>
-                    <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/45">Peak day</p>
-                    <p className="text-[14px] font-extrabold tabular-nums mt-0.5">{formatCurrency(peakDay)}</p>
-                </div>
-                <div>
-                    <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/45">Daily avg</p>
-                    <p className="text-[14px] font-extrabold tabular-nums mt-0.5">{formatCurrency(avgDay)}</p>
-                </div>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Revenue trend — change over time → area (desktop only) */}
-            <div className="hidden lg:block">
-            <Panel icon={TrendingUp} title="Revenue Trend" subtitle="Sales over the last 30 days · all branches">
-                {hasTrend ? (
-                    <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={trend} margin={{ top: 6, right: 6, left: -12, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={INDIGO} stopOpacity={0.28} />
-                                    <stop offset="100%" stopColor={INDIGO} stopOpacity={0.02} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
-                            <XAxis dataKey="date" tickFormatter={dayFmt} tick={{ fontSize: 10, fill: AXIS }} axisLine={false} tickLine={false} minTickGap={24} />
-                            <YAxis tickFormatter={kFmt} tick={{ fontSize: 10, fill: AXIS }} axisLine={false} tickLine={false} width={44} />
-                            <Tooltip content={<ChartTip isDate />} cursor={{ stroke: INDIGO, strokeOpacity: 0.25 }} />
-                            <Area type="monotone" dataKey="sales" stroke={INDIGO} strokeWidth={2} fill="url(#revFill)" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No sales in this period yet.</div>
-                )}
-            </Panel>
-            </div>
-
-            {/* Net by branch — magnitude by identity → bars (mobile + desktop) */}
+        <div className="space-y-4">
+            {/* Net by branch — magnitude by identity → bars */}
             <Panel icon={Building2} title="Net by Branch" subtitle="Income minus expense · per branch">
                 {branches.length ? (
                     <ResponsiveContainer width="100%" height={200}>
@@ -162,6 +100,5 @@ export default function SuperAdminCharts({ revenueData }: { revenueData: Revenue
                 )}
             </Panel>
         </div>
-        </>
     );
 }
