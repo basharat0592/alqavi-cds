@@ -26,9 +26,9 @@ type Group = { label: string; items: Item[] };
 /** Standalone accent buttons shown outside the group dropdowns (right side of the
  *  desktop bar; separate pills on the mobile dashboard). */
 export const STANDALONE_ITEMS: { name: string; href: string; icon: any; color: string; accent: string; accentActive: string }[] = [
-    { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#C026D3', accent: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100 hover:bg-fuchsia-100', accentActive: 'bg-[#C026D3] text-white border-[#C026D3] shadow-sm shadow-fuchsia-700/25' },
-    { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#7C3AED', accent: 'bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100', accentActive: 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-sm shadow-violet-700/25' },
-    { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, color: '#0284C7', accent: 'bg-sky-50 text-sky-700 border-sky-100 hover:bg-sky-100 hover:border-sky-200', accentActive: 'bg-[#0284C7] text-white border-[#0284C7] shadow-sm shadow-sky-700/25' },
+    { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#6B46C1', accent: 'bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100', accentActive: 'bg-[#6B46C1] text-white border-[#6B46C1] shadow-sm shadow-violet-700/20' },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#553C9A', accent: 'bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100', accentActive: 'bg-[#553C9A] text-white border-[#553C9A] shadow-sm shadow-purple-700/20' },
+    { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, color: '#2C5282', accent: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 hover:border-blue-200', accentActive: 'bg-[#2C5282] text-white border-[#2C5282] shadow-sm shadow-blue-800/20' },
 ];
 
 export const NAV_GROUPS: Group[] = [
@@ -52,7 +52,6 @@ export const NAV_GROUPS: Group[] = [
     {
         label: 'Stock', items: [
             { name: 'Live Products', href: '/admin/products', icon: Package },
-            { name: 'Products List', href: '/admin/products-list', icon: Boxes },
             { name: 'Add Listing', href: '/admin/products/add', icon: PackagePlus },
             { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
             { name: 'Warehouses', href: '/admin/inventory/warehouses', icon: Store },
@@ -68,13 +67,16 @@ export const NAV_GROUPS: Group[] = [
     },
     {
         label: 'Setup', items: [
+            { name: 'Your Profile', href: '/admin/settings', icon: User },
+            { name: 'System Settings', href: '/admin/settings?tab=settings', icon: Settings },
+            { name: 'View Store', href: '/', icon: Store },
             { name: 'Notifications', href: '/admin/notifications', icon: Bell },
             { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
             { name: 'Branches', href: '/admin/branches', icon: Building2 },
             { name: 'Admins', href: '/admin/users', icon: User },
             { name: 'Areas / Territories', href: '/admin/company/areas', icon: MapPin },
             { name: 'Website CMS', href: '/admin/website-settings', icon: Globe },
-            { name: 'System Settings', href: '/admin/settings', icon: Settings },
+            { name: 'Logout', href: '', icon: LogOut, action: 'logout' },
         ],
     },
 ];

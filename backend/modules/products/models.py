@@ -183,7 +183,7 @@ class SupplierProduct(BaseModel):
     name = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, unique=True, null=True, blank=True)
     barcode = models.CharField(max_length=100, unique=True, null=True, blank=True)
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='supplier_products')
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplier_products')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplier_products')
     # Owning company / brand (e.g. Amour Company). Used to group products by company
     # in the purchase entry (Company → Products of that company).

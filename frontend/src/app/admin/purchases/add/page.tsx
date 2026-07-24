@@ -61,6 +61,7 @@ const EMPTY_ITEM: LineItem = {
     company: '',
     product: '',
     product_name: '',
+    barcode: '',
     packaging_type: 'SINGLE',
     items_per_carton: 1,
     quantity: 1,
@@ -69,12 +70,14 @@ const EMPTY_ITEM: LineItem = {
     selling_price: 0,
     retail_rate: 0,
     expiry_date: '',
+    apply_expiry: true,
 };
 
 type LineItem = {
     company: string;           // selected company (filters the product list)
     product: string;
     product_name: string;
+    barcode: string;           // product bar code (auto-generated / from catalog)
     packaging_type: 'SINGLE' | 'CARTON';
     items_per_carton: number;
     quantity: number;
@@ -83,6 +86,7 @@ type LineItem = {
     selling_price: number;     // Sale Rate
     retail_rate: number;       // Retail.Rate
     expiry_date: string;       // Exp Date (YYYY-MM-DD)
+    apply_expiry: boolean;     // whether the Exp Date field is enabled for this line
 };
 
 /* ─── Product Selector — single searchable input (type to filter or write custom) ─── */
@@ -263,7 +267,7 @@ export default function AddPurchasePage() {
     const [companies, setCompanies] = useState<any[]>([]);
     const [showProductModal, setShowProductModal] = useState(false);
     const [showCompanyModal, setShowCompanyModal] = useState(false);
-    const [pForm, setPForm] = useState({ name: '', company: '', barcode: '', packing: '', reorder: '', category: '', status: 'ACTIVE' });
+    const [pForm, setPForm] = useState({ name: '', company: '', barcode: '', packing: '', reorder: '', category: '', status: 'ACTIVE', apply_expiry: 'yes' });
     const [cForm, setCForm] = useState({ name: '', category: '' });
     const [savingCompany, setSavingCompany] = useState(false);
     const [savingProduct, setSavingProduct] = useState(false);
@@ -272,20 +276,26 @@ export default function AddPurchasePage() {
         (companyService as any).getCompanies?.().then((r: any) => setCompanies(Array.isArray(r) ? r : r?.results || [])).catch(() => { });
     }, []);
 
+    // Fresh, short, unique barcode for every product (e.g. "K4Z9F7" — 6 chars).
+    const genBarcode = () =>
+        (Date.now().toString(36).slice(-4) + Math.floor(Math.random() * 100).toString().padStart(2, '0')).toUpperCase();
+
     const openAddProduct = () => {
-        setPForm({ name: '', company: '', barcode: '', packing: '', reorder: '', category: '', status: 'ACTIVE' });
+        setPForm({ name: '', company: '', barcode: genBarcode(), packing: '', reorder: '', category: '', status: 'ACTIVE', apply_expiry: 'yes' });
         setShowProductModal(true);
     };
     const confirmAddProduct = async () => {
         if (!pForm.name.trim()) return toast.error('Enter a product name.');
-        if (!form.supplier) return toast.error('Select the supplier (in Order Information) before adding products.');
+        // Supplier is optional now — use the order's supplier or the first registered
+        // one if any; otherwise create the product without a supplier (company-based).
+        const targetSupplier = form.supplier || (suppliers[0]?.id ? String(suppliers[0].id) : '');
         setSavingProduct(true);
         try {
             // Create a real supplier product tagged with its company, so it shows up
             // in the Company → Product dropdowns going forward.
             const created = await productService.createSupplier({
                 name: pForm.name.trim(),
-                supplier: form.supplier,
+                supplier: targetSupplier,
                 company: pForm.company || '',
                 sku: pForm.barcode || `SKU-${Date.now().toString().slice(-6)}`,
                 barcode: pForm.barcode || '',
@@ -305,14 +315,24 @@ export default function AddPurchasePage() {
                 company: pForm.company || '',
                 product: String(created.id),
                 product_name: created.name,
+                barcode: pForm.barcode || (created as any).barcode || (created as any).sku || '',
                 packaging_type: packing > 1 ? 'CARTON' : 'SINGLE',
                 items_per_carton: packing,
+                // Re-Order Qty from the popup prefills the line quantity.
+                quantity: parseInt(pForm.reorder) || 1,
+                // "Apply Expiry Date = Yes" enables the Exp Date field on this line.
+                apply_expiry: pForm.apply_expiry === 'yes',
             };
             setItems(prev => {
                 const idx = prev.findIndex(i => !i.product);
                 if (idx >= 0) { const copy = [...prev]; copy[idx] = line; return copy; }
                 return [...prev, line];
             });
+            // Adopt the fallback supplier onto the order so the PO has one (if any exist).
+            if (!form.supplier && targetSupplier) {
+                const matched = suppliers.find((s: any) => String(s.id) === String(targetSupplier));
+                setForm(f => ({ ...f, supplier: targetSupplier, supplier_name: matched?.name || f.supplier_name }));
+            }
             setShowProductModal(false);
             toast.success('Product created and added to the purchase.');
         } catch (e: any) {
@@ -326,7 +346,8 @@ export default function AddPurchasePage() {
             const created = await (companyService as any).createCompany({ name: cForm.name.trim(), category: cForm.category.trim() });
             const list = await (companyService as any).getCompanies();
             setCompanies(Array.isArray(list) ? list : (list?.results || []));
-            if (created?.id) setPForm(f => ({ ...f, company: String(created.id) }));
+            // Newly-added company also auto-fills its category into the product form.
+            if (created?.id) setPForm(f => ({ ...f, company: String(created.id), category: cForm.category.trim() || f.category }));
             setCForm({ name: '', category: '' });
             setShowCompanyModal(false);
             toast.success('Company added to the list.');
@@ -495,9 +516,11 @@ export default function AddPurchasePage() {
                     extra_discount: parseFloat(po.extra_discount || 0) || 0,
                     staff: String(po.staff || ''),
                 });
-                const loaded = (po.items || []).map((it: any) => ({
+                const loaded: LineItem[] = (po.items || []).map((it: any) => ({
+                    company: String(it.company || ''),
                     product: String(it.product || ''),
                     product_name: it.product_name || '',
+                    barcode: it.barcode || it.sku || '',
                     packaging_type: (it.packaging_type || 'SINGLE') as 'SINGLE' | 'CARTON',
                     items_per_carton: it.items_per_carton || 1,
                     quantity: it.quantity || 1,
@@ -506,6 +529,7 @@ export default function AddPurchasePage() {
                     selling_price: parseFloat(it.selling_price || 0) || 0,
                     retail_rate: parseFloat(it.retail_rate || 0) || 0,
                     expiry_date: (it.expiry_date || '') as string,
+                    apply_expiry: true,
                 }));
                 if (loaded.length) setItems(loaded);
             } catch {
@@ -517,14 +541,13 @@ export default function AddPurchasePage() {
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
-        // A registered supplier is required in BOTH modes (custom + select-from-supplier).
-        if (!form.supplier || String(form.supplier).startsWith('__custom__:')) {
-            return toast.error('Please select a registered supplier');
-        }
         if (items.some(i => !i.product)) return toast.error('Please select a product for all items');
 
         setSaving(true);
-        const finalSupplier = form.supplier;
+        // Supplier is optional — use the chosen one, else the first registered supplier
+        // if any, else none (the purchase order's supplier is nullable).
+        const validSupplier = form.supplier && !String(form.supplier).startsWith('__custom__:') ? form.supplier : '';
+        const finalSupplier = validSupplier || (suppliers[0]?.id ? String(suppliers[0].id) : '');
         const finalSupplierName = form.supplier_name;
 
         // 2. Register custom products if any exist
@@ -533,10 +556,6 @@ export default function AddPurchasePage() {
         if (hasCustom) {
             try {
                 const targetSupplier = finalSupplier || (suppliers.length > 0 ? String(suppliers[0].id) : '');
-                if (!targetSupplier) {
-                    setSaving(false);
-                    return toast.error('Please create or select a supplier to register custom products.');
-                }
                 finalItems = await Promise.all(items.map(async (item) => {
                     if (item.product.startsWith('__custom__:')) {
                         const name = item.product.replace('__custom__:', '');
@@ -570,7 +589,7 @@ export default function AddPurchasePage() {
         // Edit mode: update the existing order (full header + items recompute).
         if (editId) {
             try {
-                await purchaseService.updateFull(editId, { ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
+                await purchaseService.updateFull(editId, { ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
                 toast.success('Purchase order updated!');
                 router.push('/admin/purchases');
             } catch (err: any) {
@@ -583,7 +602,7 @@ export default function AddPurchasePage() {
         }
 
         if (form.status === 'RECEIVED' && !warehouseId && !form.warehouse) {
-            setTempPayload({ ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems });
+            setTempPayload({ ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems });
             setIsWarehouseModalOpen(true);
             setSaving(false);
             return;
@@ -599,7 +618,7 @@ export default function AddPurchasePage() {
             const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmount - (Number((form as any).extra_discount) || 0));
             const paidNow = Number((form as any).paid_amount) || 0;
             const payment_status = paidNow <= 0 ? 'UNPAID' : paidNow >= grandTotal ? 'PAID' : 'PARTIAL';
-            const payload: any = { ...form, supplier: finalSupplier, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
+            const payload: any = { ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
             if (finalWarehouseId) payload.warehouse = finalWarehouseId;
             const data = await purchaseService.create(payload);
             setSuccessOrder(data);
@@ -636,8 +655,9 @@ export default function AddPurchasePage() {
                     ...item,
                     product: val,
                     product_name: p?.name || '',
-                    // Adopt the product's own company so the Company field stays in sync.
+                    // Adopt the product's own company + bar code so the row stays in sync.
                     company: p?.company ? String(p.company) : item.company,
+                    barcode: p?.barcode || p?.sku || item.barcode || '',
                     unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price,
                 };
             }
@@ -681,7 +701,7 @@ export default function AddPurchasePage() {
                     {/* Row 1 — item number + product + remove */}
                     <div className="flex items-end gap-3">
                         <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-indigo-100">{i + 1}</span>
-                        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px] gap-2.5">
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Company</label>
                                 <CompanySelector selectedId={item.company} companies={companies} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
@@ -693,6 +713,15 @@ export default function AddPurchasePage() {
                                     products={products.filter((p: any) => !item.company || String(p.company ?? '') === String(item.company))}
                                     inputCls={selectCls}
                                     onSelect={(val: any) => updateItem(i, 'product', val)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bar Code</label>
+                                <input
+                                    className={selectCls + ' tabular-nums bg-slate-50 text-center font-bold text-slate-700'}
+                                    value={item.barcode || ''}
+                                    onChange={e => updateItem(i, 'barcode', e.target.value)}
+                                    placeholder="—"
                                 />
                             </div>
                         </div>
@@ -791,12 +820,14 @@ export default function AddPurchasePage() {
                             </div>
                         </div>
 
-                        {/* Exp Date */}
+                        {/* Exp Date — enabled only when the product's "Apply Expiry Date" is Yes */}
                         <div className="col-span-2 sm:col-span-1">
                             <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Exp Date</label>
                             <input
                                 type="date"
-                                className={inputCls + " text-center tabular-nums"}
+                                disabled={!item.apply_expiry}
+                                title={item.apply_expiry ? '' : 'Expiry not applicable for this product'}
+                                className={inputCls + " text-center tabular-nums" + (item.apply_expiry ? '' : ' opacity-50 bg-slate-100 cursor-not-allowed')}
                                 value={item.expiry_date || ''}
                                 onChange={e => updateItem(i, 'expiry_date', e.target.value)}
                             />
@@ -854,7 +885,7 @@ export default function AddPurchasePage() {
                         <p className="text-[11.5px] text-slate-500">Products, quantities, and pricing.</p>
                     </div>
                 </div>
-                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={openAddProduct}><Plus size={14} /> Add Products</Btn>
+                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={openAddProduct}><Plus size={14} /> Add New Products</Btn>
             </div>
             <div className="p-4 sm:p-6 space-y-3.5 bg-slate-50/40">
                 {renderItemsList()}
@@ -875,15 +906,6 @@ export default function AddPurchasePage() {
                 </div>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
-                <Field label="Order Number" required>
-                    <input className={inputCls} value={form.purchase_number} onChange={e => setForm(f => ({ ...f, purchase_number: e.target.value }))} placeholder="e.g. PO-123456" />
-                </Field>
-                <Field label="Supplier" required>
-                    {supplierField}
-                </Field>
-                <Field label="Order Date" required>
-                    <input className={inputCls} type="date" value={form.order_date} onChange={e => setForm(f => ({ ...f, order_date: e.target.value }))} />
-                </Field>
                 <Field label="Supplier Bill No.">
                     <input className={inputCls} value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="Supplier's invoice / bill no." />
                 </Field>
@@ -1112,12 +1134,29 @@ export default function AddPurchasePage() {
             {/* ── Add Product popup (Product Detail) ── */}
             <Modal open={showProductModal} onClose={() => setShowProductModal(false)} title="Add Product" size="md">
                 <div className="space-y-4 text-left">
-                    <Field label="Product Name" required>
-                        <input className={inputCls} value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Bio 7day cream large" autoFocus />
-                    </Field>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Product Name" required>
+                            <input className={inputCls} value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Bio 7day cream large" autoFocus />
+                        </Field>
+                        <Field label="Bar Code (auto)">
+                            <div className="flex gap-2">
+                                <input className={inputCls + ' tabular-nums bg-slate-50'} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Auto-generated" />
+                                <Btn variant="secondary" className="shrink-0 px-2.5 text-[12px]" onClick={() => setPForm(f => ({ ...f, barcode: genBarcode() }))} title="Generate a new bar code"><RefreshCw size={13} /></Btn>
+                            </div>
+                        </Field>
+                    </div>
                     <Field label="Company">
                         <div className="flex gap-2">
-                            <select className={selectCls} value={pForm.company} onChange={e => setPForm(f => ({ ...f, company: e.target.value }))}>
+                            <select
+                                className={selectCls}
+                                value={pForm.company}
+                                onChange={e => {
+                                    const cid = e.target.value;
+                                    const comp = companies.find((c: any) => String(c.id) === String(cid));
+                                    // Selecting a company auto-fills the Category from that company.
+                                    setPForm(f => ({ ...f, company: cid, category: comp?.category || '' }));
+                                }}
+                            >
                                 <option value="">Select any one</option>
                                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -1127,9 +1166,6 @@ export default function AddPurchasePage() {
                         </div>
                     </Field>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Field label="Bar Code">
-                            <input className={inputCls} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Bar code" />
-                        </Field>
                         <Field label="Category">
                             <input className={inputCls} value={pForm.category} onChange={e => setPForm(f => ({ ...f, category: e.target.value }))} placeholder="Category" />
                         </Field>
@@ -1143,6 +1179,12 @@ export default function AddPurchasePage() {
                             <select className={selectCls} value={pForm.status} onChange={e => setPForm(f => ({ ...f, status: e.target.value }))}>
                                 <option value="ACTIVE">Active</option>
                                 <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </Field>
+                        <Field label="Apply Expiry Date">
+                            <select className={selectCls} value={pForm.apply_expiry} onChange={e => setPForm(f => ({ ...f, apply_expiry: e.target.value }))}>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
                             </select>
                         </Field>
                     </div>

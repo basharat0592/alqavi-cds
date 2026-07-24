@@ -10,11 +10,14 @@ import {
     Truck, AlertTriangle, Globe,
     ScanLine, ClipboardList, PackagePlus,
     ArrowDownLeft, ArrowUpRight, Building2,
-    MapPin, Bell, Bike, CalendarClock, Search
+    MapPin, Bell, Bike, CalendarClock, Search, LogOut
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { getImageUrl } from '@/lib/utils';
 import { useAdminDashboard } from '@/hooks';
 import SuperAdminCharts from '@/components/admin/SuperAdminCharts';
 import { NAV_GROUPS, STANDALONE_ITEMS } from '@/components/layout/AdminNavMenu';
+import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS } from '@/lib/adminPages';
 import { inventoryService, companyService, supplierService } from '@/lib/api';
@@ -82,6 +85,81 @@ interface PageButton {
 interface GroupSection {
     title: string;
     items: Omit<PageButton, 'theme'>[];
+}
+
+/* Mobile welcome-hero avatar → tap for Profile / Logout. */
+function MobileProfileMenu() {
+    const [open, setOpen] = useState(false);
+    const ref = React.useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const user = authService.getUser() as any;
+    const name = (user?.name || '').trim();
+    const avatar = user?.avatar || null;
+
+    useEffect(() => {
+        const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+
+    const logout = () => { authService.logout(); router.push('/login'); };
+
+    return (
+        <div ref={ref} className="relative shrink-0">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-label="Account"
+                className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white shadow-[0_4px_12px_rgba(15,23,42,0.22)] bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-black text-[16px] flex items-center justify-center active:scale-95 transition-transform"
+            >
+                {avatar
+                    ? <img src={getImageUrl(avatar) || ''} alt="Profile" className="w-full h-full object-cover" />
+                    : (name ? name[0].toUpperCase() : 'A')}
+            </button>
+            {open && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-[0_16px_40px_-12px_rgba(0,0,0,0.28)] border border-slate-100 py-1.5 z-[60] animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-4 py-2 border-b border-slate-100 mb-1">
+                        <p className="text-[13px] font-bold text-slate-900 truncate">{name || 'Account'}</p>
+                        <p className="text-[11px] text-slate-400">Signed in</p>
+                    </div>
+                    <Link href="/admin/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
+                        <User size={16} className="text-slate-400" /> Profile
+                    </Link>
+                    <button type="button" onClick={logout} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-semibold text-rose-600 hover:bg-rose-50 text-left">
+                        <LogOut size={16} className="text-rose-500" /> Logout
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* Module-level flag: the hand waves once per real page load. It survives in-app
+   navigation (same JS runtime), so returning to the dashboard from another page
+   does NOT replay it — only a full refresh/first open resets it. */
+let handWavePlayed = false;
+
+/* Shared mobile welcome hero (branch + super admin) with the profile avatar. */
+function MobileWelcomeHero({ subtitle }: { subtitle: string }) {
+    const nm = ((authService.getUser() as any)?.name || '').trim();
+    const first = nm ? nm.split(' ')[0] : '';
+    const [animate] = useState(() => !handWavePlayed);
+    useEffect(() => { handWavePlayed = true; }, []);
+    const handCls = `align-middle ml-4${animate ? ' wave-hand' : ''}`;
+    return (
+        <div className="md:hidden pt-1 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">Welcome back</p>
+                <h1 className="text-[26px] font-black text-slate-900 leading-[1.15] mt-0.5">
+                    {first
+                        ? <>Hi, <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{first}</span> <span className={handCls}>👋</span></>
+                        : <>Hello there <span className={handCls}>👋</span></>}
+                </h1>
+                <p className="text-[12.5px] text-slate-500 mt-1">{subtitle}</p>
+            </div>
+            <MobileProfileMenu />
+        </div>
+    );
 }
 
 export default function AdminDashboard() {
@@ -826,22 +904,23 @@ export default function AdminDashboard() {
     // icon poking out on the left, white uppercase label, soft drop shadow.
     const renderTile = (t: Tile) => {
         const Icon = t.icon;
+        const g = gradientFor(t.href);
         const active = t.href === '/admin/orders' ? ((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) : 0;
         return (
             <Link
                 key={t.href}
                 href={t.href}
-                className="group relative flex items-center h-[56px] rounded-full pl-[62px] pr-6 shadow-[0_8px_18px_-4px_rgba(15,23,42,0.28)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_14px_24px_-6px_rgba(15,23,42,0.36)] active:translate-y-0"
-                style={{ backgroundColor: t.color }}
+                className="group relative flex items-center h-[56px] rounded-full border-2 pl-[54px] pr-6 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_18px_-6px_rgba(15,23,42,0.26)] active:translate-y-0 max-md:!bg-none max-md:!border-[#4338CA]"
+                style={{ backgroundColor: '#4F46E5', backgroundImage: gradientCss(g), borderColor: g.ink }}
             >
-                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
-                    <Icon size={24} strokeWidth={2.8} style={{ color: t.color }} />
+                <span className="absolute left-[6px] top-1/2 -translate-y-1/2 z-10 w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center shadow-[0_5px_14px_rgba(15,23,42,0.45)]">
+                    <Icon size={21} strokeWidth={2.8} className="max-md:!text-[#4F46E5]" style={{ color: g.ink }} />
                     {active > 0 && (
                         <span className="absolute -top-1 -right-1 z-20 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
                     )}
                 </span>
-                <span className="flex-1 min-w-0 text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2">{t.name}</span>
-                <ChevronRight className="shrink-0 w-4 h-4 text-white/75 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
+                <span className="flex-1 min-w-0 text-slate-900 font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2 [text-shadow:0_1px_1px_rgba(255,255,255,0.6)] max-md:!text-white max-md:[text-shadow:none]">{t.name}</span>
+                <ChevronRight className="shrink-0 w-4 h-4 text-slate-800/70 max-md:!text-white/80 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 max-md:translate-x-0 max-md:opacity-100" />
             </Link>
         );
     };
@@ -865,9 +944,9 @@ export default function AdminDashboard() {
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
             <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
-                {/* Super-admin greeting hero */}
+                {/* Super-admin greeting hero (desktop only; mobile uses the shared hero) */}
                 {isSuperAdmin && (
-                    <div className="px-3 md:px-0 mb-5 flex items-center gap-3">
+                    <div className="hidden md:flex px-3 md:px-0 mb-5 items-center gap-3">
                         <span className="w-11 h-11 rounded-2xl bg-[#232F3E] text-white flex items-center justify-center font-black text-[14px] shrink-0 shadow-sm tracking-tight">AQ</span>
                         <div className="min-w-0">
                             <h1 className="text-[19px] sm:text-[22px] font-bold text-slate-900 leading-tight truncate">
@@ -882,31 +961,30 @@ export default function AdminDashboard() {
                 {/* ── MAIN: DIRECTORY ── */}
                 <div className="flex-1 min-w-0 space-y-6 md:space-y-12 animate-in fade-in duration-300 text-left px-3 md:px-0">
 
-                        {/* ── BRANCH ADMIN — MOBILE: 5 nav groups as pills; tap to expand pages ── */}
+                        {/* Shared mobile welcome hero (branch + super admin) */}
+                        <MobileWelcomeHero subtitle={isSuperAdmin ? 'Your business across all branches.' : 'Everything you need, one tap away.'} />
+
+                        {/* ── BRANCH ADMIN — MOBILE: 5 nav groups as pills ── */}
                         {!isSuperAdmin && (
-                            <div className="md:hidden space-y-3">
-                                <div className="flex items-center gap-3 select-none">
-                                    <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Menu</h2>
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{mobileNavGroups.length}</span>
-                                    <div className="h-px flex-1 bg-slate-200/70" />
-                                </div>
+                            <div className="md:hidden space-y-4">
                                 <div className="space-y-2.5">
                                     {mobileNavGroups.map((g) => {
                                         const meta = NAV_GROUP_META[g.label] || { icon: Boxes, color: '#6366f1' };
                                         const GIcon = meta.icon;
+                                        const grad = gradientFor(g.label);
                                         return (
                                             <Link
                                                 key={g.label}
                                                 href={`/admin/menu/${encodeURIComponent(g.label)}`}
-                                                className="w-full relative flex items-center h-[56px] rounded-full pl-[62px] pr-5 shadow-[0_8px_18px_-4px_rgba(15,23,42,0.28)] transition-all duration-300 active:scale-[0.99]"
-                                                style={{ backgroundColor: meta.color }}
+                                                className="w-full relative flex items-center h-[56px] rounded-full border-2 pl-[54px] pr-5 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all duration-300 active:scale-[0.99]"
+                                                style={{ backgroundColor: '#4F46E5', borderColor: '#4338CA' }}
                                             >
-                                                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
-                                                    <GIcon size={24} strokeWidth={2.8} style={{ color: meta.color }} />
+                                                <span className="absolute left-[6px] top-1/2 -translate-y-1/2 z-10 w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center shadow-[0_5px_14px_rgba(15,23,42,0.45)]">
+                                                    <GIcon size={21} strokeWidth={2.8} style={{ color: '#4F46E5' }} />
                                                 </span>
                                                 <span className="flex-1 min-w-0 text-left text-white font-extrabold uppercase tracking-wide text-[13px]">{g.label}</span>
                                                 <span className="shrink-0 text-white/85 text-[11px] font-bold tabular-nums mr-1.5">{g.items.length}</span>
-                                                <ChevronRight className="shrink-0 w-4 h-4 text-white/85" />
+                                                <ChevronRight className="shrink-0 w-4 h-4 text-white/80" />
                                             </Link>
                                         );
                                     })}

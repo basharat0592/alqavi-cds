@@ -13,22 +13,22 @@ import { useVisibleGroups } from '@/components/layout/AdminNavMenu';
 import { authService } from '@/lib/auth';
 
 const GROUP_META: Record<string, { icon: any; color: string }> = {
-    Sales: { icon: TrendingUp, color: '#2563EB' },
-    Purchase: { icon: ShoppingCart, color: '#059669' },
-    Stock: { icon: Boxes, color: '#E11D48' },
-    Accounts: { icon: CreditCard, color: '#7C3AED' },
-    Setup: { icon: Settings, color: '#475569' },
+    Sales: { icon: TrendingUp, color: '#2C5282' },
+    Purchase: { icon: ShoppingCart, color: '#2F855A' },
+    Stock: { icon: Boxes, color: '#9B2C4E' },
+    Accounts: { icon: CreditCard, color: '#553C9A' },
+    Setup: { icon: Settings, color: '#4A5568' },
 };
 
 const CHILD_COLOR: Record<string, string> = {
-    '/admin/sale': '#4F46E5', '/admin/sales': '#2563EB', '/admin/sale-returns': '#0D9488', '/admin/orders': '#0891B2',
-    '/admin/purchases/add': '#059669', '/admin/purchases': '#0284C7', '/admin/purchases/returns': '#EA580C', '/admin/company/suppliers': '#D97706',
-    '/admin/products': '#C026D3', '/admin/products-list': '#16A34A', '/admin/products/add': '#DC2626', '/admin/inventory/list': '#E11D48',
-    '/admin/inventory/warehouses': '#0891B2', '/admin/company/companies': '#4F46E5',
-    '/admin/payments': '#7C3AED', '/admin/income': '#059669', '/admin/expense': '#E11D48', '/admin/reports': '#C026D3', '/admin/company/customers': '#0284C7',
-    '/admin/delivery': '#DB2777',
-    '/admin/notifications': '#0891B2', '/admin/alerts': '#EA580C', '/admin/branches': '#4F46E5', '/admin/users': '#7C3AED',
-    '/admin/company/areas': '#0D9488', '/admin/website-settings': '#2563EB', '/admin/settings': '#475569',
+    '/admin/sale': '#4C51BF', '/admin/sales': '#2C5282', '/admin/sale-returns': '#285E61', '/admin/orders': '#2C7A7B',
+    '/admin/purchases/add': '#2F855A', '/admin/purchases': '#2A4365', '/admin/purchases/returns': '#9C4221', '/admin/company/suppliers': '#975A16',
+    '/admin/products': '#6B46C1', '/admin/products-list': '#2F855A', '/admin/products/add': '#9B2C2C', '/admin/inventory/list': '#9B2C4E',
+    '/admin/inventory/warehouses': '#2C7A7B', '/admin/company/companies': '#4C51BF',
+    '/admin/payments': '#553C9A', '/admin/income': '#2F855A', '/admin/expense': '#9B2C4E', '/admin/reports': '#6B46C1', '/admin/company/customers': '#2C5282',
+    '/admin/delivery': '#9B2C4E',
+    '/admin/notifications': '#2C7A7B', '/admin/alerts': '#9C4221', '/admin/branches': '#4C51BF', '/admin/users': '#6B46C1',
+    '/admin/company/areas': '#285E61', '/admin/website-settings': '#2A4365', '/admin/settings': '#4A5568',
 };
 
 export default function MenuGroupPage() {
@@ -42,22 +42,23 @@ export default function MenuGroupPage() {
 
     const doLogout = () => { authService.logout(); router.push('/login'); };
 
-    const renderPill = (it: { name: string; href: string; icon: any; action?: 'logout' }, color: string) => {
+    const renderPill = (it: { name: string; href: string; icon: any; action?: 'logout' }) => {
         const Icon = it.icon;
         const inner = (
             <>
-                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
-                    <Icon size={24} strokeWidth={2.8} style={{ color }} />
+                <span className="absolute left-[6px] top-1/2 -translate-y-1/2 z-10 w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center shadow-[0_5px_14px_rgba(15,23,42,0.45)]">
+                    <Icon size={21} strokeWidth={2.8} style={{ color: '#4F46E5' }} />
                 </span>
                 <span className="flex-1 min-w-0 text-left text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2">{it.name}</span>
-                <ChevronRight className="shrink-0 w-4 h-4 text-white/75" />
+                <ChevronRight className="shrink-0 w-4 h-4 text-white/80" />
             </>
         );
-        const cls = "w-full relative flex items-center h-[56px] rounded-full pl-[62px] pr-6 shadow-[0_8px_18px_-4px_rgba(15,23,42,0.28)] transition-all duration-300 active:scale-[0.99]";
+        const cls = "w-full relative flex items-center h-[56px] rounded-full border-2 pl-[54px] pr-6 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all duration-300 active:scale-[0.99]";
+        const st = { backgroundColor: '#4F46E5', borderColor: '#4338CA' };
         return it.action === 'logout' ? (
-            <button key="logout" type="button" onClick={doLogout} className={cls} style={{ backgroundColor: color }}>{inner}</button>
+            <button key="logout" type="button" onClick={doLogout} className={cls} style={st}>{inner}</button>
         ) : (
-            <Link key={it.href} href={it.href} className={cls} style={{ backgroundColor: color }}>{inner}</Link>
+            <Link key={it.href} href={it.href} className={cls} style={st}>{inner}</Link>
         );
     };
 
@@ -74,7 +75,7 @@ export default function MenuGroupPage() {
                     >
                         <ArrowLeft size={18} />
                     </button>
-                    <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ backgroundColor: meta.color }}>
+                    <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ backgroundColor: '#4F46E5' }}>
                         <GIcon size={20} strokeWidth={2.6} className="text-white" />
                     </span>
                     <div className="min-w-0">
@@ -86,7 +87,7 @@ export default function MenuGroupPage() {
                 {/* Pages as pills */}
                 {group ? (
                     <div className="space-y-2.5">
-                        {group.items.map((it: any) => renderPill(it, CHILD_COLOR[it.href] || meta.color))}
+                        {group.items.map((it: any) => renderPill(it))}
                     </div>
                 ) : (
                     <div className="text-center py-20 text-[13px] text-slate-400">
