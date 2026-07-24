@@ -907,20 +907,37 @@ export default function AdminDashboard() {
         const g = gradientFor(t.href);
         const active = t.href === '/admin/orders' ? ((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) : 0;
         return (
-            <Link
-                key={t.href}
-                href={t.href}
-                className="group relative flex items-center h-[56px] rounded-full border-2 pl-[54px] pr-6 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_18px_-6px_rgba(15,23,42,0.26)] active:translate-y-0 max-md:!bg-none max-md:!border-[#4338CA]"
-                style={{ backgroundColor: '#4F46E5', backgroundImage: gradientCss(g), borderColor: g.ink }}
-            >
-                <span className="absolute left-[6px] top-1/2 -translate-y-1/2 z-10 w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center shadow-[0_5px_14px_rgba(15,23,42,0.45)]">
-                    <Icon size={21} strokeWidth={2.8} className="max-md:!text-[#4F46E5]" style={{ color: g.ink }} />
+            <Link key={t.href} href={t.href} className="group block">
+                {/* ── DESKTOP: colored body + diagonal white icon panel (reference design) ── */}
+                <div
+                    className="hidden md:flex relative items-center h-[54px] rounded-[10px] overflow-hidden shadow-[0_4px_12px_-3px_rgba(15,23,42,0.28)] transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:shadow-[0_10px_20px_-6px_rgba(15,23,42,0.36)]"
+                    style={{ backgroundColor: g.ink }}
+                >
+                    <span className="flex-1 min-w-0 pl-5 pr-9 text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.1] line-clamp-2 [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">{t.name}</span>
+                    <span
+                        className="relative h-full w-[60px] shrink-0 bg-white flex items-center justify-center"
+                        style={{ clipPath: 'polygon(32% 0, 100% 0, 100% 100%, 0% 100%)' }}
+                    >
+                        <Icon size={22} strokeWidth={2.6} style={{ color: g.ink }} className="translate-x-1.5 transition-transform duration-300 group-hover:scale-110" />
+                    </span>
                     {active > 0 && (
-                        <span className="absolute -top-1 -right-1 z-20 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
+                        <span className="absolute top-1.5 right-1.5 z-20 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
                     )}
-                </span>
-                <span className="flex-1 min-w-0 text-slate-900 font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2 [text-shadow:0_1px_1px_rgba(255,255,255,0.6)] max-md:!text-white max-md:[text-shadow:none]">{t.name}</span>
-                <ChevronRight className="shrink-0 w-4 h-4 text-slate-800/70 max-md:!text-white/80 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 max-md:translate-x-0 max-md:opacity-100" />
+                </div>
+
+                {/* ── MOBILE: solid pill (unchanged) ── */}
+                <div
+                    className="flex md:hidden relative items-center h-[56px] rounded-full border-2 pl-[54px] pr-6 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all active:translate-y-0"
+                    style={{ backgroundColor: '#4F46E5', borderColor: '#4338CA' }}
+                >
+                    <span className="absolute left-[6px] top-1/2 -translate-y-1/2 z-10 w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center shadow-[0_5px_14px_rgba(15,23,42,0.45)]">
+                        <Icon size={21} strokeWidth={2.8} style={{ color: '#4F46E5' }} />
+                        {active > 0 && (
+                            <span className="absolute -top-1 -right-1 z-20 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-sm tabular-nums">{active}</span>
+                        )}
+                    </span>
+                    <span className="flex-1 min-w-0 text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2">{t.name}</span>
+                </div>
             </Link>
         );
     };
@@ -943,7 +960,7 @@ export default function AdminDashboard() {
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
-            <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-4">
+            <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-1.5">
                 {/* Super-admin greeting hero (desktop only; mobile uses the shared hero) */}
                 {isSuperAdmin && (
                     <div className="hidden md:flex px-3 md:px-0 mb-5 items-center gap-3">
@@ -994,14 +1011,9 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* ── BRANCH ADMIN — DESKTOP: flat Quick Actions grid (all modules) ── */}
+                        {/* ── BRANCH ADMIN — DESKTOP: flat quick-action grid (all modules) ── */}
                         {!isSuperAdmin && (
-                            <div className="hidden md:block space-y-3">
-                                <div className="flex items-center gap-3 select-none">
-                                    <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Quick Actions</h2>
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{dashTiles.length}</span>
-                                    <div className="h-px flex-1 bg-slate-200/70" />
-                                </div>
+                            <div className="hidden md:block">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                     {dashTiles.map(renderTile)}
                                 </div>

@@ -20,7 +20,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Trash2, X, Download, ChevronDown, AlertTriangle, Loader2, CheckSquare, FileText } from 'lucide-react';
+import { Trash2, X, Download, ChevronDown, AlertTriangle, Loader2, CheckSquare, FileText, Printer } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 
@@ -160,6 +160,7 @@ export function BulkBar({
     statusActions,
     onExport,
     onPdf,
+    onPrint,
 }: {
     sel: TableSelection;
     /** Plural noun for messaging, e.g. "products". */
@@ -172,6 +173,8 @@ export function BulkBar({
     onExport?: () => void;
     /** Download the current selection as a branded PDF invoice. */
     onPdf?: () => void;
+    /** Print the current selection (e.g. open each invoice's print view). */
+    onPrint?: (ids: string[]) => void;
 }) {
     const [confirm, setConfirm] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -243,6 +246,16 @@ export function BulkBar({
                             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-semibold text-white hover:bg-white/10 transition-colors disabled:opacity-50"
                         >
                             <FileText size={14} /> Download PDF
+                        </button>
+                    )}
+
+                    {onPrint && (
+                        <button
+                            disabled={busy}
+                            onClick={() => onPrint(sel.selectedIds)}
+                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-semibold text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+                        >
+                            <Printer size={14} /> Print
                         </button>
                     )}
 

@@ -624,10 +624,10 @@ export default function InventoryListPage() {
                                                     {s.purchase_type === 'carton' ? `${s.cartons} Boxes` : 'Loose Units'}
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-[10px] text-slate-400 font-bold uppercase">Unit Price</div>
-                                                <div className="font-bold text-slate-900 text-[15px] mt-0.5 tabular-nums">{formatCurrency(s.price_per_item)}</div>
-                                                <div className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Single Cost</div>
+                                            <div className="text-right space-y-0.5">
+                                                <div className="flex items-center justify-end gap-2 text-[11px]"><span className="text-[8.5px] font-bold uppercase text-slate-400">Purchase</span><span className="font-bold text-slate-900 tabular-nums">{formatCurrency(s.price_per_item)}</span></div>
+                                                <div className="flex items-center justify-end gap-2 text-[11px]"><span className="text-[8.5px] font-bold uppercase text-slate-400">Cost</span><span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(s.cost_price ?? s.price_per_item)}</span></div>
+                                                <div className="flex items-center justify-end gap-2 text-[11px]"><span className="text-[8.5px] font-bold uppercase text-slate-400">Sale</span><span className="font-bold text-emerald-700 tabular-nums">{s.sale_price ? formatCurrency(s.sale_price) : '—'}</span></div>
                                             </div>
                                         </div>
 
@@ -766,8 +766,11 @@ export default function InventoryListPage() {
                                                     ); })()}
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
-                                                    <div className="font-bold text-slate-900 text-[13px] tabular-nums">{formatCurrency(s.price_per_item)}</div>
-                                                    <div className="text-[9px] text-slate-400 font-bold uppercase mt-1">Single Unit Cost</div>
+                                                    <div className="space-y-1 text-[11.5px]">
+                                                        <div className="flex items-center justify-end gap-2"><span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Purchase</span><span className="font-bold text-slate-900 tabular-nums">{formatCurrency(s.price_per_item)}</span></div>
+                                                        <div className="flex items-center justify-end gap-2"><span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Cost</span><span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(s.cost_price ?? s.price_per_item)}</span></div>
+                                                        <div className="flex items-center justify-end gap-2"><span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Sale</span><span className="font-bold text-emerald-700 tabular-nums">{s.sale_price ? formatCurrency(s.sale_price) : '—'}</span></div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-5 py-3 text-[11px]">
                                                     <div className="text-slate-900 font-bold flex items-center gap-1.5"><Truck size={13} className="text-slate-400" /> {getSupplierName(s.supplier, s.supplier_name)}</div>

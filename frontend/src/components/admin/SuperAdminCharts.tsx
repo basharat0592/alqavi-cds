@@ -79,30 +79,7 @@ export default function SuperAdminCharts({ revenueData }: { revenueData: Revenue
 
     return (
         <div className="space-y-4">
-            {/* Revenue trend — change over time → area (stacked, desktop aside) */}
-            <Panel icon={TrendingUp} title="Revenue Trend" subtitle="Sales over the last 30 days · all branches">
-                {hasTrend ? (
-                    <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={trend} margin={{ top: 6, right: 6, left: -12, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={INDIGO} stopOpacity={0.28} />
-                                    <stop offset="100%" stopColor={INDIGO} stopOpacity={0.02} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
-                            <XAxis dataKey="date" tickFormatter={dayFmt} tick={{ fontSize: 10, fill: AXIS }} axisLine={false} tickLine={false} minTickGap={24} />
-                            <YAxis tickFormatter={kFmt} tick={{ fontSize: 10, fill: AXIS }} axisLine={false} tickLine={false} width={44} />
-                            <Tooltip content={<ChartTip isDate />} cursor={{ stroke: INDIGO, strokeOpacity: 0.25 }} />
-                            <Area type="monotone" dataKey="sales" stroke={INDIGO} strokeWidth={2} fill="url(#revFill)" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No sales in this period yet.</div>
-                )}
-            </Panel>
-
-            {/* Net by branch — magnitude by identity → bars (stacked below) */}
+            {/* Net by branch — magnitude by identity → bars */}
             <Panel icon={Building2} title="Net by Branch" subtitle="Income minus expense · per branch">
                 {branches.length ? (
                     <ResponsiveContainer width="100%" height={200}>
