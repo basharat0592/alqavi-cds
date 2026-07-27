@@ -567,7 +567,12 @@ export default function AddPurchasePage() {
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
+        if (items.some(i => !i.company)) return toast.error('Please select a company for all items');
         if (items.some(i => !i.product)) return toast.error('Please select a product for all items');
+        if (items.some(i => !(i.quantity > 0))) return toast.error('Enter the quantity for all items');
+        if (items.some(i => !(i.unit_price > 0))) return toast.error('Enter the purchase rate for all items');
+        if (items.some(i => !(i.selling_price > 0))) return toast.error('Enter the sale rate for all items');
+        if (items.some(i => !(i.retail_rate > 0))) return toast.error('Enter the retail rate for all items');
 
         setSaving(true);
         // Supplier is optional — use the chosen one, else the first registered supplier
@@ -764,16 +769,19 @@ export default function AddPurchasePage() {
                     <div className="flex items-end gap-3">
                         <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px] gap-4">
                             <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Company</label>
+                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Select Company<span className="text-rose-600 ml-0.5">*</span></label>
                                 <CompanySelector selectedId={item.company} companies={companies} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
                             </div>
                             <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Product</label>
+                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Select Products<span className="text-rose-600 ml-0.5">*</span></label>
                                 <ProductSelector
                                     selectedId={item.product}
                                     products={products.filter((p: any) => {
+                                        // Always keep this line's already-chosen product (e.g. one just
+                                        // created from the "Add New Products" popup) so it stays visible.
+                                        if (String(p.id) === String(item.product)) return true;
                                         const companyOk = !item.company || String(p.company ?? '') === String(item.company);
-                                        // Only products that are in Current Stocks (by id or name).
+                                        // Otherwise only products that are in Current Stocks (by id or name).
                                         const inStock = stockKeys.ids.has(String(p.id)) || stockKeys.names.has((p.name || '').trim().toLowerCase());
                                         return companyOk && inStock;
                                     })}
@@ -813,7 +821,7 @@ export default function AddPurchasePage() {
 
                         {/* Qty */}
                         <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}</label>
+                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}<span className="text-rose-600 ml-0.5">*</span></label>
                             <input
                                 className={inputCls + " text-center font-bold tabular-nums text-indigo-650"}
                                 type="number"
@@ -844,7 +852,7 @@ export default function AddPurchasePage() {
 
                         {/* Pur. Rate */}
                         <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Pur. Rate</label>
+                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Pur. Rate<span className="text-rose-600 ml-0.5">*</span></label>
                             <div className="relative flex items-center">
                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
                                 <input
@@ -858,7 +866,7 @@ export default function AddPurchasePage() {
 
                         {/* Sale Rate */}
                         <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Sale Rate</label>
+                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Sale Rate<span className="text-rose-600 ml-0.5">*</span></label>
                             <div className="relative flex items-center">
                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
                                 <input
@@ -873,7 +881,7 @@ export default function AddPurchasePage() {
 
                         {/* Retail Rate */}
                         <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Retail Rate</label>
+                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Retail Rate<span className="text-rose-600 ml-0.5">*</span></label>
                             <div className="relative flex items-center">
                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
                                 <input
@@ -956,8 +964,13 @@ export default function AddPurchasePage() {
             <div className="p-5 sm:p-6 bg-white">
                 {renderItemsList()}
             </div>
-            {/* Settlement & charges — one line: staff, advance, discounts, freight, tax, due date */}
-            <div className="px-5 sm:px-6 py-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* Settlement & charges — staff, advance, discounts, freight, tax, due date */}
+            <div className="border-t border-slate-100 bg-slate-50/60 px-5 sm:px-6 py-5">
+                <div className="flex items-center gap-3 mb-4 select-none">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Settlement &amp; Charges</span>
+                    <div className="h-px flex-1 bg-slate-200/70" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 <Field label="Staff">
                     <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
                         <option value="">Select any one</option>
@@ -993,6 +1006,7 @@ export default function AddPurchasePage() {
                 <Field label="Balance Due Date">
                     <input className={inputCls} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
                 </Field>
+                </div>
             </div>
         </>
     );

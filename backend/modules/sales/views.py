@@ -1516,7 +1516,10 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     success, msg = self._sync_to_inventory(purchase)
                     if not success:
                         raise Exception(f"Inventory sync failed: {msg}")
-            
+
+            # Reload so date fields assigned as raw client strings come back as
+            # proper date objects for serialization (is_overdue etc.).
+            purchase.refresh_from_db()
             return Response(PurchaseOrderSerializer(purchase).data, status=status.HTTP_201_CREATED)
             
         except IntegrityError as e:

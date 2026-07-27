@@ -20,6 +20,21 @@ def _settlement_alert(due_date, remaining):
         rem = Decimal('0')
     if not due_date or rem <= 0:
         return False, 0, False
+    # A freshly-created instance can still hold the raw client string for a
+    # DateField (Django only coerces on load from the DB), so normalize it to a
+    # date before comparing — otherwise `str < date` raises a TypeError.
+    if isinstance(due_date, str):
+        from datetime import datetime
+        parsed = None
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
+            try:
+                parsed = datetime.strptime(due_date.strip()[:10], fmt).date()
+                break
+            except ValueError:
+                continue
+        if parsed is None:
+            return False, 0, False
+        due_date = parsed
     today = timezone.localdate()
     if due_date < today:
         return True, (today - due_date).days, False
