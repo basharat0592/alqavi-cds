@@ -257,6 +257,9 @@ export default function AddPurchasePage() {
     // Products that exist in Current Stocks (keyed by product id + name) — the line-item
     // Product dropdown lists ONLY these. Brand-new products are added via the popup.
     const [stockKeys, setStockKeys] = useState<{ ids: Set<string>; names: Set<string> }>({ ids: new Set(), names: new Set() });
+    // Latest purchase / sale / cost price per product (by id AND by name), read from
+    // Current Stocks — used to auto-fill the rate fields when a product is selected.
+    const [priceMap, setPriceMap] = useState<Record<string, { purchase: number; sale: number; cost: number }>>({});
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -293,11 +296,21 @@ export default function AddPurchasePage() {
                 const list = Array.isArray(rows) ? rows : (rows?.results || []);
                 const ids = new Set<string>();
                 const names = new Set<string>();
+                const prices: Record<string, { purchase: number; sale: number; cost: number }> = {};
                 for (const s of list) {
                     if (s.product) ids.add(String(s.product));
                     if (s.product_name) names.add(String(s.product_name).trim().toLowerCase());
+                    // Latest purchase price = price_per_item; cost = cost_price; sale = sale_price.
+                    const entry = {
+                        purchase: parseFloat(s.price_per_item ?? s.cost_price ?? 0) || 0,
+                        sale: parseFloat(s.sale_price ?? 0) || 0,
+                        cost: parseFloat(s.cost_price ?? s.price_per_item ?? 0) || 0,
+                    };
+                    if (s.product) prices[`id:${s.product}`] = entry;
+                    if (s.product_name) prices[`name:${String(s.product_name).trim().toLowerCase()}`] = entry;
                 }
                 setStockKeys({ ids, names });
+                setPriceMap(prices);
             })
             .catch(() => { });
     }, []);
@@ -664,27 +677,41 @@ export default function AddPurchasePage() {
     };
 
     // Load past purchase-order lines for the products currently on this order.
-    const loadPrevHistory = async () => {
+    // `silent` skips the "add a product first" toast so it can run automatically
+    // whenever the selected product changes.
+    const loadPrevHistory = async (silent = false) => {
         const productIds = new Set(
             items.filter(i => i.product && !String(i.product).startsWith('__custom__:')).map(i => String(i.product))
         );
-        if (productIds.size === 0) { toast.error('Add a product first to see its history.'); return; }
+        const productNames = new Set(
+            items.filter(i => i.product_name).map(i => String(i.product_name).trim().toLowerCase())
+        );
+        if (productIds.size === 0 && productNames.size === 0) {
+            if (!silent) toast.error('Add a product first to see its history.');
+            setHistRows([]); setHistLoaded(false);
+            return;
+        }
         setHistLoading(true);
         try {
-            const res: any = await purchaseService.getAll({ page_size: 200 });
+            const res: any = await purchaseService.getAll({ no_pagination: 'true' });
             const orders = Array.isArray(res) ? res : (res?.results || []);
             const rows: any[] = [];
             for (const po of orders) {
                 for (const it of (po.items || [])) {
-                    if (productIds.has(String(it.product))) {
+                    const matchId = it.product && productIds.has(String(it.product));
+                    const matchName = it.product_name && productNames.has(String(it.product_name).trim().toLowerCase());
+                    if (matchId || matchName) {
+                        const qty = Number(it.quantity ?? 0) || 0;
+                        const rate = parseFloat(it.price || 0) || 0;
                         rows.push({
                             date: (po.order_date || po.created_at || '').slice(0, 10),
                             po: po.purchase_number || po.order_number || '—',
-                            supplier: po.supplier_name || '—',
+                            // Supplier concept was removed — show the product's Company instead.
+                            company: it.company_name || po.company_name || '—',
                             product: it.product_name || '—',
-                            qty: it.quantity ?? 0,
-                            rate: parseFloat(it.price || 0) || 0,
-                            subtotal: parseFloat(it.subtotal || 0) || 0,
+                            qty,
+                            rate,
+                            subtotal: qty * rate,
                         });
                     }
                 }
@@ -693,9 +720,18 @@ export default function AddPurchasePage() {
             setHistRows(rows);
             setHistLoaded(true);
         } catch {
-            toast.error('Failed to load previous history.');
+            if (!silent) toast.error('Failed to load previous history.');
         } finally { setHistLoading(false); }
     };
+
+    // Auto-load previous purchase history whenever the selected products change,
+    // so the panel always reflects the real history for the current line(s).
+    const selectedProductKey = items.map(i => i.product || i.product_name).filter(Boolean).join('|');
+    useEffect(() => {
+        if (!selectedProductKey) { setHistRows([]); setHistLoaded(false); return; }
+        loadPrevHistory(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedProductKey]);
 
     const addItem = () => setItems(prev => [...prev, { ...EMPTY_ITEM }]);
 
@@ -718,6 +754,10 @@ export default function AddPurchasePage() {
                     const matched = suppliers.find(s => String(s.id) === String(p.supplier));
                     setForm(f => ({ ...f, supplier: String(p.supplier), supplier_name: matched?.name || f.supplier_name }));
                 }
+                // Pull this product's previous purchase / sale / cost prices from Current
+                // Stocks so the rate fields pre-fill (matched by id first, then by name).
+                const prev = priceMap[`id:${val}`]
+                    || priceMap[`name:${String(p?.name || '').trim().toLowerCase()}`];
                 return {
                     ...item,
                     product: val,
@@ -725,7 +765,11 @@ export default function AddPurchasePage() {
                     // Adopt the product's own company + bar code so the row stays in sync.
                     company: p?.company ? String(p.company) : item.company,
                     barcode: p?.barcode || p?.sku || item.barcode || '',
-                    unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price,
+                    // Pur. Rate ← previous purchase price, Sale Rate ← previous sale price,
+                    // Retail Rate ← previous cost price (falls back to catalog / existing).
+                    unit_price: prev?.purchase || (p?.retail_price ? parseFloat(p.retail_price) : item.unit_price),
+                    selling_price: prev?.sale || item.selling_price,
+                    retail_rate: prev?.cost || item.retail_rate,
                 };
             }
             return { ...item, [field]: val };
@@ -1172,7 +1216,7 @@ export default function AddPurchasePage() {
                                     </div>
                                     <div className="p-4 sm:p-5">
                                         {!histLoaded ? (
-                                            <div className="text-center py-12 text-[12.5px] text-slate-400">Click “Show Previous History” to load past purchases for the products on this order.</div>
+                                            <div className="text-center py-12 text-[12.5px] text-slate-400">Select a product to see its previous purchase history.</div>
                                         ) : histRows.length === 0 ? (
                                             <div className="text-center py-12 text-[12.5px] text-slate-400">No previous purchase history for these products.</div>
                                         ) : (
@@ -1183,7 +1227,7 @@ export default function AddPurchasePage() {
                                                             <th className="px-3 py-2">Date</th>
                                                             <th className="px-3 py-2">PO No.</th>
                                                             <th className="px-3 py-2">Product</th>
-                                                            <th className="px-3 py-2">Supplier</th>
+                                                            <th className="px-3 py-2">Company</th>
                                                             <th className="px-3 py-2 text-right">Qty</th>
                                                             <th className="px-3 py-2 text-right">Rate</th>
                                                             <th className="px-3 py-2 text-right">Subtotal</th>
@@ -1195,7 +1239,7 @@ export default function AddPurchasePage() {
                                                                 <td className="px-3 py-2 tabular-nums text-slate-600 whitespace-nowrap">{r.date || '—'}</td>
                                                                 <td className="px-3 py-2 font-semibold text-slate-700 whitespace-nowrap">{r.po}</td>
                                                                 <td className="px-3 py-2 text-slate-800">{r.product}</td>
-                                                                <td className="px-3 py-2 text-slate-500">{r.supplier}</td>
+                                                                <td className="px-3 py-2 text-slate-500">{r.company}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(r.rate)}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums font-bold">{formatCurrency(r.subtotal)}</td>
