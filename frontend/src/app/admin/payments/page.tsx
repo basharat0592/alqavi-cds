@@ -1324,7 +1324,7 @@ function CreateView({ onClose, onSuccess, categories, warehouses = [], isSuperAd
                             <div>
                                 <Lbl icon={Building2} required={!isSuperAdmin}>Branch</Lbl>
                                 {lockBranch ? (
-                                    <div className={inputCls + " flex items-center bg-slate-50 text-slate-700 font-semibold"}>
+                                    <div className={inputCls + " flex items-center bg-slate-100 border-slate-200 text-slate-600 font-semibold shadow-none"}>
                                         {warehouses[0]?.name || 'Your branch'}
                                     </div>
                                 ) : (

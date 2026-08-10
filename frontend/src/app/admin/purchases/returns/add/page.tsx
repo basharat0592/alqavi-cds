@@ -278,7 +278,7 @@ export default function AddPurchaseReturnPage() {
                                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-semibold text-slate-700">Return ID</label>
-                                        <input className={inputCls + " bg-slate-50 text-slate-500"} value={form.return_number} disabled />
+                                        <input className={inputCls + " " + ui.inputDisabled} value={form.return_number} disabled />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-semibold text-slate-700">Supplier *</label>

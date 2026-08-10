@@ -715,7 +715,7 @@ function ReportsEngineInner() {
                                 value={filters.category}
                                 onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
                                 disabled={isSuperAdmin && !filters.branch}
-                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"}
+                                className={inputCls + " disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"}
                             >
                                 {isNetProfitMode ? (
                                     <>
@@ -742,7 +742,7 @@ function ReportsEngineInner() {
                                 value={filters.view}
                                 onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); setCustomerSummary(null); }}
                                 disabled={!filters.category}
-                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400"}
+                                className={inputCls + " disabled:bg-slate-100 disabled:text-slate-400"}
                             >
                                 {filters.category === 'customers' ? (
                                     <>

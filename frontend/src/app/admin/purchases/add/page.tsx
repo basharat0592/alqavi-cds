@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, CheckCircle, Package, ArrowLeft, RefreshCw, Search, ChevronDown, Building2, PackagePlus, History } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
@@ -29,15 +30,41 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[12px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+        <label className={ui.fieldLabel}>{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
 
-const inputCls = ui.inputBase
-    .replace('h-10', 'h-9')
-    .replace('text-[13.5px]', 'text-[12.5px]');
+const inputCls = ui.inputBase.replace('h-10', 'h-[38px]');
 const selectCls = `${inputCls} cursor-pointer`;
+/* ─── Line-items spreadsheet ───
+   Column widths are shared by the header and every row so they stay aligned; the whole
+   grid scrolls horizontally as one unit below ~1180px. */
+const GRID_COLS =
+    'grid grid-cols-[minmax(148px,1.25fr)_minmax(168px,1.5fr)_96px_84px_82px_70px_70px_92px_92px_92px_116px_34px]';
+const GRID_MIN = 'min-w-[1180px]';
+
+/* A cell field reads as part of the grid, not as a floating box: transparent at rest,
+   with the grid lines doing the structural work, and a hard indigo focus state. */
+const cellCls =
+    'w-full h-9 px-2 bg-transparent text-[12.5px] font-semibold text-slate-900 outline-none rounded-[5px] ' +
+    'border border-transparent transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
+    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20';
+const cellNum = cellCls + ' text-right tabular-nums no-spinner';
+const cellDisabled = 'text-slate-300 cursor-not-allowed hover:border-transparent hover:bg-transparent';
+
+// Written out rather than interpolated — Tailwind only ships classes it can see as literals.
+const TH_ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' } as const;
+
+const Th = ({ children, align = 'left', required = false }: { children: React.ReactNode; align?: keyof typeof TH_ALIGN; required?: boolean }) => (
+    <div className={`px-2 py-2 text-[10px] font-black uppercase tracking-[0.05em] text-slate-500 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
+        {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
+    </div>
+);
+
+const Cell = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+    <div className={`px-1 py-1 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
+);
 
 const EMPTY_FORM = {
     purchase_number: '', supplier: '', supplier_name: '',
@@ -91,11 +118,55 @@ type LineItem = {
     apply_expiry: boolean;     // whether the Exp Date field is enabled for this line
 };
 
+/* Anchored portal menu. The line-items grid scrolls horizontally, and an `overflow-x`
+   container clips absolutely-positioned children on both axes — so dropdowns render in a
+   portal with fixed coords instead. Same approach as the sale-returns picker. */
+const usePortalMenu = (open: boolean, onClose: () => void) => {
+    const anchorRef = useRef<HTMLDivElement>(null);
+    const popRef = useRef<HTMLDivElement>(null);
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+    // Kept in a ref so an inline arrow from the caller doesn't re-run the effect each render.
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
+
+    useEffect(() => {
+        if (!open) { setCoords(null); return; }
+        const place = () => {
+            const r = anchorRef.current?.getBoundingClientRect();
+            if (!r) return;
+            const width = Math.max(r.width, 260);
+            const roomBelow = window.innerHeight - r.bottom;
+            // Flip above the field when the menu wouldn't fit underneath.
+            const top = roomBelow < 240 && r.top > roomBelow ? Math.max(8, r.top - 244) : r.bottom + 4;
+            setCoords({ top, left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), width });
+        };
+        place();
+        const onScroll = (e: Event) => { if (popRef.current?.contains(e.target as Node)) return; place(); };
+        const onDown = (e: MouseEvent) => {
+            if (anchorRef.current?.contains(e.target as Node)) return;
+            if (popRef.current?.contains(e.target as Node)) return;
+            closeRef.current();
+        };
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', place);
+        document.addEventListener('mousedown', onDown);
+        return () => {
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', place);
+            document.removeEventListener('mousedown', onDown);
+        };
+    }, [open]);
+
+    return { anchorRef, popRef, coords };
+};
+
+const menuCls = 'bg-white border border-slate-200 rounded-xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden';
+
 /* ─── Product Selector — single searchable input (type to filter or write custom) ─── */
 const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const { anchorRef, popRef, coords } = usePortalMenu(open, () => { setOpen(false); setSearch(''); });
 
     const selected = String(selectedId).startsWith('__custom__:')
         ? { id: selectedId, name: String(selectedId).replace('__custom__:', ''), isCustom: true }
@@ -106,27 +177,19 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
         ? products.filter((p: any) => (p.name || '').toLowerCase().includes(q) || (p.sku && String(p.sku).toLowerCase().includes(q)))
         : products;
 
-    useEffect(() => {
-        const h = (e: MouseEvent) => { if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false); };
-        document.addEventListener('mousedown', h);
-        return () => document.removeEventListener('mousedown', h);
-    }, []);
-
     return (
-        <div className="relative w-full" ref={containerRef}>
-            <div className="relative">
-                <input
-                    className={inputCls + ' pr-8'}
-                    value={open ? search : (selected ? selected.name : '')}
-                    placeholder="Search or type product…"
-                    onFocus={() => setOpen(true)}
-                    onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-                />
-                <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
-            </div>
+        <div className="relative w-full" ref={anchorRef}>
+            <input
+                className={inputCls + ' pr-6'}
+                value={open ? search : (selected ? selected.name : '')}
+                placeholder="Search product…"
+                onFocus={() => setOpen(true)}
+                onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+            />
+            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
 
-            {open && (
-                <div className="absolute z-[100] top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+            {open && coords && createPortal(
+                <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[260px] overflow-y-auto custom-scrollbar">
                         {filtered.slice(0, 60).map((p: any) => (
                             <div
@@ -148,7 +211,8 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -202,34 +266,24 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
 const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const { anchorRef, popRef, coords } = usePortalMenu(open, () => { setOpen(false); setSearch(''); });
 
     const selected = companies.find((c: any) => String(c.id) === String(selectedId));
     const q = search.trim().toLowerCase();
     const filtered = q ? companies.filter((c: any) => (c.name || '').toLowerCase().includes(q)) : companies;
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) { setOpen(false); setSearch(''); }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     return (
-        <div className="relative w-full" ref={containerRef}>
-            <div className="relative">
-                <input
-                    className={inputCls + ' pr-8'}
-                    value={open ? search : (selected ? selected.name : '')}
-                    placeholder="Search company…"
-                    onFocus={() => setOpen(true)}
-                    onChange={e => { setSearch(e.target.value); setOpen(true); }}
-                />
-                <ChevronDown size={14} className="text-slate-400 shrink-0 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-            {open && (
-                <div className="absolute z-[100] top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="relative w-full" ref={anchorRef}>
+            <input
+                className={inputCls + ' pr-6'}
+                value={open ? search : (selected ? selected.name : '')}
+                placeholder="Search company…"
+                onFocus={() => setOpen(true)}
+                onChange={e => { setSearch(e.target.value); setOpen(true); }}
+            />
+            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
+            {open && coords && createPortal(
+                <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
                         {filtered.map((c: any) => (
                             <div key={c.id} className="px-4 py-2 hover:bg-indigo-50/60 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
@@ -243,7 +297,8 @@ const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => 
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -806,180 +861,149 @@ export default function AddPurchasePage() {
             // A purchase order *adds* stock, so there is no upper cap on the order
             // quantity — current stock is shown as context only, never a limit.
             const p = products.find(prod => String(prod.id) === String(item.product));
+            const isCarton = item.packaging_type === 'CARTON';
+            const totalPcs = (isCarton ? (item.quantity * item.items_per_carton) : item.quantity) + (item.bonus_quantity || 0);
+            const profit = (item.unit_price > 0 && item.selling_price > 0)
+                ? ((item.selling_price - item.unit_price) / item.unit_price) * 100
+                : null;
 
             return (
-                <div key={i} className={"relative" + (i > 0 ? " border-t border-slate-100 pt-6 mt-6" : "")}>
-                    {/* Row 1 — company / product / bar code + remove */}
-                    <div className="flex items-end gap-3">
-                        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px] gap-4">
-                            <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Select Company<span className="text-rose-600 ml-0.5">*</span></label>
-                                <CompanySelector selectedId={item.company} companies={companies} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
-                            </div>
-                            <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Select Products<span className="text-rose-600 ml-0.5">*</span></label>
-                                <ProductSelector
-                                    selectedId={item.product}
-                                    products={products.filter((p: any) => {
-                                        // Always keep this line's already-chosen product (e.g. one just
-                                        // created from the "Add New Products" popup) so it stays visible.
-                                        if (String(p.id) === String(item.product)) return true;
-                                        const companyOk = !item.company || String(p.company ?? '') === String(item.company);
-                                        // Otherwise only products that are in Current Stocks (by id or name).
-                                        const inStock = stockKeys.ids.has(String(p.id)) || stockKeys.names.has((p.name || '').trim().toLowerCase());
-                                        return companyOk && inStock;
-                                    })}
-                                    inputCls={selectCls}
-                                    onSelect={(val: any) => updateItem(i, 'product', val)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Bar Code</label>
-                                <input
-                                    className={selectCls + ' tabular-nums bg-slate-50 text-center font-bold text-slate-700'}
-                                    value={item.barcode || ''}
-                                    onChange={e => updateItem(i, 'barcode', e.target.value)}
-                                    placeholder="—"
-                                />
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => removeItem(i)}
-                            title="Remove item"
-                            className="shrink-0 mb-0.5 w-9 h-9 flex items-center justify-center rounded-lg text-slate-350 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors"
-                        >
-                            <Trash2 size={15} />
-                        </button>
-                    </div>
-
-                    {/* Row 2 — quantities & pricing grid */}
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-                        {/* Type */}
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Type</label>
-                            <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
+                <div key={i} className="border-b border-slate-200 last:border-b-0 bg-white hover:bg-slate-50/60 focus-within:bg-indigo-50/30 transition-colors">
+                    <div className={GRID_COLS + ' ' + GRID_MIN}>
+                        <Cell>
+                            <CompanySelector selectedId={item.company} companies={companies} inputCls={cellCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
+                        </Cell>
+                        <Cell>
+                            <ProductSelector
+                                selectedId={item.product}
+                                products={products.filter((prod: any) => {
+                                    // Always keep this line's already-chosen product (e.g. one just
+                                    // created from the "Add New Products" popup) so it stays visible.
+                                    if (String(prod.id) === String(item.product)) return true;
+                                    const companyOk = !item.company || String(prod.company ?? '') === String(item.company);
+                                    // Otherwise only products that are in Current Stocks (by id or name).
+                                    const inStock = stockKeys.ids.has(String(prod.id)) || stockKeys.names.has((prod.name || '').trim().toLowerCase());
+                                    return companyOk && inStock;
+                                })}
+                                inputCls={cellCls}
+                                onSelect={(val: any) => updateItem(i, 'product', val)}
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                className={cellCls + ' tabular-nums tracking-wide text-slate-600'}
+                                value={item.barcode || ''}
+                                onChange={e => updateItem(i, 'barcode', e.target.value)}
+                                placeholder="—"
+                            />
+                        </Cell>
+                        <Cell>
+                            <select className={cellCls + ' cursor-pointer'} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
                                 <option value="SINGLE">Single</option>
                                 <option value="CARTON">Carton</option>
                             </select>
-                        </div>
-
-                        {/* Qty */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}<span className="text-rose-600 ml-0.5">*</span></label>
+                        </Cell>
+                        <Cell>
                             <input
-                                className={inputCls + " text-center font-bold tabular-nums text-indigo-650"}
-                                type="number"
-                                min="1"
+                                className={cellNum + ' text-indigo-700'}
+                                type="number" min="1"
                                 value={item.quantity || ''}
                                 onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
                             />
-                        </div>
-
-                        {/* Packing */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Packing</label>
-                            <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-slate-50' : '') + " text-center tabular-nums"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
-                        </div>
-
-                        {/* Bonus */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Bonus (U)</label>
+                        </Cell>
+                        <Cell>
                             <input
-                                className={inputCls + " text-center tabular-nums text-emerald-700 font-bold"}
-                                type="number"
-                                min="0"
+                                className={cellNum + (isCarton ? '' : ' ' + cellDisabled)}
+                                type="number" min="1"
+                                disabled={!isCarton}
+                                title={isCarton ? '' : 'Only applies to carton purchases'}
+                                value={item.items_per_carton || ''}
+                                onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)}
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                className={cellNum + ' text-emerald-700'}
+                                type="number" min="0"
                                 value={item.bonus_quantity || ''}
                                 onChange={e => updateItem(i, 'bonus_quantity', Math.max(0, parseInt(e.target.value) || 0))}
                                 placeholder="0"
                             />
-                        </div>
-
-                        {/* Pur. Rate */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Pur. Rate<span className="text-rose-600 ml-0.5">*</span></label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
-                                <input
-                                    type="number" min="0" step="0.01"
-                                    className={inputCls + " pl-6 font-bold text-slate-800 text-center"}
-                                    value={item.unit_price || ''}
-                                    onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Sale Rate */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Sale Rate<span className="text-rose-600 ml-0.5">*</span></label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
-                                <input
-                                    type="number" min="0" step="0.01"
-                                    className={inputCls + " pl-6 text-center tabular-nums"}
-                                    value={item.selling_price || ''}
-                                    onChange={e => updateItem(i, 'selling_price', parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Retail Rate */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Retail Rate<span className="text-rose-600 ml-0.5">*</span></label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
-                                <input
-                                    type="number" min="0" step="0.01"
-                                    className={inputCls + " pl-6 text-center tabular-nums"}
-                                    value={item.retail_rate || ''}
-                                    onChange={e => updateItem(i, 'retail_rate', parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Exp Date — enabled only when the product's "Apply Expiry Date" is Yes */}
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Exp Date</label>
+                        </Cell>
+                        <Cell>
+                            <input
+                                type="number" min="0" step="0.01"
+                                className={cellNum}
+                                value={item.unit_price || ''}
+                                onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                type="number" min="0" step="0.01"
+                                className={cellNum}
+                                value={item.selling_price || ''}
+                                onChange={e => updateItem(i, 'selling_price', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                type="number" min="0" step="0.01"
+                                className={cellNum}
+                                value={item.retail_rate || ''}
+                                onChange={e => updateItem(i, 'retail_rate', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                            />
+                        </Cell>
+                        <Cell>
                             <input
                                 type="date"
                                 disabled={!item.apply_expiry}
                                 title={item.apply_expiry ? '' : 'Expiry not applicable for this product'}
-                                className={inputCls + " text-center tabular-nums" + (item.apply_expiry ? '' : ' opacity-50 bg-slate-100 cursor-not-allowed')}
+                                className={cellCls + ' tabular-nums' + (item.apply_expiry ? '' : ' ' + cellDisabled)}
                                 value={item.expiry_date || ''}
                                 onChange={e => updateItem(i, 'expiry_date', e.target.value)}
                             />
-                        </div>
+                        </Cell>
+                        <Cell className="justify-center">
+                            <button
+                                onClick={() => removeItem(i)}
+                                disabled={items.length === 1}
+                                title={items.length === 1 ? 'A purchase needs at least one row' : 'Remove row'}
+                                className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </Cell>
                     </div>
+
+                    {/* Per-row readout — only once the row actually has a product on it. */}
                     {item.product && (
-                        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-x-4 gap-y-1 justify-between items-center text-[11px] text-slate-500">
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <span>Total Pcs: <b className="text-slate-700 tabular-nums">{(item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity) + (item.bonus_quantity || 0)} Pcs</b></span>
-                                {(item.bonus_quantity || 0) > 0 && (
-                                    <>
-                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                        <span className="text-emerald-700">incl. {item.bonus_quantity} bonus</span>
-                                    </>
-                                )}
-                                {p && (
-                                    <>
-                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                        <span>Current stock: <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
-                                    </>
-                                )}
-                                {(item.unit_price > 0 && item.selling_price > 0) && (() => {
-                                    const profit = ((item.selling_price - item.unit_price) / item.unit_price) * 100;
-                                    return (
-                                        <>
-                                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                            <span>%Profit: <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                            <div className="text-[13px] font-bold text-slate-900 tabular-nums">
-                                Subtotal: {formatCurrency(calculateSubtotal(item))}
-                            </div>
+                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[10.5px] text-slate-500'}>
+                            <span>Total <b className="text-slate-700 tabular-nums">{totalPcs}</b> pcs</span>
+                            {(item.bonus_quantity || 0) > 0 && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <span className="text-emerald-700">incl. {item.bonus_quantity} bonus</span>
+                                </>
+                            )}
+                            {p && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <span>stock <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
+                                </>
+                            )}
+                            {profit !== null && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <span>profit <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
+                                </>
+                            )}
+                            <span className="ml-auto text-[12px] font-bold text-slate-900 tabular-nums">
+                                {formatCurrency(calculateSubtotal(item))}
+                            </span>
                         </div>
                     )}
                 </div>
@@ -990,31 +1014,61 @@ export default function AddPurchasePage() {
     /* ─── Order Items section (identical in both modes) ─── */
     const renderItemsCard = () => (
         <>
-            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
-                        <Package size={17} strokeWidth={2} />
+            <div className="px-4 sm:px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
+                        <Package size={16} strokeWidth={2} />
                     </div>
                     <div>
-                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <h2 className="text-[13.5px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
                             Order Items
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
                         </h2>
-                        <p className="text-[11.5px] text-slate-500">Products, quantities, and pricing.</p>
+                        <p className="text-[11px] text-slate-500">Products, quantities, and pricing.</p>
                     </div>
                 </div>
                 <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={openAddProduct}><Plus size={14} /> Add New Products</Btn>
             </div>
-            <div className="p-5 sm:p-6 bg-white">
-                {renderItemsList()}
-            </div>
-            {/* Settlement & charges — staff, advance, discounts, freight, tax, due date */}
-            <div className="border-t border-slate-100 bg-slate-50/60 px-5 sm:px-6 py-5">
-                <div className="flex items-center gap-3 mb-4 select-none">
-                    <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Settlement &amp; Charges</span>
-                    <div className="h-px flex-1 bg-slate-200/70" />
+            {/* One horizontal scroller wraps header + rows so their columns stay locked together. */}
+            <div className="overflow-x-auto custom-scrollbar border-y border-slate-200">
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-100 border-b border-slate-300'}>
+                    <Th required>Company</Th>
+                    <Th required>Product</Th>
+                    <Th>Bar Code</Th>
+                    <Th>Type</Th>
+                    <Th align="right" required>{items.some(it => it.packaging_type === 'CARTON') ? 'Ctns' : 'Qty'}</Th>
+                    <Th align="right">Pack</Th>
+                    <Th align="right">Bonus</Th>
+                    <Th align="right" required>Pur. Rs</Th>
+                    <Th align="right" required>Sale Rs</Th>
+                    <Th align="right" required>Retail Rs</Th>
+                    <Th>Expiry</Th>
+                    <Th> </Th>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {renderItemsList()}
+                <div className={GRID_MIN + ' bg-slate-50/70 px-3 py-2 flex items-center justify-between gap-3'}>
+                    <button
+                        onClick={addItem}
+                        className="inline-flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                    >
+                        <Plus size={14} /> Add row
+                    </button>
+                    <span className="text-[11px] text-slate-500">
+                        {items.length} {items.length === 1 ? 'row' : 'rows'} · Total <b className="text-slate-900 tabular-nums">{formatCurrency(totalAmount)}</b>
+                    </span>
+                </div>
+            </div>
+        </>
+    );
+
+    /* ─── Settlement & Charges — standalone card, shown at the very bottom ─── */
+    const renderSettlementCard = () => (
+        <div className="px-4 sm:px-5 py-4">
+            <div className="flex items-center gap-3 mb-3 select-none">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Settlement &amp; Charges</span>
+                <div className="h-px flex-1 bg-slate-200/70" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-4">
                 <Field label="Staff">
                     <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
                         <option value="">Select any one</option>
@@ -1025,34 +1079,33 @@ export default function AddPurchasePage() {
                 </Field>
                 <Field label="Paid Now (Advance)">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                         <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).paid_amount || ''} onChange={e => setForm(f => ({ ...f, paid_amount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
                 </Field>
                 <Field label="Extra Discount">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                         <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).extra_discount || ''} onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
                 </Field>
                 <Field label="Freight / Shipping Cost">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                         <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).shipping_cost || ''} onChange={e => setForm(f => ({ ...f, shipping_cost: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
                 </Field>
                 <Field label="Tax Rate (%)">
                     <div className="relative">
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
+                        <span className={ui.fieldAffix + ' right-3'}>%</span>
                         <input className={inputCls + " pr-8"} type="number" min="0" value={(form as any).tax_rate || ''} onChange={e => setForm(f => ({ ...f, tax_rate: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0" />
                     </div>
                 </Field>
                 <Field label="Balance Due Date">
                     <input className={inputCls} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
                 </Field>
-                </div>
             </div>
-        </>
+        </div>
     );
 
     /* ─── Order Information section — shared shell; only the Supplier field differs per mode ─── */
@@ -1090,7 +1143,7 @@ export default function AddPurchasePage() {
                 </Field>
                 <Field label="Paid Now (Advance)">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                         <input
                             className={inputCls + " pl-9"}
                             type="number"
@@ -1126,7 +1179,7 @@ export default function AddPurchasePage() {
                     <>
                         <Field label="Extra Discount">
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                                 <input
                                     className={inputCls + " pl-9"}
                                     type="number"
@@ -1139,7 +1192,7 @@ export default function AddPurchasePage() {
                         </Field>
                         <Field label="Freight / Shipping Cost">
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                                 <input
                                     className={inputCls + " pl-9"}
                                     type="number"
@@ -1152,7 +1205,7 @@ export default function AddPurchasePage() {
                         </Field>
                         <Field label="Tax Rate (%)">
                             <div className="relative">
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
+                                <span className={ui.fieldAffix + ' right-3'}>%</span>
                                 <input
                                     className={inputCls + " pr-8"}
                                     type="number"
@@ -1190,11 +1243,32 @@ export default function AddPurchasePage() {
     return (
         <div className="pb-20">
             <div className="max-w-[1320px] mx-auto">
-                <PageHeader
-                    title={editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
-                    subtitle={editId ? 'Update this purchase order — supplier, items, and totals.' : 'Create a purchase order with supplier, items, and totals.'}
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: editId ? 'Edit Purchase' : 'New Purchase' }]}
-                />
+                {/* ── Clean, simple header ── */}
+                <div className="mb-6">
+                    <nav className="flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-400 mb-3">
+                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
+                        <span className="text-slate-300">/</span>
+                        <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-slate-600">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
+                    </nav>
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <PackagePlus size={22} strokeWidth={2} />
+                            </div>
+                            <div>
+                                <h1 className="text-[22px] font-bold text-slate-900 tracking-tight leading-none">
+                                    {editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
+                                </h1>
+                                <p className="text-[12.5px] text-slate-500 mt-1.5">Add products, set rates, and record settlement.</p>
+                            </div>
+                        </div>
+                        <button onClick={() => router.push('/admin/purchases')} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[12.5px] font-semibold px-4 py-2.5 transition-colors shadow-sm">
+                            <ArrowLeft size={15} /> Back
+                        </button>
+                    </div>
+                </div>
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
@@ -1254,9 +1328,9 @@ export default function AddPurchasePage() {
                             </div>
 
                             {/* RIGHT: totals panel + actions */}
-                            <div className="w-full lg:w-[360px] shrink-0">
+                            <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4">
                             <Card className="overflow-hidden">
-                                <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent">
+                                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2.5">
                                     <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
                                 </div>
                                 <div className="p-5 space-y-2.5">
@@ -1289,9 +1363,9 @@ export default function AddPurchasePage() {
                                         </div>
                                     )}
                                     <div className="h-px bg-slate-100 my-1" />
-                                    <div className="flex justify-between items-center pt-0.5">
-                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
-                                        <span className="text-[20px] font-black text-indigo-650 tabular-nums">{formatCurrency(grandTotal)}</span>
+                                    <div className="flex justify-between items-center rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3">
+                                        <span className="text-slate-700 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
+                                        <span className="text-[21px] font-black text-indigo-650 tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
                                     </div>
                                     {paidNow > 0 && (
                                         <div className="flex justify-between items-center">
@@ -1322,6 +1396,11 @@ export default function AddPurchasePage() {
                             </Card>
                         </div>
                         </div>
+
+                        {/* Settlement & Charges — bottom-most section */}
+                        <Card className="overflow-hidden">
+                            {renderSettlementCard()}
+                        </Card>
                     </div>
                     )}
 
@@ -1347,7 +1426,7 @@ export default function AddPurchasePage() {
                         </Field>
                         <Field label="Bar Code (auto)">
                             <div className="flex gap-2">
-                                <input className={inputCls + ' tabular-nums bg-slate-50'} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Auto-generated" />
+                                <input className={inputCls + ' tabular-nums tracking-wide'} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Auto-generated" />
                                 <Btn variant="secondary" className="shrink-0 px-2.5 text-[12px]" onClick={() => setPForm(f => ({ ...f, barcode: genBarcode() }))} title="Generate a new bar code"><RefreshCw size={13} /></Btn>
                             </div>
                         </Field>

@@ -6,6 +6,7 @@ export { Card } from './Card';
 export { PageHeader } from './PageHeader';
 export type { Crumb } from './PageHeader';
 export { Modal } from './Modal';
+export { Pagination } from './Pagination';
 export { Dropdown, DropdownItem } from './Dropdown';
 export {
     useTableSelection,

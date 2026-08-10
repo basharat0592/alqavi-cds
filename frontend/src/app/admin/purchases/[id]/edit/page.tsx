@@ -127,7 +127,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                     disabled={purchase.status === 'RECEIVED' && purchase.is_inventory_synced}
                                     value={purchase.status}
                                     onChange={(e) => setPurchase({ ...purchase, status: e.target.value })}
-                                    className={inputCls + " cursor-pointer" + (purchase.status === 'RECEIVED' && purchase.is_inventory_synced ? ' bg-slate-50 opacity-70' : '')}
+                                    className={inputCls + " cursor-pointer" + (purchase.status === 'RECEIVED' && purchase.is_inventory_synced ? ' ' + ui.inputDisabled : '')}
                                 >
                                     <option value="PENDING">Ordered</option>
                                     <option value="PROCESSING">Confirmed</option>

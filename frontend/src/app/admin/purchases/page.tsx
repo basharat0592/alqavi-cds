@@ -20,7 +20,7 @@ import { inventoryService } from '@/services/inventory.service';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
-import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, Pagination } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ADMIN DESIGN SYSTEM - PURCHASES (indigo accent, slate neutrals)
@@ -561,22 +561,14 @@ export default function PurchasesPage() {
 
                 {/* Mobile Pagination Footer Controls */}
                 {filtered.length > 0 && (
-                    <div className="md:hidden flex items-center justify-between gap-3 text-[11.5px] text-slate-500 bg-white p-3 rounded-xl border border-slate-150/60 shadow-sm mb-6 text-left">
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
-                        >
-                            Previous
-                        </button>
-                        <span className="font-semibold text-slate-700">Page {currentPage} of {totalPages}</span>
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded disabled:opacity-40 font-bold"
-                        >
-                            Next
-                        </button>
+                    <div className="md:hidden bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            onPage={setCurrentPage}
+                            total={filtered.length}
+                            pageSize={itemsPerPage}
+                        />
                     </div>
                 )}
 
@@ -693,32 +685,13 @@ export default function PurchasesPage() {
 
                     {/* Desktop Pagination Footer Controls */}
                     {filtered.length > 0 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-100 text-[12px] text-slate-500 font-medium">
-                            <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                                Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-                                <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
-                                <span className="font-semibold text-slate-700">{filtered.length}</span> purchases
-                            </div>
-                            <div className="flex items-center gap-2.5 order-1 sm:order-2 w-full sm:w-auto">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
-                                >
-                                    Previous
-                                </button>
-                                <div className="text-[11.5px] font-extrabold text-slate-800 tracking-wider tabular-nums px-2">
-                                    {currentPage} / {totalPages}
-                                </div>
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            onPage={setCurrentPage}
+                            total={filtered.length}
+                            pageSize={itemsPerPage}
+                        />
                     )}
                 </Card>
             </div>
