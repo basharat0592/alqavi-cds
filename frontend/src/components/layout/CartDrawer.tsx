@@ -111,7 +111,7 @@ export default function CartDrawer() {
                             {items.length === 0 ? (
                                 <div className="h-[65vh] flex flex-col items-center justify-center text-center p-6 space-y-6">
                                     <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center relative shadow-inner">
-                                        <ShoppingBag size={36} className="text-slate-350" />
+                                        <ShoppingBag size={36} className="text-slate-300" />
                                         <motion.div
                                             animate={{ scale: [1, 1.15, 1] }}
                                             transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}

@@ -352,7 +352,7 @@ export default function SalesPage() {
                                 </Card>
                             ))}
                             {totalPages > 1 && (
-                                <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500 bg-white p-3 rounded-xl border border-slate-150/60 shadow-sm">
+                                <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500 bg-white p-3 rounded-xl border border-slate-200/60 shadow-sm">
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
@@ -467,7 +467,7 @@ export default function SalesPage() {
 
                     {/* Pagination Footer Controls */}
                     {totalPages > 1 && (
-                        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-550 border-collapse">
+                        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 border-collapse">
                             <div>
                                 Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
                                 <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
@@ -487,7 +487,7 @@ export default function SalesPage() {
                                         onClick={() => setCurrentPage(page)}
                                         className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border ${
                                             currentPage === page 
-                                                ? 'bg-indigo-650 border-indigo-650 text-white font-extrabold bg-indigo-600' 
+                                                ? 'bg-indigo-600 border-indigo-600 text-white font-extrabold' 
                                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                         }`}
                                     >

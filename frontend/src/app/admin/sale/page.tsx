@@ -901,7 +901,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         {/* Discount Input */}
                                         <div>
                                             <div className="flex justify-between items-center mb-1.5">
-                                                <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">Discount</label>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Discount</label>
                                                 <div className="flex bg-slate-100 rounded-md p-0.5 border border-slate-200/50">
                                                     <button
                                                         type="button"

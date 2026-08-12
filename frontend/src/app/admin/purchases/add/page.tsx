@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, CheckCircle, Package, ArrowLeft, RefreshCw, Search, ChevronDown, Building2, PackagePlus, History } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Package, RefreshCw, Search, ChevronDown, Building2, History, AlertTriangle } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
@@ -12,7 +12,7 @@ import { inventoryService } from '@/services/inventory.service';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { Card, Button, Modal, ui } from '@/components/admin/ui';
 
 /* ─── Shared Components ─── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
@@ -35,35 +35,36 @@ const Field = ({ label, required = false, children }: { label: string; required?
     </div>
 );
 
-const inputCls = ui.inputBase.replace('h-10', 'h-[38px]');
+const inputCls = ui.inputBase.replace('text-[13.5px]', 'text-[14px]');
 const selectCls = `${inputCls} cursor-pointer`;
 /* ─── Line-items spreadsheet ───
    Column widths are shared by the header and every row so they stay aligned; the whole
-   grid scrolls horizontally as one unit below ~1180px. */
+   grid scrolls horizontally as one unit below ~1290px. */
 const GRID_COLS =
-    'grid grid-cols-[minmax(148px,1.25fr)_minmax(168px,1.5fr)_96px_84px_82px_70px_70px_92px_92px_92px_116px_34px]';
-const GRID_MIN = 'min-w-[1180px]';
+    'grid grid-cols-[minmax(172px,1.3fr)_minmax(194px,1.5fr)_106px_98px_88px_76px_76px_104px_104px_104px_132px_40px]';
+const GRID_MIN = 'min-w-[1290px]';
 
-/* A cell field reads as part of the grid, not as a floating box: transparent at rest,
-   with the grid lines doing the structural work, and a hard indigo focus state. */
+/* Each cell still carries a visible resting fill + border — a transparent cell reads as
+   "nothing here" on a white card, which is the whole problem this screen started with.
+   The grid lines frame the columns; the field outline says "you can type here". */
 const cellCls =
-    'w-full h-9 px-2 bg-transparent text-[12.5px] font-semibold text-slate-900 outline-none rounded-[5px] ' +
-    'border border-transparent transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
-    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20';
+    'w-full h-10 px-2.5 bg-slate-50 text-[13.5px] font-semibold text-slate-900 outline-none rounded-md ' +
+    'border border-slate-200 transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
+    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-[#13B0D1] focus:ring-2 focus:ring-[#13B0D1]/30';
 const cellNum = cellCls + ' text-right tabular-nums no-spinner';
-const cellDisabled = 'text-slate-300 cursor-not-allowed hover:border-transparent hover:bg-transparent';
+const cellDisabled = 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed hover:border-slate-200 hover:bg-slate-100';
 
 // Written out rather than interpolated — Tailwind only ships classes it can see as literals.
 const TH_ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' } as const;
 
 const Th = ({ children, align = 'left', required = false }: { children: React.ReactNode; align?: keyof typeof TH_ALIGN; required?: boolean }) => (
-    <div className={`px-2 py-2 text-[10px] font-black uppercase tracking-[0.05em] text-slate-500 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
+    <div className={`px-2.5 py-2.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
         {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
     </div>
 );
 
 const Cell = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`px-1 py-1 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
+    <div className={`px-1.5 py-1.5 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
 );
 
 const EMPTY_FORM = {
@@ -185,8 +186,16 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                 placeholder="Search product…"
                 onFocus={() => setOpen(true)}
                 onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+                onKeyDown={(e) => {
+                    // Enter takes the top match, then the grid's handler moves focus on.
+                    if (e.key === 'Enter' && open && filtered.length) {
+                        onSelect(filtered[0].id); setOpen(false); setSearch('');
+                    } else if (e.key === 'Escape' && open) {
+                        e.stopPropagation(); setOpen(false); setSearch('');
+                    }
+                }}
             />
-            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
+            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#0E8CA8]' : ''}`} />
 
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
@@ -194,7 +203,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                         {filtered.slice(0, 60).map((p: any) => (
                             <div
                                 key={p.id}
-                                className="px-3 py-2 hover:bg-indigo-50/60 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
+                                className="px-3 py-2 hover:bg-[#13B0D1]/10 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
                                 onClick={() => { onSelect(p.id); setOpen(false); setSearch(''); }}
                             >
                                 <div className="min-w-0">
@@ -245,7 +254,7 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
             </button>
             {open && (
                 <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/20 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                         {filtered.map((s: any) => (
                             <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
@@ -280,13 +289,20 @@ const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => 
                 placeholder="Search company…"
                 onFocus={() => setOpen(true)}
                 onChange={e => { setSearch(e.target.value); setOpen(true); }}
+                onKeyDown={e => {
+                    if (e.key === 'Enter' && open && filtered.length) {
+                        onSelect(String(filtered[0].id)); setOpen(false); setSearch('');
+                    } else if (e.key === 'Escape' && open) {
+                        e.stopPropagation(); setOpen(false); setSearch('');
+                    }
+                }}
             />
-            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
+            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#0E8CA8]' : ''}`} />
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
                         {filtered.map((c: any) => (
-                            <div key={c.id} className="px-4 py-2 hover:bg-indigo-50/60 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
+                            <div key={c.id} className="px-4 py-2 hover:bg-[#13B0D1]/10 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
                                 <span className="font-semibold text-slate-800 truncate">{c.name}</span>
                                 {c.category && <span className="text-[9px] text-slate-400 uppercase font-bold shrink-0">{c.category}</span>}
                             </div>
@@ -322,6 +338,8 @@ export default function AddPurchasePage() {
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [staffList, setStaffList] = useState<any[]>([]);
     const [items, setItems] = useState<LineItem[]>([{ ...EMPTY_ITEM }]);
+    // Only true once a save has been rejected — keeps the grid quiet while typing.
+    const [showErrors, setShowErrors] = useState(false);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
     const [tempPayload, setTempPayload] = useState<any>(null);
@@ -635,13 +653,20 @@ export default function AddPurchasePage() {
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
-        if (items.some(i => !i.company)) return toast.error('Please select a company for all items');
-        if (items.some(i => !i.product)) return toast.error('Please select a product for all items');
-        if (items.some(i => !(i.quantity > 0))) return toast.error('Enter the quantity for all items');
-        if (items.some(i => !(i.unit_price > 0))) return toast.error('Enter the purchase rate for all items');
-        if (items.some(i => !(i.selling_price > 0))) return toast.error('Enter the sale rate for all items');
-        if (items.some(i => !(i.retail_rate > 0))) return toast.error('Enter the retail rate for all items');
 
+        // Point at the offending row instead of just naming the field — with many
+        // rows on screen, "for all items" isn't enough to find the gap.
+        const rowNo = (pred: (i: LineItem) => boolean) => items.findIndex(pred) + 1;
+        const fail = (msg: string) => { setShowErrors(true); toast.error(msg); return undefined; };
+
+        if (items.some(i => !i.company)) return fail(`Row ${rowNo(i => !i.company)}: select a company`);
+        if (items.some(i => !i.product)) return fail(`Row ${rowNo(i => !i.product)}: select a product`);
+        if (items.some(i => !(i.quantity > 0))) return fail(`Row ${rowNo(i => !(i.quantity > 0))}: enter the quantity`);
+        if (items.some(i => !(i.unit_price > 0))) return fail(`Row ${rowNo(i => !(i.unit_price > 0))}: enter the purchase rate`);
+        if (items.some(i => !(i.selling_price > 0))) return fail(`Row ${rowNo(i => !(i.selling_price > 0))}: enter the sale rate`);
+        if (items.some(i => !(i.retail_rate > 0))) return fail(`Row ${rowNo(i => !(i.retail_rate > 0))}: enter the retail rate`);
+
+        setShowErrors(false);
         setSaving(true);
         // Supplier is optional — use the chosen one, else the first registered supplier
         // if any, else none (the purchase order's supplier is nullable).
@@ -856,6 +881,109 @@ export default function AddPurchasePage() {
         UNPAID: 'bg-slate-100 text-slate-500 border-slate-200',
     }[paymentStatus];
 
+    /* ─── Keyboard-first entry ───
+       The grid is driven from one container-level handler rather than per-input
+       props: querying live DOM order means disabled cells (Pack on a non-carton
+       row, Expiry where it doesn't apply) are skipped for free, and the column
+       count never has to be kept in sync by hand. */
+    const gridRef = useRef<HTMLDivElement>(null);
+
+    const gridCells = () => Array.from(
+        gridRef.current?.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])') ?? []
+    );
+
+    const focusCell = (el?: HTMLElement) => {
+        if (!el) return;
+        el.focus();
+        if (el instanceof HTMLInputElement && el.type !== 'date') el.select();
+    };
+
+    const onGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
+
+        // Ctrl/Cmd+Enter saves from anywhere in the grid.
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleSave();
+            return;
+        }
+
+        const cells = gridCells();
+        const idx = cells.indexOf(target);
+        if (idx === -1) return;
+
+        // Columns can vary per row (disabled cells drop out), so step vertically by
+        // matching the target's position within its own row element.
+        const rowOf = (el: HTMLElement) => el.closest('[data-row]');
+        const stepRow = (dir: 1 | -1) => {
+            const row = rowOf(target);
+            if (!row) return;
+            const inRow = Array.from(row.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
+            const col = inRow.indexOf(target);
+            let j = idx;
+            while ((j = j + dir) >= 0 && j < cells.length) {
+                const otherRow = rowOf(cells[j]);
+                if (otherRow && otherRow !== row) {
+                    const others = Array.from(otherRow.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
+                    focusCell(others[Math.min(col, others.length - 1)]);
+                    return;
+                }
+            }
+        };
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const next = cells[idx + (e.shiftKey ? -1 : 1)];
+            if (next) { focusCell(next); return; }
+            // Past the last cell — start a fresh row and land on it.
+            if (!e.shiftKey) {
+                addItem();
+                requestAnimationFrame(() => focusCell(gridCells()[idx + 1]));
+            }
+            return;
+        }
+        // Arrows would otherwise increment number inputs instead of moving.
+        if (e.key === 'ArrowDown') { e.preventDefault(); stepRow(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); stepRow(-1); }
+        else if (e.key === 'Escape') target.blur();
+    };
+
+    // Rows that fail validation, surfaced only after a save attempt so the form
+    // doesn't shout at someone who is still filling it in.
+    const rowInvalid = (it: LineItem) => ({
+        company: !it.company,
+        product: !it.product,
+        quantity: !(it.quantity > 0),
+        unit_price: !(it.unit_price > 0),
+    });
+
+    // Same product on more than one row — legal, but almost always a mistake.
+    const duplicateRows = (() => {
+        const seen = new Map<string, number>();
+        const dupes = new Set<number>();
+        items.forEach((it, i) => {
+            if (!it.product) return;
+            const key = String(it.product);
+            if (seen.has(key)) { dupes.add(seen.get(key)!); dupes.add(i); }
+            else seen.set(key, i);
+        });
+        return dupes;
+    })();
+
+    // Column sums for reconciling against the supplier's paper bill.
+    const totalUnits = items.reduce((s, it) => s + (it.packaging_type === 'CARTON' ? (it.quantity || 0) * (it.items_per_carton || 0) : (it.quantity || 0)), 0);
+    const totalBonus = items.reduce((s, it) => s + (it.bonus_quantity || 0), 0);
+
+    // Warn before losing a part-filled order to a reload or a closed tab.
+    const hasUnsavedWork = !successOrder && items.some(it => it.product || it.company || it.unit_price > 0);
+    useEffect(() => {
+        if (!hasUnsavedWork) return;
+        const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [hasUnsavedWork]);
+
     const renderItemsList = () => {
         return items.map((item, i) => {
             // A purchase order *adds* stock, so there is no upper cap on the order
@@ -867,11 +995,15 @@ export default function AddPurchasePage() {
                 ? ((item.selling_price - item.unit_price) / item.unit_price) * 100
                 : null;
 
+            const bad = showErrors ? rowInvalid(item) : { company: false, product: false, quantity: false, unit_price: false };
+            const err = (on: boolean) => on ? ' !border-rose-400 !bg-rose-50/60 focus:!border-rose-500 focus:!ring-rose-500/25' : '';
+            const isDupe = duplicateRows.has(i);
+
             return (
-                <div key={i} className="border-b border-slate-200 last:border-b-0 bg-white hover:bg-slate-50/60 focus-within:bg-indigo-50/30 transition-colors">
+                <div key={i} data-row={i} className="border-b border-slate-200 last:border-b-0 bg-white hover:bg-slate-50/60 focus-within:bg-[#13B0D1]/[0.06] transition-colors">
                     <div className={GRID_COLS + ' ' + GRID_MIN}>
                         <Cell>
-                            <CompanySelector selectedId={item.company} companies={companies} inputCls={cellCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
+                            <CompanySelector selectedId={item.company} companies={companies} inputCls={cellCls + err(bad.company)} onSelect={(val: any) => updateItem(i, 'company', val)} />
                         </Cell>
                         <Cell>
                             <ProductSelector
@@ -885,7 +1017,7 @@ export default function AddPurchasePage() {
                                     const inStock = stockKeys.ids.has(String(prod.id)) || stockKeys.names.has((prod.name || '').trim().toLowerCase());
                                     return companyOk && inStock;
                                 })}
-                                inputCls={cellCls}
+                                inputCls={cellCls + err(bad.product) + (isDupe && !bad.product ? ' !border-amber-400 !bg-amber-50/60' : '')}
                                 onSelect={(val: any) => updateItem(i, 'product', val)}
                             />
                         </Cell>
@@ -905,7 +1037,7 @@ export default function AddPurchasePage() {
                         </Cell>
                         <Cell>
                             <input
-                                className={cellNum + ' text-indigo-700'}
+                                className={cellNum + ' text-[#0E8CA8]' + err(bad.quantity)}
                                 type="number" min="1"
                                 value={item.quantity || ''}
                                 onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
@@ -933,7 +1065,7 @@ export default function AddPurchasePage() {
                         <Cell>
                             <input
                                 type="number" min="0" step="0.01"
-                                className={cellNum}
+                                className={cellNum + err(bad.unit_price)}
                                 value={item.unit_price || ''}
                                 onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
                                 placeholder="0.00"
@@ -981,7 +1113,13 @@ export default function AddPurchasePage() {
 
                     {/* Per-row readout — only once the row actually has a product on it. */}
                     {item.product && (
-                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[10.5px] text-slate-500'}>
+                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-4 gap-y-1 px-3.5 pb-2 -mt-0.5 text-[12px] text-slate-500'}>
+                            <span className="font-bold text-slate-400 tabular-nums">#{i + 1}</span>
+                            {isDupe && (
+                                <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
+                                    <AlertTriangle size={12} /> duplicate product
+                                </span>
+                            )}
                             <span>Total <b className="text-slate-700 tabular-nums">{totalPcs}</b> pcs</span>
                             {(item.bonus_quantity || 0) > 0 && (
                                 <>
@@ -1001,7 +1139,7 @@ export default function AddPurchasePage() {
                                     <span>profit <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
                                 </>
                             )}
-                            <span className="ml-auto text-[12px] font-bold text-slate-900 tabular-nums">
+                            <span className="ml-auto text-[13.5px] font-bold text-[#B4780B] tabular-nums">
                                 {formatCurrency(calculateSubtotal(item))}
                             </span>
                         </div>
@@ -1014,23 +1152,23 @@ export default function AddPurchasePage() {
     /* ─── Order Items section (identical in both modes) ─── */
     const renderItemsCard = () => (
         <>
-            <div className="px-4 sm:px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
-                        <Package size={16} strokeWidth={2} />
+            <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center ring-1 ring-inset ring-[#13B0D1]/25 shrink-0">
+                        <Package size={18} strokeWidth={2} />
                     </div>
                     <div>
-                        <h2 className="text-[13.5px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
                             Order Items
-                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
+                            <span className="text-[11px] font-black text-[#0E8CA8] bg-[#13B0D1]/10 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
                         </h2>
-                        <p className="text-[11px] text-slate-500">Products, quantities, and pricing.</p>
+                        <p className="text-[12.5px] text-slate-500">Products, quantities, and pricing.</p>
                     </div>
                 </div>
-                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={openAddProduct}><Plus size={14} /> Add New Products</Btn>
+                <Btn variant="secondary" className="text-[13px] py-2 px-4" onClick={openAddProduct}><Plus size={15} /> Add New Products</Btn>
             </div>
             {/* One horizontal scroller wraps header + rows so their columns stay locked together. */}
-            <div className="overflow-x-auto custom-scrollbar border-y border-slate-200">
+            <div ref={gridRef} onKeyDown={onGridKeyDown} className="overflow-x-auto custom-scrollbar border-y border-slate-200">
                 <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-100 border-b border-slate-300'}>
                     <Th required>Company</Th>
                     <Th required>Product</Th>
@@ -1046,15 +1184,36 @@ export default function AddPurchasePage() {
                     <Th> </Th>
                 </div>
                 {renderItemsList()}
+
+                {/* Column totals — aligned to the grid so each sum sits under its column. */}
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-100 border-t-2 border-slate-300'}>
+                    <div className="px-2.5 py-2.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80">Totals</div>
+                    <div className="border-r border-slate-200/80" />
+                    <div className="border-r border-slate-200/80" />
+                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2.5 py-2.5 text-[13px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnits}</div>
+                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2.5 py-2.5 text-[13px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonus || ''}</div>
+                    <div className="border-r border-slate-200/80" />
+                    <div className="border-r border-slate-200/80" />
+                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2.5 py-2.5 text-[13.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
+                </div>
+
                 <div className={GRID_MIN + ' bg-slate-50/70 px-3 py-2 flex items-center justify-between gap-3'}>
                     <button
                         onClick={addItem}
-                        className="inline-flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                        className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:bg-[#13B0D1]/10 px-3 py-2 rounded-lg transition-colors"
                     >
-                        <Plus size={14} /> Add row
+                        <Plus size={16} /> Add row
                     </button>
-                    <span className="text-[11px] text-slate-500">
-                        {items.length} {items.length === 1 ? 'row' : 'rows'} · Total <b className="text-slate-900 tabular-nums">{formatCurrency(totalAmount)}</b>
+                    <span className="hidden md:flex items-center gap-3 text-[11.5px] text-slate-400">
+                        <span><kbd className="px-1.5 py-0.5 rounded border border-slate-300 bg-white font-sans font-bold text-slate-500">Enter</kbd> next</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded border border-slate-300 bg-white font-sans font-bold text-slate-500">↑↓</kbd> row</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded border border-slate-300 bg-white font-sans font-bold text-slate-500">Ctrl↵</kbd> save</span>
+                    </span>
+                    <span className="text-[12.5px] text-slate-500">
+                        {items.length} {items.length === 1 ? 'row' : 'rows'}
                     </span>
                 </div>
             </div>
@@ -1169,7 +1328,7 @@ export default function AddPurchasePage() {
                     <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="text-[12px] font-bold text-indigo-650 hover:text-indigo-700 flex items-center gap-1 transition-colors"
+                        className="text-[12px] font-bold text-[#0E8CA8] hover:text-[#13B0D1] flex items-center gap-1 transition-colors"
                     >
                         {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
                     </button>
@@ -1243,32 +1402,14 @@ export default function AddPurchasePage() {
     return (
         <div className="pb-20">
             <div className="max-w-[1320px] mx-auto">
-                {/* ── Clean, simple header ── */}
-                <div className="mb-6">
-                    <nav className="flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-400 mb-3">
-                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
-                        <span className="text-slate-300">/</span>
-                        <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
-                        <span className="text-slate-300">/</span>
-                        <span className="text-slate-600">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
-                    </nav>
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                                <PackagePlus size={22} strokeWidth={2} />
-                            </div>
-                            <div>
-                                <h1 className="text-[22px] font-bold text-slate-900 tracking-tight leading-none">
-                                    {editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
-                                </h1>
-                                <p className="text-[12.5px] text-slate-500 mt-1.5">Add products, set rates, and record settlement.</p>
-                            </div>
-                        </div>
-                        <button onClick={() => router.push('/admin/purchases')} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[12.5px] font-semibold px-4 py-2.5 transition-colors shadow-sm">
-                            <ArrowLeft size={15} /> Back
-                        </button>
-                    </div>
-                </div>
+                {/* Breadcrumb only — the title block was removed; "Purchases" here is the way back. */}
+                <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 mb-4">
+                    <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
+                    <span className="text-slate-300">/</span>
+                    <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
+                    <span className="text-slate-300">/</span>
+                    <span className="text-slate-600">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
+                </nav>
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
@@ -1285,7 +1426,7 @@ export default function AddPurchasePage() {
                             <div className="flex-1 min-w-0 w-full">
                                 <Card className="overflow-hidden">
                                     <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent flex items-center justify-between gap-3 flex-wrap">
-                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-indigo-600" /> Previous Purchase History</h3>
+                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#0E8CA8]" /> Previous Purchase History</h3>
                                         <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5" loading={histLoading} onClick={loadPrevHistory}>Show Previous History</Btn>
                                     </div>
                                     <div className="p-4 sm:p-5">
@@ -1331,60 +1472,60 @@ export default function AddPurchasePage() {
                             <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4">
                             <Card className="overflow-hidden">
                                 <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2.5">
-                                    <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
+                                    <h3 className="text-[14px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
                                 </div>
                                 <div className="p-5 space-y-2.5">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Purchase</span>
-                                        <span className="font-extrabold text-slate-800 tabular-nums text-[13px]">{formatCurrency(totalAmount)}</span>
+                                        <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Amt Purchase</span>
+                                        <span className="font-extrabold text-slate-800 tabular-nums text-[14px]">{formatCurrency(totalAmount)}</span>
                                     </div>
                                     {bonusValue > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Bonus</span>
-                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(bonusValue)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Amt Bonus</span>
+                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[14px]">{formatCurrency(bonusValue)}</span>
                                         </div>
                                     )}
                                     {(form as any).shipping_cost > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Freight</span>
-                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency((form as any).shipping_cost)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Freight</span>
+                                            <span className="font-bold text-slate-700 tabular-nums text-[14px]">+{formatCurrency((form as any).shipping_cost)}</span>
                                         </div>
                                     )}
                                     {taxAmountLive > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
-                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency(taxAmountLive)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
+                                            <span className="font-bold text-slate-700 tabular-nums text-[14px]">+{formatCurrency(taxAmountLive)}</span>
                                         </div>
                                     )}
                                     {extraDiscount > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Extra Disc.</span>
-                                            <span className="font-bold text-rose-600 tabular-nums text-[13px]">−{formatCurrency(extraDiscount)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Extra Disc.</span>
+                                            <span className="font-bold text-rose-600 tabular-nums text-[14px]">−{formatCurrency(extraDiscount)}</span>
                                         </div>
                                     )}
                                     <div className="h-px bg-slate-100 my-1" />
-                                    <div className="flex justify-between items-center rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3">
-                                        <span className="text-slate-700 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
-                                        <span className="text-[21px] font-black text-indigo-650 tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
+                                    <div className="flex justify-between items-center rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/35 px-4 py-3">
+                                        <span className="text-slate-700 font-black uppercase text-[13px] tracking-wide">Net Amount</span>
+                                        <span className="text-[24px] font-black text-[#B4780B] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
                                     </div>
                                     {paidNow > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-emerald-600 font-semibold uppercase text-[11px] tracking-wide">Paid Cash</span>
-                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(paidNow)}</span>
+                                            <span className="text-emerald-600 font-semibold uppercase text-[12px] tracking-wide">Paid Cash</span>
+                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[14px]">{formatCurrency(paidNow)}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Balance</span>
-                                        <span className={`text-[16px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
+                                        <span className="text-slate-800 font-black uppercase text-[13px] tracking-wide">Balance</span>
+                                        <span className={`text-[18px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-1">
-                                        <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wide">Status</span>
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
+                                        <span className="text-slate-400 font-semibold uppercase text-[11px] tracking-wide">Status</span>
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
                                     </div>
-                                    <div className="text-[11px] text-slate-400 font-semibold pt-1">Total Products = {items.filter(i => i.product).length}</div>
+                                    <div className="text-[12px] text-slate-400 font-semibold pt-1">Total Products = {items.filter(i => i.product).length}</div>
 
                                     <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
-                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px]" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>
+                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#13B0D1] hover:!bg-[#0E8CA8] shadow-sm shadow-[#13B0D1]/30" loading={saving} onClick={() => handleSave()}>
                                             {editId ? 'Update Order' : 'Save Purchase'}
                                         </Btn>
                                         <div className="grid grid-cols-2 gap-2">
@@ -1411,7 +1552,7 @@ export default function AddPurchasePage() {
                         <p className="text-[13px] text-slate-500 mb-6">Your purchase order <b className="text-slate-900">{successOrder?.purchase_number}</b> has been recorded.</p>
                         <div className="flex flex-col gap-2">
                             <Btn className="w-full justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
-                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline">Create Another Order</button>
+                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline">Create Another Order</button>
                         </div>
                     </div>
                 </Modal>

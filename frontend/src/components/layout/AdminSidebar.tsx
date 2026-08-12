@@ -186,17 +186,17 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
             `}</style>
 
-            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-slate-900 border-r border-slate-800/70 ${isCollapsed ? 'w-[64px]' : 'w-[235px]'}`}>
+            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-gradient-to-b from-slate-900 to-[#0B1220] border-r border-white/[0.07] ${isCollapsed ? 'w-[64px]' : 'w-[235px]'}`}>
 
-                <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between border-b border-white/5">
-                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center bg-indigo-500/15 border border-indigo-400/30">
-                            <span className="font-black text-[13px] text-indigo-400">AQ</span>
+                <div className="px-4 h-[66px] flex-shrink-0 flex items-center justify-between border-b border-white/[0.07]">
+                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 group/brand">
+                        <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center bg-[#13B0D1] shadow-lg shadow-[#13B0D1]/25 group-hover/brand:scale-105 transition-transform">
+                            <span className="font-black text-[13px] text-white">AQ</span>
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5 text-indigo-400">Central Console</span>
-                                <span className="text-[13px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
+                                <span className="text-[9px] font-bold uppercase tracking-[0.16em] leading-none mb-1 text-[#22C3E0]">Central Console</span>
+                                <span className="text-[14px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
                             </div>
                         )}
                     </Link>
@@ -211,14 +211,14 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 </div>
 
                 {/* ── NAVIGATION ── */}
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll pt-4 pb-3">
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll pt-5 pb-4">
 
 
                     {filteredGroups.map((group, gIdx) => (
-                        <div key={group.label} className={gIdx !== 0 ? 'mt-5' : ''}>
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-6' : ''}>
                             {!isCollapsed && (
-                                <div className="px-4 mb-1.5">
-                                    <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                <div className="px-4 mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
                                         {group.label}
                                     </span>
                                 </div>
@@ -227,26 +227,26 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                 <div className="mx-3 mb-1 h-px bg-white/5" />
                             )}
 
-                            <div className="space-y-[1px] px-2">
+                            <div className="space-y-0.5 px-2.5">
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (
                                         <Link key={item.href} href={item.href}
                                             onClick={() => onNavigate?.()}
-                                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'} ${active ? 'bg-indigo-500/15 ring-1 ring-indigo-400/20' : 'hover:bg-white/5'}`}>
+                                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5'} ${active ? 'bg-[#13B0D1]/15 ring-1 ring-[#13B0D1]/30' : 'hover:bg-white/5'}`}>
 
                                             {/* Active left indicator */}
                                             {active && !isCollapsed && (
-                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-indigo-400" />
+                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#13B0D1]" />
                                             )}
 
                                             <item.icon
-                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'}`}
-                                                size={15}
+                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-[#22C3E0]' : 'text-slate-400 group-hover:text-slate-200'}`}
+                                                size={16}
                                             />
 
                                             {!isCollapsed && (
-                                                <span className={`text-[13px] tracking-tight whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
+                                                <span className={`text-[13.5px] tracking-tight whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                                     {item.name}
                                                 </span>
                                             )}
@@ -282,19 +282,19 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                     <div className="flex-shrink-0 px-2 pb-3 pt-2 border-t border-white/5">
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
-                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'} ${isActive('/admin/settings') ? 'bg-indigo-500/15 ring-1 ring-indigo-400/20' : 'hover:bg-white/5'}`}>
+                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5'} ${isActive('/admin/settings') ? 'bg-[#13B0D1]/15 ring-1 ring-[#13B0D1]/30' : 'hover:bg-white/5'}`}>
 
                             {isActive('/admin/settings') && !isCollapsed && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-indigo-400" />
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#13B0D1]" />
                             )}
 
                             <Settings
-                                size={15}
-                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'}`}
+                                size={16}
+                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#22C3E0]' : 'text-slate-400 group-hover:text-slate-200'}`}
                             />
 
                             {!isCollapsed && (
-                                <span className={`text-[13px] tracking-tight transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
+                                <span className={`text-[13.5px] tracking-tight transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                     System Settings
                                 </span>
                             )}

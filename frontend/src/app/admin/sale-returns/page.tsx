@@ -358,7 +358,7 @@ export default function SaleReturnsPage() {
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
                                     >
                                         Previous
                                     </button>
@@ -368,7 +368,7 @@ export default function SaleReturnsPage() {
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage === totalPages}
-                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
+                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
                                     >
                                         Next
                                     </button>

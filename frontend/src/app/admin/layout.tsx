@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
 import { DesktopNavMenu, MobileNavMenu } from '@/components/layout/AdminNavMenu';
+import AdminSidebar from '@/components/layout/AdminSidebar';
 import NotificationPanel, { type ActivityItem } from '@/components/admin/NotificationPanel';
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import ReadOnlyController from '@/components/admin/ReadOnlyController';
@@ -10,7 +11,7 @@ import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
-    Home, Globe, Settings, ScanLine, TrendingUp, Boxes
+    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, PanelLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -211,8 +212,10 @@ function BranchAdminBottomNav({ pathname }: { pathname: string }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const [mobileOpen, setMobileOpen] = useState(false);
     const [isNavigating, setIsNavigating] = useState(false);
+    // Desktop sidebar collapse, remembered across visits. Mobile keeps using the
+    // bottom tab bar, so the sidebar is desktop-only.
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // Profile & panel states
     const [notifOpen, setNotifOpen] = useState(false);
@@ -253,6 +256,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Notifications
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
+
+    // Restore the collapse preference on mount only — reading it in useState would
+    // run on the server and mismatch the first client render.
+    useEffect(() => {
+        try {
+            setSidebarCollapsed(window.localStorage.getItem('admin.sidebarCollapsed') === '1');
+        } catch { /* private mode / storage disabled */ }
+    }, []);
+
+    const toggleSidebar = () => {
+        setSidebarCollapsed(prev => {
+            const next = !prev;
+            try { window.localStorage.setItem('admin.sidebarCollapsed', next ? '1' : '0'); } catch { /* ignore */ }
+            return next;
+        });
+    };
 
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
@@ -404,7 +423,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
         <AuthGuard allowedRoles={['admin', 'staff']}>
             <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
-                
+
+                {/* ═══ SIDEBAR — desktop only; mobile navigates via the bottom tab bar ═══ */}
+                <div className="hidden md:block h-full shrink-0 print:hidden">
+                    <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+                </div>
 
                 {/* ═══ RIGHT CONTAINER (Navbar + Main Content) ═══ */}
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
@@ -434,13 +457,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="hidden md:flex h-[66px] w-full flex-shrink-0 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-[0_1px_0_rgba(15,23,42,0.03),0_6px_20px_-12px_rgba(15,23,42,0.15)] sticky top-0 transition-colors duration-300 print:hidden">
 
                         <div className="flex items-center gap-4 flex-1">
-                            <Link href="/admin/dashboard" className="flex items-center gap-2.5 shrink-0 group pr-1">
-                                <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e293b] to-[#0f172a] text-white flex items-center justify-center font-black text-[13px] tracking-tight shadow-sm ring-1 ring-white/10 group-hover:scale-105 group-hover:shadow-md transition-all">AQ</span>
-                                <span className="hidden lg:flex flex-col leading-none">
-                                    <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">Central Console</span>
-                                    <span className="text-[14px] font-extrabold tracking-tight text-slate-800">Al-Qavi <span className="text-indigo-600">Hub</span></span>
-                                </span>
-                            </Link>
+                            {/* The sidebar carries the brand lockup now, so the navbar just
+                                gets the collapse control in its place. */}
+                            <button
+                                onClick={toggleSidebar}
+                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                                className="w-9 h-9 shrink-0 rounded-xl border border-slate-200/80 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-colors"
+                            >
+                                <PanelLeft size={17} className={cn('transition-transform duration-300', sidebarCollapsed && 'rotate-180')} />
+                            </button>
 
                             <span className="hidden lg:block h-7 w-px bg-slate-200/80 shrink-0" />
 
@@ -548,10 +574,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={profileRef}>
                                 <button onClick={() => setProfileOpen(!profileOpen)}
-                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-150 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
+                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
                                     <div className="relative">
                                         <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10">
-                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-slate-650 dark:text-zinc-300">{adminName[0]}</span>}
+                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">{adminName[0]}</span>}
                                         </div>
                                         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
                                     </div>

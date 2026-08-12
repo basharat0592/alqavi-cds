@@ -587,7 +587,7 @@ export default function PaymentsPage() {
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-bold text-amber-950">Action Required: Pending Receipts</h4>
-                                    <p className="text-[11px] text-amber-850 mt-0.5">
+                                    <p className="text-[11px] text-amber-800 mt-0.5">
                                         There are {pendingPayments.length} customer payment receipts awaiting verification.
                                     </p>
                                 </div>
@@ -632,7 +632,7 @@ export default function PaymentsPage() {
                                             onClick={() => setTypeFilter(t.key)}
                                             className={`flex-1 sm:flex-initial px-3.5 py-1 text-[10.5px] font-bold uppercase rounded-md transition-all whitespace-nowrap relative
                                                 ${typeFilter === t.key ? 'bg-white text-indigo-600 shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-700'}
-                                                ${t.badge && typeFilter !== 'pending' ? 'bg-amber-100/50 text-amber-850' : ''}`}
+                                                ${t.badge && typeFilter !== 'pending' ? 'bg-amber-100/50 text-amber-800' : ''}`}
                                         >
                                             {t.label}
                                             {t.badge && (
@@ -744,7 +744,7 @@ export default function PaymentsPage() {
                                                 <td className="px-4 py-2 whitespace-nowrap font-medium">
                                                     <div className="font-bold text-slate-900 flex items-center gap-1.5">
                                                         {payment.isPending ? (
-                                                            <span className="text-amber-850 font-bold bg-amber-100/60 px-1 py-0.5 rounded text-[10px] border border-amber-200/30">
+                                                            <span className="text-amber-800 font-bold bg-amber-100/60 px-1 py-0.5 rounded text-[10px] border border-amber-200/30">
                                                                 Pending
                                                             </span>
                                                         ) : payment.isDue ? (
@@ -760,12 +760,12 @@ export default function PaymentsPage() {
                                                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${tone}`}>{s}</span>
                                                     ); })()}
                                                 </td>
-                                                <td className="px-4 py-2 text-slate-650 capitalize whitespace-nowrap font-bold text-[10.5px]">
+                                                <td className="px-4 py-2 text-slate-700 capitalize whitespace-nowrap font-bold text-[10.5px]">
                                                     {payment.method.replace('_', ' ')}
                                                 </td>
                                                 <td className="px-4 py-2 whitespace-nowrap">
                                                     <div className="font-bold text-slate-900 text-[12px]">{payment.payer_payee || "Internal"}</div>
-                                                    <div className="text-[10px] text-slate-450 mt-0.5 italic hidden sm:block">By: {payment.user_name}</div>
+                                                    <div className="text-[10px] text-slate-500 mt-0.5 italic hidden sm:block">By: {payment.user_name}</div>
                                                 </td>
                                                 <td className="px-4 py-2 whitespace-nowrap">
                                                     {payment.isPending ? (
@@ -853,7 +853,7 @@ export default function PaymentsPage() {
 
                         {/* Pagination Footer Controls (10 per page) */}
                         {!loading && filtered.length > 0 && (
-                            <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-550 border-collapse">
+                            <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 border-collapse">
                                 <div>
                                     Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
                                     <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
@@ -863,7 +863,7 @@ export default function PaymentsPage() {
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-[11px] text-slate-650 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-[11px] text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Prev
                                     </button>
@@ -883,7 +883,7 @@ export default function PaymentsPage() {
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-[11px] text-slate-650 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-[11px] text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Next
                                     </button>

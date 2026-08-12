@@ -59,12 +59,12 @@ export default function ProfileDropdown({
                     <p className="text-[10px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Administrative</p>
                     <div className="space-y-0.5">
                         <Link href="/admin/settings" onClick={onClose} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Your Profile</span>
-                            <ChevronRight size={12} className="text-slate-350 group-hover:translate-x-0.5 transition-transform" />
+                            <span className="text-[13px] font-medium text-slate-700 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">Your Profile</span>
+                            <ChevronRight size={12} className="text-slate-300 group-hover:translate-x-0.5 transition-transform" />
                         </Link>
                         <Link href="/admin/settings" onClick={onClose} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">System Settings</span>
-                            <ChevronRight size={12} className="text-slate-350 group-hover:translate-x-0.5 transition-transform" />
+                            <span className="text-[13px] font-medium text-slate-700 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">System Settings</span>
+                            <ChevronRight size={12} className="text-slate-300 group-hover:translate-x-0.5 transition-transform" />
                         </Link>
                     </div>
                 </div>
@@ -77,18 +77,18 @@ export default function ProfileDropdown({
                         {!isSuper && (
                             <>
                                 <Link href="/admin/company/customers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                                    <Users size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                                    <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Customer</span>
+                                    <Users size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors" />
+                                    <span className="text-[13px] font-medium text-slate-700 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">Customer</span>
                                 </Link>
                                 <Link href="/admin/company/suppliers" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                                    <Building2 size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                                    <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">Supplier</span>
+                                    <Building2 size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors" />
+                                    <span className="text-[13px] font-medium text-slate-700 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">Supplier</span>
                                 </Link>
                             </>
                         )}
                         <Link href="/" target="_blank" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                            <ExternalLink size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors" />
-                            <span className="text-[13px] font-medium text-slate-650 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors">View Store</span>
+                            <ExternalLink size={14} className="text-slate-400 dark:text-zinc-500 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors" />
+                            <span className="text-[13px] font-medium text-slate-700 dark:text-zinc-300 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">View Store</span>
                         </Link>
                     </div>
                 </div>

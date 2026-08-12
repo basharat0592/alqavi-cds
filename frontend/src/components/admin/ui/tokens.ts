@@ -32,7 +32,7 @@ export const ui = {
     /** Disabled/read-only field — clearly inert, not just faded. */
     inputDisabled: 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed shadow-none hover:bg-slate-100 hover:border-slate-200',
     /** Field label above an input. */
-    fieldLabel: 'block text-[11px] font-bold uppercase tracking-[0.04em] text-slate-600 mb-1.5',
+    fieldLabel: 'block text-[12px] font-bold uppercase tracking-[0.04em] text-slate-600 mb-1.5',
     /** Unit affix (Rs, %) sitting inside a field. */
     fieldAffix: 'absolute top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-500 pointer-events-none',
     // Shared table presets — consistent, readable tables everywhere they're adopted.

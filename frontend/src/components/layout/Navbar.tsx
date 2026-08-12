@@ -663,7 +663,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-150 text-slate-500 border border-slate-200 text-left">
+                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-left">
                                                     {p.category_name || 'Beauty'}
                                                 </span>
                                                 {(p.total_quantity || p.quantity_in_stock || p.available_quantity || 0) > 0 ? (

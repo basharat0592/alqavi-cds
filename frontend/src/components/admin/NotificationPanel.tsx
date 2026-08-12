@@ -43,7 +43,7 @@ export default function NotificationPanel({
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/55 dark:bg-white/5">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 rounded-xl border border-slate-250 dark:border-white/10 flex items-center justify-center">
+                    <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-center">
                         <Bell className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
                     </div>
                     <div>
@@ -78,7 +78,7 @@ export default function NotificationPanel({
                     <div className="py-16 text-center px-6 bg-slate-50/50 dark:bg-white/5">
                         <Bell className="h-10 w-10 text-slate-200 dark:text-zinc-700 mx-auto mb-3" />
                         <p className="font-bold text-slate-600 dark:text-zinc-400 text-[13px]">System clear</p>
-                        <p className="text-[10px] text-slate-400 dark:text-zinc-550 mt-1 uppercase tracking-widest font-bold">No critical notifications</p>
+                        <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1 uppercase tracking-widest font-bold">No critical notifications</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
@@ -93,7 +93,7 @@ export default function NotificationPanel({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between gap-2">
-                                            <p className={`text-[13px] font-bold leading-tight group-hover:text-sky-500 dark:group-hover:text-sky-450 transition-colors ${!item.read ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
+                                            <p className={`text-[13px] font-bold leading-tight group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors ${!item.read ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
                                                 {item.title}
                                             </p>
                                             <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium shrink-0 flex items-center gap-1">
@@ -111,7 +111,7 @@ export default function NotificationPanel({
                                                     e.stopPropagation();
                                                     onMarkRead(item.id);
                                                 }}
-                                                className="text-[11px] text-sky-500 hover:text-sky-650 dark:text-sky-400 dark:hover:text-sky-350 font-bold hover:underline flex items-center gap-1 transition-colors"
+                                                className="text-[11px] text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 font-bold hover:underline flex items-center gap-1 transition-colors"
                                             >
                                                 Mark as read
                                             </button>
@@ -127,15 +127,15 @@ export default function NotificationPanel({
             {/* Footer */}
             <div className="border-t border-slate-100 dark:border-white/5 bg-slate-50/55 dark:bg-white/5 px-5 py-3.5 flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
-                    <button onClick={onMarkAllRead} className="text-[11px] font-bold text-sky-500 hover:text-sky-650 dark:text-sky-400 dark:hover:text-sky-350 hover:underline transition-colors">
+                    <button onClick={onMarkAllRead} className="text-[11px] font-bold text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors">
                         Mark All as Noted
                     </button>
-                    <Link href="/admin/notifications" onClick={onClose} className="text-[11px] font-bold text-sky-500 hover:text-sky-650 dark:text-sky-400 dark:hover:text-sky-350 hover:underline transition-colors">
+                    <Link href="/admin/notifications" onClick={onClose} className="text-[11px] font-bold text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors">
                         View All Activity
                     </Link>
                 </div>
                 <Link href="/admin/settings" onClick={onClose}
-                    className="h-9 w-full justify-center px-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-white/10 flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98]">
+                    className="h-9 w-full justify-center px-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/10 flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98]">
                     <Settings size={12} /> Configure Alerts
                 </Link>
             </div>
